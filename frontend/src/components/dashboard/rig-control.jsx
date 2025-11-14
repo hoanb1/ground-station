@@ -55,11 +55,14 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import {setCenterFrequency} from "../waterfall/waterfall-slice.jsx";
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
+import SettingsIcon from '@mui/icons-material/Settings';
+import { useNavigate } from 'react-router-dom';
 
 
 const RigControl = React.memo(function RigControl() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { t } = useTranslation('target');
     const {
         satGroups,
@@ -353,28 +356,49 @@ const RigControl = React.memo(function RigControl() {
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 {/* 1. Rig Selection */}
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={rigData['connected'] === true}
-                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                 size="small">
-                        <InputLabel htmlFor="radiorig-select">{t('rig_control_labels.rig_label')}</InputLabel>
-                        <Select
-                            id="radiorig-select"
-                            value={rigs.length > 0? selectedRadioRig: "none"}
-                            onChange={(event) => {
-                                handleRigChange(event);
-                            }}
-                            variant={'filled'}>
-                            <MenuItem value="none">
-                                {t('rig_control_labels.no_rig_control')}
-                            </MenuItem>
-                            <MenuItem value="" disabled>
-                                <em>{t('rig_control_labels.select_rig')}</em>
-                            </MenuItem>
-                            {rigs.map((rig, index) => {
-                                return <MenuItem type={"rig"} value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
-                            })}
-                        </Select>
-                    </FormControl>
+                    <Grid container direction="row" spacing={1} sx={{ alignItems: 'flex-end' }}>
+                        <Grid size="grow">
+                            <FormControl disabled={rigData['connected'] === true}
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                         size="small">
+                                <InputLabel htmlFor="radiorig-select">{t('rig_control_labels.rig_label')}</InputLabel>
+                                <Select
+                                    id="radiorig-select"
+                                    value={rigs.length > 0? selectedRadioRig: "none"}
+                                    onChange={(event) => {
+                                        handleRigChange(event);
+                                    }}
+                                    variant={'filled'}>
+                                    <MenuItem value="none">
+                                        {t('rig_control_labels.no_rig_control')}
+                                    </MenuItem>
+                                    <MenuItem value="" disabled>
+                                        <em>{t('rig_control_labels.select_rig')}</em>
+                                    </MenuItem>
+                                    {rigs.map((rig, index) => {
+                                        return <MenuItem type={"rig"} value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
+                                    })}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid>
+                            <IconButton
+                                onClick={() => navigate('/hardware/rig')}
+                                sx={{
+                                    height: '100%',
+                                    marginBottom: 1,
+                                    borderRadius: 1,
+                                    backgroundColor: 'primary.main',
+                                    color: 'white',
+                                    '&:hover': {
+                                        backgroundColor: 'primary.dark',
+                                    }
+                                }}
+                            >
+                                <SettingsIcon />
+                            </IconButton>
+                        </Grid>
+                    </Grid>
                 </Grid>
 
                 {/* 2. Transmitter Selection */}

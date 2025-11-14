@@ -31,9 +31,10 @@ import { toast } from "../../utils/toast-with-timestamp.jsx";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import { useTranslation } from 'react-i18next';
 import Grid from "@mui/material/Grid2";
-import {Button, FormControl, InputLabel, MenuItem, Select} from "@mui/material";
+import {Button, FormControl, IconButton, InputLabel, MenuItem, Select} from "@mui/material";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
+import SettingsIcon from '@mui/icons-material/Settings';
 import { GaugeAz, GaugeEl } from '../target/rotator-gauges.jsx';
 import {
     getCurrentStatusofRotator,
@@ -44,11 +45,13 @@ import {
     canConnectRotator,
     isRotatorSelectionDisabled
 } from '../target/rotator-utils.js';
+import { useNavigate } from 'react-router-dom';
 
 
 const RotatorControl = React.memo(function RotatorControl() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { t } = useTranslation('target');
     const {
         satGroups,
@@ -176,28 +179,49 @@ const RotatorControl = React.memo(function RotatorControl() {
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={isRotatorSelectionDisabled(trackingState)}
-                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                 size="small">
-                        <InputLabel htmlFor="rotator-select">{t('rotator_control_labels.rotator_label')}</InputLabel>
-                        <Select
-                            id="rotator-select"
-                            value={rotators.length > 0? selectedRotator: "none"}
-                            onChange={(event) => {
-                                handleRotatorChange(event);
-                            }}
-                            variant={'filled'}>
-                            <MenuItem value="none">
-                                {t('rotator_control_labels.no_rotator_control')}
-                            </MenuItem>
-                            <MenuItem value="" disabled>
-                                <em>{t('rotator_control_labels.select_rotator')}</em>
-                            </MenuItem>
-                            {rotators.map((rotators, index) => {
-                                return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;
-                            })}
-                        </Select>
-                    </FormControl>
+                    <Grid container direction="row" spacing={1} sx={{ alignItems: 'flex-end' }}>
+                        <Grid size="grow">
+                            <FormControl disabled={isRotatorSelectionDisabled(trackingState)}
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                         size="small">
+                                <InputLabel htmlFor="rotator-select">{t('rotator_control_labels.rotator_label')}</InputLabel>
+                                <Select
+                                    id="rotator-select"
+                                    value={rotators.length > 0? selectedRotator: "none"}
+                                    onChange={(event) => {
+                                        handleRotatorChange(event);
+                                    }}
+                                    variant={'filled'}>
+                                    <MenuItem value="none">
+                                        {t('rotator_control_labels.no_rotator_control')}
+                                    </MenuItem>
+                                    <MenuItem value="" disabled>
+                                        <em>{t('rotator_control_labels.select_rotator')}</em>
+                                    </MenuItem>
+                                    {rotators.map((rotators, index) => {
+                                        return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;
+                                    })}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid>
+                            <IconButton
+                                onClick={() => navigate('/hardware/rotator')}
+                                sx={{
+                                    height: '100%',
+                                    marginBottom: 1,
+                                    borderRadius: 1,
+                                    backgroundColor: 'primary.main',
+                                    color: 'white',
+                                    '&:hover': {
+                                        backgroundColor: 'primary.dark',
+                                    }
+                                }}
+                            >
+                                <SettingsIcon />
+                            </IconButton>
+                        </Grid>
+                    </Grid>
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
