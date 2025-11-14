@@ -43,11 +43,6 @@ export const ToastContainerWithStyles = () => {
                     top: 75px !important;
                 }
 
-                .Toastify__toast-container--bottom-left,
-                .Toastify__toast-container--bottom-center,
-                .Toastify__toast-container--bottom-right {
-                    bottom: 20px !important;
-                }
 
                 .Toastify__toast-container,
                 .Toastify__toast,
