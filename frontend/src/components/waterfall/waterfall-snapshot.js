@@ -83,7 +83,7 @@ export const useWaterfallSnapshot = ({
 
     /**
      * Finds overlay canvases in the DOM
-     * @returns {Object} Object containing bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, and frequencyScaleLeftCanvas
+     * @returns {Object} Object containing bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas, and vfoContainerCanvas
      */
     const findOverlayCanvases = useCallback(() => {
         const allCanvases = document.querySelectorAll('canvas');
@@ -91,6 +91,7 @@ export const useWaterfallSnapshot = ({
         let bandplanCanvas = null;
         let frequencyScaleCanvas = null;
         let frequencyScaleLeftCanvas = null;
+        let vfoContainerCanvas = null;
 
         const bandscopeCanvas = bandscopeCanvasRef.current;
 
@@ -104,6 +105,9 @@ export const useWaterfallSnapshot = ({
             } else if (canvas.classList.contains('waterfall-left-margin-filler')) {
                 // Small canvas between dB axes (frequency scale left margin filler)
                 frequencyScaleLeftCanvas = canvas;
+            } else if (canvas.classList.contains('vfo-markers-canvas')) {
+                // VFO container overlay
+                vfoContainerCanvas = canvas;
             } else if (
                 canvas !== bandscopeCanvas &&
                 canvas.classList.contains('waterfall-canvas') === false &&
@@ -111,7 +115,8 @@ export const useWaterfallSnapshot = ({
                 canvas.classList.contains('waterfall-left-margin-canvas') === false &&
                 canvas.classList.contains('waterfall-left-margin-filler') === false &&
                 canvas.classList.contains('bookmark-canvas') === false &&
-                canvas.classList.contains('frequency-band-overlay') === false
+                canvas.classList.contains('frequency-band-overlay') === false &&
+                canvas.classList.contains('vfo-markers-canvas') === false
             ) {
                 // Frequency scale is the other canvas that's not bandscope or waterfall
                 if (!frequencyScaleCanvas && canvas.height < 30 && canvas.height !== 21) {
@@ -120,7 +125,7 @@ export const useWaterfallSnapshot = ({
             }
         });
 
-        return { bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas };
+        return { bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas, vfoContainerCanvas };
     }, [bandscopeCanvasRef]);
 
     /**
@@ -133,7 +138,7 @@ export const useWaterfallSnapshot = ({
         const bandscopeCanvas = bandscopeCanvasRef.current;
         const dBAxisScopeCanvas = dBAxisScopeCanvasRef.current;
         const waterfallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
-        const { bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas } = overlayCanvases;
+        const { bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas, vfoContainerCanvas } = overlayCanvases;
 
         // Get the actual visual container width from the DOM
         const container = bandscopeCanvas.parentElement;
@@ -218,6 +223,15 @@ export const useWaterfallSnapshot = ({
         if (bandplanCanvas && bandplanCanvas.width > 0 && bandplanCanvas.height > 0) {
             ctx.drawImage(
                 bandplanCanvas,
+                overlaySourceX, 0, overlaySourceWidth, bandScopeHeight,
+                leftMarginWidth, yOffset, canvasSourceWidth, bandScopeHeight
+            );
+        }
+
+        // Draw VFO container overlay - scale from overlay resolution to match bandscope
+        if (vfoContainerCanvas && vfoContainerCanvas.width > 0 && vfoContainerCanvas.height > 0) {
+            ctx.drawImage(
+                vfoContainerCanvas,
                 overlaySourceX, 0, overlaySourceWidth, bandScopeHeight,
                 leftMarginWidth, yOffset, canvasSourceWidth, bandScopeHeight
             );
