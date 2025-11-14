@@ -28,6 +28,7 @@ import {
     Chip,
     Grid2,
     Button,
+    Card,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useState, useRef } from "react";
@@ -353,8 +354,13 @@ const SatelliteInfoPopover = () => {
                     {satelliteData.details.norad_id ? (
                         <>
                             {/* Position Information */}
-                            <Box sx={{ mb: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0 }}>
+                            <Box sx={{
+                                mb: 2,
+                                p: 1.5,
+                                borderRadius: 1,
+                                backgroundColor: 'action.hover'
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                                     <Typography variant="subtitle2" sx={{ color: 'info.light', fontWeight: 'bold' }}>
                                         {t('target_popover.sections.current_position')}
                                     </Typography>
@@ -435,7 +441,6 @@ const SatelliteInfoPopover = () => {
                                 </Grid2>
                             </Box>
 
-                            <Divider sx={{ borderColor: 'border.main', mb: 2 }} />
                         </>
                     ) : null}
 
