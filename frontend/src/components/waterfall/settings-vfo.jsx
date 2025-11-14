@@ -75,7 +75,7 @@ const VfoAccordion = ({
     const squelchSliderRef = React.useRef(null);
     const volumeSliderRef = React.useRef(null);
 
-    // Get doppler-corrected transmitters from Redux state
+    // Get doppler-corrected transmitters from Redux state (includes alive field)
     const transmitters = useSelector(state => state.targetSatTrack.rigData.transmitters || []);
 
     React.useEffect(() => {
@@ -264,10 +264,24 @@ const VfoAccordion = ({
                                         </MenuItem>
                                         {transmitters.map((tx) => (
                                             <MenuItem key={tx.id} value={tx.id} sx={{ fontSize: '0.875rem' }}>
-                                                <Box>
-                                                    <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
-                                                    <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                                        {(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                    <Box
+                                                        sx={{
+                                                            width: 8,
+                                                            height: 8,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: tx.alive ? 'success.main' : 'error.main',
+                                                            boxShadow: (theme) => tx.alive
+                                                                ? `0 0 6px ${theme.palette.success.main}99`
+                                                                : `0 0 6px ${theme.palette.error.main}99`,
+                                                            flexShrink: 0,
+                                                        }}
+                                                    />
+                                                    <Box sx={{ flex: 1 }}>
+                                                        <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
+                                                        <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                                                            {(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
+                                                        </Box>
                                                     </Box>
                                                 </Box>
                                             </MenuItem>

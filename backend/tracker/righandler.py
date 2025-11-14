@@ -315,6 +315,7 @@ class RigHandler:
                     "description": transmitter.get("description"),
                     "type": transmitter.get("type"),
                     "mode": transmitter.get("mode"),
+                    "alive": transmitter.get("alive"),
                     "downlink_low": downlink_freq,
                     "downlink_high": transmitter.get("downlink_high"),
                     "uplink_low": uplink_freq,
