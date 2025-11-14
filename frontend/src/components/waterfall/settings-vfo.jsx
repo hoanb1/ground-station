@@ -267,7 +267,7 @@ const VfoAccordion = ({
                                                 <Box>
                                                     <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
                                                     <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                                        {(tx.observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
+                                                        {(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
                                                     </Box>
                                                 </Box>
                                             </MenuItem>

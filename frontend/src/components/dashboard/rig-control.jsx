@@ -29,6 +29,8 @@ import {
     setRadioRig,
     setRotator,
     setRigVFO,
+    setVFO1,
+    setVFO2,
     setSatelliteGroupSelectOpen,
     setSatelliteId,
     setSatGroupId,
@@ -45,7 +47,8 @@ import {
     TitleBar
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
-import {Box, Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
+import {Box, Button, Divider, FormControl, IconButton, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import SatelliteList from "../target/satellite-dropdown.jsx";
 import Typography from "@mui/material/Typography";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -73,6 +76,8 @@ const RigControl = React.memo(function RigControl() {
         selectedRadioRig,
         selectedRotator,
         selectedRigVFO,
+        selectedVFO1,
+        selectedVFO2,
         selectedTransmitter,
         availableTransmitters,
         rigData,
@@ -100,7 +105,12 @@ const RigControl = React.memo(function RigControl() {
     } = useSelector((state) => state.rigs);
 
     const handleTrackingStop = () => {
-        const newTrackingState = {...trackingState, 'rig_state': "stopped"};
+        const newTrackingState = {
+            ...trackingState,
+            'rig_state': "stopped",
+            'vfo1': selectedVFO1,
+            'vfo2': selectedVFO2,
+        };
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
@@ -124,6 +134,8 @@ const RigControl = React.memo(function RigControl() {
             'rotator_id': selectedRotator,
             'transmitter_id': selectedTransmitter,
             'rig_vfo': selectedRigVFO,
+            'vfo1': selectedVFO1,
+            'vfo2': selectedVFO2,
         };
 
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
@@ -180,6 +192,8 @@ const RigControl = React.memo(function RigControl() {
             'rotator_id': selectedRotator,
             'transmitter_id': event.target.value,
             'rig_vfo': selectedRigVFO,
+            'vfo1': selectedVFO1,
+            'vfo2': selectedVFO2,
         };
 
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
@@ -206,6 +220,96 @@ const RigControl = React.memo(function RigControl() {
             'rotator_id': selectedRotator,
             'transmitter_id': selectedTransmitter,
             'rig_vfo': event.target.value,
+            'vfo1': selectedVFO1,
+            'vfo2': selectedVFO2,
+        };
+
+        dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
+            .unwrap()
+            .then((response) => {
+
+            })
+            .catch((error) => {
+
+            });
+    }
+
+    function handleVFO1Change(event) {
+        const vfo1Value = event.target.value;
+        dispatch(setVFO1(vfo1Value));
+
+        const data = {
+            ...trackingState,
+            'norad_id': satelliteId,
+            'rotator_state': trackingState['rotator_state'],
+            'rig_state': trackingState['rig_state'],
+            'group_id': groupId,
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
+            'rig_vfo': selectedRigVFO,
+            'vfo1': vfo1Value,
+            'vfo2': selectedVFO2,
+        };
+
+        dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
+            .unwrap()
+            .then((response) => {
+
+            })
+            .catch((error) => {
+
+            });
+    }
+
+    function handleVFO2Change(event) {
+        const vfo2Value = event.target.value;
+        dispatch(setVFO2(vfo2Value));
+
+        const data = {
+            ...trackingState,
+            'norad_id': satelliteId,
+            'rotator_state': trackingState['rotator_state'],
+            'rig_state': trackingState['rig_state'],
+            'group_id': groupId,
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
+            'rig_vfo': selectedRigVFO,
+            'vfo1': selectedVFO1,
+            'vfo2': vfo2Value,
+        };
+
+        dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
+            .unwrap()
+            .then((response) => {
+
+            })
+            .catch((error) => {
+
+            });
+    }
+
+    function handleVFOSwap() {
+        // Swap VFO1 and VFO2 values
+        const tempVFO1 = selectedVFO1;
+        const tempVFO2 = selectedVFO2;
+
+        dispatch(setVFO1(tempVFO2));
+        dispatch(setVFO2(tempVFO1));
+
+        const data = {
+            ...trackingState,
+            'norad_id': satelliteId,
+            'rotator_state': trackingState['rotator_state'],
+            'rig_state': trackingState['rig_state'],
+            'group_id': groupId,
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
+            'rig_vfo': selectedRigVFO,
+            'vfo1': tempVFO2,
+            'vfo2': tempVFO1,
         };
 
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
@@ -224,6 +328,8 @@ const RigControl = React.memo(function RigControl() {
             'rig_state': "connected",
             'rig_id': selectedRadioRig,
             'rig_vfo': selectedRigVFO,
+            'vfo1': selectedVFO1,
+            'vfo2': selectedVFO2,
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
@@ -234,6 +340,8 @@ const RigControl = React.memo(function RigControl() {
             'rig_state': "disconnected",
             'rig_id': selectedRadioRig,
             'rig_vfo': selectedRigVFO,
+            'vfo1': selectedVFO1,
+            'vfo2': selectedVFO2,
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
@@ -243,8 +351,9 @@ const RigControl = React.memo(function RigControl() {
             {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Radio rig control</TitleBar>*/}
 
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
+                {/* 1. Rig Selection */}
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
+                    <FormControl disabled={rigData['connected'] === true}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="radiorig-select">{t('rig_control_labels.rig_label')}</InputLabel>
@@ -268,30 +377,10 @@ const RigControl = React.memo(function RigControl() {
                     </FormControl>
                 </Grid>
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
-                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                 size="small">
-                        <InputLabel htmlFor="vfo-select">{t('rig_control_labels.vfo_label')}</InputLabel>
-                        <Select
-                            id="vfo-select"
-                            value={selectedRigVFO || "none"}
-                            onChange={(event) => {
-                                handleRigVFOChange(event);
-                            }}
-                            variant={'filled'}>
-                            <MenuItem value="none">
-                                {t('rig_control_labels.no_vfo_control')}
-                            </MenuItem>
-                            <MenuItem value="1">VFO 1</MenuItem>
-                            <MenuItem value="2">VFO 2</MenuItem>
-                        </Select>
-                    </FormControl>
-                </Grid>
-
+                {/* 2. Transmitter Selection */}
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={["tracking"].includes(trackingState['rig_state'])}
-                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
+                    <FormControl disabled={rigData['tracking'] === true}
+                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="transmitter-select">{t('rig_control_labels.transmitter_label')}</InputLabel>
                         <Select
@@ -337,78 +426,157 @@ const RigControl = React.memo(function RigControl() {
                     </FormControl>
                 </Grid>
 
+                {/* 3 & 4. VFO Selection with Swap Button */}
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'stretch' }}>
+                        {/* VFO dropdowns container */}
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {/* VFO 1 */}
+                            <FormControl disabled={rigData['tracking'] === true}
+                                         sx={{marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
+                                         size="small">
+                                <InputLabel htmlFor="vfo1-select">VFO 1</InputLabel>
+                                <Select
+                                    id="vfo1-select"
+                                    value={selectedTransmitter === "none" ? "none" : (selectedVFO1 || "uplink")}
+                                    onChange={(event) => {
+                                        handleVFO1Change(event);
+                                    }}
+                                    variant={'filled'}>
+                                    <MenuItem value="none">[none]</MenuItem>
+                                    <MenuItem value="uplink">
+                                        {selectedTransmitter && selectedTransmitter !== "none" && rigData?.transmitters?.length > 0 ? (
+                                            (() => {
+                                                const transmitter = rigData.transmitters.find(t => t.id === selectedTransmitter);
+                                                return transmitter ? (
+                                                    <>Uplink: {preciseHumanizeFrequency(transmitter.uplink_observed_freq || 0)}</>
+                                                ) : "Uplink";
+                                            })()
+                                        ) : "Uplink"}
+                                    </MenuItem>
+                                    <MenuItem value="downlink">
+                                        {selectedTransmitter && selectedTransmitter !== "none" && rigData?.transmitters?.length > 0 ? (
+                                            (() => {
+                                                const transmitter = rigData.transmitters.find(t => t.id === selectedTransmitter);
+                                                return transmitter ? (
+                                                    <>Downlink: {preciseHumanizeFrequency(transmitter.downlink_observed_freq || 0)}</>
+                                                ) : "Downlink";
+                                            })()
+                                        ) : "Downlink"}
+                                    </MenuItem>
+                                </Select>
+                            </FormControl>
 
-                <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '185px', overflow: 'auto', pt: 1.5}}>
+                            {/* VFO 2 */}
+                            <FormControl disabled={rigData['tracking'] === true}
+                                         sx={{marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                         size="small">
+                                <InputLabel htmlFor="vfo2-select">VFO 2</InputLabel>
+                                <Select
+                                    id="vfo2-select"
+                                    value={selectedTransmitter === "none" ? "none" : (selectedVFO2 || "downlink")}
+                                    onChange={(event) => {
+                                        handleVFO2Change(event);
+                                    }}
+                                    variant={'filled'}>
+                                    <MenuItem value="none">[none]</MenuItem>
+                                    <MenuItem value="downlink">
+                                        {selectedTransmitter && selectedTransmitter !== "none" && rigData?.transmitters?.length > 0 ? (
+                                            (() => {
+                                                const transmitter = rigData.transmitters.find(t => t.id === selectedTransmitter);
+                                                return transmitter ? (
+                                                    <>Downlink: {preciseHumanizeFrequency(transmitter.downlink_observed_freq || 0)}</>
+                                                ) : "Downlink";
+                                            })()
+                                        ) : "Downlink"}
+                                    </MenuItem>
+                                    <MenuItem value="uplink">
+                                        {selectedTransmitter && selectedTransmitter !== "none" && rigData?.transmitters?.length > 0 ? (
+                                            (() => {
+                                                const transmitter = rigData.transmitters.find(t => t.id === selectedTransmitter);
+                                                return transmitter ? (
+                                                    <>Uplink: {preciseHumanizeFrequency(transmitter.uplink_observed_freq || 0)}</>
+                                                ) : "Uplink";
+                                            })()
+                                        ) : "Uplink"}
+                                    </MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Box>
+
+                        {/* Swap button - takes remaining space vertically */}
+                        <Box sx={{ display: 'flex', alignItems: 'stretch', flexShrink: 0 }}>
+                            <IconButton
+                                onClick={handleVFOSwap}
+                                disabled={rigData['tracking'] === true}
+                                sx={{
+                                    height: 'calc(100% - 5px)',
+                                    borderRadius: 1,
+                                    px: 1,
+                                    bgcolor: 'primary.main',
+                                    color: 'primary.contrastText',
+                                    '&:hover': {
+                                        bgcolor: 'primary.dark',
+                                    },
+                                    '&:disabled': {
+                                        bgcolor: 'action.disabledBackground',
+                                        color: 'action.disabled',
+                                    }
+                                }}
+                                title="Swap VFO 1 and VFO 2">
+                                <SwapVertIcon />
+                            </IconButton>
+                        </Box>
+                    </Box>
+                </Grid>
+
+
+                <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '135px', overflow: 'auto', pt: 1.5}}>
                     <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                         <Grid container direction="column" spacing={1}>
+                            {/* VFO 1 Frequency */}
                             <Grid>
-                                <Grid container direction="row" sx={{
-                                    alignItems: "center",
-                                    gap: 0
-                                }}>
+                                <Grid container direction="row" sx={{alignItems: "center", gap: 0}}>
                                     <Grid size="auto" style={{minWidth: '100px'}}>
                                         <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            {t('rig_control.on_rig')}
+                                            VFO 1
                                         </Typography>
                                     </Grid>
                                     <Grid size="grow" style={{textAlign: 'right'}}>
-                                        <Typography variant="h7"
-                                                    style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                            <LCDFrequencyDisplay frequency={rigData['frequency']} size="medium" />
+                                        <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                            <LCDFrequencyDisplay frequency={rigData?.vfo1?.frequency || 0} size="medium" />
                                         </Typography>
                                     </Grid>
                                 </Grid>
                             </Grid>
+
+                            {/* VFO 2 Frequency */}
                             <Grid>
-                                <Grid container direction="row" sx={{
-                                    alignItems: "center",
-                                    gap: 0
-                                }}>
+                                <Grid container direction="row" sx={{alignItems: "center", gap: 0}}>
+                                    <Grid size="auto" style={{minWidth: '100px'}}>
+                                        <Typography variant="body2" sx={{color: 'text.secondary'}}>
+                                            VFO 2
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size="grow" style={{textAlign: 'right'}}>
+                                        <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                            <LCDFrequencyDisplay frequency={rigData?.vfo2?.frequency || 0} size="medium" />
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+
+                            {/* Doppler Shift */}
+                            <Grid>
+                                <Grid container direction="row" sx={{alignItems: "center", gap: 0}}>
                                     <Grid size="auto" style={{minWidth: '100px'}}>
                                         <Typography variant="body2" sx={{color: 'text.secondary'}}>
                                             {t('rig_control.doppler_shift')}
                                         </Typography>
                                     </Grid>
                                     <Grid size="grow" style={{textAlign: 'right'}}>
-                                        <Typography variant="h7"
-                                                    style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                        <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
                                             <LCDFrequencyDisplay frequency={rigData['doppler_shift']} size="medium" frequencyIsOffset={true}/>
-                                        </Typography>
-                                    </Grid>
-                                </Grid>
-                            </Grid>
-                            <Grid>
-                                <Grid container direction="row" sx={{
-                                    alignItems: "center",
-                                    gap: 0
-                                }}>
-                                    <Grid size="auto" style={{minWidth: '100px'}}>
-                                        <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            {t('rig_control.transmitted')}
-                                        </Typography>
-                                    </Grid>
-                                    <Grid size="grow" style={{textAlign: 'right'}}>
-                                        <Typography variant="h7"
-                                                    style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                            <LCDFrequencyDisplay frequency={rigData['original_freq']} size="medium" />
-                                        </Typography>
-                                    </Grid>
-                                </Grid>
-                            </Grid>
-                            <Grid>
-                                <Grid container direction="row" sx={{
-                                    alignItems: "center",
-                                    gap: 0
-                                }}>
-                                    <Grid size="auto" style={{minWidth: '100px'}}>
-                                        <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            {t('rig_control.observed')}
-                                        </Typography>
-                                    </Grid>
-                                    <Grid size="grow" style={{textAlign: 'right'}}>
-                                        <Typography variant="h7"
-                                                    style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                            <LCDFrequencyDisplay frequency={rigData['observed_freq']} size="medium" />
                                         </Typography>
                                     </Grid>
                                 </Grid>

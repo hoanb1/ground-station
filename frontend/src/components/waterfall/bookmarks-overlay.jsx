@@ -139,10 +139,10 @@ const BookmarkCanvas = ({
         // 2. Create doppler-shifted bookmarks from rigData
         const transmittersWithDoppler = rigData['transmitters'] || [];
         const dopplerBookmarks = transmittersWithDoppler
-            .filter(transmitter => transmitter.observed_freq > 0)
+            .filter(transmitter => transmitter.downlink_observed_freq > 0)
             .map(transmitter => ({
-                frequency: transmitter.observed_freq,
-                label: `${satelliteData['details']['name']} - ${transmitter.description || 'Unknown'} - Corrected: ${humanizeFrequency(transmitter.observed_freq)}`,
+                frequency: transmitter.downlink_observed_freq,
+                label: `${satelliteData['details']['name']} - ${transmitter.description || 'Unknown'} - Corrected: ${humanizeFrequency(transmitter.downlink_observed_freq)}`,
                 color: theme.palette.warning.main,
                 metadata: {
                     type: 'doppler_shift',

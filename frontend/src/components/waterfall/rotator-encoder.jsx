@@ -36,7 +36,7 @@ const RotaryEncoder = ({
     const lockedTransmitter = isLocked
         ? transmitters.find(tx => tx.id === currentVFO.lockedTransmitterId)
         : null;
-    const correctedFrequency = lockedTransmitter?.observed_freq || 0;
+    const correctedFrequency = lockedTransmitter?.downlink_observed_freq || 0;
 
     // Format frequency for display
     const formatFrequency = (freq) => {

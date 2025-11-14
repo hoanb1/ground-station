@@ -50,9 +50,9 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                 const transmitters = state.targetSatTrack.rigData.transmitters || [];
                 const transmitter = transmitters.find(tx => tx.id === vfoState.lockedTransmitterId);
 
-                if (transmitter && transmitter.observed_freq) {
+                if (transmitter && transmitter.downlink_observed_freq) {
                     const newOffset = updates.frequencyOffset;
-                    const finalFrequency = transmitter.observed_freq + newOffset;
+                    const finalFrequency = transmitter.downlink_observed_freq + newOffset;
 
                     // Immediately dispatch frequency update to backend
                     store.dispatch(setVFOProperty({
@@ -252,10 +252,10 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                         return;  // Skip frequency update for this VFO
                     }
 
-                    if (transmitter.observed_freq) {
+                    if (transmitter.downlink_observed_freq) {
                         // Apply frequency offset (can be positive or negative)
                         const offset = vfo.frequencyOffset || 0;
-                        const finalFrequency = transmitter.observed_freq + offset;
+                        const finalFrequency = transmitter.downlink_observed_freq + offset;
 
                         // Check if frequency has changed (to avoid unnecessary updates)
                         if (vfo.frequency !== finalFrequency) {
@@ -298,14 +298,14 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                     store.dispatch(setVFOProperty({
                         vfoNumber: vfoNumber,
                         updates: {
-                            frequency: transmitter.observed_freq,
+                            frequency: transmitter.downlink_observed_freq,
                             mode: normalizedMode || 'FM',
                             frequencyOffset: 0  // Reset offset when locking
                         },
                         skipBackendSync: false  // Send to backend
                     }));
 
-                    console.log(`VFO ${vfoNumber} locked to transmitter "${transmitter.description}" at ${(transmitter.observed_freq / 1e6).toFixed(6)} MHz`);
+                    console.log(`VFO ${vfoNumber} locked to transmitter "${transmitter.description}" at ${(transmitter.downlink_observed_freq / 1e6).toFixed(6)} MHz`);
                 }
             } else {
                 // VFO was just unlocked (transmitterId is null)

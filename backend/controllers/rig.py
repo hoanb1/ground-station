@@ -620,6 +620,37 @@ class RigController:
             self.logger.error(f"Error setting split VFO: {e}")
             raise RuntimeError(f"Error setting split VFO: {e}")
 
+    async def get_vfo_frequency_and_mode(self, vfo: str) -> Tuple[float, str, int]:
+        """Get frequency and mode for a specific VFO.
+
+        Args:
+            vfo: VFO identifier ("1" for VFOA, "2" for VFOB)
+
+        Returns:
+            Tuple of (frequency, mode, bandwidth)
+        """
+        # Map VFO string to rigctld VFO name
+        vfo_map = {
+            "1": "VFOA",
+            "2": "VFOB",
+            "none": "VFOA",
+        }
+        rigctld_vfo = vfo_map.get(vfo, "VFOA")
+
+        try:
+            # Set the VFO
+            await self.set_vfo(rigctld_vfo)
+
+            # Get frequency and mode
+            frequency = await self.get_frequency()
+            mode, bandwidth = await self.get_mode()
+
+            return frequency, mode, bandwidth
+
+        except Exception as e:
+            self.logger.error(f"Error getting VFO {vfo} frequency and mode: {e}")
+            return 0.0, "UNKNOWN", 0
+
     async def get_info(self) -> str:
         """Get rig information."""
         try:

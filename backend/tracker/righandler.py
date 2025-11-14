@@ -20,6 +20,7 @@ Handles all rig-related operations including connection, frequency control, and 
 
 import logging
 import sys
+import time
 
 import crud
 
@@ -48,6 +49,7 @@ class RigHandler:
         :param tracker: Reference to the parent SatelliteTracker instance
         """
         self.tracker = tracker
+        self.last_vfo_update_time = 0.0  # Track when VFO frequencies were last updated
 
     async def connect_to_rig(self):
         """Connect to rig hardware (radio or SDR)."""
@@ -205,7 +207,7 @@ class RigHandler:
                 self.tracker.rig_controller = None
 
     async def handle_transmitter_tracking(self, satellite_tles, location):
-        """Handle transmitter selection and doppler calculation."""
+        """Handle transmitter selection and doppler calculation for both RX and TX."""
         if self.tracker.current_transmitter_id != "none":
             async with AsyncSessionLocal() as dbsession:
                 current_transmitter_reply = await crud.transmitters.fetch_transmitter(
@@ -214,27 +216,57 @@ class RigHandler:
                 current_transmitter = current_transmitter_reply.get("data", {})
 
             if current_transmitter:
-                self.tracker.rig_data["original_freq"] = current_transmitter.get("downlink_low", 0)
+                downlink_freq = current_transmitter.get("downlink_low", 0)
+                uplink_freq = current_transmitter.get("uplink_low", 0)
 
-                # Calculate doppler shift
-                self.tracker.rig_data["observed_freq"], self.tracker.rig_data["doppler_shift"] = (
-                    calculate_doppler_shift(
+                self.tracker.rig_data["original_freq"] = downlink_freq
+                self.tracker.rig_data["uplink_freq"] = uplink_freq
+
+                # Calculate RX (downlink) doppler shift
+                if downlink_freq and downlink_freq > 0:
+                    (
+                        self.tracker.rig_data["downlink_observed_freq"],
+                        self.tracker.rig_data["doppler_shift"],
+                    ) = calculate_doppler_shift(
                         satellite_tles[0],
                         satellite_tles[1],
                         location["lat"],
                         location["lon"],
                         0,
-                        current_transmitter.get("downlink_low", 0),
+                        downlink_freq,
                     )
-                )
+                else:
+                    self.tracker.rig_data["downlink_observed_freq"] = 0
+                    self.tracker.rig_data["doppler_shift"] = 0
+
+                # Calculate TX (uplink) doppler shift (inverted)
+                if uplink_freq and uplink_freq > 0:
+                    uplink_observed, uplink_doppler = calculate_doppler_shift(
+                        satellite_tles[0],
+                        satellite_tles[1],
+                        location["lat"],
+                        location["lon"],
+                        0,
+                        uplink_freq,
+                    )
+                    # For TX, apply opposite correction
+                    self.tracker.rig_data["uplink_observed_freq"] = (
+                        2 * uplink_freq - uplink_observed
+                    )
+                    self.tracker.rig_data["uplink_doppler_shift"] = -uplink_doppler
+                else:
+                    self.tracker.rig_data["uplink_observed_freq"] = 0
+                    self.tracker.rig_data["uplink_doppler_shift"] = 0
 
                 if self.tracker.current_rig_state == "tracking":
                     self.tracker.rig_data["tracking"] = True
                     self.tracker.rig_data["stopped"] = False
 
                 else:
-                    self.tracker.rig_data["observed_freq"] = 0
+                    self.tracker.rig_data["downlink_observed_freq"] = 0
                     self.tracker.rig_data["doppler_shift"] = 0
+                    self.tracker.rig_data["uplink_observed_freq"] = 0
+                    self.tracker.rig_data["uplink_doppler_shift"] = 0
                     self.tracker.rig_data["tracking"] = False
                     self.tracker.rig_data["stopped"] = True
 
@@ -243,13 +275,21 @@ class RigHandler:
         else:
             logger.debug("No satellite transmitter selected")
             self.tracker.rig_data["transmitter_id"] = self.tracker.current_transmitter_id
-            self.tracker.rig_data["observed_freq"] = 0
+            self.tracker.rig_data["downlink_observed_freq"] = 0
             self.tracker.rig_data["doppler_shift"] = 0
+            self.tracker.rig_data["uplink_observed_freq"] = 0
+            self.tracker.rig_data["uplink_doppler_shift"] = 0
+            self.tracker.rig_data["uplink_freq"] = 0
             self.tracker.rig_data["tracking"] = False
             self.tracker.rig_data["stopped"] = True
 
     async def calculate_all_transmitters_doppler(self, satellite_tles, location):
-        """Calculate doppler shift for all active transmitters of the current satellite."""
+        """Calculate doppler shift for all active transmitters of the current satellite.
+
+        For RX (downlink): Applies positive doppler shift when satellite approaches.
+        For TX (uplink): Applies negative doppler shift (opposite direction) so that
+        the satellite receives the correct frequency after doppler effect.
+        """
         if self.tracker.current_norad_id is None:
             self.tracker.rig_data["transmitters"] = []
             return
@@ -268,8 +308,22 @@ class RigHandler:
             transmitters_with_doppler = []
             for transmitter in active_transmitters:
                 downlink_freq = transmitter.get("downlink_low", 0)
+                uplink_freq = transmitter.get("uplink_low", 0)
+
+                transmitter_data = {
+                    "id": transmitter.get("id"),
+                    "description": transmitter.get("description"),
+                    "type": transmitter.get("type"),
+                    "mode": transmitter.get("mode"),
+                    "downlink_low": downlink_freq,
+                    "downlink_high": transmitter.get("downlink_high"),
+                    "uplink_low": uplink_freq,
+                    "uplink_high": transmitter.get("uplink_high"),
+                }
+
+                # Calculate RX (downlink) doppler shift
                 if downlink_freq and downlink_freq > 0:
-                    observed_freq, doppler_shift = calculate_doppler_shift(
+                    downlink_observed_freq, doppler_shift = calculate_doppler_shift(
                         satellite_tles[0],
                         satellite_tles[1],
                         location["lat"],
@@ -277,19 +331,35 @@ class RigHandler:
                         0,
                         downlink_freq,
                     )
+                    transmitter_data["downlink_observed_freq"] = downlink_observed_freq
+                    transmitter_data["doppler_shift"] = doppler_shift
+                else:
+                    transmitter_data["downlink_observed_freq"] = 0
+                    transmitter_data["doppler_shift"] = 0
 
-                    transmitters_with_doppler.append(
-                        {
-                            "id": transmitter.get("id"),
-                            "description": transmitter.get("description"),
-                            "type": transmitter.get("type"),
-                            "mode": transmitter.get("mode"),
-                            "downlink_low": downlink_freq,
-                            "downlink_high": transmitter.get("downlink_high"),
-                            "observed_freq": observed_freq,
-                            "doppler_shift": doppler_shift,
-                        }
+                # Calculate TX (uplink) doppler shift (inverted)
+                if uplink_freq and uplink_freq > 0:
+                    # Calculate the doppler shift for uplink
+                    uplink_observed, uplink_doppler = calculate_doppler_shift(
+                        satellite_tles[0],
+                        satellite_tles[1],
+                        location["lat"],
+                        location["lon"],
+                        0,
+                        uplink_freq,
                     )
+                    # For TX, we need to apply the opposite correction:
+                    # If satellite is approaching (positive doppler), we transmit lower
+                    # If satellite is receding (negative doppler), we transmit higher
+                    transmitter_data["uplink_observed_freq"] = 2 * uplink_freq - uplink_observed
+                    transmitter_data["uplink_doppler_shift"] = -uplink_doppler
+                else:
+                    transmitter_data["uplink_observed_freq"] = 0
+                    transmitter_data["uplink_doppler_shift"] = 0
+
+                # Only include transmitters that have at least downlink or uplink
+                if downlink_freq > 0 or uplink_freq > 0:
+                    transmitters_with_doppler.append(transmitter_data)
 
             self.tracker.rig_data["transmitters"] = transmitters_with_doppler
             logger.debug(
@@ -303,35 +373,115 @@ class RigHandler:
             self.tracker.rig_data["transmitters"] = []
 
     async def control_rig_frequency(self):
-        """Control rig frequency based on doppler calculations."""
+        """Control rig frequency based on doppler calculations for both VFOs."""
         if self.tracker.rig_controller and self.tracker.current_rig_state == "tracking":
             # Check if this is an SDR or hardware rig
             if isinstance(self.tracker.rig_controller, SDRController):
                 # SDR: Don't set center frequency - user controls that manually from UI
                 # VFO frequency updates are handled in vfos/updates.py:handle_vfo_updates_for_tracking()
                 logger.debug(
-                    f"SDR tracking - doppler freq: {self.tracker.rig_data['observed_freq']:.0f} Hz (VFO updates handled separately)"
+                    f"SDR tracking - doppler freq: {self.tracker.rig_data['downlink_observed_freq']:.0f} Hz (VFO updates handled separately)"
                 )
 
             else:
-                # Hardware rig: Use the global rig_vfo to tune specific VFO
-                frequency_gen = self.tracker.rig_controller.set_frequency(
-                    self.tracker.rig_data["observed_freq"], vfo=self.tracker.current_rig_vfo
-                )
+                # Hardware rig: Set both VFO 1 and VFO 2 frequencies
+                # Only update every 5 seconds to minimize VFO switching
+                current_time = time.time()
+                if current_time - self.last_vfo_update_time < 5.0:
+                    return
 
-                try:
-                    current_frequency, is_tuning = await anext(frequency_gen)
-                    self.tracker.rig_data["tuning"] = is_tuning
+                self.last_vfo_update_time = current_time
 
-                    logger.debug(
-                        f"Hardware rig VFO {self.tracker.current_rig_vfo} frequency: {current_frequency}, tuning={is_tuning}"
-                    )
-                except StopAsyncIteration:
-                    logger.info(
-                        f"Hardware rig tuning VFO {self.tracker.current_rig_vfo} to frequency {self.tracker.rig_data['observed_freq']} complete"
-                    )
+                # Find the selected transmitter to get frequencies
+                transmitter = None
+                if self.tracker.current_transmitter_id != "none":
+                    for t in self.tracker.rig_data.get("transmitters", []):
+                        if t["id"] == self.tracker.current_transmitter_id:
+                            transmitter = t
+                            break
+
+                if transmitter:
+                    # Determine frequencies for VFO 1 and VFO 2
+                    vfo1_freq = None
+                    vfo2_freq = None
+                    downlink_vfo = None  # Track which VFO has downlink
+
+                    if self.tracker.current_vfo1 == "uplink":
+                        vfo1_freq = transmitter.get("uplink_observed_freq", 0)
+                    elif self.tracker.current_vfo1 == "downlink":
+                        vfo1_freq = transmitter.get("downlink_observed_freq", 0)
+                        downlink_vfo = "1"
+
+                    if self.tracker.current_vfo2 == "uplink":
+                        vfo2_freq = transmitter.get("uplink_observed_freq", 0)
+                    elif self.tracker.current_vfo2 == "downlink":
+                        vfo2_freq = transmitter.get("downlink_observed_freq", 0)
+                        downlink_vfo = "2"
+
+                    # Set VFO 1 frequency if configured
+                    if vfo1_freq and vfo1_freq > 0:
+                        try:
+                            frequency_gen = self.tracker.rig_controller.set_frequency(
+                                vfo1_freq, vfo="1"
+                            )
+                            current_frequency, is_tuning = await anext(frequency_gen)
+
+                            # Update VFO 1 data with the frequency we're setting
+                            self.tracker.rig_data["vfo1"] = {
+                                "frequency": vfo1_freq,
+                                "mode": transmitter.get("mode", "UNKNOWN"),
+                                "bandwidth": 0,
+                            }
+
+                            logger.debug(
+                                f"Hardware rig VFO 1 ({self.tracker.current_vfo1}): {current_frequency} Hz, tuning={is_tuning}"
+                            )
+                        except StopAsyncIteration:
+                            logger.info(
+                                f"Hardware rig VFO 1 tuned to {vfo1_freq} Hz ({self.tracker.current_vfo1})"
+                            )
+                        except Exception as e:
+                            logger.error(f"Error setting VFO 1 frequency: {e}")
+
+                    # Set VFO 2 frequency if configured
+                    if vfo2_freq and vfo2_freq > 0:
+                        try:
+                            frequency_gen = self.tracker.rig_controller.set_frequency(
+                                vfo2_freq, vfo="2"
+                            )
+                            current_frequency, is_tuning = await anext(frequency_gen)
+
+                            # Update VFO 2 data with the frequency we're setting
+                            self.tracker.rig_data["vfo2"] = {
+                                "frequency": vfo2_freq,
+                                "mode": transmitter.get("mode", "UNKNOWN"),
+                                "bandwidth": 0,
+                            }
+
+                            logger.debug(
+                                f"Hardware rig VFO 2 ({self.tracker.current_vfo2}): {current_frequency} Hz, tuning={is_tuning}"
+                            )
+                        except StopAsyncIteration:
+                            logger.info(
+                                f"Hardware rig VFO 2 tuned to {vfo2_freq} Hz ({self.tracker.current_vfo2})"
+                            )
+                        except Exception as e:
+                            logger.error(f"Error setting VFO 2 frequency: {e}")
+
+                    # After setting both VFOs, select the downlink VFO to help the user with QSOs
+                    if downlink_vfo:
+                        try:
+                            vfo_name = "VFOA" if downlink_vfo == "1" else "VFOB"
+                            await self.tracker.rig_controller.set_vfo(vfo_name)
+                            logger.debug(f"Selected {vfo_name} (downlink) for user operation")
+                        except Exception as e:
+                            logger.error(f"Error selecting downlink VFO: {e}")
 
     async def update_hardware_frequency(self):
-        """Update current rig frequency."""
+        """Update current rig frequency (no VFO reading to avoid switching)."""
         if self.tracker.rig_controller:
+            # Get main frequency (current VFO)
             self.tracker.rig_data["frequency"] = await self.tracker.rig_controller.get_frequency()
+
+            # Don't read VFO data from rig to avoid VFO switching
+            # VFO data is populated by control_rig_frequency() when setting frequencies

@@ -107,7 +107,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
     async ({socket, data}, {getState, dispatch, rejectWithValue}) => {
         const state = getState();
-        const {norad_id, rotator_state, rig_state, group_id, rig_id, rotator_id, transmitter_id, rig_vfo} = data;
+        const {norad_id, rotator_state, rig_state, group_id, rig_id, rotator_id, transmitter_id, rig_vfo, vfo1, vfo2} = data;
         const trackState = {
             'name': 'satellite-tracking',
             'value': {
@@ -119,6 +119,8 @@ export const setTrackingStateInBackend = createAsyncThunk(
                 'rig_id': rig_id,
                 'transmitter_id': transmitter_id,
                 'rig_vfo': rig_vfo,
+                'vfo1': vfo1,
+                'vfo2': vfo2,
             }
         };
         return new Promise((resolve, reject) => {
@@ -289,6 +291,8 @@ const targetSatTrackSlice = createSlice({
         selectedRadioRig: "",
         selectedRotator: "",
         selectedRigVFO: "none",
+        selectedVFO1: "uplink",
+        selectedVFO2: "downlink",
         openMapSettingsDialog: false,
         nextPassesHours: 24.0,
         cachedPasses: {},
@@ -311,7 +315,7 @@ const targetSatTrackSlice = createSlice({
             'connected': false,
             'doppler_shift': 0,
             'frequency': 0,
-            'observed_freq': 0,
+            'downlink_observed_freq': 0,
             'tracking': false,
             'transmitters': [],
         },
@@ -507,6 +511,12 @@ const targetSatTrackSlice = createSlice({
         },
         setRigVFO(state, action) {
             state.selectedRigVFO = action.payload;
+        },
+        setVFO1(state, action) {
+            state.selectedVFO1 = action.payload;
+        },
+        setVFO2(state, action) {
+            state.selectedVFO2 = action.payload;
         },
         setOpenMapSettingsDialog(state, action) {
             state.openMapSettingsDialog = action.payload;
@@ -764,6 +774,8 @@ export const {
     setRadioRig,
     setRotator,
     setRigVFO,
+    setVFO1,
+    setVFO2,
     setOpenMapSettingsDialog,
     setNextPassesHours,
     setSelectedTransmitter,

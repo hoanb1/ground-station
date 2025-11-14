@@ -281,7 +281,7 @@ class SDRController:
         sio,
         session_id: str,
         vfo_id: str,
-        observed_freq: float,
+        downlink_observed_freq: float,
         doppler_shift: float,
         original_freq: float,
         bandwidth: Optional[int] = None,
@@ -293,7 +293,7 @@ class SDRController:
             sio: Socket.IO server instance for emitting updates
             session_id: Session ID to update
             vfo_id: VFO number ("1", "2", "3", or "4")
-            observed_freq: Doppler-corrected frequency
+            downlink_observed_freq: Doppler-corrected downlink frequency
             doppler_shift: Doppler shift value
             original_freq: Original transmitted frequency
             bandwidth: Optional bandwidth to set
@@ -311,7 +311,7 @@ class SDRController:
             self.vfo_manager.update_vfo_state(
                 session_id=session_id,
                 vfo_id=vfo_number,
-                center_freq=int(observed_freq),
+                center_freq=int(downlink_observed_freq),
                 bandwidth=bandwidth,
                 modulation=modulation,
                 active=True,
@@ -322,7 +322,7 @@ class SDRController:
 
             self.logger.debug(
                 f"Updated VFO {vfo_id} for session {session_id}: "
-                f"freq={observed_freq:.0f} Hz, doppler={doppler_shift:.0f} Hz"
+                f"freq={downlink_observed_freq:.0f} Hz, doppler={doppler_shift:.0f} Hz"
             )
 
         except Exception as e:

@@ -61,6 +61,8 @@ class SatelliteTracker:
         self.current_rig_id = "none"
         self.current_transmitter_id = "none"
         self.current_rig_vfo = "none"
+        self.current_vfo1 = "uplink"
+        self.current_vfo2 = "downlink"
         self.current_rotator_state = "disconnected"
         self.current_rig_state = "disconnected"
         self.current_norad_id = None
@@ -97,7 +99,7 @@ class SatelliteTracker:
             "stopped": False,
             "error": False,
             "frequency": 0,
-            "observed_freq": 0,
+            "downlink_observed_freq": 0,
             "doppler_shift": 0,
             "original_freq": 0,
             "transmitter_id": "none",
@@ -105,6 +107,16 @@ class SatelliteTracker:
             "device_type": "",
             "host": "",
             "port": 0,
+            "vfo1": {
+                "frequency": 0,
+                "mode": "UNKNOWN",
+                "bandwidth": 0,
+            },
+            "vfo2": {
+                "frequency": 0,
+                "mode": "UNKNOWN",
+                "bandwidth": 0,
+            },
         }
 
         # Operational state
@@ -224,6 +236,8 @@ class SatelliteTracker:
                 self.current_rig_id = tracker.get("rig_id", "none")
                 self.current_transmitter_id = tracker.get("transmitter_id", "none")
                 self.current_rig_vfo = tracker.get("rig_vfo", "none")
+                self.current_vfo1 = tracker.get("vfo1", "uplink")
+                self.current_vfo2 = tracker.get("vfo2", "downlink")
                 self.current_rotator_state = tracker.get("rotator_state", "disconnected")
                 self.current_rig_state = tracker.get("rig_state", "disconnected")
 
