@@ -19,7 +19,11 @@ const SatellitePassTimelineComponent = ({
   pastOffsetHours = 2, // Hours to offset into the past on initial render
   showSunShading = true,
   showSunMarkers = true,
-  satelliteName = null
+  satelliteName = null,
+  singlePassMode = false, // New prop: if true, show only the active pass
+  passId = null, // New prop: specific pass ID to show (optional, used with singlePassMode)
+  showTitleBar = true, // New prop: if false, hide the title bar
+  minLabelInterval = null, // New prop: minimum interval between labels in hours (null = auto-calculate)
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('target');
@@ -58,10 +62,40 @@ const SatellitePassTimelineComponent = ({
     return timezonePref ? timezonePref.value : 'UTC';
   }, (prev, next) => prev === next); // Use equality check
 
-  const { timelineData, timeLabels, startTime, endTime, sunData } = useMemo(() => {
+  const { timelineData, timeLabels, startTime, endTime, sunData, activePassObj } = useMemo(() => {
     const now = new Date();
-    const startTime = timeWindowStart ? new Date(timeWindowStart) : new Date(now);
-    const endTime = new Date(startTime.getTime() + timeWindowHours * 60 * 60 * 1000);
+
+    // In single-pass mode, determine the active pass and set time window accordingly
+    let activePassObj = null;
+    let startTime, endTime;
+
+    if (singlePassMode && satellitePasses && satellitePasses.length > 0) {
+      // Find the active pass (either specified by passId or determine current pass)
+      if (passId) {
+        activePassObj = satellitePasses.find(pass => pass.id === passId);
+      } else {
+        // Determine current active pass based on current time
+        activePassObj = satellitePasses.find(pass => {
+          const passStart = new Date(pass.event_start);
+          const passEnd = new Date(pass.event_end);
+          return now >= passStart && now <= passEnd;
+        });
+      }
+
+      // If we found an active pass, set time window to the pass duration
+      if (activePassObj) {
+        startTime = new Date(activePassObj.event_start);
+        endTime = new Date(activePassObj.event_end);
+      } else {
+        // No active pass found, fall back to normal mode
+        startTime = timeWindowStart ? new Date(timeWindowStart) : new Date(now);
+        endTime = new Date(startTime.getTime() + timeWindowHours * 60 * 60 * 1000);
+      }
+    } else {
+      // Normal mode: use time window configuration
+      startTime = timeWindowStart ? new Date(timeWindowStart) : new Date(now);
+      endTime = new Date(startTime.getTime() + timeWindowHours * 60 * 60 * 1000);
+    }
 
     // Calculate sun times for the timeline window
     let sunData = { nightPeriods: [], sunEvents: [] };
@@ -155,45 +189,100 @@ const SatellitePassTimelineComponent = ({
     }
 
     const totalDuration = endTime.getTime() - startTime.getTime();
+    const actualTimeWindowHours = totalDuration / (1000 * 60 * 60); // Convert ms to hours
 
     // Generate time labels with dynamic interval based on zoom level
-    let labelInterval;
-    if (timeWindowHours <= 0.5) {
-      labelInterval = 0.05; // 3 minutes
-    } else if (timeWindowHours <= 1) {
-      labelInterval = 0.1; // 6 minutes
-    } else if (timeWindowHours <= 2) {
-      labelInterval = 0.167; // 10 minutes
-    } else if (timeWindowHours <= 4) {
-      labelInterval = 0.25; // 15 minutes
-    } else if (timeWindowHours <= 8) {
-      labelInterval = 0.5; // 30 minutes
-    } else if (timeWindowHours <= 16) {
-      labelInterval = 1; // 1 hour
-    } else if (timeWindowHours <= 24) {
-      labelInterval = 2; // 2 hours
-    } else if (timeWindowHours <= 48) {
-      labelInterval = 4; // 4 hours
-    } else {
-      labelInterval = 6; // 6 hours
-    }
-
     const labels = [];
-    for (let i = 0; i <= timeWindowHours; i += labelInterval) {
-      const time = new Date(startTime.getTime() + i * 60 * 60 * 1000);
-      const position = (i / timeWindowHours) * 100; // Position as percentage
-      labels.push({
-        text: time.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: timezone
-        }),
-        position: position
-      });
+
+    if (singlePassMode) {
+      // In single-pass mode, calculate label count to prevent overlap
+      // Assume average label width is ~70px (for HH:MM format), plus ~30px spacing for safety
+      const estimatedLabelWidth = 100; // px - generous spacing to prevent any overlap
+      const chartWidthPixels = window.innerWidth * 0.35; // Estimate based on typical popover width (~35% of viewport)
+      const availableChartWidth = chartWidthPixels - Y_AXIS_WIDTH; // Subtract Y-axis width
+      const maxLabelsByWidth = Math.floor(availableChartWidth / estimatedLabelWidth);
+
+      // Also calculate based on time duration (prefer ~3-5 minute intervals for readability)
+      let targetIntervalMinutes;
+      if (actualTimeWindowHours <= 0.25) { // <= 15 minutes
+        targetIntervalMinutes = 3;
+      } else if (actualTimeWindowHours <= 0.5) { // <= 30 minutes
+        targetIntervalMinutes = 5;
+      } else { // > 30 minutes
+        targetIntervalMinutes = 10;
+      }
+      const targetIntervalHours = targetIntervalMinutes / 60;
+      const labelCountByTime = Math.max(3, Math.ceil(actualTimeWindowHours / targetIntervalHours) + 1);
+
+      // Use the minimum of the two calculations to prevent overlap
+      const labelCount = Math.max(3, Math.min(maxLabelsByWidth, labelCountByTime, 8)); // Min 3, max 8
+
+      for (let i = 0; i < labelCount; i++) {
+        const fraction = i / (labelCount - 1); // 0 to 1
+        const time = new Date(startTime.getTime() + fraction * totalDuration);
+        const position = fraction * 100;
+        labels.push({
+          text: time.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: timezone
+          }),
+          position: position
+        });
+      }
+    } else {
+      // Normal mode: use dynamic interval based on zoom level
+      let labelInterval;
+
+      // If minLabelInterval is specified, use it directly
+      if (minLabelInterval !== null) {
+        labelInterval = minLabelInterval;
+      } else {
+        // Auto-calculate based on time window
+        if (timeWindowHours <= 0.5) {
+          labelInterval = 0.05; // 3 minutes
+        } else if (timeWindowHours <= 1) {
+          labelInterval = 0.1; // 6 minutes
+        } else if (timeWindowHours <= 2) {
+          labelInterval = 0.167; // 10 minutes
+        } else if (timeWindowHours <= 4) {
+          labelInterval = 0.25; // 15 minutes
+        } else if (timeWindowHours <= 8) {
+          labelInterval = 0.5; // 30 minutes
+        } else if (timeWindowHours <= 16) {
+          labelInterval = 1; // 1 hour
+        } else if (timeWindowHours <= 24) {
+          labelInterval = 2; // 2 hours
+        } else if (timeWindowHours <= 48) {
+          labelInterval = 4; // 4 hours
+        } else {
+          labelInterval = 6; // 6 hours
+        }
+      }
+
+      for (let i = 0; i <= timeWindowHours; i += labelInterval) {
+        const time = new Date(startTime.getTime() + i * 60 * 60 * 1000);
+        const position = (i / timeWindowHours) * 100; // Position as percentage
+        labels.push({
+          text: time.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: timezone
+          }),
+          position: position
+        });
+      }
     }
 
     // Process passes
-    const passes = satellitePasses
+    let passesToProcess = satellitePasses;
+
+    // In single-pass mode, only show the active pass
+    if (singlePassMode && activePassObj) {
+      passesToProcess = [activePassObj];
+    }
+
+    const passes = passesToProcess
       .map((pass) => {
         const passStart = new Date(pass.event_start);
         const passEnd = new Date(pass.event_end);
@@ -228,8 +317,9 @@ const SatellitePassTimelineComponent = ({
       startTime,
       endTime,
       sunData,
+      activePassObj,
     };
-  }, [satellitePasses, activePass, timeWindowHours, timeWindowStart, timezone, groundStationLocation, showSunShading, showSunMarkers]);
+  }, [satellitePasses, activePass, timeWindowHours, timeWindowStart, timezone, groundStationLocation, showSunShading, showSunMarkers, singlePassMode, passId, minLabelInterval]);
 
   // Event handlers
   const {
@@ -266,61 +356,65 @@ const SatellitePassTimelineComponent = ({
 
   return (
     <TimelineContainer>
-      <TitleBar
-        className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
-        sx={{
-          bgcolor: 'background.default',
-          borderBottom: '1px solid',
-          borderColor: 'border.main',
-          backdropFilter: 'blur(10px)'
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
-          <Box sx={{display: 'flex', alignItems: 'center'}}>
-            <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-              {satelliteName && t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours.toFixed(1) })}
-            </Typography>
+      {showTitleBar && (
+        <TitleBar
+          className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
+          sx={{
+            bgcolor: 'background.default',
+            borderBottom: '1px solid',
+            borderColor: 'border.main',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
+            <Box sx={{display: 'flex', alignItems: 'center'}}>
+              <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+                {satelliteName && t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours.toFixed(1) })}
+              </Typography>
+            </Box>
+            {!singlePassMode && (
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                <Tooltip title={t('timeline.zoomIn')}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleZoomIn}
+                      disabled={timeWindowHours <= 0.5}
+                      sx={{ padding: '2px' }}
+                    >
+                      <ZoomInIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title={t('timeline.zoomOut')}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleZoomOut}
+                      disabled={timeWindowHours >= initialTimeWindowHours}
+                      sx={{ padding: '2px' }}
+                    >
+                      <ZoomOutIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title={t('timeline.resetZoom')}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleResetZoom}
+                      disabled={timeWindowHours === initialTimeWindowHours && timeWindowStart === null}
+                      sx={{ padding: '2px' }}
+                    >
+                      <RestartAltIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+            )}
           </Box>
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title={t('timeline.zoomIn')}>
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleZoomIn}
-                  disabled={timeWindowHours <= 0.5}
-                  sx={{ padding: '2px' }}
-                >
-                  <ZoomInIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title={t('timeline.zoomOut')}>
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleZoomOut}
-                  disabled={timeWindowHours >= initialTimeWindowHours}
-                  sx={{ padding: '2px' }}
-                >
-                  <ZoomOutIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title={t('timeline.resetZoom')}>
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleResetZoom}
-                  disabled={timeWindowHours === initialTimeWindowHours && timeWindowStart === null}
-                  sx={{ padding: '2px' }}
-                >
-                  <RestartAltIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Box>
-        </Box>
-      </TitleBar>
+        </TitleBar>
+      )}
       <TimelineContent>
         <TimelineCanvas
           onMouseMove={handleMouseMove}

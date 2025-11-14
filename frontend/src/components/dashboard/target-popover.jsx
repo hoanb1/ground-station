@@ -44,6 +44,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { humanizeFrequency, formatLegibleDateTime, betterStatusValue } from "../common/common.jsx";
 import SatSelectorIsland from "../target/satellite-selector.jsx";
+import { SatellitePassTimeline } from "../target/timeline-main.jsx";
 
 const SatelliteInfoPopover = () => {
     const theme = useTheme();
@@ -53,7 +54,7 @@ const SatelliteInfoPopover = () => {
     const { t } = useTranslation('dashboard');
 
     // Get satellite data from Redux store
-    const { satelliteData, trackingState, rotatorData } = useSelector(state => state.targetSatTrack);
+    const { satelliteData, trackingState, rotatorData, satellitePasses, activePass } = useSelector(state => state.targetSatTrack);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -192,6 +193,21 @@ const SatelliteInfoPopover = () => {
     );
 
     const statusInfo = getSatelliteStatus(theme);
+
+    // Determine the current active pass
+    const getCurrentActivePass = () => {
+        if (!satellitePasses || satellitePasses.length === 0) return null;
+
+        const now = new Date();
+        return satellitePasses.find(pass => {
+            const passStart = new Date(pass.event_start);
+            const passEnd = new Date(pass.event_end);
+            return now >= passStart && now <= passEnd;
+        });
+    };
+
+    const currentActivePass = getCurrentActivePass();
+    const showTimeline = satelliteData.details.norad_id && currentActivePass;
 
     return (
         <>
@@ -362,7 +378,7 @@ const SatelliteInfoPopover = () => {
                                     </Button>
                                 </Box>
                                 <Grid2 container spacing={1}>
-                                    <Grid2 size={6}>
+                                    <Grid2 size={4}>
                                         <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
                                             <strong>{t('target_popover.latitude')}</strong>
                                         </Typography>
@@ -371,7 +387,7 @@ const SatelliteInfoPopover = () => {
                                                 color="info.light">{satelliteData.position.lat?.toFixed(4)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
-                                    <Grid2 size={6}>
+                                    <Grid2 size={4}>
                                         <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
                                             <strong>{t('target_popover.longitude')}</strong>
                                         </Typography>
@@ -380,25 +396,7 @@ const SatelliteInfoPopover = () => {
                                                 color="info.light">{satelliteData.position.lon?.toFixed(4)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
-                                    <Grid2 size={6}>
-                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
-                                            <strong>{t('target_popover.altitude')}</strong>
-                                        </Typography>
-                                        <Typography variant="body2" component="div">
-                                            <NumericValue
-                                                color="success.light">{(satelliteData.position.alt / 1000)?.toFixed(2)} km</NumericValue>
-                                        </Typography>
-                                    </Grid2>
-                                    <Grid2 size={6}>
-                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
-                                            <strong>{t('target_popover.velocity')}</strong>
-                                        </Typography>
-                                        <Typography variant="body2" component="div">
-                                            <NumericValue
-                                                color="warning.light">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
-                                        </Typography>
-                                    </Grid2>
-                                    <Grid2 size={6}>
+                                    <Grid2 size={4}>
                                         <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
                                             <strong>{t('target_popover.azimuth')}</strong>
                                         </Typography>
@@ -407,12 +405,72 @@ const SatelliteInfoPopover = () => {
                                                 color="secondary.light">{satelliteData.position.az?.toFixed(2)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
+                                    <Grid2 size={4}>
+                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
+                                            <strong>{t('target_popover.altitude')}</strong>
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                            <NumericValue
+                                                color="success.light">{(satelliteData.position.alt / 1000)?.toFixed(2)} km</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 size={4}>
+                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
+                                            <strong>{t('target_popover.velocity')}</strong>
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                            <NumericValue
+                                                color="warning.light">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 size={4}>
+                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
+                                            <strong>{t('target_popover.elevation')}</strong>
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                            <NumericValue
+                                                color={getElevationColor(satelliteData.position.el)}>{satelliteData.position.el?.toFixed(2)}°</NumericValue>
+                                        </Typography>
+                                    </Grid2>
                                 </Grid2>
                             </Box>
 
                             <Divider sx={{ borderColor: 'border.main', mb: 2 }} />
                         </>
                     ) : null}
+
+                    {/* Active Pass Timeline - show when there's an active pass, otherwise show placeholder */}
+                    {satelliteData.details.norad_id && (
+                        <Box sx={{ mb: 2, height: '150px' }}>
+                            {showTimeline ? (
+                                <SatellitePassTimeline
+                                    singlePassMode={true}
+                                    passId={currentActivePass.id}
+                                    showSunShading={false}
+                                    showSunMarkers={false}
+                                    satelliteName={satelliteData.details.name}
+                                    showTitleBar={false}
+                                />
+                            ) : (
+                                <Box
+                                    sx={{
+                                        height: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backgroundColor: 'action.hover',
+                                        borderRadius: 1,
+                                        border: '1px dashed',
+                                        borderColor: 'divider',
+                                    }}
+                                >
+                                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                        No active pass at the moment
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
 
                     {/* Satellite Selector */}
                     <Box sx={{ mb: 0 }}>
