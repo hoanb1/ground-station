@@ -37,7 +37,7 @@ class ProcessManager:
     """
 
     def __init__(self, sio=None):
-        self.logger = logging.getLogger("sdr-manager")
+        self.logger = logging.getLogger("proc-manager")
         self.sio = sio
         self.processes: Dict[str, Dict[str, Any]] = {}  # Map of sdr_id to process information
 
