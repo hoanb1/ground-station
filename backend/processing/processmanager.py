@@ -19,13 +19,13 @@ import logging
 import signal
 from typing import Any, Dict
 
-from sdr.decodermanager import DecoderManager
-from sdr.demodulatormanager import DemodulatorManager
-from sdr.processlifecycle import ProcessLifecycleManager
-from sdr.recordermanager import RecorderManager
+from processing.decodermanager import DecoderManager
+from processing.demodulatormanager import DemodulatorManager
+from processing.processlifecycle import ProcessLifecycleManager
+from processing.recordermanager import RecorderManager
 
 
-class SDRProcessManager:
+class ProcessManager:
     """
     Manager for the SDR worker processes
 
@@ -290,5 +290,5 @@ class SDRProcessManager:
             asyncio.create_task(self.stop_sdr_process(sdr_id))
 
 
-# Set up the SDR process manager
-sdr_process_manager = SDRProcessManager()
+# Set up the process manager
+process_manager = ProcessManager()

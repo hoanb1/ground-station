@@ -31,7 +31,7 @@ class ConsumerManager:
         Initialize the consumer manager
 
         Args:
-            processes: Reference to the main processes dictionary from SDRProcessManager
+            processes: Reference to the main processes dictionary from ProcessManager
         """
         self.logger = logging.getLogger("consumer-manager")
         self.processes = processes

@@ -18,8 +18,8 @@ from common.arguments import arguments
 from common.logger import logger
 from db import *  # noqa: F401,F403
 from db import engine  # Explicit import for type checker
-from sdr.sdrprocessmanager import sdr_process_manager
-from sdr.soapysdrbrowser import discover_soapy_servers
+from hardware.soapysdrbrowser import discover_soapy_servers
+from processing.processmanager import process_manager
 from server import shutdown
 from server.firsttime import first_time_initialization, run_initial_sync
 from server.scheduler import start_scheduler, stop_scheduler
@@ -126,7 +126,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-sdr_process_manager.set_sio(sio)
+process_manager.set_sio(sio)
 
 # Mount static directories
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")

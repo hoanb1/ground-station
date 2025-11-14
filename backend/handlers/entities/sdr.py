@@ -18,8 +18,13 @@ from typing import Dict, Union
 import crud
 from db import AsyncSessionLocal
 from handlers.entities.filebrowser import emit_file_browser_state
-from sdr.sdrprocessmanager import sdr_process_manager
-from sdr.utils import active_sdr_clients, add_sdr_session, cleanup_sdr_session, get_sdr_session
+from processing.processmanager import process_manager
+from processing.utils import (
+    active_sdr_clients,
+    add_sdr_session,
+    cleanup_sdr_session,
+    get_sdr_session,
+)
 from server.startup import audio_queue
 from session.tracker import session_tracker
 
@@ -147,10 +152,10 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                 # Check if other clients are already connected in the same room (SDR),
                 # if so then send them an update
-                if sdr_process_manager.processes.get(sdr_id, None) is not None:
+                if process_manager.processes.get(sdr_id, None) is not None:
                     other_clients = [
                         client
-                        for client in sdr_process_manager.processes[sdr_id]["clients"]
+                        for client in process_manager.processes[sdr_id]["clients"]
                         if client != client_id
                     ]
 
@@ -158,12 +163,12 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     for other_client in other_clients:
                         await sio.emit("sdr-config", sdr_config, room=other_client)
 
-                is_running = sdr_process_manager.is_sdr_process_running(sdr_id)
+                is_running = process_manager.is_sdr_process_running(sdr_id)
                 if is_running:
                     logger.info(
                         f"Updating SDR configuration for client {client_id} with SDR id: {sdr_id}"
                     )
-                    await sdr_process_manager.update_configuration(sdr_id, sdr_config)
+                    await process_manager.update_configuration(sdr_id, sdr_config)
 
                 reply["success"] = True
 
@@ -209,7 +214,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 logger.info(f"Starting streaming SDR data for client {client_id}")
 
                 # Start or join the SDR process
-                process_sdr_id = await sdr_process_manager.start_sdr_process(
+                process_sdr_id = await process_manager.start_sdr_process(
                     sdr_device, sdr_config, client_id
                 )
                 logger.info(
@@ -251,7 +256,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                 if sdr_id:
                     # Stop or leave the SDR process
-                    await sdr_process_manager.stop_sdr_process(sdr_id, client_id)
+                    await process_manager.stop_sdr_process(sdr_id, client_id)
 
                 if client_id not in active_sdr_clients:
                     logger.error(f"Client {client_id} not registered while stopping SDR stream")
@@ -412,7 +417,7 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
     if mode == "fm":
         from demodulators.fmdemodulator import FMDemodulator
 
-        result = sdr_process_manager.start_demodulator(
+        result = process_manager.start_demodulator(
             sdr_id, session_id, FMDemodulator, audio_queue, vfo_number=vfo_number
         )
         if result:
@@ -424,7 +429,7 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
     elif mode == "fm_stereo":
         from demodulators.fmstereodemodulator import FMStereoDemodulator
 
-        result = sdr_process_manager.start_demodulator(
+        result = process_manager.start_demodulator(
             sdr_id, session_id, FMStereoDemodulator, audio_queue, vfo_number=vfo_number
         )
         if result:
@@ -436,7 +441,7 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
     elif mode in ["usb", "lsb", "cw"]:
         from demodulators.ssbdemodulator import SSBDemodulator
 
-        result = sdr_process_manager.start_demodulator(
+        result = process_manager.start_demodulator(
             sdr_id, session_id, SSBDemodulator, audio_queue, vfo_number=vfo_number, mode=mode
         )
         if result:
@@ -448,7 +453,7 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
     elif mode == "am":
         from demodulators.amdemodulator import AMDemodulator
 
-        result = sdr_process_manager.start_demodulator(
+        result = process_manager.start_demodulator(
             sdr_id, session_id, AMDemodulator, audio_queue, vfo_number=vfo_number
         )
         if result:
@@ -495,5 +500,5 @@ def handle_vfo_demodulator_state(vfo_state, session_id, logger):
         )
     else:
         # Stop demodulator for this specific VFO
-        sdr_process_manager.stop_demodulator(sdr_id, session_id, vfo_number)
+        process_manager.stop_demodulator(sdr_id, session_id, vfo_number)
         logger.info(f"Stopped demodulator for session {session_id} VFO {vfo_number}")

@@ -29,7 +29,7 @@ class DecoderManager:
         Initialize the decoder manager
 
         Args:
-            processes: Reference to the main processes dictionary from SDRProcessManager
+            processes: Reference to the main processes dictionary from ProcessManager
             demodulator_manager: Reference to DemodulatorManager for creating internal demodulators
         """
         self.logger = logging.getLogger("decoder-manager")

@@ -20,7 +20,7 @@ from handlers.entities import (
 from handlers.entities.filebrowser import filebrowser_request_routing
 from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry
-from sdr.utils import cleanup_sdr_session
+from processing.utils import cleanup_sdr_session
 from server.shutdown import cleanup_everything
 from session.tracker import session_tracker
 

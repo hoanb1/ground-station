@@ -23,7 +23,7 @@ from demodulators.loradecoder import LoRaDecoder
 from demodulators.morsedecoder import MorseDecoder
 from demodulators.sstvdecoder import SSTVDecoder
 from handlers.entities.sdr import handle_vfo_demodulator_state
-from sdr.sdrprocessmanager import sdr_process_manager
+from processing.processmanager import process_manager
 from session.tracker import session_tracker
 from vfos.state import VFOManager
 
@@ -190,11 +190,11 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
     }
 
     # Get current decoder state
-    current_decoder = sdr_process_manager.get_active_decoder(sdr_id, session_id)
+    current_decoder = process_manager.get_active_decoder(sdr_id, session_id)
     current_decoder_vfo = None
     if current_decoder:
         # Check which VFO owns the current decoder
-        process_info = sdr_process_manager.processes.get(sdr_id)
+        process_info = process_manager.processes.get(sdr_id)
         if process_info:
             decoder_entry = process_info.get("decoders", {}).get(session_id)
             if isinstance(decoder_entry, dict):
@@ -204,14 +204,14 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
     if not vfo_state.active:
         # VFO is not active - if this VFO owns the decoder, stop it
         if current_decoder and current_decoder_vfo == vfo_number:
-            sdr_process_manager.stop_decoder(sdr_id, session_id)
+            process_manager.stop_decoder(sdr_id, session_id)
             logger.info(f"Stopped decoder for session {session_id} VFO {vfo_number} (VFO inactive)")
         return
 
     # If decoder is "none" or not in map, stop decoder only if THIS VFO owns it
     if requested_decoder == "none" or requested_decoder not in decoder_map:
         if current_decoder and current_decoder_vfo == vfo_number:
-            sdr_process_manager.stop_decoder(sdr_id, session_id)
+            process_manager.stop_decoder(sdr_id, session_id)
             logger.info(f"Stopped decoder for session {session_id} VFO {vfo_number}")
         return
 
@@ -235,18 +235,18 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
         logger.info(
             f"Stopping decoder from VFO {current_decoder_vfo} to start decoder for VFO {vfo_number}"
         )
-        sdr_process_manager.stop_decoder(sdr_id, session_id)
+        process_manager.stop_decoder(sdr_id, session_id)
 
     # Start new decoder for this VFO
     try:
-        process_info = sdr_process_manager.processes.get(sdr_id)
+        process_info = process_manager.processes.get(sdr_id)
         if not process_info:
             logger.error(f"No SDR process found for {sdr_id}")
             return
 
         data_queue = process_info["data_queue"]
 
-        success = sdr_process_manager.start_decoder(
+        success = process_manager.start_decoder(
             sdr_id=sdr_id,
             session_id=session_id,
             decoder_class=decoder_class,

@@ -20,7 +20,7 @@ from datetime import datetime
 from typing import Optional
 
 from demodulators.iqrecorder import IQRecorder
-from sdr.sdrprocessmanager import sdr_process_manager
+from processing.processmanager import process_manager
 
 logger = logging.getLogger("recorder")
 
@@ -49,7 +49,7 @@ def start_recording(
         Exception: If SDR is not streaming or recording fails to start
     """
     # Validate SDR is streaming
-    if not sdr_process_manager.is_sdr_process_running(sdr_id):
+    if not process_manager.is_sdr_process_running(sdr_id):
         raise Exception(f"SDR {sdr_id} is not streaming. Start streaming before recording.")
 
     # Generate timestamp
@@ -74,7 +74,7 @@ def start_recording(
     recording_path = os.path.join(recordings_dir, recording_name_with_timestamp)
 
     # Start recorder
-    result = sdr_process_manager.start_recorder(
+    result = process_manager.start_recorder(
         sdr_id,
         client_id,
         IQRecorder,
@@ -106,7 +106,7 @@ def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] =
         Exception: If no active recording found or recorder type is invalid
     """
     # Get the active recorder (stored separately from demodulators)
-    recorder = sdr_process_manager.get_active_recorder(sdr_id, client_id)
+    recorder = process_manager.get_active_recorder(sdr_id, client_id)
 
     if not recorder:
         raise Exception("No active recording found")
@@ -118,7 +118,7 @@ def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] =
     recording_path = recorder.recording_path
 
     # Stop the recorder (this will finalize the SigMF metadata)
-    sdr_process_manager.stop_recorder(sdr_id, client_id)
+    process_manager.stop_recorder(sdr_id, client_id)
     logger.info(f"Stopped IQ recording for client {client_id}")
 
     # Save the waterfall image if provided

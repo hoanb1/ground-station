@@ -81,11 +81,11 @@ active_sdr_clients: Dict[str, Dict[str, Any]] = {}
 sdr_parameters_cache: Dict[str, Dict] = {}
 
 
-def get_sdr_process_manager():
+def get_process_manager():
     """Lazy import to avoid circular dependency"""
-    from sdr.sdrprocessmanager import sdr_process_manager
+    from processing.processmanager import process_manager
 
-    return sdr_process_manager
+    return process_manager
 
 
 def add_sdr_session(sid: str, sdr_config: Dict):
@@ -134,8 +134,8 @@ async def cleanup_sdr_session(sid):
 
         if sdr_id:
             # Stop or leave the SDR process
-            sdr_process_manager = get_sdr_process_manager()
-            await sdr_process_manager.stop_sdr_process(sdr_id, sid)
+            proc_manager = get_process_manager()
+            await proc_manager.stop_sdr_process(sdr_id, sid)
 
         # Clear all session data from SessionTracker
         session_tracker.clear_session(sid)
@@ -162,7 +162,7 @@ async def get_local_soapy_sdr_devices():
         probe_process = await asyncio.create_subprocess_exec(
             "python3",
             "-c",
-            "from sdr.soapyenum import probe_available_usb_sdrs; "
+            "from hardware.soapyenum import probe_available_usb_sdrs;"
             "import json; print(probe_available_usb_sdrs())",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -314,7 +314,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 probe_process = await asyncio.create_subprocess_exec(
                     "python3",
                     "-c",
-                    f"from sdr.soapysdrremoteprobe import probe_remote_soapy_sdr; "
+                    f"from hardware.soapysdrremoteprobe import probe_remote_soapy_sdr; "
                     f"print(probe_remote_soapy_sdr({sdr}))",
                     stdout=asyncio.subprocess.PIPE,
                 )
@@ -333,7 +333,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 probe_process = await asyncio.create_subprocess_exec(
                     "python3",
                     "-c",
-                    f"from sdr.soapysdrlocalprobe import probe_local_soapy_sdr; "
+                    f"from hardware.soapysdrlocalprobe import probe_local_soapy_sdr; "
                     f"print(probe_local_soapy_sdr({sdr}))",
                     stdout=asyncio.subprocess.PIPE,
                 )
@@ -387,7 +387,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             probe_process = await asyncio.create_subprocess_exec(
                 "python3",
                 "-c",
-                f"from sdr.uhdprobe import probe_uhd_usrp; print(probe_uhd_usrp({sdr}))",
+                f"from hardware.uhdprobe import probe_uhd_usrp; print(probe_uhd_usrp({sdr}))",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -481,7 +481,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             probe_process = await asyncio.create_subprocess_exec(
                 "python3",
                 "-c",
-                f"from sdr.sigmfprobe import probe_sigmf_recording; print(probe_sigmf_recording({sdr}))",
+                f"from hardware.sigmfprobe import probe_sigmf_recording; print(probe_sigmf_recording({sdr}))",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )

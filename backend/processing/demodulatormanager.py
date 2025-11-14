@@ -16,7 +16,7 @@
 
 import logging
 
-from sdr.consumerbase import ConsumerManager
+from processing.consumerbase import ConsumerManager
 
 
 class DemodulatorManager(ConsumerManager):

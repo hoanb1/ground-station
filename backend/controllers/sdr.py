@@ -45,14 +45,14 @@ class SDRController:
     - VFO manager integration (update_vfo_with_doppler method)
 
     If you want to add SDR control features:
-    - Gain control: Add methods to communicate with sdr_process_manager
-    - Sample rate changes: Use sdr_process_manager.update_configuration()
+    - Gain control: Add methods to communicate with process_manager
+    - Sample rate changes: Use process_manager.update_configuration()
     - Antenna switching: Add hamlib-style commands for SDRs that support it
     - Don't add center frequency updates during tracking (breaks multi-session tracking)
 
     Related files:
     - backend/vfos/updates.py:handle_vfo_updates_for_tracking() - Where VFO doppler updates happen
-    - backend/sdr/sdrprocessmanager.py - Manages SDR worker processes
+    - backend/sdr/processmanager.py - Manages SDR worker processes
     - backend/tracker/logic.py:_control_rig_frequency() - Distinguishes SDR vs hardware rig behavior
     - backend/session/tracker.py - Tracks which sessions are using which SDRs/VFOs
     """

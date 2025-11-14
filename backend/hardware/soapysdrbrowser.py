@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import socket
+from typing import Any, Dict, List, Union
 
 from zeroconf import ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
@@ -26,7 +27,7 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 logger = logging.getLogger("soapysdr-browser")
 
 # Store discovered servers here with a dictionary for each server containing all properties
-discovered_servers: dict[str, dict[str, str | list | int]] = {}
+discovered_servers: Dict[str, Dict[str, Union[str, List[Any], int, float]]] = {}
 
 
 # Custom JSON encoder to handle SoapySDR types
@@ -43,7 +44,7 @@ class SoapySDREncoder(json.JSONEncoder):
             if hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes, dict)):
                 return list(obj)
 
-        except Exception as e:
+        except Exception:
             pass
 
         # Let the base class handle everything else
@@ -73,8 +74,9 @@ async def query_sdrs_with_python_module(ip, port, timeout=5):
     try:
         # This needs to run in a thread pool to avoid blocking the event loop
         # Wrap with a timeout to prevent hanging on problematic servers
+        loop = asyncio.get_event_loop()
         raw_results = await asyncio.wait_for(
-            asyncio.to_thread(_query_with_soapysdr_module, ip, port), timeout=timeout
+            loop.run_in_executor(None, _query_with_soapysdr_module, ip, port), timeout=timeout
         )
 
         # Convert the results to serializable dictionaries
@@ -228,12 +230,14 @@ async def refresh_connected_sdrs():
         # Update server info
         server_info["sdrs"] = connected_sdrs
         server_info["status"] = status
-        server_info["last_updated"] = asyncio.get_event_loop().time()
+        server_info["last_updated"] = float(asyncio.get_event_loop().time())
 
         if status == "active":
             if prev_status != "active":
                 logger.info(f"Server {name} is now active (was {prev_status})")
-            logger.info(f"Refreshed SDRs for {name}: found {len(connected_sdrs)} devices")
+            sdrs = server_info.get("sdrs", [])
+            sdr_count = len(sdrs) if isinstance(sdrs, list) else 0
+            logger.info(f"Refreshed SDRs for {name}: found {sdr_count} devices")
         else:
             if prev_status == "active":
                 logger.warning(f"Server {name} changed status from active to {status}")
@@ -266,14 +270,16 @@ async def discover_soapy_servers():
         if discovered_servers:
             logger.debug("Found the following potential SoapyRemote servers:")
             for name, server_info in discovered_servers.items():
+                sdrs = server_info.get("sdrs", [])
+                sdr_count = len(sdrs) if isinstance(sdrs, list) else 0
                 logger.debug(
                     f"  Name: {name}, IP: {server_info['ip']}, Port: {server_info['port']}, "
-                    f"Status: {server_info['status']}, Connected SDRs: {len(server_info['sdrs'])}"
+                    f"Status: {server_info['status']}, Connected SDRs: {sdr_count}"
                 )
 
-                if server_info["status"] == "active" and server_info["sdrs"]:
+                if server_info["status"] == "active" and isinstance(sdrs, list) and sdrs:
                     # Format SDR information for nice display
-                    for i, sdr in enumerate(server_info["sdrs"]):
+                    for i, sdr in enumerate(sdrs):
                         try:
                             # Pretty format with indentation
                             sdr_info = json.dumps(sdr, cls=SoapySDREncoder, indent=2)
@@ -308,13 +314,15 @@ def get_server_summary():
         )
 
         if server_info["status"] == "active":
-            summary.append(f"    Connected SDRs: {len(server_info['sdrs'])}")
+            sdrs = server_info.get("sdrs", [])
+            if isinstance(sdrs, list):
+                summary.append(f"    Connected SDRs: {len(sdrs)}")
 
-            for i, sdr in enumerate(server_info["sdrs"]):
-                # Extract key info like driver, label if available
-                driver = sdr.get("driver", "Unknown")
-                label = sdr.get("label", sdr.get("device", f"SDR #{i+1}"))
-                summary.append(f"      SDR #{i+1}: {label} ({driver})")
+                for i, sdr in enumerate(sdrs):
+                    # Extract key info like driver, label if available
+                    driver = sdr.get("driver", "Unknown")
+                    label = sdr.get("label", sdr.get("device", f"SDR #{i+1}"))
+                    summary.append(f"      SDR #{i+1}: {label} ({driver})")
         else:
             summary.append(f"    No SDR information available: {server_info['status']}")
 

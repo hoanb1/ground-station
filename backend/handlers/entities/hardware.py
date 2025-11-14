@@ -19,9 +19,9 @@ from typing import Any, Dict, Optional, Union
 
 import crud
 from db import AsyncSessionLocal
-from sdr.soapysdrbrowser import discovered_servers
-from sdr.utils import get_local_soapy_sdr_devices
-from sdr.utils import get_sdr_parameters as fetch_sdr_parameters_util
+from hardware.soapysdrbrowser import discovered_servers
+from processing.utils import get_local_soapy_sdr_devices
+from processing.utils import get_sdr_parameters as fetch_sdr_parameters_util
 from tracker.runner import queue_to_tracker
 
 # ============================================================================

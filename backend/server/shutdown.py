@@ -6,7 +6,7 @@ from audio.audiobroadcaster import AudioBroadcaster
 from audio.audioconsumer import WebAudioConsumer
 from audio.transcriptionconsumer import TranscriptionConsumer
 from common.logger import logger
-from sdr.utils import cleanup_sdr_session
+from processing.utils import cleanup_sdr_session
 
 # Globals used by audio threads
 audio_consumer: Optional[WebAudioConsumer] = None
@@ -31,7 +31,7 @@ def cleanup_everything():
 
     # Clean up all SDR sessions
     try:
-        from sdr.utils import active_sdr_clients
+        from processing.utils import active_sdr_clients
 
         if active_sdr_clients:
             logger.info(f"Cleaning up {len(active_sdr_clients)} SDR sessions...")

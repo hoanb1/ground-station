@@ -23,8 +23,8 @@ import numpy as np
 from common.constants import DictKeys, QueueMessageTypes, SocketEvents
 from fft.processor import fft_processor_process
 from handlers.entities.filebrowser import emit_file_browser_state
-from sdr.iqbroadcaster import IQBroadcaster
-from sdr.utils import create_named_worker_process
+from processing.iqbroadcaster import IQBroadcaster
+from processing.utils import create_named_worker_process
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.sigmfplaybackworker import sigmf_playback_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
