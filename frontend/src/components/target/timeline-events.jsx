@@ -1,6 +1,9 @@
 import { useCallback } from 'react';
 import { Y_AXIS_WIDTH, ZOOM_FACTOR } from './timeline-constants.jsx';
 
+// Internal constant for past offset (30 minutes)
+const PAST_OFFSET_HOURS = 0.5;
+
 /**
  * Custom hook that returns all event handlers for the timeline component
  */
@@ -21,6 +24,8 @@ export const useTimelineEvents = ({
   touchStartTimeRef,
   touchStartZoomLevelRef,
   timezone,
+  startTime,
+  endTime,
 }) => {
 
   const handleMouseMove = useCallback((e) => {
@@ -48,20 +53,24 @@ export const useTimelineEvents = ({
       // Don't return here, continue to update crosshair
     }
 
-    // Calculate time at this position
-    const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
-    const totalMs = timeWindowHours * 60 * 60 * 1000;
-    const timeAtPosition = new Date(currentStartTime.getTime() + (percentage / 100) * totalMs);
+    // Calculate time at this position using actual timeline window
+    const actualStartTime = startTime || (timeWindowStart ? new Date(timeWindowStart) : new Date());
+    const actualEndTime = endTime || new Date(actualStartTime.getTime() + timeWindowHours * 60 * 60 * 1000);
+    const totalMs = actualEndTime.getTime() - actualStartTime.getTime();
+    const timeAtPosition = new Date(actualStartTime.getTime() + (percentage / 100) * totalMs);
 
     // Find which pass (if any) we're hovering over and calculate actual elevation
     let actualElevation = null;
     for (const pass of timelineData) {
-      if (percentage >= pass.left && percentage <= (pass.left + pass.width)) {
-        // We're within this pass's time range
+      // If we have elevation_curve data, check against actual curve time range
+      if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+        const curveStartTime = new Date(pass.elevation_curve[0].time).getTime();
+        const curveEndTime = new Date(pass.elevation_curve[pass.elevation_curve.length - 1].time).getTime();
 
-        // If we have elevation_curve data, interpolate from actual data
-        if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+        // Check if hover time is within the elevation curve's time range
+        if (timeAtPosition.getTime() >= curveStartTime && timeAtPosition.getTime() <= curveEndTime) {
           // Find the two closest points in the elevation curve
+          let found = false;
           for (let i = 0; i < pass.elevation_curve.length - 1; i++) {
             const point1 = pass.elevation_curve[i];
             const point2 = pass.elevation_curve[i + 1];
@@ -72,16 +81,32 @@ export const useTimelineEvents = ({
               // Linear interpolation between the two points
               const t = (timeAtPosition.getTime() - time1) / (time2 - time1);
               actualElevation = point1.elevation + t * (point2.elevation - point1.elevation);
+              found = true;
               break;
             }
           }
-        } else {
+
+          // If not found in the middle, check if we're at the last point
+          if (!found && pass.elevation_curve.length > 0) {
+            const lastPoint = pass.elevation_curve[pass.elevation_curve.length - 1];
+            const lastTime = new Date(lastPoint.time).getTime();
+
+            // If hovering on or after the last point, use its elevation
+            if (timeAtPosition.getTime() >= lastTime) {
+              actualElevation = lastPoint.elevation;
+            }
+          }
+          break;
+        }
+      } else if (pass.left !== undefined && pass.width !== undefined) {
+        // Fallback to pass.left/width if elevation_curve not available
+        if (percentage >= pass.left && percentage <= (pass.left + pass.width)) {
           // Fallback to parabolic curve formula
           const positionInPass = (percentage - pass.left) / pass.width;
           const elevationRatio = 4 * positionInPass * (1 - positionInPass);
           actualElevation = pass.peak_altitude * elevationRatio;
+          break;
         }
-        break;
       }
     }
 
@@ -269,10 +294,9 @@ export const useTimelineEvents = ({
 
   const handleResetZoom = useCallback(() => {
     setTimeWindowHours(initialTimeWindowHours);
-    // Set start time to 2 hours in the past
+    // Set start time to 30 minutes in the past
     const now = new Date();
-    const pastOffsetHours = 2;
-    setTimeWindowStart(now.getTime() - (pastOffsetHours * 60 * 60 * 1000));
+    setTimeWindowStart(now.getTime() - (PAST_OFFSET_HOURS * 60 * 60 * 1000));
   }, [initialTimeWindowHours, setTimeWindowHours, setTimeWindowStart]);
 
   return {

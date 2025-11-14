@@ -16,7 +16,7 @@ import { useTimelineEvents } from './timeline-events.jsx';
 
 const SatellitePassTimelineComponent = ({
   timeWindowHours: initialTimeWindowHours = 8,
-  pastOffsetHours = 2, // Hours to offset into the past on initial render
+  pastOffsetHours = 0.5, // Hours to offset into the past on initial render (30 minutes)
   showSunShading = true,
   showSunMarkers = true,
   satelliteName = null,
@@ -82,10 +82,17 @@ const SatellitePassTimelineComponent = ({
         });
       }
 
-      // If we found an active pass, set time window to the pass duration
+      // If we found an active pass, set time window based on elevation curve time range
       if (activePassObj) {
-        startTime = new Date(activePassObj.event_start);
-        endTime = new Date(activePassObj.event_end);
+        // Use elevation curve times if available (includes the 30-minute extension for first pass)
+        if (activePassObj.elevation_curve && activePassObj.elevation_curve.length > 0) {
+          startTime = new Date(activePassObj.elevation_curve[0].time);
+          endTime = new Date(activePassObj.elevation_curve[activePassObj.elevation_curve.length - 1].time);
+        } else {
+          // Fallback to event times
+          startTime = new Date(activePassObj.event_start);
+          endTime = new Date(activePassObj.event_end);
+        }
       } else {
         // No active pass found, fall back to normal mode
         startTime = timeWindowStart ? new Date(timeWindowStart) : new Date(now);
@@ -352,6 +359,8 @@ const SatellitePassTimelineComponent = ({
     touchStartTimeRef,
     touchStartZoomLevelRef,
     timezone,
+    startTime,
+    endTime,
   });
 
   return (

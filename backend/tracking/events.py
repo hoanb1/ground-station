@@ -6,7 +6,7 @@ import multiprocessing
 import time
 from datetime import datetime
 from multiprocessing import Manager
-from typing import Dict, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 from skyfield.api import EarthSatellite, Loader, Topos
@@ -64,7 +64,9 @@ def _named_worker_init():
     multiprocessing.current_process().name = "Ground Station - SatellitePassWorker"
 
 
-def _calculate_elevation_curve(satellite_data, home_location, event_start, event_end):
+def _calculate_elevation_curve(
+    satellite_data, home_location, event_start, event_end, extend_start_minutes=0
+):
     """
     Calculate elevation curve for a single satellite pass with adaptive sampling.
 
@@ -72,6 +74,7 @@ def _calculate_elevation_curve(satellite_data, home_location, event_start, event
     :param home_location: Dictionary with 'lat' and 'lon' keys
     :param event_start: ISO format start time string
     :param event_end: ISO format end time string
+    :param extend_start_minutes: Minutes to extend before event_start (for first pass in timeline)
     :return: List of dictionaries with 'time' and 'elevation' keys
     """
     try:
@@ -90,46 +93,48 @@ def _calculate_elevation_curve(satellite_data, home_location, event_start, event
             longitude_degrees=float(home_location["lon"]),
         )
 
-        # Parse times and extend start time by 2 hours before
+        # Parse times for the actual pass
         start_dt = datetime.fromisoformat(event_start.replace("Z", "+00:00"))
         end_dt = datetime.fromisoformat(event_end.replace("Z", "+00:00"))
 
-        # Extend start time by 2 hours before the actual pass start
+        # Extend by requested minutes before (for first pass) and 2 minutes after to ensure curve touches horizon
         from datetime import timedelta
 
-        extended_start_dt = start_dt - timedelta(hours=2)
+        extended_start_dt = start_dt - timedelta(minutes=max(2, extend_start_minutes))
+        extended_end_dt = end_dt + timedelta(minutes=2)
 
-        # Calculate total duration including the 2 hours before
-        total_duration_seconds = (end_dt - extended_start_dt).total_seconds()
+        # Calculate duration including the buffer
+        total_duration_seconds = (extended_end_dt - extended_start_dt).total_seconds()
 
-        # Adaptive sampling: aim for ~120 points per pass, but adjust based on duration
-        # For short passes (< 30 min), sample every 30 seconds
-        # For long passes (> 2 hours), sample every 2 minutes to keep point count reasonable
-        if total_duration_seconds < 1800:  # Less than 30 minutes
+        # Adaptive sampling: aim for ~60-120 points per pass
+        # For short passes (< 10 min), sample every 10 seconds
+        # For medium passes (10-30 min), sample every 15 seconds
+        # For long passes (> 30 min), sample every 30 seconds
+        if total_duration_seconds < 600:  # Less than 10 minutes
+            sample_interval = 10  # 10 seconds
+        elif total_duration_seconds < 1800:  # Less than 30 minutes
+            sample_interval = 15  # 15 seconds
+        else:  # 30 minutes or more
             sample_interval = 30  # 30 seconds
-        elif total_duration_seconds < 7200:  # Less than 2 hours
-            sample_interval = 60  # 1 minute
-        else:  # 2 hours or more
-            sample_interval = 120  # 2 minutes
 
         # Calculate number of samples
         num_samples = max(int(total_duration_seconds / sample_interval), 2)
 
-        # Create time array starting from 2 hours before the pass
+        # Create time array including the buffer
         t_start = ts.from_datetime(extended_start_dt)
-        t_end = ts.from_datetime(end_dt)
+        t_end = ts.from_datetime(extended_end_dt)
         time_offsets = np.linspace(0, (t_end.tt - t_start.tt), num_samples)
         t_points = t_start + time_offsets
 
         # Calculate elevation at each time point
         difference = satellite - observer
-        elevation_curve = []
+        all_points = []
 
         for t in t_points:
             topocentric = difference.at(t)
             alt, az, distance = topocentric.altaz()
 
-            elevation_curve.append(
+            all_points.append(
                 {
                     "time": t.utc_iso(),
                     "elevation": round(float(alt.degrees), 2),
@@ -138,7 +143,78 @@ def _calculate_elevation_curve(satellite_data, home_location, event_start, event
                 }
             )
 
-        return elevation_curve
+        # Filter to only include points above horizon, plus interpolate 0° crossing points
+        filtered_points: List[Dict[str, Any]] = []
+
+        for i, point in enumerate(all_points):
+            if point["elevation"] >= 0:
+                # If this is the first positive point and there's a previous point
+                if len(filtered_points) == 0 and i > 0:
+                    prev_point = all_points[i - 1]
+                    if prev_point["elevation"] < 0:
+                        # Interpolate to find 0° crossing
+                        ratio = (0 - prev_point["elevation"]) / (
+                            point["elevation"] - prev_point["elevation"]
+                        )
+
+                        # Interpolate time
+                        time_diff_seconds = (t_points[i].tt - t_points[i - 1].tt) * 86400
+                        interpolated_time = t_points[i - 1].tt + (ratio * time_diff_seconds / 86400)
+                        interpolated_t = ts.tt_jd(interpolated_time)
+
+                        filtered_points.append(
+                            {
+                                "time": interpolated_t.utc_iso(),
+                                "elevation": 0.0,
+                                "azimuth": round(
+                                    prev_point["azimuth"]
+                                    + ratio * (point["azimuth"] - prev_point["azimuth"]),
+                                    2,
+                                ),
+                                "distance": round(
+                                    prev_point["distance"]
+                                    + ratio * (point["distance"] - prev_point["distance"]),
+                                    2,
+                                ),
+                            }
+                        )
+
+                # Add the positive elevation point
+                filtered_points.append(point)
+
+                # If next point is negative, interpolate the 0° crossing at the end
+                if i < len(all_points) - 1:
+                    next_point = all_points[i + 1]
+                    if next_point["elevation"] < 0:
+                        # Interpolate to find 0° crossing
+                        ratio = (0 - point["elevation"]) / (
+                            next_point["elevation"] - point["elevation"]
+                        )
+
+                        # Interpolate time
+                        time_diff_seconds = (t_points[i + 1].tt - t_points[i].tt) * 86400
+                        interpolated_time = t_points[i].tt + (ratio * time_diff_seconds / 86400)
+                        interpolated_t = ts.tt_jd(interpolated_time)
+
+                        filtered_points.append(
+                            {
+                                "time": interpolated_t.utc_iso(),
+                                "elevation": 0.0,
+                                "azimuth": round(
+                                    point["azimuth"]
+                                    + ratio * (next_point["azimuth"] - point["azimuth"]),
+                                    2,
+                                ),
+                                "distance": round(
+                                    point["distance"]
+                                    + ratio * (next_point["distance"] - point["distance"]),
+                                    2,
+                                ),
+                            }
+                        )
+                        break  # Stop after adding the last 0° point
+
+        return filtered_points
 
     except Exception as e:
         logger.error(f"Error calculating elevation curve: {e}")
@@ -415,13 +491,44 @@ async def fetch_next_events_for_satellite(
                 events_for_satellite = result.get("data", [])
                 home_location = {"lat": homelat, "lon": homelon}
 
-                for event in events_for_satellite:
+                # Get current time to determine which passes should be extended
+                from datetime import datetime
+                from datetime import timezone as dt_timezone
+
+                current_time = datetime.now(dt_timezone.utc)
+
+                for idx, event in enumerate(events_for_satellite):
                     event["name"] = satellite["name"]
                     event["id"] = f"{event['id']}_{satellite['norad_id']}_{event['event_start']}"
 
+                    # Extend passes that are happening now or will happen soon
+                    # Check if pass is active or upcoming within 2 hours
+                    event_start = datetime.fromisoformat(
+                        event["event_start"].replace("Z", "+00:00")
+                    )
+                    event_end = datetime.fromisoformat(event["event_end"].replace("Z", "+00:00"))
+
+                    # Calculate time until pass starts (negative if already started)
+                    time_until_start = (event_start - current_time).total_seconds() / 60  # minutes
+                    # Calculate time since pass ended (negative if not yet ended)
+                    time_since_end = (current_time - event_end).total_seconds() / 60  # minutes
+
+                    # Extend if: pass is active OR starts within next 2 hours OR ended less than 30 min ago
+                    should_extend = (time_until_start <= 120) and (time_since_end <= 30)
+                    extend_start_minutes = 30 if should_extend else 0
+
+                    if extend_start_minutes > 0:
+                        logger.info(
+                            f"Extending pass {event['id']} by {extend_start_minutes} minutes (starts_in: {time_until_start:.1f}min, ended_ago: {time_since_end:.1f}min)"
+                        )
+
                     # Calculate elevation curve for this pass
                     elevation_curve = _calculate_elevation_curve(
-                        satellite, home_location, event["event_start"], event["event_end"]
+                        satellite,
+                        home_location,
+                        event["event_start"],
+                        event["event_end"],
+                        extend_start_minutes=extend_start_minutes,
                     )
                     event["elevation_curve"] = elevation_curve
 

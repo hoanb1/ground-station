@@ -19,32 +19,92 @@ export const PassCurve = ({ pass, startTime, endTime }) => {
     return theme.palette.success.main; // Green for above 45°
   };
 
-  const pathData = [];
+  // Split elevation curve into segments whenever elevation goes below 0
+  const curveSegments = [];
+  const pathDataSegments = [];
 
   // Use actual elevation curve if available
   if (pass.elevation_curve && pass.elevation_curve.length > 0) {
     const totalDuration = endTime.getTime() - startTime.getTime();
 
+    // First, filter points to only those within the time window
+    let pointsInWindow = [];
+    let beforePoint = null;
+    let afterPoint = null;
+
     pass.elevation_curve.forEach((point) => {
       const pointTime = new Date(point.time).getTime();
 
-      // Skip points that are outside the time window
-      // This prevents lines from being drawn at x=0 for points before the window
-      if (pointTime < startTime.getTime() || pointTime > endTime.getTime()) {
-        return;
+      if (pointTime < startTime.getTime()) {
+        // Keep updating beforePoint - we want the closest one to window start
+        beforePoint = point;
+      } else if (pointTime > endTime.getTime()) {
+        // Keep only the first point after window end
+        if (!afterPoint) {
+          afterPoint = point;
+        }
+      } else {
+        // Point is inside the window
+        pointsInWindow.push(point);
       }
+    });
 
-      // Use UNIFIED COORDINATE SYSTEM
-      // X: Time to percentage (0% = start, 100% = end)
-      const x = ((pointTime - startTime.getTime()) / totalDuration) * 100;
+    // Build the full points list
+    let allPoints = [];
+    if (beforePoint) allPoints.push(beforePoint);
+    allPoints = allPoints.concat(pointsInWindow);
+    if (afterPoint) allPoints.push(afterPoint);
 
-      // Y: Elevation to percentage (0% = 90° top, 100% = 0° bottom)
-      const y = elevationToYPercent(point.elevation);
+    // Now split into segments whenever elevation < 0
+    let currentSegment = [];
 
-      pathData.push(`${x},${y}`);
+    allPoints.forEach((point, i) => {
+      if (point.elevation >= 0) {
+        // Add point to current segment
+        currentSegment.push(point);
+      } else {
+        // Elevation is negative - end current segment if it has points
+        if (currentSegment.length > 0) {
+          curveSegments.push(currentSegment);
+          currentSegment = [];
+        }
+      }
+    });
+
+    // Add final segment if it has points
+    if (currentSegment.length > 0) {
+      curveSegments.push(currentSegment);
+    }
+
+    // Convert each segment's points to path data strings
+    curveSegments.forEach((segment, idx) => {
+      const segmentPath = [];
+      const elevations = segment.map(p => p.elevation);
+
+      segment.forEach((point) => {
+        const pointTime = new Date(point.time).getTime();
+
+        // Clamp to window bounds
+        const clampedPointTime = Math.max(startTime.getTime(), Math.min(pointTime, endTime.getTime()));
+
+        // Use UNIFIED COORDINATE SYSTEM
+        // X: Time to percentage (0% = start, 100% = end)
+        const x = ((clampedPointTime - startTime.getTime()) / totalDuration) * 100;
+
+        // Y: Elevation to percentage (0% = 90° top, 100% = 0° bottom)
+        const y = elevationToYPercent(point.elevation);
+
+        segmentPath.push(`${x},${y}`);
+      });
+
+      // Only add segments with at least 2 points
+      if (segmentPath.length >= 2) {
+        pathDataSegments.push(segmentPath);
+      }
     });
   } else {
     // Fallback to parabolic curve if no elevation_curve data
+    const segmentPath = [];
     const points = 100;
     for (let i = 0; i <= points; i++) {
       const t = i / points;
@@ -53,58 +113,66 @@ export const PassCurve = ({ pass, startTime, endTime }) => {
       const elevationAtPoint = pass.peak_altitude * elevationRatio;
       // Use UNIFIED COORDINATE SYSTEM
       const y = elevationToYPercent(elevationAtPoint);
-      pathData.push(`${x},${y}`);
+      segmentPath.push(`${x},${y}`);
     }
+    pathDataSegments.push(segmentPath);
   }
 
-  if (pathData.length === 0) {
+  if (pathDataSegments.length === 0) {
     return null;
   }
-
-  // Create SVG path from points
-  const pathString = pathData.map((point, i) => {
-    const [x, y] = point.split(',');
-    return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-  }).join(' ');
-
-  // Get first and last X coordinates for closing the path
-  const firstX = pathData[0].split(',')[0];
-  const lastX = pathData[pathData.length - 1].split(',')[0];
-
-  // Close the path to baseline (bottom at Y=100 using UNIFIED COORDINATE SYSTEM)
-  const bottomY = 100; // 0° elevation = 100% from top
-  const fillPath = `${pathString} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
 
   return (
     <svg
       style={{
         position: 'absolute',
-            top: `${Y_AXIS_TOP_MARGIN}px`,
+        top: `${Y_AXIS_TOP_MARGIN}px`,
         left: `${Y_AXIS_WIDTH}px`,
         width: `calc(100% - ${Y_AXIS_WIDTH}px)`,
-        height: `calc(100% - ${X_AXIS_HEIGHT + Y_AXIS_TOP_MARGIN}px)`, // Account for top margin and time axis
+        height: `calc(100% - ${X_AXIS_HEIGHT + Y_AXIS_TOP_MARGIN}px)`,
         pointerEvents: 'none',
       }}
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
     >
-      {/* Fill under curve */}
-      <path
-        d={fillPath}
-        fill={getColor()}
-        opacity={pass.isCurrent ? 0.3 : 0.2}
-        style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-      />
-      {/* Curve line */}
-      <path
-        d={pathString}
-        stroke={getColor()}
-        strokeWidth="0.5"
-        fill="none"
-        opacity={pass.isCurrent ? 1 : 0.8}
-        vectorEffect="non-scaling-stroke"
-        style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-      />
+      {pathDataSegments.map((pathData, segmentIndex) => {
+        // Create SVG path from points
+        const pathString = pathData.map((point, i) => {
+          const [x, y] = point.split(',');
+          return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+        }).join(' ');
+
+        // Get first and last X coordinates for closing the fill path
+        const firstX = pathData[0].split(',')[0];
+        const lastX = pathData[pathData.length - 1].split(',')[0];
+        const bottomY = 100; // 0° elevation at bottom
+
+        // Create closed path for fill area
+        const fillPath = `${pathString} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
+
+        return (
+          <g key={segmentIndex}>
+            {/* Fill area */}
+            <path
+              d={fillPath}
+              fill={getColor()}
+              fillOpacity={0.15}
+              stroke="none"
+              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+            />
+            {/* Stroke line */}
+            <path
+              d={pathString}
+              stroke={getColor()}
+              strokeWidth="0.5"
+              fill="none"
+              opacity={pass.isCurrent ? 1 : 0.8}
+              vectorEffect="non-scaling-stroke"
+              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+            />
+          </g>
+        );
+      })}
     </svg>
   );
 };
