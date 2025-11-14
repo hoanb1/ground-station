@@ -201,13 +201,13 @@ RUN git clone https://github.com/myriadrf/LimeSuite.git && \
     sudo ldconfig
 
 # compile Hamlib
-WORKDIR /src
-RUN git clone https://github.com/Hamlib/Hamlib.git && \
-    cd Hamlib && \
-    ./bootstrap && \
-    ./configure --with-python-binding && \
-    make && \
-    sudo make install
+# WORKDIR /src
+# RUN git clone https://github.com/Hamlib/Hamlib.git && \
+#     cd Hamlib && \
+#     ./bootstrap && \
+#     ./configure --with-python-binding && \
+#     make && \
+#     sudo make install
 
 # compile csdr
 WORKDIR /src
@@ -302,9 +302,9 @@ RUN cp -r /usr/local/lib/python3/dist-packages/lora_sdr* /app/venv/lib/python3.1
 # Configure library paths and copy Python bindings
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
     ldconfig && \
-    mkdir -p "/app/venv/lib/python3.12/site-packages/Hamlib/" && \
-    cp /usr/local/lib/python3.12/site-packages/*Hamlib* /app/venv/lib/python3.12/site-packages/Hamlib && \
     cp /usr/local/lib/python3.12/site-packages/*SoapySDR* /app/venv/lib/python3.12/site-packages/
+    # mkdir -p "/app/venv/lib/python3.12/site-packages/Hamlib/" && \
+    # cp /usr/local/lib/python3.12/site-packages/*Hamlib* /app/venv/lib/python3.12/site-packages/Hamlib && \
 
 # Download and place the USRP B210 FPGA binary for LibreSDR device
 RUN mkdir -p /usr/local/share/uhd/images
