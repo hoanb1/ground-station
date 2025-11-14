@@ -282,12 +282,16 @@ export default function FileBrowser() {
                 ? formatDuration(item.metadata.start_time, item.metadata.finalized_time)
                 : null;
 
+            // Determine if decoded file is an image
+            const isImage = item.type === 'decoded' && item.file_type &&
+                ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(item.file_type.toLowerCase());
+
             return {
                 ...item,
                 displayName: item.name || item.filename,
                 image: item.type === 'recording'
                     ? (item.recording_in_progress ? null : item.snapshot?.url)
-                    : item.url,
+                    : (item.type === 'snapshot' || isImage ? item.url : null),
                 duration,
             };
         });
@@ -917,6 +921,14 @@ export default function FileBrowser() {
                                                                 mb: 1,
                                                             }}
                                                         />
+                                                    ) : item.type === 'decoded' ? (
+                                                        <DataObjectIcon
+                                                            sx={{
+                                                                fontSize: 80,
+                                                                color: 'success.main',
+                                                                mb: 1,
+                                                            }}
+                                                        />
                                                     ) : (
                                                         <CameraAltIcon
                                                             sx={{
@@ -927,7 +939,9 @@ export default function FileBrowser() {
                                                         />
                                                     )}
                                                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                                        No snapshot available
+                                                        {item.type === 'decoded'
+                                                            ? (item.decoder_type ? `${item.decoder_type} file` : 'Decoded file')
+                                                            : 'No snapshot available'}
                                                     </Typography>
                                                 </>
                                             )}

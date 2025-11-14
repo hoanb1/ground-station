@@ -161,6 +161,37 @@ export const DECODERS = {
         hasTextOutput: false,
         hasModeDisplay: false,
     },
+    lora: {
+        internalName: 'lora',
+        displayName: 'LoRa',
+        description: 'LoRa decoder (processes raw IQ, no demodulator)',
+        requiresDemodulator: null, // raw IQ decoder
+        overrideDemodulator: 'NONE', // disable audio demodulator
+        hasStatusDisplay: true,
+        hasProgressDisplay: false,
+        hasTextOutput: false,
+        hasModeDisplay: true, // shows LoRa parameters (SF, BW, CR)
+    },
+    gmsk: {
+        internalName: 'gmsk',
+        displayName: 'GMSK',
+        description: 'GMSK decoder with USP FEC (processes raw IQ, no demodulator)',
+        requiresDemodulator: null, // raw IQ decoder
+        overrideDemodulator: 'NONE', // disable audio demodulator
+        hasStatusDisplay: true,
+        hasProgressDisplay: false,
+        hasTextOutput: false,
+        hasModeDisplay: false,
+        defaultBandwidth: 30000, // 30 kHz default (suitable for ~9600-10000 baud + Doppler)
+        calculateBandwidth: (transmitter) => {
+            // Calculate optimal bandwidth based on transmitter baud rate
+            // Formula: 3x baud rate (for GMSK spectral width + Doppler margin)
+            if (transmitter && transmitter.baud) {
+                return transmitter.baud * 3;
+            }
+            return 30000; // fallback to default
+        },
+    },
 };
 
 /**

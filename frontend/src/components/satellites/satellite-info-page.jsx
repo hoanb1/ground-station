@@ -37,6 +37,7 @@ import SatelliteMapContainer from "./satellite-map.jsx";
 import SatelliteTransmittersTable from "./satellite-transmitters-table.jsx";
 import { useParams, useNavigate } from 'react-router';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CloseIcon from '@mui/icons-material/Close';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { useTranslation } from 'react-i18next';
 
@@ -50,25 +51,414 @@ L.Icon.Default.mergeOptions({
 });
 
 
-const SatelliteInfoPage = () => {
+// Core satellite info content component
+const SatelliteInfoContent = ({
+    satelliteData,
+    asDialog = false,
+    onClose = null,
+    showDeleteButton = true
+}) => {
     const { t } = useTranslation('satellites');
-    const { noradId } = useParams();
-    const navigate = useNavigate();
-    const [rows, setRows] = useState([]);
     const dispatch = useDispatch();
     const {socket} = useSocket();
+    const navigate = useNavigate();
+    const [rows, setRows] = useState([]);
     const [imageError, setImageError] = useState(false);
-    const [satellitePosition, setSatellitePosition] = useState([0, 0]); // Default position
+    const [satellitePosition, setSatellitePosition] = useState([0, 0]);
     const [deleteSatelliteConfirmOpen, setDeleteSatelliteConfirmOpen] = useState(false);
-
-    // Get satellite list, clickedSatellite and loading state from Redux store
-    const { satellites, clickedSatellite, loading, error } = useSelector(state => state.satellites);
 
     // Get timezone preference
     const timezone = useSelector((state) => {
         const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
         return tzPref?.value || 'UTC';
     });
+
+    useEffect(() => {
+        if (satelliteData && satelliteData.transmitters) {
+            const mappedRows = satelliteData.transmitters.map((transmitter, index) => ({
+                id: transmitter.id || `existing-${index}`,
+                description: transmitter.description || "-",
+                type: transmitter.type || "-",
+                status: transmitter.status || "-",
+                alive: transmitter.alive || "-",
+                uplinkLow: transmitter.uplink_low || "-",
+                uplinkHigh: transmitter.uplink_high || "-",
+                uplinkDrift: transmitter.uplink_drift || "-",
+                downlinkLow: transmitter.downlink_low || "-",
+                downlinkHigh: transmitter.downlink_high || "-",
+                downlinkDrift: transmitter.downlink_drift || "-",
+                mode: transmitter.mode || "-",
+                uplinkMode: transmitter.uplink_mode || "-",
+                invert: transmitter.invert || "-",
+                baud: transmitter.baud || "-",
+                _original: transmitter,
+            }));
+            setRows(mappedRows);
+
+            if (satelliteData.latitude && satelliteData.longitude) {
+                setSatellitePosition([satelliteData.latitude, satelliteData.longitude]);
+            } else {
+                setSatellitePosition([0, 0]);
+            }
+        } else {
+            setRows([]);
+        }
+    }, [satelliteData]);
+
+    const handleImageError = () => {
+        setImageError(true);
+    };
+
+    const renderTextWithClickableLinks = (text) => {
+        if (!text || text === '-') return '-';
+
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const parts = text.split(urlRegex);
+
+        return parts.map((part, index) => {
+            if (urlRegex.test(part)) {
+                return (
+                    <a
+                        key={index}
+                        href={part}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{textDecoration: 'underline'}}
+                    >
+                        {part}
+                    </a>
+                );
+            }
+            return part;
+        });
+    };
+
+    if (!satelliteData || satelliteData.id === null) {
+        return (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+                <Typography>{t('satellite_info.transmitters.no_data')}</Typography>
+            </Box>
+        );
+    }
+
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Header - only shown if showDeleteButton is true */}
+            {showDeleteButton && (
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => setDeleteSatelliteConfirmOpen(true)}
+                    >
+                        {t('satellite_info.delete_satellite')}
+                    </Button>
+                    <Dialog open={deleteSatelliteConfirmOpen} onClose={() => setDeleteSatelliteConfirmOpen(false)}>
+                        <DialogTitle>{t('satellite_info.delete_confirm_title')}</DialogTitle>
+                        <DialogContent>
+                            {t('satellite_info.delete_confirm_message')}
+                            {satelliteData.transmitters && satelliteData.transmitters.length > 0 && (
+                                <Typography sx={{ mt: 2, color: 'warning.main' }}>
+                                    {t('satellite_info.delete_confirm_transmitters', {
+                                        count: satelliteData.transmitters.length,
+                                        plural: satelliteData.transmitters.length !== 1 ? 'ες' : 'η'
+                                    })}
+                                </Typography>
+                            )}
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>
+                                {t('satellite_info.transmitters.cancel')}
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                onClick={async () => {
+                                    try {
+                                        await dispatch(deleteSatellite({
+                                            socket,
+                                            noradId: satelliteData.norad_id
+                                        })).unwrap();
+                                        if (!asDialog) {
+                                            navigate('/satellites/satellites');
+                                        } else if (onClose) {
+                                            onClose();
+                                        }
+                                        toast.success(t('satellite_info.delete_success'));
+                                    } catch (error) {
+                                        console.error('Failed to delete satellite:', error);
+                                        toast.error(t('satellite_info.delete_failed', { error }));
+                                    }
+                                    setDeleteSatelliteConfirmOpen(false);
+                                }}
+                            >
+                                {t('satellite_info.transmitters.delete')}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </Box>
+            )}
+
+            {/* Main Content */}
+            <Grid
+                container
+                spacing={3}
+                sx={{
+                    width: '100%',
+                    flexShrink: 0,
+                    mb: 2
+                }}
+            >
+                {/* Row 1: Satellite Info */}
+                <Grid
+                    size={{xs: 12, md: asDialog ? 6 : 12, lg: asDialog ? 6 : 4}}
+                    sx={{
+                        backgroundColor: 'background.paper',
+                        borderRadius: '8px',
+                        padding: 3,
+                        minHeight: '300px',
+                        color: 'text.primary',
+                        boxSizing: 'border-box'
+                    }}
+                >
+                    <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.name')}</strong> <span>{satelliteData['name']}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.norad_id')}</strong> <span>{satelliteData['norad_id']}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.status')}</strong>
+                            <span>{betterStatusValue(satelliteData['status'])}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.countries')}</strong>
+                            <span>{renderCountryFlagsCSV(satelliteData['countries'])}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.operator')}</strong> <span>{satelliteData['operator'] || '-'}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.launched')}</strong>
+                            <span>{betterDateTimes(satelliteData['launched'], timezone)}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.deployed')}</strong>
+                            <span>{betterDateTimes(satelliteData['deployed'], timezone)}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.decayed')}</strong>
+                            <span>{betterDateTimes(satelliteData['decayed'], timezone)}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.updated')}</strong>
+                            <span>{betterDateTimes(satelliteData['updated'], timezone)}</span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.website')}</strong>
+                            <span>
+                                {renderTextWithClickableLinks(satelliteData['website'])}
+                            </span>
+                        </Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                padding: '8px 0',
+                                borderBottom: '1px solid',
+                                borderColor: 'border.main',
+                            }}
+                        >
+                            <strong>{t('satellite_info.fields.citation')}</strong>
+                            <span>
+                                {renderTextWithClickableLinks(satelliteData['citation'])}
+                            </span>
+                        </Box>
+                    </Box>
+                </Grid>
+
+                {/* Row 1: Image */}
+                <Grid
+                    size={{ xs: 12, md: asDialog ? 6 : 12, lg: asDialog ? 6 : 4 }}
+                    sx={{
+                        textAlign: 'center',
+                        minHeight: '300px',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: 'background.paper',
+                        borderRadius: '8px',
+                        boxSizing: 'border-box'
+                    }}
+                >
+                    <Box sx={{textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1}}>
+                        {!imageError ? (
+                            <img
+                                src={`/satimages/${satelliteData['norad_id']}.png`}
+                                alt={`Satellite ${satelliteData['norad_id']}`}
+                                onError={handleImageError}
+                                style={{
+                                    maxWidth: '100%',
+                                    height: 'auto',
+                                    borderRadius: '4px',
+                                }}
+                            />
+                        ) : (
+                            <Box
+                                sx={{
+                                    width: '200px',
+                                    height: '150px',
+                                    border: '1px solid',
+                                    borderColor: 'border.main',
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    backgroundColor: 'background.elevated',
+                                    color: 'text.disabled',
+                                    gap: 1
+                                }}
+                            >
+                                <Typography variant="caption" sx={{ color: 'text.disabled', textAlign: 'center' }}>
+                                    {t('satellite_info.no_image')}
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                </Grid>
+
+                {/* Row 2: Map */}
+                <Grid
+                    size={{ xs: 12, lg: asDialog ? 12 : 4 }}
+                    sx={{
+                        backgroundColor: 'background.paper',
+                        borderRadius: '8px',
+                        minHeight: '300px',
+                        boxSizing: 'border-box',
+                        overflow: 'hidden'
+                    }}
+                >
+                    <Box sx={{ height: '100%', position: 'relative' }}>
+                        <Box sx={{ height: 'calc(100%)', minHeight: '240px' }}>
+                            <SatelliteMapContainer satelliteData={satelliteData}/>
+                        </Box>
+                    </Box>
+                </Grid>
+            </Grid>
+
+            {/* Transmitters section */}
+            <SatelliteTransmittersTable
+                rows={rows}
+                setRows={setRows}
+                clickedSatellite={satelliteData}
+            />
+        </Box>
+    );
+};
+
+// Page wrapper component
+const SatelliteInfoPage = () => {
+    const { t } = useTranslation('satellites');
+    const { noradId } = useParams();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const {socket} = useSocket();
+
+    // Get satellite list, clickedSatellite and loading state from Redux store
+    const { satellites, clickedSatellite, loading, error } = useSelector(state => state.satellites);
 
     useEffect(() => {
         const noradIdInt = parseInt(noradId);
@@ -92,58 +482,14 @@ const SatelliteInfoPage = () => {
                         toast.error(`Failed to load satellite data: ${error}`, {
                             autoClose: 5000,
                         });
-
-                        // Optionally redirect back to satellites list or show error page
-                        // navigate('/satellites/satellites');
                     });
             }
         }
-    }, [noradId, satellites, dispatch, socket, navigate]);
-
-    useEffect(() => {
-        if (clickedSatellite && clickedSatellite.transmitters) {
-            // Map the transmitters data to rows with unique IDs
-            const mappedRows = clickedSatellite.transmitters.map((transmitter, index) => ({
-                id: transmitter.id || `existing-${index}`,
-                description: transmitter.description || "-",
-                type: transmitter.type || "-",
-                status: transmitter.status || "-",
-                alive: transmitter.alive || "-",
-                uplinkLow: transmitter.uplink_low || "-",
-                uplinkHigh: transmitter.uplink_high || "-",
-                uplinkDrift: transmitter.uplink_drift || "-",
-                downlinkLow: transmitter.downlink_low || "-",
-                downlinkHigh: transmitter.downlink_high || "-",
-                downlinkDrift: transmitter.downlink_drift || "-",
-                mode: transmitter.mode || "-",
-                uplinkMode: transmitter.uplink_mode || "-",
-                invert: transmitter.invert || "-",
-                baud: transmitter.baud || "-",
-                // Keep the original data for reference
-                _original: transmitter,
-            }));
-            setRows(mappedRows);
-
-            // Set satellite position if available (you might need to get this from satellite tracking data)
-            // For now, using a default position - you can replace this with actual satellite coordinates
-            if (clickedSatellite.latitude && clickedSatellite.longitude) {
-                setSatellitePosition([clickedSatellite.latitude, clickedSatellite.longitude]);
-            } else {
-                // Default to showing a world view
-                setSatellitePosition([0, 0]);
-            }
-        } else {
-            setRows([]);
-        }
-    }, [clickedSatellite]);
+    }, [noradId, satellites, clickedSatellite, dispatch, socket]);
 
     const handleBackClick = () => {
-        navigate(-1); // Go back to previous page
+        navigate(-1);
     };
-
-    function handleImageError() {
-        setImageError(true);
-    }
 
     // Show loading state while fetching satellite data
     if (loading && clickedSatellite.id === null) {
@@ -203,31 +549,6 @@ const SatelliteInfoPage = () => {
         );
     }
 
-    const renderTextWithClickableLinks = (text) => {
-        if (!text || text === '-') return '-';
-
-        // Regular expression to match URLs
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        const parts = text.split(urlRegex);
-
-        return parts.map((part, index) => {
-            if (urlRegex.test(part)) {
-                return (
-                    <a
-                        key={index}
-                        href={part}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{textDecoration: 'underline'}}
-                    >
-                        {part}
-                    </a>
-                );
-            }
-            return part;
-        });
-    };
-
     return (
         <Box
             className={"top-level-box"}
@@ -250,302 +571,53 @@ const SatelliteInfoPage = () => {
                         </Typography>
                     </Box>
                 </Box>
-
-                <Box>
-                    <Button
-                        variant="contained"
-                        color="error"
-                        onClick={() => setDeleteSatelliteConfirmOpen(true)}
-                    >
-                        {t('satellite_info.delete_satellite')}
-                    </Button>
-                    <Dialog open={deleteSatelliteConfirmOpen} onClose={() => setDeleteSatelliteConfirmOpen(false)}>
-                        <DialogTitle>{t('satellite_info.delete_confirm_title')}</DialogTitle>
-                        <DialogContent>
-                            {t('satellite_info.delete_confirm_message')}
-                            {clickedSatellite.transmitters && clickedSatellite.transmitters.length > 0 && (
-                                <Typography sx={{ mt: 2, color: 'warning.main' }}>
-                                    {t('satellite_info.delete_confirm_transmitters', {
-                                        count: clickedSatellite.transmitters.length,
-                                        plural: clickedSatellite.transmitters.length !== 1 ? 'ες' : 'η'
-                                    })}
-                                </Typography>
-                            )}
-                        </DialogContent>
-                        <DialogActions>
-                            <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>{t('satellite_info.transmitters.cancel')}</Button>
-                            <Button
-                                variant="contained"
-                                color="error"
-                                onClick={async () => {
-                                    try {
-                                        await dispatch(deleteSatellite({
-                                            socket,
-                                            noradId: clickedSatellite.norad_id
-                                        })).unwrap();
-                                        navigate('/satellites/satellites');
-                                        toast.success(t('satellite_info.delete_success'));
-                                    } catch (error) {
-                                        console.error('Failed to delete satellite:', error);
-                                        toast.error(t('satellite_info.delete_failed', { error }));
-                                    }
-                                    setDeleteSatelliteConfirmOpen(false);
-                                }}
-                            >
-                                {t('satellite_info.transmitters.delete')}
-                            </Button>
-                        </DialogActions>
-                    </Dialog>
-                </Box>
             </Box>
 
-            {clickedSatellite.id !== null ? (
-                <Box sx={{}}>
-                    <Grid
-                        container
-                        spacing={3}
-                        sx={{
-                            width: '100%',
-                            flexShrink: 0,
-                            mb: 2
-                        }}
-                    >
-                        <Grid
-                            size={{xs: 12, lg: 4}}
-                            sx={{
-                                backgroundColor: 'background.paper',
-                                borderRadius: '8px',
-                                padding: 3,
-                                minHeight: '300px',
-                                color: 'text.primary',
-                                boxSizing: 'border-box'
-                            }}
-                        >
-                            <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.name')}</strong> <span>{clickedSatellite['name']}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.norad_id')}</strong> <span>{clickedSatellite['norad_id']}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.status')}</strong>
-                                    <span>{betterStatusValue(clickedSatellite['status'])}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.countries')}</strong>
-                                    <span>{renderCountryFlagsCSV(clickedSatellite['countries'])}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.operator')}</strong> <span>{clickedSatellite['operator'] || '-'}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.launched')}</strong>
-                                    <span>{betterDateTimes(clickedSatellite['launched'], timezone)}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.deployed')}</strong>
-                                    <span>{betterDateTimes(clickedSatellite['deployed'], timezone)}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.decayed')}</strong>
-                                    <span>{betterDateTimes(clickedSatellite['decayed'], timezone)}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.updated')}</strong>
-                                    <span>{betterDateTimes(clickedSatellite['updated'], timezone)}</span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.website')}</strong>
-                                    <span>
-                                        {renderTextWithClickableLinks(clickedSatellite['website'])}
-                                    </span>
-                                </Box>
-                                <Box
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        width: '100%',
-                                        padding: '8px 0',
-                                        borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                    }}
-                                >
-                                    <strong>{t('satellite_info.fields.citation')}</strong>
-                                    <span>
-                                        {renderTextWithClickableLinks(clickedSatellite['citation'])}
-                                    </span>
-                                </Box>
-                            </Box>
-                        </Grid>
-                        <Grid
-                            size={{ xs: 12, lg: 4 }}
-                            sx={{
-                                textAlign: 'center',
-                                minHeight: '300px',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                backgroundColor: 'background.paper',
-                                borderRadius: '8px',
-                                boxSizing: 'border-box'
-                            }}
-                        >
-                            <Box sx={{textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1}}>
-                                {!imageError ? (
-                                    <img
-                                        src={`/satimages/${clickedSatellite['norad_id']}.png`}
-                                        alt={`Satellite ${clickedSatellite['norad_id']}`}
-                                        onError={handleImageError}
-                                        style={{
-                                            maxWidth: '100%',
-                                            height: 'auto',
-                                            borderRadius: '4px',
-                                        }}
-                                    />
-                                ) : (
-                                    <Box
-                                        sx={{
-                                            width: '200px',
-                                            height: '150px',
-                                            border: '1px solid',
-                                            borderColor: 'border.main',
-                                            borderRadius: '4px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            backgroundColor: 'background.elevated',
-                                            color: 'text.disabled',
-                                            gap: 1
-                                        }}
-                                    >
-                                        <Typography variant="caption" sx={{ color: 'text.disabled', textAlign: 'center' }}>
-                                            {t('satellite_info.no_image')}
-                                        </Typography>
-                                    </Box>
-                                )}
-                            </Box>
-                        </Grid>
-                        <Grid
-                            size={{ xs: 12, lg: 4 }}
-                            sx={{
-                                backgroundColor: 'background.paper',
-                                borderRadius: '8px',
-                                minHeight: '300px',
-                                boxSizing: 'border-box',
-                                overflow: 'hidden'
-                            }}
-                        >
-                            <Box sx={{ height: '100%', position: 'relative' }}>
-                                <Box sx={{ height: 'calc(100%)', minHeight: '240px' }}>
-                                    <SatelliteMapContainer satelliteData={clickedSatellite}/>
-                                </Box>
-                            </Box>
-                        </Grid>
-                    </Grid>
-
-                    {/* Transmitters section */}
-                    <SatelliteTransmittersTable
-                        rows={rows}
-                        setRows={setRows}
-                        clickedSatellite={clickedSatellite}
-                    />
-                </Box>
-            ) : (
-                <span>{t('satellite_info.transmitters.no_data')}</span>
-            )}
+            <SatelliteInfoContent
+                satelliteData={clickedSatellite}
+                asDialog={false}
+                showDeleteButton={true}
+            />
         </Box>
+    );
+};
+
+// Dialog wrapper component for use in other parts of the app
+export const SatelliteInfoDialog = ({ open, onClose, satelliteData }) => {
+    const { t } = useTranslation('satellites');
+
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="lg"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    minHeight: '80vh',
+                    maxHeight: '90vh'
+                }
+            }}
+        >
+            <DialogTitle>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6">
+                        {satelliteData?.name} - {t('satellite_info.title')}
+                    </Typography>
+                    <IconButton onClick={onClose} size="small">
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
+            </DialogTitle>
+            <DialogContent dividers sx={{ p: 3 }}>
+                <SatelliteInfoContent
+                    satelliteData={satelliteData}
+                    asDialog={true}
+                    onClose={onClose}
+                    showDeleteButton={false}
+                />
+            </DialogContent>
+        </Dialog>
     );
 };
 

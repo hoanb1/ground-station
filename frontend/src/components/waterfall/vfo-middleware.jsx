@@ -12,7 +12,15 @@ export const setSocketForMiddleware = (socket) => {
 
 // Helper function to filter out UI-only fields before sending to backend
 const filterUIOnlyFields = (vfoState) => {
-    const { lockedTransmitterId, frequencyOffset, ...backendFields } = vfoState;
+    // frequencyOffset is UI-only (used for doppler offset calculations)
+    // lockedTransmitterId is now sent to backend as locked_transmitter_id
+    const { frequencyOffset, lockedTransmitterId, ...backendFields } = vfoState;
+
+    // Convert camelCase to snake_case for backend
+    if (lockedTransmitterId !== undefined) {
+        backendFields.locked_transmitter_id = lockedTransmitterId;
+    }
+
     return backendFields;
 };
 

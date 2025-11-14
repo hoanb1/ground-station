@@ -17,8 +17,12 @@
 
 from typing import Any, Dict, Optional, Union
 
+from sqlalchemy import select
+
 from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
+from db.models import Transmitters
+from demodulators.gmskdecoder import GMSKDecoder
 from demodulators.loradecoder import LoRaDecoder
 from demodulators.morsedecoder import MorseDecoder
 from demodulators.sstvdecoder import SSTVDecoder
@@ -63,18 +67,39 @@ async def update_vfo_parameters(
         transcription_model=data.get("transcriptionModel"),
         transcription_language=data.get("transcriptionLanguage"),
         decoder=data.get("decoder"),
+        locked_transmitter_id=data.get("locked_transmitter_id"),
     )
 
     # Start/stop demodulator based on VFO state (after update)
     vfo_id = data.get("vfoNumber", 0)
     if vfo_id > 0:  # Valid VFO (not deselect-all case)
         vfo_state = vfomanager.get_vfo_state(sid, vfo_id)
-        handle_vfo_demodulator_state(vfo_state, sid, logger)
+
+        # Handle demodulator state changes ONLY if active state or mode was changed in the update
+        # This prevents VFO updates (like selecting a different VFO) from starting/stopping demodulators
+        # However, skip demodulator management if the VFO is using a raw IQ decoder (GMSK, LoRa)
+        # as these decoders handle demodulation internally
+        if "active" in data or "mode" in data:
+            # Check if decoder needs raw IQ (GMSK, LoRa don't need audio demodulator)
+            raw_iq_decoders = {"gmsk", "lora"}
+            if vfo_state.decoder not in raw_iq_decoders:
+                handle_vfo_demodulator_state(vfo_state, sid, logger)
+            else:
+                logger.debug(
+                    f"Skipping demodulator for VFO {vfo_id} - decoder {vfo_state.decoder} works on raw IQ"
+                )
 
         # Handle decoder state changes ONLY if decoder field was provided in the update
         # This prevents VFO updates (like selecting a different VFO) from stopping decoders on other VFOs
         if "decoder" in data:
-            handle_vfo_decoder_state(vfo_state, sid, logger)
+            await handle_vfo_decoder_state(vfo_state, sid, logger)
+
+        # Handle locked_transmitter_id changes - restart decoder to pick up new transmitter settings
+        if "locked_transmitter_id" in data and vfo_state.decoder != "none":
+            logger.info(
+                f"Locked transmitter changed for VFO {vfo_id} with active decoder {vfo_state.decoder} - restarting decoder"
+            )
+            await handle_vfo_decoder_state(vfo_state, sid, logger)
 
     return {"success": True, "data": {}}
 
@@ -154,7 +179,7 @@ async def toggle_transcription(
     }
 
 
-def handle_vfo_decoder_state(vfo_state, session_id, logger):
+async def handle_vfo_decoder_state(vfo_state, session_id, logger):
     """
     Start or stop decoder for a specific VFO based on its decoder setting.
 
@@ -183,6 +208,7 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
         "sstv": SSTVDecoder,
         "lora": LoRaDecoder,
         "morse": MorseDecoder,  # Morse code decoder (uses internal SSB/CW demodulator)
+        "gmsk": GMSKDecoder,  # GMSK decoder with USP FEC
         # Add more decoders as they're implemented:
         # "afsk": AFSKDecoder,
         # "rtty": RTTYDecoder,
@@ -246,15 +272,68 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
 
         data_queue = process_info["data_queue"]
 
-        success = process_manager.start_decoder(
-            sdr_id=sdr_id,
-            session_id=session_id,
-            decoder_class=decoder_class,
-            data_queue=data_queue,
-            output_dir="data/decoded",
-            vfo_center_freq=vfo_state.center_freq,  # Pass VFO frequency for internal FM demod
-            vfo=vfo_state.vfo_number,  # Pass VFO number for status updates
-        )
+        # Prepare decoder kwargs
+        decoder_kwargs = {
+            "sdr_id": sdr_id,
+            "session_id": session_id,
+            "decoder_class": decoder_class,
+            "data_queue": data_queue,
+            "output_dir": "data/decoded",
+            "vfo_center_freq": vfo_state.center_freq,  # Pass VFO frequency for internal FM demod
+            "vfo": vfo_state.vfo_number,  # Pass VFO number for status updates
+        }
+
+        # For GMSK decoder, pass transmitter dict if available
+        if decoder_class == GMSKDecoder:
+            transmitter_info = None
+
+            # If VFO is locked to a transmitter, query it from the database
+            if vfo_state.locked_transmitter_id:
+                async with AsyncSessionLocal() as db_session:
+                    result = await db_session.execute(
+                        select(Transmitters).where(
+                            Transmitters.id == vfo_state.locked_transmitter_id
+                        )
+                    )
+                    transmitter_record = result.scalar_one_or_none()
+
+                    if transmitter_record:
+                        # Convert transmitter record to dict
+                        transmitter_info = {
+                            "id": transmitter_record.id,
+                            "description": transmitter_record.description,
+                            "mode": transmitter_record.mode,
+                            "baud": transmitter_record.baud,
+                            "downlink_low": transmitter_record.downlink_low,
+                            "downlink_high": transmitter_record.downlink_high,
+                            "center_frequency": vfo_state.center_freq,
+                            "bandwidth": vfo_state.bandwidth,
+                        }
+                        logger.info(
+                            f"GMSK decoder using locked transmitter: {transmitter_record.description} "
+                            f"(baud: {transmitter_record.baud})"
+                        )
+                    else:
+                        logger.warning(
+                            f"Locked transmitter ID {vfo_state.locked_transmitter_id} not found in database"
+                        )
+
+            # If no transmitter locked or not found, create a default placeholder
+            if not transmitter_info:
+                transmitter_info = {
+                    "description": f"VFO {vfo_number} Signal",
+                    "mode": "GMSK",
+                    "center_frequency": vfo_state.center_freq,
+                    "bandwidth": vfo_state.bandwidth,
+                }
+                logger.warning(
+                    f"No locked transmitter for GMSK decoder on VFO {vfo_number} - using default settings. "
+                    f"Lock a transmitter to use its baud rate."
+                )
+
+            decoder_kwargs["transmitter"] = transmitter_info
+
+        success = process_manager.start_decoder(**decoder_kwargs)
 
         if success:
             logger.info(

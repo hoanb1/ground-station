@@ -22,7 +22,10 @@ class VFOState:
     transcription_enabled: bool = False  # Enable/disable transcription for this VFO
     transcription_model: str = "small.en"  # Whisper model to use
     transcription_language: str = "en"  # Language code for transcription
-    decoder: str = "none"  # Decoder type: none, sstv, afsk, rtty, psk31
+    decoder: str = "none"  # Decoder type: none, sstv, afsk, rtty, psk31, gmsk, lora
+    locked_transmitter_id: Optional[str] = (
+        None  # Transmitter ID locked to this VFO (source of truth for baud, freq, etc.)
+    )
 
 
 class VFOManager:
@@ -66,6 +69,7 @@ class VFOManager:
         transcription_model: Optional[str] = None,
         transcription_language: Optional[str] = None,
         decoder: Optional[str] = None,
+        locked_transmitter_id: Optional[str] = None,
     ) -> None:
 
         assert session_id is not None, "session_id is required"
@@ -132,6 +136,10 @@ class VFOManager:
         # check decoder setting
         if decoder is not None:
             vfo_state.decoder = decoder
+
+        # check locked transmitter ID
+        if locked_transmitter_id is not None:
+            vfo_state.locked_transmitter_id = locked_transmitter_id
 
         # logger.info(f"vfo states for session {session_id}: {session_vfos}")
 

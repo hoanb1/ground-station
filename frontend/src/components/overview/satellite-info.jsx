@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {useNavigate} from 'react-router';
 import {
@@ -42,11 +42,13 @@ import { toast } from '../../utils/toast-with-timestamp.jsx';
 import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 import { useTranslation } from 'react-i18next';
+import { SatelliteInfoDialog } from '../satellites/satellite-info-page.jsx';
 
 const OverviewSatelliteInfoCard = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const {socket} = useSocket();
+    const [dialogOpen, setDialogOpen] = useState(false);
     const { t } = useTranslation('overview');
     const {
         satelliteData,
@@ -398,7 +400,7 @@ const OverviewSatelliteInfoCard = () => {
                             </Button>
                             <IconButton
                                 disabled={!selectedSatelliteId}
-                                onClick={() => navigate(`/satellite/${selectedSatelliteId}`)}
+                                onClick={() => setDialogOpen(true)}
                                 sx={{
                                     borderRadius: 2,
                                     bgcolor: 'action.hover',
@@ -417,6 +419,18 @@ const OverviewSatelliteInfoCard = () => {
                         </Box>
                     </Box>
                 </>
+            )}
+
+            {/* Satellite Info Dialog */}
+            {satelliteData && satelliteData['details'] && (
+                <SatelliteInfoDialog
+                    open={dialogOpen}
+                    onClose={() => setDialogOpen(false)}
+                    satelliteData={{
+                        ...satelliteData['details'],
+                        transmitters: satelliteData['transmitters'] || []
+                    }}
+                />
             )}
         </Box>
     );
