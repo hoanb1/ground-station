@@ -495,15 +495,11 @@ const SatellitePassTimelineComponent = ({
           {/* Hover indicator */}
           {hoverPosition !== null && (() => {
             const hoverLeft = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${hoverPosition.x / 100})`;
-            // Adjust label position to prevent overflow at edges
-            const isNearRightEdge = hoverPosition.x > 85;
-            const isNearLeftEdge = hoverPosition.x < 15;
-            let labelTransform = 'translateX(-50%)';
-            if (isNearRightEdge) {
-              labelTransform = 'translateX(calc(-100% + 1px))'; // Touch left side of line
-            } else if (isNearLeftEdge) {
-              labelTransform = 'translateX(-1px)'; // Touch right side of line
-            }
+
+            // Calculate Y position for elevation marker on curve
+            const elevationYPercent = hoverPosition.elevation !== null
+              ? elevationToYPercent(hoverPosition.elevation)
+              : null;
 
             return (
               <>
@@ -515,21 +511,7 @@ const SatellitePassTimelineComponent = ({
                     top: `${Y_AXIS_TOP_MARGIN}px`,
                     bottom: `${X_AXIS_HEIGHT}px`,
                     width: '1px',
-                    borderLeft: `1px dashed ${theme.palette.text.secondary}`,
-                    opacity: 0.7,
-                    pointerEvents: 'none',
-                    zIndex: 15,
-                  }}
-                />
-                {/* Horizontal line */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: `${hoverPosition.y}%`,
-                    left: `${Y_AXIS_WIDTH}px`,
-                    right: 0,
-                    height: '1px',
-                    borderTop: `1px dashed ${theme.palette.text.secondary}`,
+                    borderLeft: `1px solid ${theme.palette.text.secondary}`,
                     opacity: 0.7,
                     pointerEvents: 'none',
                     zIndex: 15,
@@ -541,7 +523,7 @@ const SatellitePassTimelineComponent = ({
                     position: 'absolute',
                     left: hoverLeft,
                     top: '5px',
-                    transform: labelTransform,
+                    transform: 'translateX(-50%)',
                     backgroundColor: theme.palette.background.paper,
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: '4px',
@@ -557,30 +539,30 @@ const SatellitePassTimelineComponent = ({
                 >
                   {formatHoverTime(hoverTime)}
                 </Box>
-              {/* Elevation tooltip */}
-              {hoverPosition.elevation !== null && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: `${hoverPosition.y}%`,
-                    right: '5px',
-                    transform: 'translateY(-50%)',
-                    backgroundColor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold',
-                    color: theme.palette.text.primary,
-                    whiteSpace: 'nowrap',
-                    pointerEvents: 'none',
-                    zIndex: 25,
-                    boxShadow: theme.shadows[2],
-                  }}
-                >
-                  {`${hoverPosition.elevation.toFixed(1)}°`}
-                </Box>
-              )}
+                {/* Elevation marker on curve */}
+                {hoverPosition.elevation !== null && elevationYPercent !== null && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: hoverLeft,
+                      top: `calc(${Y_AXIS_TOP_MARGIN}px + (100% - ${Y_AXIS_TOP_MARGIN}px - ${X_AXIS_HEIGHT}px) * ${elevationYPercent / 100})`,
+                      transform: 'translate(-50%, -50%)',
+                      backgroundColor: theme.palette.background.paper,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      color: theme.palette.text.primary,
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'none',
+                      zIndex: 25,
+                      boxShadow: theme.shadows[2],
+                    }}
+                  >
+                    {`${hoverPosition.elevation.toFixed(1)}°`}
+                  </Box>
+                )}
               </>
             );
           })()}
