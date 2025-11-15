@@ -180,13 +180,19 @@ const MaintenanceForm = () => {
         return () => clearTimeout(timer);
     }, []);
 
-    // Load library versions on component mount
+    // Load library versions on component mount (only if not already loaded)
     React.useEffect(() => {
         if (socket && socket.connected) {
-            dispatch(fetchLibraryVersions({ socket }));
-            dispatch(fetchFrontendLibraryVersions({ socket }));
+            // Only fetch backend versions if not already loaded
+            if (Object.keys(libraryVersions.backend.categories).length === 0 && !libraryVersions.backend.loading) {
+                dispatch(fetchLibraryVersions({ socket }));
+            }
+            // Only fetch frontend versions if not already loaded
+            if (Object.keys(libraryVersions.frontend.categories).length === 0 && !libraryVersions.frontend.loading) {
+                dispatch(fetchFrontendLibraryVersions({ socket }));
+            }
         }
-    }, [socket, dispatch]);
+    }, [socket, dispatch, libraryVersions.backend.categories, libraryVersions.backend.loading, libraryVersions.frontend.categories, libraryVersions.frontend.loading]);
 
     // Handler to refresh library versions
     const handleRefreshLibraryVersions = () => {
