@@ -37,6 +37,7 @@ const BANDWIDTHS = {
     "1000": "1 kHz",
     "2100": "2.1 kHz",
     "2400": "2.4 kHz",
+    "2500": "2.5 kHz",
     "2700": "2.7 kHz",
     "3000": "3 kHz",
     "3300": "3.3 kHz",
@@ -603,6 +604,8 @@ const VfoAccordion = ({
                                                 updates.bandwidth = 2500; // 2.5 kHz for Morse decoder (narrowband)
                                             } else if (newValue === 'gmsk') {
                                                 // Get locked transmitter for GMSK bandwidth calculation
+                                                // TODO maybe we should remove this logic and let the user adjust the
+                                                // bandwidth themselves?  It's not clear that this is a good idea.
                                                 const currentVFO = vfoMarkers[vfoIndex];
                                                 const lockedTransmitter = currentVFO?.lockedTransmitterId
                                                     ? transmitters.find(tx => tx.id === currentVFO.lockedTransmitterId)

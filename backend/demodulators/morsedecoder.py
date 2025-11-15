@@ -26,6 +26,8 @@ from typing import Optional
 import numpy as np
 from scipy.signal import butter, sosfilt
 
+from vfos.state import VFOManager
+
 logger = logging.getLogger("morsedecoder")
 
 
@@ -117,6 +119,7 @@ class MorseDecoder(threading.Thread):
         self.running = True
         self.output_dir = output_dir
         self.vfo = vfo
+        self.vfo_manager = VFOManager()  # Access VFO state for squelch/volume
         self.target_freq = target_freq
         self.bandwidth = bandwidth
         self.auto_tune = True  # Automatically detect tone frequency

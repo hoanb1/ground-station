@@ -123,6 +123,7 @@ class TranscriptionConsumer(threading.Thread):
                 # Extract session info
                 session_id = audio_message.get("session_id")
                 audio_chunk = audio_message.get("audio")
+                vfo_number = audio_message.get("vfo_number")
 
                 if session_id is None or audio_chunk is None:
                     logger.warning("Received malformed audio message for transcription")
@@ -130,9 +131,19 @@ class TranscriptionConsumer(threading.Thread):
                     continue
 
                 # Check if transcription is enabled for this VFO
-                vfo_state = self.vfo_manager.get_selected_vfo(session_id)
+                # Try to get specific VFO if vfo_number is provided, otherwise get selected VFO
+                if vfo_number is not None:
+                    vfo_state = self.vfo_manager.get_vfo_state(session_id, vfo_number)
+                else:
+                    vfo_state = self.vfo_manager.get_selected_vfo(session_id)
+
                 if vfo_state is None:
-                    logger.debug(f"No VFO state for session {session_id}")
+                    # Silently skip if no VFO state (could be internal demodulator for decoder)
+                    self.transcription_queue.task_done()
+                    continue
+
+                # Skip if VFO is not selected (only transcribe selected VFO audio)
+                if not vfo_state.selected:
                     self.transcription_queue.task_done()
                     continue
 

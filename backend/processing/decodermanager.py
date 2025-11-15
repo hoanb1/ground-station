@@ -36,7 +36,9 @@ class DecoderManager:
         self.processes = processes
         self.demodulator_manager = demodulator_manager
 
-    def start_decoder(self, sdr_id, session_id, decoder_class, data_queue, **kwargs):
+    def start_decoder(
+        self, sdr_id, session_id, decoder_class, data_queue, audio_out_queue=None, **kwargs
+    ):
         """
         Start a decoder thread for a specific session.
 
@@ -51,6 +53,7 @@ class DecoderManager:
             session_id: Session identifier (client session ID)
             decoder_class: The decoder class to instantiate (e.g., SSTVDecoder, AFSKDecoder)
             data_queue: Queue where decoded data will be placed (same as SDR data_queue)
+            audio_out_queue: Optional queue for streaming demodulated audio to UI (for SSTV/Morse audio monitoring)
             **kwargs: Additional arguments to pass to the decoder constructor
 
         Returns:
@@ -184,6 +187,13 @@ class DecoderManager:
                     "center_freq": vfo_center_freq,  # Pass VFO frequency
                     "bandwidth": demod_bandwidth,
                 }
+
+                # If audio_out_queue provided, pass it to the demodulator for UI audio streaming
+                if audio_out_queue is not None:
+                    demod_kwargs["audio_out_queue"] = audio_out_queue
+                    self.logger.info(
+                        "Internal demodulator will stream audio to UI via audio_out_queue"
+                    )
 
                 # Add mode parameter only for SSB
                 if demod_mode:

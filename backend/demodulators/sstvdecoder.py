@@ -31,6 +31,8 @@ import numpy as np
 from PIL import Image
 from scipy.signal.windows import hann
 
+from vfos.state import VFOManager
+
 logger = logging.getLogger("sstvdecoder")
 
 
@@ -212,6 +214,7 @@ class SSTVDecoder(threading.Thread):
         self.mode = None
         self.status = DecoderStatus.IDLE
         self.vfo = vfo
+        self.vfo_manager = VFOManager()  # Access VFO state for squelch/volume
         os.makedirs(self.output_dir, exist_ok=True)
         logger.info(f"SSTV decoder initialized for session {session_id}, VFO {vfo}")
 
@@ -542,39 +545,49 @@ class SSTVDecoder(threading.Thread):
         audio_chunks_received = 0
 
         processing = False
+        # Separate buffer for audio received during processing (for next decode)
+        next_decode_buffer = np.array([], dtype=np.float32)
 
         try:
             while self.running:
-                # Skip audio consumption during processing phase
-                if not processing:
-                    try:
-                        audio_chunk = self.audio_queue.get(timeout=0.1)
+                # ALWAYS consume audio to prevent queue backup and chopped audio
+                # During processing, store audio in next_decode_buffer for the next image
+                try:
+                    audio_chunk = self.audio_queue.get(timeout=0.1)
 
-                        # Extract audio from dict wrapper if needed
-                        if isinstance(audio_chunk, dict):
-                            if "audio" in audio_chunk:
-                                audio_chunk = audio_chunk["audio"]
-                            else:
-                                continue
+                    # Extract audio from dict wrapper if needed
+                    if isinstance(audio_chunk, dict):
+                        if "audio" in audio_chunk:
+                            audio_chunk = audio_chunk["audio"]
+                        else:
+                            continue
 
-                        # Ensure audio_chunk is a proper 1D array
-                        if isinstance(audio_chunk, (int, float)):
-                            audio_chunk = np.array([audio_chunk], dtype=np.float32)
-                        elif not isinstance(audio_chunk, np.ndarray):
-                            audio_chunk = np.array(audio_chunk, dtype=np.float32)
-                        elif audio_chunk.ndim == 0:
-                            audio_chunk = audio_chunk.reshape(1)
+                    # Ensure audio_chunk is a proper 1D array
+                    if isinstance(audio_chunk, (int, float)):
+                        audio_chunk = np.array([audio_chunk], dtype=np.float32)
+                    elif not isinstance(audio_chunk, np.ndarray):
+                        audio_chunk = np.array(audio_chunk, dtype=np.float32)
+                    elif audio_chunk.ndim == 0:
+                        audio_chunk = audio_chunk.reshape(1)
 
+                    # If processing, buffer audio for next decode; otherwise add to main buffer
+                    if processing:
+                        next_decode_buffer = np.concatenate([next_decode_buffer, audio_chunk])
+                        # Limit next_decode_buffer to prevent unbounded growth (keep last 5 seconds)
+                        max_next_buffer = int(self.sample_rate * 5.0)
+                        if len(next_decode_buffer) > max_next_buffer:
+                            next_decode_buffer = next_decode_buffer[-max_next_buffer:]
+                    else:
                         self.audio_buffer = np.concatenate([self.audio_buffer, audio_chunk])
 
-                        audio_chunks_received += 1
-                        if audio_chunks_received % 500 == 0:
-                            logger.debug(
-                                f"Received {audio_chunks_received} audio chunks, buffer: {len(self.audio_buffer)} samples"
-                            )
+                    audio_chunks_received += 1
+                    if audio_chunks_received % 500 == 0:
+                        logger.debug(
+                            f"Received {audio_chunks_received} audio chunks, buffer: {len(self.audio_buffer)} samples"
+                        )
 
-                    except queue.Empty:
-                        pass
+                except queue.Empty:
+                    pass
 
                 if len(self.audio_buffer) < min_buffer_size:
                     continue
@@ -660,8 +673,13 @@ class SSTVDecoder(threading.Thread):
 
                     # Return to LISTENING for next transmission
                     self.mode = None
-                    self.audio_buffer = np.array([], dtype=np.float32)
+                    # Start next decode with audio that arrived during processing
+                    self.audio_buffer = next_decode_buffer
+                    next_decode_buffer = np.array([], dtype=np.float32)
                     processing = False
+                    logger.info(
+                        f"Finished processing, starting next decode with {len(self.audio_buffer)} buffered samples"
+                    )
                     self._send_status_update(DecoderStatus.LISTENING)
 
         except Exception as e:

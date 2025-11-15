@@ -231,7 +231,9 @@ class ProcessManager:
 
     # ==================== Decoder Methods ====================
 
-    def start_decoder(self, sdr_id, session_id, decoder_class, data_queue, **kwargs):
+    def start_decoder(
+        self, sdr_id, session_id, decoder_class, data_queue, audio_out_queue=None, **kwargs
+    ):
         """
         Start a decoder thread for a specific session.
 
@@ -240,13 +242,14 @@ class ProcessManager:
             session_id: Session identifier (client session ID)
             decoder_class: The decoder class to instantiate
             data_queue: Queue where decoded data will be placed
+            audio_out_queue: Optional queue for streaming demodulated audio to UI
             **kwargs: Additional arguments to pass to the decoder constructor
 
         Returns:
             bool: True if started successfully, False otherwise
         """
         return self.decoder_manager.start_decoder(
-            sdr_id, session_id, decoder_class, data_queue, **kwargs
+            sdr_id, session_id, decoder_class, data_queue, audio_out_queue, **kwargs
         )
 
     def stop_decoder(self, sdr_id, session_id):

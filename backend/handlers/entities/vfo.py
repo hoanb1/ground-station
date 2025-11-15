@@ -28,6 +28,7 @@ from demodulators.morsedecoder import MorseDecoder
 from demodulators.sstvdecoder import SSTVDecoder
 from handlers.entities.sdr import handle_vfo_demodulator_state
 from processing.processmanager import process_manager
+from server.startup import audio_queue
 from session.tracker import session_tracker
 from vfos.state import VFOManager
 
@@ -53,9 +54,15 @@ async def update_vfo_parameters(
         return {"success": False, "error": "No data provided"}
 
     vfomanager = VFOManager()
+    vfo_id = data.get("vfoNumber", 0)
+
+    # Get old VFO state BEFORE update to detect changes
+    old_vfo_state = vfomanager.get_vfo_state(sid, vfo_id) if vfo_id > 0 else None
+    old_locked_transmitter_id = old_vfo_state.locked_transmitter_id if old_vfo_state else None
+
     vfomanager.update_vfo_state(
         session_id=sid,
-        vfo_id=data.get("vfoNumber", 0),
+        vfo_id=vfo_id,
         center_freq=int(data["frequency"]) if "frequency" in data else None,
         bandwidth=int(data["bandwidth"]) if "bandwidth" in data else None,
         modulation=data.get("mode") if "mode" in data else None,
@@ -71,7 +78,6 @@ async def update_vfo_parameters(
     )
 
     # Start/stop demodulator based on VFO state (after update)
-    vfo_id = data.get("vfoNumber", 0)
     if vfo_id > 0:  # Valid VFO (not deselect-all case)
         vfo_state = vfomanager.get_vfo_state(sid, vfo_id)
 
@@ -95,11 +101,15 @@ async def update_vfo_parameters(
             await handle_vfo_decoder_state(vfo_state, sid, logger)
 
         # Handle locked_transmitter_id changes - restart decoder to pick up new transmitter settings
+        # Only restart if the VALUE actually changed (not just present in update)
         if "locked_transmitter_id" in data and vfo_state.decoder != "none":
-            logger.info(
-                f"Locked transmitter changed for VFO {vfo_id} with active decoder {vfo_state.decoder} - restarting decoder"
-            )
-            await handle_vfo_decoder_state(vfo_state, sid, logger)
+            new_locked_transmitter_id = data.get("locked_transmitter_id")
+            if old_locked_transmitter_id != new_locked_transmitter_id:
+                logger.info(
+                    f"Locked transmitter changed for VFO {vfo_id} (from {old_locked_transmitter_id} to {new_locked_transmitter_id}) "
+                    f"with active decoder {vfo_state.decoder} - restarting decoder"
+                )
+                await handle_vfo_decoder_state(vfo_state, sid, logger)
 
     return {"success": True, "data": {}}
 
@@ -278,6 +288,7 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger):
             "session_id": session_id,
             "decoder_class": decoder_class,
             "data_queue": data_queue,
+            "audio_out_queue": audio_queue,  # Pass audio queue for UI streaming of demodulated audio
             "output_dir": "data/decoded",
             "vfo_center_freq": vfo_state.center_freq,  # Pass VFO frequency for internal FM demod
             "vfo": vfo_state.vfo_number,  # Pass VFO number for status updates

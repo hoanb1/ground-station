@@ -57,6 +57,7 @@ class SSBDemodulator(threading.Thread):
         internal_mode=False,
         center_freq=None,
         bandwidth=None,
+        audio_out_queue=None,
         **kwargs,
     ):
         super().__init__(daemon=True, name=f"SSBDemodulator-{session_id}-VFO{vfo_number or ''}")
@@ -72,6 +73,9 @@ class SSBDemodulator(threading.Thread):
         self.internal_mode = internal_mode
         self.internal_center_freq = center_freq  # Used if internal_mode=True
         self.internal_bandwidth = bandwidth or 2500  # Default to 2.5 kHz for CW/SSB
+
+        # Audio output queue for UI streaming (used by decoders like Morse)
+        self.audio_out_queue = audio_out_queue
 
         # Audio output parameters
         self.audio_sample_rate = 44100  # 44.1 kHz audio output
@@ -286,14 +290,15 @@ class SSBDemodulator(threading.Thread):
 
                 # Determine VFO parameters based on mode
                 if self.internal_mode:
-                    # Internal mode: use provided parameters but still get VFO state for volume/squelch
+                    # Internal mode: use provided parameters but still get VFO state for volume/squelch/bandwidth
                     vfo_state = self._get_active_vfo()
                     vfo_center_freq = (
                         self.internal_center_freq
                         if self.internal_center_freq is not None
                         else sdr_center_freq
                     )
-                    vfo_bandwidth = self.internal_bandwidth
+                    # Use VFO bandwidth if available (allows dynamic bandwidth adjustment), otherwise fallback to internal
+                    vfo_bandwidth = vfo_state.bandwidth if vfo_state else self.internal_bandwidth
                     # Keep the mode as set during init (e.g., "cw" for CW decoder)
                     is_selected = True  # Always selected in internal mode
                 else:
@@ -482,29 +487,42 @@ class SSBDemodulator(threading.Thread):
                         chunk = self.audio_buffer[: self.target_chunk_size]
                         self.audio_buffer = self.audio_buffer[self.target_chunk_size :]
 
-                        # Only output audio if this VFO is selected (in normal mode)
-                        if not self.internal_mode and not is_selected:
-                            continue
+                        # Prepare audio message
+                        audio_message = {
+                            "session_id": self.session_id,
+                            "audio": chunk,
+                            "vfo_number": self.vfo_number,  # Add VFO number for multi-VFO support
+                        }
 
-                        # Put audio chunk in queue - use put_nowait to avoid blocking
-                        # If queue is full, skip this chunk to prevent buffer buildup
-                        try:
-                            self.audio_queue.put_nowait(
-                                {
-                                    "session_id": self.session_id,
-                                    "audio": chunk,
-                                    "vfo_number": self.vfo_number,  # Add VFO number for multi-VFO support
-                                }
-                            )
-                        except queue.Full:
-                            # Queue is full - drop this chunk to prevent lag accumulation
-                            logger.debug(
-                                f"Audio queue full, dropping chunk for session {self.session_id}"
-                            )
-                            break  # Exit while loop to process next IQ samples
-                        except Exception as e:
-                            logger.warning(f"Could not queue audio: {str(e)}")
-                            break
+                        # In normal mode, only output if VFO is selected
+                        # In internal mode, always output (decoders need the audio)
+                        should_output = self.internal_mode or is_selected
+
+                        if should_output:
+                            # Put audio chunk in primary queue (decoder input or normal output)
+                            try:
+                                self.audio_queue.put_nowait(audio_message)
+                            except queue.Full:
+                                # Queue is full - drop this chunk to prevent lag accumulation
+                                logger.debug(
+                                    f"Audio queue full, dropping chunk for session {self.session_id}"
+                                )
+                                break  # Exit while loop to process next IQ samples
+                            except Exception as e:
+                                logger.warning(f"Could not queue audio: {str(e)}")
+                                break
+
+                            # If audio_out_queue is provided (internal mode for UI streaming), send there too
+                            if self.audio_out_queue is not None:
+                                try:
+                                    self.audio_out_queue.put_nowait(audio_message)
+                                except queue.Full:
+                                    # UI queue full - drop this chunk, but continue processing
+                                    logger.debug(
+                                        f"Audio out queue full, dropping UI chunk for session {self.session_id}"
+                                    )
+                                except Exception as e:
+                                    logger.debug(f"Could not queue audio to UI: {str(e)}")
 
             except Exception as e:
                 if self.running:
