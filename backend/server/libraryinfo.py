@@ -350,6 +350,30 @@ def get_library_versions(use_cache: bool = True) -> Dict[str, Any]:
     except ImportError:
         pass
 
+    # SDRplay API (check for libsdrplay_api.so)
+    sdrplay_version = None
+    # Try to find the library file to extract version
+    sdrplay_lib_path = "/usr/local/lib/libsdrplay_api.so.3.15"
+    if os.path.exists(sdrplay_lib_path):
+        # Extract version from the library filename
+        basename = os.path.basename(sdrplay_lib_path)
+        if basename.startswith("libsdrplay_api.so."):
+            sdrplay_version = basename.replace("libsdrplay_api.so.", "")
+    else:
+        # Fallback: check if any libsdrplay_api.so exists
+        for lib_path in ["/usr/local/lib/libsdrplay_api.so", "/usr/lib/libsdrplay_api.so"]:
+            if os.path.exists(lib_path):
+                sdrplay_version = "installed"
+                break
+
+    if sdrplay_version:
+        system_libraries["sdrplay-api"] = {
+            "name": "SDRplay RSP API",
+            "version": sdrplay_version,
+            "category": "sdr",
+            "description": "SDRplay RSP hardware driver API",
+        }
+
     # SoapySDR modules (check which are installed and their versions)
     soapy_modules = get_system_library_version(["SoapySDRUtil", "--info"])
     if soapy_modules:

@@ -192,7 +192,7 @@ const MaintenanceForm = () => {
                 dispatch(fetchFrontendLibraryVersions({ socket }));
             }
         }
-    }, [socket, dispatch, libraryVersions.backend.categories, libraryVersions.backend.loading, libraryVersions.frontend.categories, libraryVersions.frontend.loading]);
+    }, [socket, dispatch]);
 
     // Handler to refresh library versions
     const handleRefreshLibraryVersions = () => {

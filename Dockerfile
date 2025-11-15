@@ -337,6 +337,9 @@ RUN chmod +x /app/startup.sh
 # Copy the built frontend from the previous stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
+# Copy package.json for library version info
+COPY --from=frontend-builder /app/frontend/package.json ./frontend/package.json
+
 # Add build arguments for version information (moved here to maximize cache reuse)
 ARG GIT_COMMIT
 ARG BUILD_DATE
