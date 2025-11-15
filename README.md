@@ -71,23 +71,26 @@ The following features are planned for future releases:
 
 The Ground Station application is composed of a frontend, a backend, and a set of worker processes.
 
+### High-Level System Architecture
+
 ```mermaid
 flowchart TB
-    %% Cache buster: v3-20251105
+    %% Cache buster: v5-20251115-updated
     %% Frontend Layer
-    A[Frontend: React + Redux + MUI<br/>- Real-time UI updates<br/>- State management<br/>- Interactive satellite maps<br/>- Spectrum & waterfall display<br/>- Audio playback & recording<br/>- IQ recording & playback controls]
+    A[Frontend: React + Redux + MUI<br/>- Real-time UI updates<br/>- State management<br/>- Interactive satellite maps<br/>- Spectrum & waterfall display<br/>- Audio playback & recording<br/>- IQ recording & playback controls<br/>- Decoder monitoring & output display]
 
     %% Backend Layer
-    B[Backend: FastAPI + Socket.IO<br/>- WebSocket connections<br/>- Worker process management<br/>- Database operations<br/>- TLE data fetching<br/>- Recording & file management]
+    B[Backend: FastAPI + Socket.IO<br/>- WebSocket connections<br/>- Worker process management<br/>- Database operations<br/>- TLE data fetching<br/>- Recording & file management<br/>- Decoder lifecycle management]
 
     %% Worker Layer
     subgraph Workers["Worker Processes"]
         direction TB
         W1[Satellite Tracker + Hardware Control<br/>- Antenna rotator control<br/>- Rig/radio control<br/>- Real-time tracking calculations<br/>- Hardware state management]
-        W2[SDR IQ Acquisition<br/>- Raw IQ sample streaming<br/>- Non-blocking acquisition<br/>- Multi-consumer support]
+        W2[SDR IQ Acquisition<br/>- Raw IQ sample streaming<br/>- IQ Broadcaster pub/sub<br/>- Multi-consumer support]
         W2A[FFT Processor<br/>- Spectrum computation<br/>- Waterfall generation<br/>- Real-time FFT analysis]
-        W2B[FM Demodulator<br/>- Frequency translation<br/>- FM demodulation<br/>- Audio processing<br/>- Per-session processing]
+        W2B[Demodulators<br/>- FM/SSB/AM modes<br/>- Normal & Internal modes<br/>- Frequency translation<br/>- Audio processing<br/>- Multi-VFO support]
         W2C[IQ Recorder<br/>- SigMF format recording<br/>- Metadata capture<br/>- Satellite info tagging<br/>- Waterfall snapshot saving]
+        W2D[Decoders<br/>- SSTV image decoder<br/>- Morse/CW decoder<br/>- AFSK packet decoder<br/>- LoRa/GMSK decoders<br/>- Audio Broadcaster for monitoring]
         W3[SDR Local Probe<br/>- Device discovery<br/>- Local SoapySDR enumeration<br/>- Hardware capability detection]
         W4[SDR Remote Probe<br/>- Remote SoapySDR discovery<br/>- Network device scanning<br/>- Remote capability detection]
     end
@@ -105,6 +108,7 @@ flowchart TB
     %% Storage Layer
     subgraph Storage["Data Storage"]
         S1[SigMF Recordings<br/>- .sigmf-data files<br/>- .sigmf-meta files<br/>- Waterfall snapshots]
+        S2[Decoded Outputs<br/>- SSTV images<br/>- Morse text logs<br/>- Packet data]
     end
 
     %% External Services
@@ -113,31 +117,49 @@ flowchart TB
         E2[Satellite Databases<br/>- Transmitter info<br/>- Orbital data]
     end
 
-    %% Connections
-    A ---|Socket.IO<br/>Real-time updates| B
+    %% Connections - Frontend to Backend
+    A <---|Socket.IO<br/>Bidirectional| B
+
+    %% Backend to Workers
     B ---|Message Queues<br/>Commands & Status| W1
     B ---|Message Queues<br/>Stream Control| W2
     B ---|Message Queues<br/>Discovery Requests| W3
     B ---|Message Queues<br/>Remote Scanning| W4
 
-    W2 ---|IQ Queue FFT<br/>Broadcast| W2A
-    W2 ---|IQ Queue Demod<br/>Broadcast| W2B
-    W2 ---|IQ Queue Record<br/>Broadcast| W2C
-    W2A ---|FFT Data<br/>Spectrum| B
-    W2B ---|Audio Data<br/>Demodulated| B
-    W2C ---|Recording Files<br/>SigMF Format| S1
+    %% SDR IQ Distribution via IQ Broadcaster
+    W2 ---|IQ Broadcaster<br/>Subscribe| W2A
+    W2 ---|IQ Broadcaster<br/>Subscribe| W2B
+    W2 ---|IQ Broadcaster<br/>Subscribe| W2C
+    W2 ---|IQ Broadcaster<br/>Subscribe Raw IQ| W2D
 
+    %% Demodulator to Decoder Chain
+    W2B ---|Internal Mode<br/>Audio Broadcaster| W2D
+
+    %% Data back to Backend
+    W2A ---|FFT Data<br/>Spectrum/Waterfall| B
+    W2B ---|Audio Data<br/>Demodulated| B
+    W2D ---|Decoded Data<br/>Images/Text/Packets| B
+    W2D ---|UI Audio Stream<br/>Live Monitoring| B
+
+    %% Recording Storage
+    W2C ---|Write SigMF<br/>Recording Files| S1
+    W2D ---|Write Decoded<br/>Output Files| S2
+
+    %% Hardware Control
     W1 ---|Control Commands| H1
     W1 ---|Frequency Control| H2
-    W2 ---|Data Streaming| H3
+    W2 ---|IQ Data Streaming| H3
     W2 ---|Network Streaming| H4
     W2 ---|Playback Source| H5
     W3 ---|Device Enumeration| H3
     W4 ---|Remote Discovery| H4
 
+    %% Storage Access
     H5 ---|Read Files| S1
     B ---|File Management| S1
+    B ---|File Management| S2
 
+    %% External Data
     B ---|HTTP/API Requests| E1
     B ---|Database Queries| E2
 
@@ -149,12 +171,11 @@ flowchart TB
     classDef storage fill:#01579b,stroke:#0288d1,stroke-width:2px,color:#ffffff
     classDef external fill:#b71c1c,stroke:#f44336,stroke-width:2px,color:#ffffff
 
-
     class A frontend
     class B backend
-    class W1,W2,W2A,W2B,W2C,W3,W4 worker
+    class W1,W2,W2A,W2B,W2C,W2D,W3,W4 worker
     class H1,H2,H3,H4,H5 hardware
-    class S1 storage
+    class S1,S2 storage
     class E1,E2 external
 
     %% Dashed borders for subgraphs
@@ -163,6 +184,127 @@ flowchart TB
     style Storage stroke-dasharray: 5 5
     style External stroke-dasharray: 5 5
 ```
+
+### Signal Processing Data Flow
+
+This diagram shows how radio signals flow through the system from SDR hardware to decoders and UI:
+
+```mermaid
+flowchart TB
+    %% SDR Source
+    SDR[SDR Hardware<br/>RTL-SDR, SoapySDR, UHD]
+
+    %% IQ Broadcaster
+    IQB[IQ Broadcaster<br/>Pub/Sub Pattern<br/>Deep copy for each subscriber]
+
+    %% Primary Consumers
+    subgraph Consumers["IQ Consumers"]
+        FFT[FFT Processor<br/>→ Spectrum Display]
+        REC[IQ Recorder<br/>→ SigMF Files]
+        DEMOD[Demodulator<br/>FM/SSB/AM]
+    end
+
+    %% Demodulator Branches
+    subgraph DemodBranch["Demodulator Types"]
+        direction TB
+        NORM[Normal Mode<br/>User Playback]
+        INT[Internal Mode<br/>For Decoders]
+    end
+
+    %% Audio Broadcaster for Internal Demodulators
+    AUDIOB[Audio Broadcaster<br/>Pub/Sub Pattern<br/>Deep copy for each subscriber]
+
+    %% Decoder Chain
+    subgraph DecoderChain["Decoder Processing"]
+        direction TB
+        DEC[Decoder<br/>SSTV/Morse/AFSK]
+        UIAUDIO[UI Audio Stream<br/>Live Monitoring]
+    end
+
+    %% Output Destinations
+    subgraph Outputs["Outputs"]
+        SPECUI[Spectrum/Waterfall UI]
+        SIGFILE[SigMF Recording Files]
+        PLAYBACK[Audio Playback to User]
+        DECOUT[Decoded Data<br/>Images/Text/Packets]
+        AUDIOUI[UI Audio Player<br/>Decoder Monitoring]
+    end
+
+    %% Connections
+    SDR -->|Raw IQ Samples| IQB
+    IQB -->|Subscribe| FFT
+    IQB -->|Subscribe| REC
+    IQB -->|Subscribe| DEMOD
+
+    DEMOD -->|Branch| NORM
+    DEMOD -->|Branch| INT
+
+    NORM -->|Audio Queue| PLAYBACK
+    INT -->|Audio Queue| AUDIOB
+
+    AUDIOB -->|Subscribe: decoder| DEC
+    AUDIOB -->|Subscribe: ui| UIAUDIO
+
+    FFT -->|FFT Data| SPECUI
+    REC -->|Write| SIGFILE
+    DEC -->|Decoded Output| DECOUT
+    UIAUDIO -->|Audio Chunks| AUDIOUI
+
+    %% Styling
+    classDef hardware fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
+    classDef broadcaster fill:#d84315,stroke:#ff5722,stroke-width:3px,color:#ffffff
+    classDef processor fill:#e65100,stroke:#ff9800,stroke-width:2px,color:#ffffff
+    classDef output fill:#01579b,stroke:#0288d1,stroke-width:2px,color:#ffffff
+    classDef decoder fill:#1b5e20,stroke:#4caf50,stroke-width:2px,color:#ffffff
+
+    class SDR hardware
+    class IQB,AUDIOB broadcaster
+    class FFT,REC,DEMOD,NORM,INT processor
+    class SPECUI,SIGFILE,PLAYBACK,DECOUT,AUDIOUI output
+    class DEC,UIAUDIO decoder
+```
+
+#### Key Concepts
+
+**IQ Broadcaster (Pub/Sub Pattern):**
+- SDR produces raw IQ samples at high rate (e.g., 2.4 MSPS)
+- IQBroadcaster distributes to multiple consumers simultaneously
+- Each subscriber gets independent queue with deep-copied samples
+- Slow consumers: messages dropped rather than blocking producer
+- Supports: FFT processor, demodulators, IQ recorder, decoders (LoRa/GMSK)
+
+**Demodulator Modes:**
+- **Normal Mode:** User-controlled VFO → Audio output for playback
+- **Internal Mode:** Created automatically by DecoderManager for SSTV/Morse
+  - Bypasses VFO checks
+  - Fixed parameters (frequency, bandwidth)
+  - Feeds AudioBroadcaster instead of direct playback
+
+**Audio Broadcaster (Decoder Pattern):**
+- Only used for internal demodulators feeding decoders
+- Distributes demodulated audio to:
+  - **Decoder subscriber:** SSTV/Morse decoder processing
+  - **UI subscriber:** Live audio monitoring in browser
+- Statistics tracking: delivered/dropped message counts per subscriber
+- Graceful slow consumer handling
+
+**Chain Processing Example (SSTV):**
+1. SDR → IQBroadcaster → Internal FM Demodulator (12.5 kHz BW)
+2. FM Demodulator → AudioBroadcaster input queue
+3. AudioBroadcaster → Decoder subscriber → SSTV Decoder → Image output
+4. AudioBroadcaster → UI subscriber → Browser audio player (user hears what decoder processes)
+
+**Chain Processing Example (Morse/CW):**
+1. SDR → IQBroadcaster → Internal SSB Demodulator (CW mode, 2.5 kHz BW)
+2. SSB Demodulator → AudioBroadcaster input queue
+3. AudioBroadcaster → Decoder subscriber → Morse Decoder → Text output
+4. AudioBroadcaster → UI subscriber → Browser audio player
+
+**Why Broadcasters?**
+- **Decoupling:** Producers don't know about consumers
+- **Scalability:** Add consumers without modifying producers
+- **Monitoring:** Per-subscriber statistics and health monitoring
+- **Reliability:** Slow consumers don't block fast producers
 
 *   **Frontend:** The frontend is a single-page application built with React, Redux Toolkit, and Material-UI. It communicates with the backend using a socket.io connection for real-time updates.
 *   **Backend:** The backend is a Python application built with FastAPI. It provides a REST API and a socket.io interface for the frontend. It also manages the worker processes.
