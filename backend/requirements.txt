@@ -41,6 +41,7 @@ pydantic_core==2.27.2
 PyJWT==2.10.1
 pyrtlsdr==0.3.0
 python-engineio==4.11.2
+reedsolo==2.1.1
 python-socketio==5.12.1
 PyYAML==6.0.2
 requests==2.32.3
