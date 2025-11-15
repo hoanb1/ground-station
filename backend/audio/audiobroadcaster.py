@@ -133,8 +133,10 @@ class AudioBroadcaster(threading.Thread):
                             self.stats["errors"] += 1
                             logger.error(f"Error broadcasting to '{name}': {e}")
 
-                # Mark task as done
-                self.input_queue.task_done()
+                # Note: task_done() only exists on queue.Queue (threading), not multiprocessing.Queue
+                # If input_queue is a threading queue, mark task as done for join() support
+                if hasattr(self.input_queue, "task_done"):
+                    self.input_queue.task_done()
 
             except queue.Empty:
                 # No data available - continue waiting

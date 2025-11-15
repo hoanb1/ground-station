@@ -17,6 +17,8 @@
 import logging
 import multiprocessing
 
+from audio.audiobroadcaster import AudioBroadcaster
+
 
 class DecoderManager:
     """
@@ -155,8 +157,11 @@ class DecoderManager:
                 from demodulators.fmdemodulator import FMDemodulator
                 from demodulators.ssbdemodulator import SSBDemodulator
 
-                # Create internal audio queue for the demodulator
-                internal_audio_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+                # Create AudioBroadcaster for distributing demodulated audio to multiple consumers
+                # This allows the decoder and UI to both receive audio without modifying demodulator code
+                broadcaster_input_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+                audio_broadcaster = AudioBroadcaster(broadcaster_input_queue)
+                audio_broadcaster.start()
 
                 # Get VFO center frequency from kwargs if provided
                 vfo_center_freq = kwargs.get("vfo_center_freq", None)
@@ -167,33 +172,29 @@ class DecoderManager:
                     demod_mode = "cw"
                     demod_bandwidth = 2500  # 2.5 kHz bandwidth for Morse/CW
                     self.logger.info(
-                        "Creating internal SSB demodulator (CW mode) for Morse decoder"
+                        "Creating internal SSB demodulator (CW mode) for Morse decoder with AudioBroadcaster"
                     )
                 else:
                     demod_class = FMDemodulator
                     demod_mode = None  # FM doesn't use mode parameter
                     demod_bandwidth = 12500  # 12.5 kHz bandwidth for SSTV
-                    self.logger.info("Creating internal FM demodulator for decoder")
+                    self.logger.info(
+                        "Creating internal FM demodulator for decoder with AudioBroadcaster"
+                    )
 
                 # Start internal demodulator with internal_mode enabled
+                # Demodulator writes to broadcaster input queue (single output)
                 # Pass vfo_number if provided to maintain multi-VFO structure
                 demod_kwargs = {
                     "sdr_id": sdr_id,
                     "session_id": session_id,
                     "demodulator_class": demod_class,
-                    "audio_queue": internal_audio_queue,
+                    "audio_queue": broadcaster_input_queue,  # Demodulator feeds broadcaster
                     "vfo_number": vfo_number,  # Pass VFO number for multi-VFO mode
                     "internal_mode": True,  # Enable internal mode to bypass VFO checks
                     "center_freq": vfo_center_freq,  # Pass VFO frequency
                     "bandwidth": demod_bandwidth,
                 }
-
-                # If audio_out_queue provided, pass it to the demodulator for UI audio streaming
-                if audio_out_queue is not None:
-                    demod_kwargs["audio_out_queue"] = audio_out_queue
-                    self.logger.info(
-                        "Internal demodulator will stream audio to UI via audio_out_queue"
-                    )
 
                 # Add mode parameter only for SSB
                 if demod_mode:
@@ -206,6 +207,8 @@ class DecoderManager:
                     self.logger.error(
                         f"Failed to start internal {demod_type} demodulator for session {session_id}"
                     )
+                    # Clean up broadcaster if demodulator failed to start
+                    audio_broadcaster.stop()
                     return False
 
                 internal_demod_created = True
@@ -214,8 +217,8 @@ class DecoderManager:
             # Get the appropriate queue for the decoder
             if needs_raw_iq:
                 # Raw IQ decoder - subscribe to IQ broadcaster like IQRecorder does
-                broadcaster = process_info.get("iq_broadcaster")
-                if not broadcaster:
+                iq_broadcaster = process_info.get("iq_broadcaster")
+                if not iq_broadcaster:
                     self.logger.error(f"No IQ broadcaster found for device {sdr_id}")
                     return False
 
@@ -225,7 +228,7 @@ class DecoderManager:
                     subscription_key += f":vfo{vfo_number}"
 
                 # Subscribe to the broadcaster to get a dedicated IQ queue
-                iq_queue = broadcaster.subscribe(subscription_key, maxsize=3)
+                iq_queue = iq_broadcaster.subscribe(subscription_key, maxsize=3)
 
                 # Filter out internal parameters before passing to decoder
                 decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
@@ -236,37 +239,58 @@ class DecoderManager:
 
                 # Store the subscription key for cleanup
                 subscription_key_to_store = subscription_key
+                audio_broadcaster_instance = None  # Raw IQ decoders don't use audio broadcaster
             else:
-                # Audio decoder - get audio queue from demodulator
-                if demod_entry is None:
-                    self.logger.error(f"No demodulator entry found for session {session_id}")
+                # Audio decoder - subscribe to AudioBroadcaster
+                if not internal_demod_created:
+                    self.logger.error(f"No internal demodulator created for session {session_id}")
                     return False
 
-                # Handle both multi-VFO and legacy mode
-                if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
-                    # Multi-VFO mode: get specific VFO's demodulator
-                    vfo_entry = demod_entry[vfo_number]
-                    demodulator = vfo_entry.get("instance")
-                elif isinstance(demod_entry, dict) and "instance" in demod_entry:
-                    # Legacy mode: single demodulator
-                    demodulator = demod_entry.get("instance")
-                else:
-                    demodulator = None
+                # Subscribe decoder to audio broadcaster
+                decoder_audio_queue = audio_broadcaster.subscribe(
+                    f"decoder:{session_id}", maxsize=10
+                )
 
-                if demodulator is None:
-                    self.logger.error(f"No demodulator instance found for session {session_id}")
-                    return False
-                audio_queue = demodulator.audio_queue
+                # If UI audio streaming requested, subscribe UI as well
+                ui_forwarder_thread = None
+                if audio_out_queue is not None:
+                    ui_audio_queue = audio_broadcaster.subscribe(f"ui:{session_id}", maxsize=10)
+                    self.logger.info("UI audio streaming enabled via AudioBroadcaster")
+
+                    # Start a daemon thread to forward audio from ui_audio_queue to audio_out_queue
+                    # This bridges the broadcaster subscriber queue to the caller's queue
+                    # Thread will auto-cleanup when broadcaster stops or process exits
+                    import threading
+
+                    def forward_audio():
+                        while True:
+                            try:
+                                audio_msg = ui_audio_queue.get(timeout=1.0)
+                                try:
+                                    audio_out_queue.put_nowait(audio_msg)
+                                except Exception:
+                                    pass  # Drop if UI queue full
+                            except Exception:
+                                break  # Exit on timeout or error
+
+                    ui_forwarder_thread = threading.Thread(
+                        target=forward_audio, daemon=True, name=f"UIAudioForwarder-{session_id}"
+                    )
+                    ui_forwarder_thread.start()
+                    # Note: Thread reference stored in decoder entry but not explicitly joined
+                    # Daemon thread will exit automatically when broadcaster stops
 
                 # Filter out internal parameters before passing to decoder
-                # vfo_center_freq is used for internal FM demodulator setup, not passed to decoder
                 decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
 
-                # Create and start the decoder with the audio queue
-                decoder = decoder_class(audio_queue, data_queue, session_id, **decoder_kwargs)
+                # Create and start the decoder with the audio queue from broadcaster
+                decoder = decoder_class(
+                    decoder_audio_queue, data_queue, session_id, **decoder_kwargs
+                )
                 decoder.start()
 
                 subscription_key_to_store = None
+                audio_broadcaster_instance = audio_broadcaster  # Store for cleanup
 
             # Store reference
             if "decoders" not in process_info:
@@ -278,6 +302,10 @@ class DecoderManager:
                 "vfo_number": vfo_number,  # Store VFO number for multi-VFO cleanup
                 "subscription_key": subscription_key_to_store,  # For raw IQ decoders
                 "needs_raw_iq": needs_raw_iq,  # Track if this is a raw IQ decoder
+                "audio_broadcaster": audio_broadcaster_instance,  # AudioBroadcaster instance for cleanup
+                "ui_forwarder_thread": (
+                    ui_forwarder_thread if not needs_raw_iq else None
+                ),  # UI forwarder thread reference
             }
 
             self.logger.info(
@@ -322,23 +350,36 @@ class DecoderManager:
                 vfo_number = decoder_entry.get("vfo_number")  # Get VFO number if present
                 subscription_key = decoder_entry.get("subscription_key")  # For raw IQ decoders
                 needs_raw_iq = decoder_entry.get("needs_raw_iq", False)
+                audio_broadcaster = decoder_entry.get(
+                    "audio_broadcaster"
+                )  # AudioBroadcaster instance
+                ui_forwarder_thread = decoder_entry.get(
+                    "ui_forwarder_thread"
+                )  # UI forwarder thread  # noqa: F841
             else:
                 decoder = decoder_entry
                 internal_demod = False
                 vfo_number = None
                 subscription_key = None
                 needs_raw_iq = False
+                audio_broadcaster = None
+                ui_forwarder_thread = None  # noqa: F841
 
             decoder_name = type(decoder).__name__
             decoder.stop()
             decoder.join(timeout=2.0)  # Wait up to 2 seconds
 
-            # If this was a raw IQ decoder, unsubscribe from broadcaster
+            # If this was a raw IQ decoder, unsubscribe from IQ broadcaster
             if needs_raw_iq and subscription_key:
-                broadcaster = process_info.get("iq_broadcaster")
-                if broadcaster:
-                    broadcaster.unsubscribe(subscription_key)
+                iq_broadcaster = process_info.get("iq_broadcaster")
+                if iq_broadcaster:
+                    iq_broadcaster.unsubscribe(subscription_key)
                     self.logger.info(f"Unsubscribed {decoder_name} from IQ broadcaster")
+
+            # If we have an AudioBroadcaster, stop it
+            if audio_broadcaster:
+                audio_broadcaster.stop()
+                self.logger.info(f"Stopped AudioBroadcaster for session {session_id}")
 
             # If we created an internal demodulator for this decoder, stop it too
             # But first check if it still exists and is actually in internal mode

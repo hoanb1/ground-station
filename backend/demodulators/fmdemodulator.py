@@ -56,7 +56,6 @@ class FMDemodulator(threading.Thread):
         center_freq=None,
         bandwidth=None,
         vfo_number=None,
-        audio_out_queue=None,
     ):
         super().__init__(daemon=True, name=f"FMDemodulator-{session_id}-VFO{vfo_number or ''}")
         self.iq_queue = iq_queue
@@ -70,9 +69,6 @@ class FMDemodulator(threading.Thread):
         self.internal_mode = internal_mode
         self.internal_center_freq = center_freq  # Used if internal_mode=True
         self.internal_bandwidth = bandwidth or 12500  # Default to 12.5 kHz for SSTV
-
-        # Audio output queue for UI streaming (used by decoders like SSTV/Morse)
-        self.audio_out_queue = audio_out_queue
 
         # Audio output parameters
         self.audio_sample_rate = 44100  # 44.1 kHz audio output
@@ -542,7 +538,9 @@ class FMDemodulator(threading.Thread):
                         should_output = self.internal_mode or is_selected
 
                         if should_output:
-                            # Put audio chunk in primary queue (decoder input or normal output)
+                            # Put audio chunk in queue (single output point)
+                            # In internal mode, this feeds AudioBroadcaster which distributes to decoder/UI
+                            # In normal mode, this goes directly to audio consumers
                             try:
                                 self.audio_queue.put_nowait(audio_message)
                             except queue.Full:
@@ -554,18 +552,6 @@ class FMDemodulator(threading.Thread):
                             except Exception as e:
                                 logger.warning(f"Could not queue audio: {str(e)}")
                                 break
-
-                            # If audio_out_queue is provided (internal mode for UI streaming), send there too
-                            if self.audio_out_queue is not None:
-                                try:
-                                    self.audio_out_queue.put_nowait(audio_message)
-                                except queue.Full:
-                                    # UI queue full - drop this chunk, but continue processing
-                                    logger.debug(
-                                        f"Audio out queue full, dropping UI chunk for session {self.session_id}"
-                                    )
-                                except Exception as e:
-                                    logger.debug(f"Could not queue audio to UI: {str(e)}")
 
             except Exception as e:
                 if self.running:
