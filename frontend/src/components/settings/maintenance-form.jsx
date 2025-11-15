@@ -21,7 +21,7 @@ import {gridLayoutStoreName as overviewGridLayoutName} from "../overview/main-la
 import {gridLayoutStoreName as targetGridLayoutName} from "../target/main-layout.jsx";
 import {gridLayoutStoreName as waterfallGridLayoutName} from "../waterfall/main-layout.jsx";
 import Paper from "@mui/material/Paper";
-import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, Tab} from "@mui/material";
+import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, Tab, Backdrop} from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import React, {useState} from "react";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -73,6 +73,7 @@ const MaintenanceForm = () => {
     // Confirmation dialog states
     const [confirmClearLayoutOpen, setConfirmClearLayoutOpen] = useState(false);
     const [confirmClearReduxOpen, setConfirmClearReduxOpen] = useState(false);
+    const [isReloading, setIsReloading] = useState(false);
 
     // Maintenance functions
     const clearLayoutLocalStorage = () => {
@@ -80,6 +81,12 @@ const MaintenanceForm = () => {
         localStorage.setItem(overviewGridLayoutName, null);
         localStorage.setItem(targetGridLayoutName, null);
         localStorage.setItem(waterfallGridLayoutName, null);
+
+        // Show reload spinner and reload after 1 second
+        setIsReloading(true);
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
     }
 
     const clearReduxPersistentState = () => {
@@ -110,6 +117,12 @@ const MaintenanceForm = () => {
         persistKeys.forEach(key => {
             localStorage.removeItem(key);
         });
+
+        // Show reload spinner and reload after 1 second
+        setIsReloading(true);
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
     }
 
     const clearFileBrowserPersist = () => {
@@ -1392,6 +1405,19 @@ const MaintenanceForm = () => {
                         </Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Reload Spinner Overlay */}
+                <Backdrop
+                    sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+                    open={isReloading}
+                >
+                    <Box sx={{ textAlign: 'center' }}>
+                        <CircularProgress color="inherit" size={60} />
+                        <Typography variant="h6" sx={{ mt: 2 }}>
+                            Reloading...
+                        </Typography>
+                    </Box>
+                </Backdrop>
             </Box>
         </Paper>
     );
