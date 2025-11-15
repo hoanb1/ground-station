@@ -189,9 +189,8 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapySDRPlay3.git && \
 
 # compile LimeSuite
 WORKDIR /src
-RUN git clone --depth=1 https://github.com/myriadrf/LimeSuite.git && \
+RUN git clone --depth=1 --branch=stable https://github.com/myriadrf/LimeSuite.git && \
     cd LimeSuite && \
-    git checkout stable && \
     sed -i '1i\#include <cstdint>' src/lms7002m_mcu/MCU_File.cpp && \
     mkdir builddir && \
     cd builddir && \
