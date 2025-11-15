@@ -95,9 +95,9 @@ async def update_vfo_parameters(
                     f"Skipping demodulator for VFO {vfo_id} - decoder {vfo_state.decoder} works on raw IQ"
                 )
 
-        # Handle decoder state changes ONLY if decoder field was provided in the update
-        # This prevents VFO updates (like selecting a different VFO) from stopping decoders on other VFOs
-        if "decoder" in data:
+        # Handle decoder state changes if decoder field was provided OR if active state changed
+        # When VFO becomes inactive, we need to stop the decoder as well
+        if "decoder" in data or "active" in data:
             await handle_vfo_decoder_state(vfo_state, sid, logger)
 
         # Handle locked_transmitter_id changes - restart decoder to pick up new transmitter settings

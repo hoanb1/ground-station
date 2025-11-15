@@ -101,13 +101,33 @@ class ConsumerManager:
                 if isinstance(existing_entry, dict)
                 else existing_entry
             )
-            # If same type, just return success (already running)
+            # If same type, check if it's in internal mode
             if isinstance(existing, consumer_class):
-                log_msg = f"{consumer_class.__name__} already running for session {session_id}"
-                if vfo_number is not None:
-                    log_msg += f" VFO {vfo_number}"
-                self.logger.debug(log_msg)
-                return True
+                # Check if existing is an internal demodulator (created by decoder)
+                is_internal = getattr(existing, "internal_mode", False)
+                # Check if we're requesting internal mode
+                requesting_internal = kwargs.get("internal_mode", False)
+
+                # If modes match (both internal or both normal), reuse existing
+                if is_internal == requesting_internal:
+                    log_msg = f"{consumer_class.__name__} already running for session {session_id}"
+                    if vfo_number is not None:
+                        log_msg += f" VFO {vfo_number}"
+                    self.logger.debug(log_msg)
+                    return True
+                else:
+                    # Different modes: stop the old one and start a new one
+                    mode_desc = "internal" if is_internal else "normal"
+                    new_mode_desc = "internal" if requesting_internal else "normal"
+                    log_msg = f"Switching from {mode_desc} to {new_mode_desc} {consumer_class.__name__} for session {session_id}"
+                    if vfo_number is not None:
+                        log_msg += f" VFO {vfo_number}"
+                    self.logger.info(log_msg)
+                    # Stop using the appropriate method based on storage key
+                    if storage_key == "recorders":
+                        self._stop_consumer(sdr_id, session_id, storage_key)
+                    else:
+                        self._stop_consumer(sdr_id, session_id, storage_key, vfo_number)
             else:
                 # Different type, stop the old one first
                 log_msg = f"Switching from {type(existing).__name__} to {consumer_class.__name__} for session {session_id}"

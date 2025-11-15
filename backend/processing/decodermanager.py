@@ -341,15 +341,44 @@ class DecoderManager:
                     self.logger.info(f"Unsubscribed {decoder_name} from IQ broadcaster")
 
             # If we created an internal demodulator for this decoder, stop it too
+            # But first check if it still exists and is actually in internal mode
             if internal_demod:
-                if vfo_number:
-                    self.logger.info(
-                        f"Stopping internal FM demodulator for session {session_id} VFO {vfo_number}"
-                    )
-                    self.demodulator_manager.stop_demodulator(sdr_id, session_id, vfo_number)
+                # Check if a demodulator exists for this session/VFO
+                demod_entry = process_info.get("demodulators", {}).get(session_id)
+                should_stop_demod = False
+
+                if demod_entry:
+                    # Check if this is multi-VFO mode or legacy mode
+                    if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
+                        # Multi-VFO mode: check specific VFO's demodulator
+                        vfo_demod = demod_entry[vfo_number].get("instance")
+                        # Only stop if it's still in internal mode (not replaced by normal demod)
+                        should_stop_demod = getattr(vfo_demod, "internal_mode", False)
+                    elif isinstance(demod_entry, dict) and "instance" in demod_entry:
+                        # Legacy mode: check single demodulator
+                        demod_instance = demod_entry.get("instance")
+                        should_stop_demod = getattr(demod_instance, "internal_mode", False)
+
+                if should_stop_demod:
+                    # Determine demodulator type from the decoder type for better logging
+                    from demodulators.morsedecoder import MorseDecoder
+
+                    demod_type = "SSB" if isinstance(decoder, MorseDecoder) else "FM"
+
+                    if vfo_number:
+                        self.logger.info(
+                            f"Stopping internal {demod_type} demodulator for session {session_id} VFO {vfo_number}"
+                        )
+                        self.demodulator_manager.stop_demodulator(sdr_id, session_id, vfo_number)
+                    else:
+                        self.logger.info(
+                            f"Stopping internal {demod_type} demodulator for session {session_id}"
+                        )
+                        self.demodulator_manager.stop_demodulator(sdr_id, session_id)
                 else:
-                    self.logger.info(f"Stopping internal FM demodulator for session {session_id}")
-                    self.demodulator_manager.stop_demodulator(sdr_id, session_id)
+                    self.logger.debug(
+                        f"Internal demodulator for session {session_id} was already replaced, skipping cleanup"
+                    )
 
             del decoders[session_id]
             self.logger.info(f"Stopped {decoder_name} for session {session_id}")
