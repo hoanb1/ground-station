@@ -70,14 +70,20 @@ const MaintenanceForm = () => {
     const [restartMessage, setRestartMessage] = useState('');
     const [confirmRestartOpen, setConfirmRestartOpen] = useState(false);
 
+    // Confirmation dialog states
+    const [confirmClearLayoutOpen, setConfirmClearLayoutOpen] = useState(false);
+    const [confirmClearReduxOpen, setConfirmClearReduxOpen] = useState(false);
+
     // Maintenance functions
     const clearLayoutLocalStorage = () => {
+        setConfirmClearLayoutOpen(false);
         localStorage.setItem(overviewGridLayoutName, null);
         localStorage.setItem(targetGridLayoutName, null);
         localStorage.setItem(waterfallGridLayoutName, null);
     }
 
     const clearReduxPersistentState = () => {
+        setConfirmClearReduxOpen(false);
         // Clear all Redux persist keys
         const persistKeys = [
             'persist:waterfall',
@@ -569,7 +575,7 @@ const MaintenanceForm = () => {
                                     <Button
                                         variant="contained"
                                         color="warning"
-                                        onClick={clearLayoutLocalStorage}
+                                        onClick={() => setConfirmClearLayoutOpen(true)}
                                         fullWidth
                                         size="small"
                                     >
@@ -604,7 +610,7 @@ const MaintenanceForm = () => {
                                     <Button
                                         variant="contained"
                                         color="error"
-                                        onClick={clearReduxPersistentState}
+                                        onClick={() => setConfirmClearReduxOpen(true)}
                                         fullWidth
                                         size="small"
                                     >
@@ -1280,7 +1286,7 @@ const MaintenanceForm = () => {
                     </Grid>
                 </Grid>
 
-                {/* Confirmation Dialog */}
+                {/* Service Restart Confirmation Dialog */}
                 <Dialog open={confirmRestartOpen} onClose={() => setConfirmRestartOpen(false)}>
                     <DialogTitle>{t('maintenance.confirm_restart_title')}</DialogTitle>
                     <DialogContent>
@@ -1313,6 +1319,68 @@ const MaintenanceForm = () => {
                         <Button onClick={() => setConfirmRestartOpen(false)}>{t('maintenance.cancel')}</Button>
                         <Button onClick={handleServiceRestart} color="error" variant="contained">
                             {t('maintenance.yes_restart')}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Clear Layout Confirmation Dialog */}
+                <Dialog open={confirmClearLayoutOpen} onClose={() => setConfirmClearLayoutOpen(false)}>
+                    <DialogTitle>Clear All Grid Layouts?</DialogTitle>
+                    <DialogContent>
+                        <Typography paragraph>
+                            This will reset all widget layouts to their defaults on the following pages:
+                        </Typography>
+                        <ul>
+                            <li>Overview page</li>
+                            <li>Target page</li>
+                            <li>Waterfall page</li>
+                        </ul>
+                        <Typography paragraph>
+                            You will need to refresh the page to see the changes. Are you sure you want to continue?
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setConfirmClearLayoutOpen(false)}>Cancel</Button>
+                        <Button onClick={clearLayoutLocalStorage} color="warning" variant="contained">
+                            Clear Layouts
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Clear Redux Persist Confirmation Dialog */}
+                <Dialog open={confirmClearReduxOpen} onClose={() => setConfirmClearReduxOpen(false)}>
+                    <DialogTitle>Clear All Redux Persistent State?</DialogTitle>
+                    <DialogContent>
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                            <AlertTitle>Warning</AlertTitle>
+                            This action will reset ALL application settings to their defaults!
+                        </Alert>
+                        <Typography paragraph>
+                            This will clear all persistent data including:
+                        </Typography>
+                        <ul>
+                            <li>Waterfall settings (frequency, gain, sample rate, colormap, FFT)</li>
+                            <li>VFO settings (markers, frequencies, modes, active states)</li>
+                            <li>Rig configurations</li>
+                            <li>Rotator configurations</li>
+                            <li>TLE sources</li>
+                            <li>Satellite and group data</li>
+                            <li>Location settings</li>
+                            <li>User preferences (timezone, theme)</li>
+                            <li>Dashboard settings</li>
+                            <li>Weather settings</li>
+                            <li>Camera settings</li>
+                            <li>SDR settings</li>
+                            <li>File browser settings</li>
+                        </ul>
+                        <Typography paragraph>
+                            <strong>You will need to refresh the page after clearing.</strong> Are you sure you want to continue?
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setConfirmClearReduxOpen(false)}>Cancel</Button>
+                        <Button onClick={clearReduxPersistentState} color="error" variant="contained">
+                            Clear All Settings
                         </Button>
                     </DialogActions>
                 </Dialog>
