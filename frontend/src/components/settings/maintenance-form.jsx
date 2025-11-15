@@ -21,7 +21,7 @@ import {gridLayoutStoreName as overviewGridLayoutName} from "../overview/main-la
 import {gridLayoutStoreName as targetGridLayoutName} from "../target/main-layout.jsx";
 import {gridLayoutStoreName as waterfallGridLayoutName} from "../waterfall/main-layout.jsx";
 import Paper from "@mui/material/Paper";
-import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions} from "@mui/material";
+import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import React, {useState} from "react";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -29,12 +29,19 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import InfoIcon from '@mui/icons-material/Info';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSocket } from "../common/socket.jsx";
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchLibraryVersions } from './library-versions-slice.jsx';
 
 const MaintenanceForm = () => {
     const { socket } = useSocket();
     const { t } = useTranslation('settings');
+    const dispatch = useDispatch();
+
+    // Library versions state from Redux
+    const libraryVersions = useSelector((state) => state.libraryVersions);
 
     // Feature detection states
     const [workersSupported, setWorkersSupported] = useState(null);
@@ -169,6 +176,20 @@ const MaintenanceForm = () => {
         // Cleanup timer on component unmount
         return () => clearTimeout(timer);
     }, []);
+
+    // Load library versions on component mount
+    React.useEffect(() => {
+        if (socket && socket.connected) {
+            dispatch(fetchLibraryVersions({ socket }));
+        }
+    }, [socket, dispatch]);
+
+    // Handler to refresh library versions
+    const handleRefreshLibraryVersions = () => {
+        if (socket && socket.connected) {
+            dispatch(fetchLibraryVersions({ socket }));
+        }
+    };
 
     // Test functions
     const testWebWorkers = () => {
@@ -973,6 +994,88 @@ const MaintenanceForm = () => {
                                     </Grid>
                                 )}
                             </Grid>
+                        </Paper>
+
+                        {/* Library Versions Card */}
+                        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="h6">
+                                    Library Versions
+                                </Typography>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    startIcon={libraryVersions.loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+                                    onClick={handleRefreshLibraryVersions}
+                                    disabled={libraryVersions.loading}
+                                >
+                                    Refresh
+                                </Button>
+                            </Box>
+                            <Divider sx={{ mb: 2 }} />
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Versions of installed libraries and dependencies
+                            </Typography>
+
+                            {libraryVersions.error && (
+                                <Alert severity="error" sx={{ mb: 2 }}>
+                                    {libraryVersions.error}
+                                </Alert>
+                            )}
+
+                            {libraryVersions.loading && !Object.keys(libraryVersions.categories).length ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                                    <CircularProgress />
+                                </Box>
+                            ) : (
+                                <>
+                                    {Object.keys(libraryVersions.categories).length > 0 ? (
+                                        <>
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                                Total libraries: <strong>{libraryVersions.totalCount}</strong>
+                                            </Typography>
+                                            <TableContainer>
+                                                <Table size="small">
+                                                    <TableHead>
+                                                        <TableRow>
+                                                            <TableCell><strong>Category</strong></TableCell>
+                                                            <TableCell><strong>Library</strong></TableCell>
+                                                            <TableCell><strong>Description</strong></TableCell>
+                                                            <TableCell><strong>Version</strong></TableCell>
+                                                        </TableRow>
+                                                    </TableHead>
+                                                    <TableBody>
+                                                        {Object.entries(libraryVersions.categories).map(([category, libraries]) => (
+                                                            libraries.map((lib, index) => (
+                                                                <TableRow key={lib.key} hover>
+                                                                    <TableCell sx={{ textTransform: 'capitalize' }}>
+                                                                        {index === 0 ? category : ''}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {lib.name}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <Typography variant="body2" color="text.secondary">
+                                                                            {lib.description}
+                                                                        </Typography>
+                                                                    </TableCell>
+                                                                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                                                        {lib.version}
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </TableContainer>
+                                        </>
+                                    ) : (
+                                        <Alert severity="info">
+                                            No library version information available
+                                        </Alert>
+                                    )}
+                                </>
+                            )}
                         </Paper>
 
                         {/* Socket.IO Connection Information Card */}

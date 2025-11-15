@@ -41,6 +41,7 @@ import sdrsReducer from '../hardware/sdr-slice.jsx';
 import versionReducer from "../dashboard/version-slice.jsx";
 import fileBrowserReducer from '../filebrowser/filebrowser-slice.jsx';
 import decodersReducer from '../decoders/decoders-slice.jsx';
+import libraryVersionsReducer from '../settings/library-versions-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
 
 
@@ -203,6 +204,13 @@ const decodersPersistConfig = {
     whitelist: ['ui']  // Persist UI state, not active sessions
 };
 
+// Persist configuration for library versions slice
+const libraryVersionsPersistConfig = {
+    key: 'libraryVersions',
+    storage,
+    whitelist: []  // Don't persist library versions
+};
+
 
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
@@ -224,6 +232,7 @@ const persistedSdrReducer = persistReducer(sdrPersistConfig, sdrsReducer);
 const persistedVersionInfoReducer = persistReducer(versionInfoConfig, versionReducer);
 const persistedFileBrowserReducer = persistReducer(fileBrowserPersistConfig, fileBrowserReducer);
 const persistedDecodersReducer = persistReducer(decodersPersistConfig, decodersReducer);
+const persistedLibraryVersionsReducer = persistReducer(libraryVersionsPersistConfig, libraryVersionsReducer);
 
 
 export const store = configureStore({
@@ -247,6 +256,7 @@ export const store = configureStore({
         version: persistedVersionInfoReducer,
         filebrowser: persistedFileBrowserReducer,
         decoders: persistedDecodersReducer,
+        libraryVersions: persistedLibraryVersionsReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>

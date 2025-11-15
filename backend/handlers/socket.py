@@ -12,6 +12,7 @@ from handlers.entities import (
     locations,
     preferences,
     satellites,
+    systeminfo,
     tle_sources,
     tracking,
     transmitters,
@@ -39,6 +40,7 @@ def _register_all_handlers():
     transmitters.register_handlers(handler_registry)
     tracking.register_handlers(handler_registry)
     vfo.register_handlers(handler_registry)
+    systeminfo.register_handlers(handler_registry)
 
 
 # Register all handlers at module load time
