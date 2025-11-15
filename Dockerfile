@@ -72,7 +72,7 @@ RUN pip install --break-system-packages --ignore-installed numpy==2.3.1
 
 # Compile UHD from source with Python API
 WORKDIR /src
-RUN git clone https://github.com/EttusResearch/uhd.git && \
+RUN git clone --depth=1 https://github.com/EttusResearch/uhd.git && \
     cd uhd/host && \
     mkdir build && \
     cd build && \
@@ -96,7 +96,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # compile SoapySDR
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapySDR.git && \
+RUN git clone --depth=1 https://github.com/pothosware/SoapySDR.git && \
     cd SoapySDR && \
     mkdir build && \
     cd build && \
@@ -107,7 +107,7 @@ RUN git clone https://github.com/pothosware/SoapySDR.git && \
 
 # compile SoapySDRRemote
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyRemote.git && \
+RUN git clone --depth=1 https://github.com/pothosware/SoapyRemote.git && \
     cd SoapyRemote && \
     mkdir build && \
     cd build && \
@@ -118,7 +118,7 @@ RUN git clone https://github.com/pothosware/SoapyRemote.git && \
 
 # compile SoapySDR-RTLSDR
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyRTLSDR.git && \
+RUN git clone --depth=1 https://github.com/pothosware/SoapyRTLSDR.git && \
     cd SoapyRTLSDR && \
     mkdir build && \
     cd build && \
@@ -129,7 +129,7 @@ RUN git clone https://github.com/pothosware/SoapyRTLSDR.git && \
 
 # compile SoapySDR-Airspy
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyAirspy.git && \
+RUN git clone --depth=1 https://github.com/pothosware/SoapyAirspy.git && \
     cd SoapyAirspy && \
     mkdir build && \
     cd build && \
@@ -140,7 +140,7 @@ RUN git clone https://github.com/pothosware/SoapyAirspy.git && \
 
 # compile SoapySDR-UHD
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyUHD.git && \
+RUN git clone --depth=1 https://github.com/pothosware/SoapyUHD.git && \
     cd SoapyUHD && \
     mkdir build && \
     cd build && \
@@ -151,7 +151,7 @@ RUN git clone https://github.com/pothosware/SoapyUHD.git && \
 
 # compile SoapySDR-hackrf
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyHackRF.git && \
+RUN git clone --depth=1 https://github.com/pothosware/SoapyHackRF.git && \
     cd SoapyHackRF && \
     mkdir build && \
     cd build && \
@@ -178,7 +178,7 @@ RUN wget https://www.sdrplay.com/software/SDRplay_RSP_API-Linux-3.15.2.run && \
 
 # compile SoapySDRPlay3
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapySDRPlay3.git && \
+RUN git clone --depth=1 https://github.com/pothosware/SoapySDRPlay3.git && \
     cd SoapySDRPlay3 && \
     mkdir build && \
     cd build && \
@@ -189,7 +189,7 @@ RUN git clone https://github.com/pothosware/SoapySDRPlay3.git && \
 
 # compile LimeSuite
 WORKDIR /src
-RUN git clone https://github.com/myriadrf/LimeSuite.git && \
+RUN git clone --depth=1 https://github.com/myriadrf/LimeSuite.git && \
     cd LimeSuite && \
     git checkout stable && \
     sed -i '1i\#include <cstdint>' src/lms7002m_mcu/MCU_File.cpp && \
@@ -210,21 +210,21 @@ RUN git clone https://github.com/myriadrf/LimeSuite.git && \
 #     sudo make install
 
 # compile csdr
-WORKDIR /src
-RUN git clone https://github.com/jketterl/csdr.git && \
-    cd csdr && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make && \
-    make install && \
-    ldconfig
+# WORKDIR /src
+# RUN git clone https://github.com/jketterl/csdr.git && \
+#     cd csdr && \
+#     mkdir build && \
+#     cd build && \
+#     cmake .. && \
+#     make && \
+#     make install && \
+#     ldconfig
 
 # compile pycsdr
-WORKDIR /src
-RUN git clone https://github.com/jketterl/pycsdr.git && \
-    cd pycsdr && \
-    ./setup.py install install_headers
+# WORKDIR /src
+# RUN git clone https://github.com/jketterl/csdr.git && \
+#     cd pycsdr && \
+#     ./setup.py install install_headers
 
 # Install additional dependencies for GNU Radio
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -249,7 +249,7 @@ RUN pip install --force-reinstall numpy==2.3.1
 
 # Compile VOLK (Vector-Optimized Library of Kernels) - required by GNU Radio
 WORKDIR /src
-RUN git clone --recursive https://github.com/gnuradio/volk.git && \
+RUN git clone --depth=1 --recursive https://github.com/gnuradio/volk.git && \
     cd volk && \
     mkdir build && \
     cd build && \
@@ -260,7 +260,7 @@ RUN git clone --recursive https://github.com/gnuradio/volk.git && \
 
 # Compile GNU Radio 3.10
 WORKDIR /src
-RUN git clone --recursive https://github.com/gnuradio/gnuradio.git && \
+RUN git clone --depth=1 --recursive https://github.com/gnuradio/gnuradio.git && \
     cd gnuradio && \
     git checkout maint-3.10 && \
     mkdir build && \
@@ -282,7 +282,7 @@ RUN cp -r /usr/local/lib/python3.12/site-packages/pmt* /app/venv/lib/python3.12/
 
 # Compile gr-lora_sdr
 WORKDIR /src
-RUN git clone https://github.com/tapparelj/gr-lora_sdr.git && \
+RUN git clone --depth=1 https://github.com/tapparelj/gr-lora_sdr.git && \
     cd gr-lora_sdr && \
     mkdir build && \
     cd build && \
@@ -313,6 +313,19 @@ RUN wget -O /usr/local/share/uhd/images/libresdr_b210.bin \
 
 # Remove all that source code
 RUN rm -rf /src
+
+# Remove build tools to save space
+RUN apt-get remove -y --purge \
+    build-essential \
+    cmake \
+    gcc \
+    g++ \
+    git \
+    wget \
+    dh-autoreconf \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
