@@ -259,9 +259,8 @@ RUN git clone --depth=1 --recursive https://github.com/gnuradio/volk.git && \
 
 # Compile GNU Radio 3.10
 WORKDIR /src
-RUN git clone --depth=1 --recursive https://github.com/gnuradio/gnuradio.git && \
+RUN git clone --depth=1 --branch=maint-3.10 --recursive https://github.com/gnuradio/gnuradio.git && \
     cd gnuradio && \
-    git checkout maint-3.10 && \
     mkdir build && \
     cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release \
