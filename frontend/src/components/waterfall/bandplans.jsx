@@ -1,5 +1,68 @@
 export const frequencyBands = [
     {
+        startFrequency: 1800000,
+        endFrequency: 2000000,
+        name: '160m Ham',
+        color: 'rgba(255, 0, 0, 0.3)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 3500000,
+        endFrequency: 4000000,
+        name: '80m Ham',
+        color: 'rgba(255, 50, 0, 0.3)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 7000000,
+        endFrequency: 7300000,
+        name: '40m Ham',
+        color: 'rgba(255, 100, 0, 0.3)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 10100000,
+        endFrequency: 10150000,
+        name: '30m Ham',
+        color: 'rgba(255, 150, 0, 0.3)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 14000000,
+        endFrequency: 14350000,
+        name: '20m Ham',
+        color: 'rgba(255, 200, 0, 0.3)',
+        textColor: '#000000'
+    },
+    {
+        startFrequency: 18068000,
+        endFrequency: 18168000,
+        name: '17m Ham',
+        color: 'rgba(200, 255, 0, 0.3)',
+        textColor: '#000000'
+    },
+    {
+        startFrequency: 21000000,
+        endFrequency: 21450000,
+        name: '15m Ham',
+        color: 'rgba(150, 255, 0, 0.3)',
+        textColor: '#000000'
+    },
+    {
+        startFrequency: 24890000,
+        endFrequency: 24990000,
+        name: '12m Ham',
+        color: 'rgba(100, 255, 0, 0.3)',
+        textColor: '#000000'
+    },
+    {
+        startFrequency: 28000000,
+        endFrequency: 29700000,
+        name: '10m Ham',
+        color: 'rgba(0, 255, 100, 0.3)',
+        textColor: '#000000'
+    },
+    {
         startFrequency: 144000000,
         endFrequency: 146000000,
         name: '2m Ham',
