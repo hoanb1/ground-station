@@ -24,6 +24,10 @@ from typing import Any, Dict, List, Optional
 
 from common.logger import logger
 
+# Cache for library versions to avoid repeated expensive operations
+_backend_library_versions_cache: Optional[Dict[str, Any]] = None
+_frontend_library_versions_cache: Optional[Dict[str, Any]] = None
+
 
 def get_package_version(package_name: str) -> Optional[str]:
     """
@@ -66,13 +70,25 @@ def get_python_version() -> str:
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
 
 
-def get_library_versions() -> Dict[str, Any]:
+def get_library_versions(use_cache: bool = True) -> Dict[str, Any]:
     """
     Get versions of all important libraries and dependencies.
+
+    Args:
+        use_cache: If True, return cached results if available. If False, force refresh.
 
     Returns:
         Dictionary containing categorized library information
     """
+    global _backend_library_versions_cache
+
+    # Return cached version if available and use_cache is True
+    if use_cache and _backend_library_versions_cache is not None:
+        logger.debug("Returning cached backend library versions")
+        return _backend_library_versions_cache
+
+    logger.info("Fetching backend library versions (no cache)")
+
     libraries: Dict[str, Dict[str, Any]] = {
         "python": {
             "name": "Python",
@@ -443,16 +459,33 @@ def get_library_versions() -> Dict[str, Any]:
 
     logger.info(f"Retrieved version information for {len(installed_libraries)} libraries")
 
-    return {"categories": result, "total_count": len(installed_libraries)}
+    result_dict = {"categories": result, "total_count": len(installed_libraries)}
+
+    # Cache the result
+    _backend_library_versions_cache = result_dict
+
+    return result_dict
 
 
-def get_frontend_library_versions() -> Dict[str, Any]:
+def get_frontend_library_versions(use_cache: bool = True) -> Dict[str, Any]:
     """
     Get versions of frontend libraries from package.json.
+
+    Args:
+        use_cache: If True, return cached results if available. If False, force refresh.
 
     Returns:
         Dictionary containing categorized frontend library information
     """
+    global _frontend_library_versions_cache
+
+    # Return cached version if available and use_cache is True
+    if use_cache and _frontend_library_versions_cache is not None:
+        logger.debug("Returning cached frontend library versions")
+        return _frontend_library_versions_cache
+
+    logger.info("Fetching frontend library versions (no cache)")
+
     # Path to frontend package.json relative to backend directory
     package_json_path = os.path.join(
         os.path.dirname(__file__), "..", "..", "frontend", "package.json"
@@ -588,7 +621,12 @@ def get_frontend_library_versions() -> Dict[str, Any]:
 
         logger.info(f"Retrieved frontend version information for {total_count} packages")
 
-        return {"categories": result, "total_count": total_count}
+        result_dict = {"categories": result, "total_count": total_count}
+
+        # Cache the result
+        _frontend_library_versions_cache = result_dict
+
+        return result_dict
 
     except (json.JSONDecodeError, IOError) as e:
         logger.error(f"Error reading frontend package.json: {e}")
