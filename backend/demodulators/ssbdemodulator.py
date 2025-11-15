@@ -290,13 +290,15 @@ class SSBDemodulator(threading.Thread):
 
                 # Determine VFO parameters based on mode
                 if self.internal_mode:
-                    # Internal mode: use provided parameters but still get VFO state for volume/squelch/bandwidth
+                    # Internal mode: use provided parameters but still get VFO state for volume/squelch/bandwidth/frequency
                     vfo_state = self._get_active_vfo()
-                    vfo_center_freq = (
-                        self.internal_center_freq
-                        if self.internal_center_freq is not None
-                        else sdr_center_freq
-                    )
+                    # Use VFO center frequency if available (allows dynamic tuning), otherwise fallback to internal/SDR center
+                    if vfo_state and vfo_state.center_freq:
+                        vfo_center_freq = vfo_state.center_freq
+                    elif self.internal_center_freq is not None:
+                        vfo_center_freq = self.internal_center_freq
+                    else:
+                        vfo_center_freq = sdr_center_freq
                     # Use VFO bandwidth if available (allows dynamic bandwidth adjustment), otherwise fallback to internal
                     vfo_bandwidth = vfo_state.bandwidth if vfo_state else self.internal_bandwidth
                     # Keep the mode as set during init (e.g., "cw" for CW decoder)
