@@ -16,6 +16,8 @@
 """Library version information utilities."""
 
 import importlib.metadata
+import json
+import os
 import subprocess
 import sys
 from typing import Any, Dict, List, Optional
@@ -292,3 +294,152 @@ def get_library_versions() -> Dict[str, Any]:
     logger.info(f"Retrieved version information for {len(installed_libraries)} libraries")
 
     return {"categories": result, "total_count": len(installed_libraries)}
+
+
+def get_frontend_library_versions() -> Dict[str, Any]:
+    """
+    Get versions of frontend libraries from package.json.
+
+    Returns:
+        Dictionary containing categorized frontend library information
+    """
+    # Path to frontend package.json relative to backend directory
+    package_json_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "frontend", "package.json"
+    )
+    package_json_path = os.path.abspath(package_json_path)
+
+    if not os.path.exists(package_json_path):
+        logger.error(f"Frontend package.json not found at {package_json_path}")
+        return {"categories": {}, "total_count": 0}
+
+    try:
+        with open(package_json_path, "r") as f:
+            package_data = json.load(f)
+
+        dependencies = package_data.get("dependencies", {})
+        dev_dependencies = package_data.get("devDependencies", {})
+
+        # Categorize frontend libraries
+        categorized: Dict[str, List[Dict[str, str]]] = {
+            "ui": [],
+            "state": [],
+            "routing": [],
+            "data-viz": [],
+            "maps": [],
+            "utilities": [],
+            "build": [],
+            "testing": [],
+        }
+
+        # Map packages to categories
+        category_mapping = {
+            # UI Frameworks & Components
+            "react": "ui",
+            "react-dom": "ui",
+            "@emotion/react": "ui",
+            "@emotion/styled": "ui",
+            "@mui/material": "ui",
+            "@mui/icons-material": "ui",
+            "@mui/joy": "ui",
+            "@mui/lab": "ui",
+            "@toolpad/core": "ui",
+            "hugeicons-react": "ui",
+            "react-icons": "ui",
+            "react-toastify": "ui",
+            "react-full-screen": "ui",
+            "react-grid-layout": "ui",
+            "react-resize-detector": "ui",
+            "react-window": "ui",
+            "react-virtuoso": "ui",
+            "react-zoom-pan-pinch": "ui",
+            # State Management
+            "@reduxjs/toolkit": "state",
+            "react-redux": "state",
+            "redux-persist": "state",
+            "immer": "state",
+            # Routing
+            "react-router": "routing",
+            "react-router-dom": "routing",
+            # Data Visualization
+            "@mui/x-charts": "data-viz",
+            "@mui/x-data-grid": "data-viz",
+            # Maps & Geolocation
+            "leaflet": "maps",
+            "leaflet-fullscreen": "maps",
+            "react-leaflet": "maps",
+            "satellite.js": "maps",
+            "suncalc": "maps",
+            "cities.json": "maps",
+            # Utilities
+            "socket.io-client": "utilities",
+            "socket.io": "utilities",
+            "i18next": "utilities",
+            "react-i18next": "utilities",
+            "moment-timezone": "utilities",
+            "lodash": "utilities",
+            "uuid": "utilities",
+            "hls.js": "utilities",
+            # Build Tools
+            "vite": "build",
+            "@vitejs/plugin-react": "build",
+            # Testing
+            "vitest": "testing",
+            "@vitest/ui": "testing",
+            "@vitest/coverage-v8": "testing",
+            "@playwright/test": "testing",
+            "@testing-library/react": "testing",
+            "@testing-library/jest-dom": "testing",
+            "@testing-library/user-event": "testing",
+            "jsdom": "testing",
+            "eslint": "testing",
+            "@eslint/js": "testing",
+            "eslint-plugin-react": "testing",
+            "eslint-plugin-react-hooks": "testing",
+            "eslint-plugin-react-refresh": "testing",
+        }
+
+        # Process dependencies
+        for package_name, version in dependencies.items():
+            category = category_mapping.get(package_name, "utilities")
+            # Clean version (remove ^ ~ etc)
+            clean_version = version.lstrip("^~>=<")
+            categorized[category].append(
+                {
+                    "key": package_name,
+                    "name": package_name,
+                    "version": clean_version,
+                    "description": "Production dependency",
+                }
+            )
+
+        # Process dev dependencies
+        for package_name, version in dev_dependencies.items():
+            category = category_mapping.get(package_name, "build")
+            clean_version = version.lstrip("^~>=<")
+            if category not in categorized:
+                categorized[category] = []
+            categorized[category].append(
+                {
+                    "key": package_name,
+                    "name": package_name,
+                    "version": clean_version,
+                    "description": "Development dependency",
+                }
+            )
+
+        # Remove empty categories and sort
+        result: Dict[str, List[Dict[str, str]]] = {}
+        total_count = 0
+        for category in sorted(categorized.keys()):
+            if categorized[category]:
+                result[category] = sorted(categorized[category], key=lambda x: x["name"])
+                total_count += len(result[category])
+
+        logger.info(f"Retrieved frontend version information for {total_count} packages")
+
+        return {"categories": result, "total_count": total_count}
+
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error(f"Error reading frontend package.json: {e}")
+        return {"categories": {}, "total_count": 0}

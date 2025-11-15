@@ -21,7 +21,7 @@ import {gridLayoutStoreName as overviewGridLayoutName} from "../overview/main-la
 import {gridLayoutStoreName as targetGridLayoutName} from "../target/main-layout.jsx";
 import {gridLayoutStoreName as waterfallGridLayoutName} from "../waterfall/main-layout.jsx";
 import Paper from "@mui/material/Paper";
-import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from "@mui/material";
+import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, Tab} from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import React, {useState} from "react";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -33,7 +33,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSocket } from "../common/socket.jsx";
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchLibraryVersions } from './library-versions-slice.jsx';
+import { fetchLibraryVersions, fetchFrontendLibraryVersions } from './library-versions-slice.jsx';
 
 const MaintenanceForm = () => {
     const { socket } = useSocket();
@@ -42,6 +42,9 @@ const MaintenanceForm = () => {
 
     // Library versions state from Redux
     const libraryVersions = useSelector((state) => state.libraryVersions);
+
+    // Tab state for library versions
+    const [libraryVersionsTab, setLibraryVersionsTab] = useState(0);
 
     // Feature detection states
     const [workersSupported, setWorkersSupported] = useState(null);
@@ -181,6 +184,7 @@ const MaintenanceForm = () => {
     React.useEffect(() => {
         if (socket && socket.connected) {
             dispatch(fetchLibraryVersions({ socket }));
+            dispatch(fetchFrontendLibraryVersions({ socket }));
         }
     }, [socket, dispatch]);
 
@@ -188,6 +192,13 @@ const MaintenanceForm = () => {
     const handleRefreshLibraryVersions = () => {
         if (socket && socket.connected) {
             dispatch(fetchLibraryVersions({ socket }));
+        }
+    };
+
+    // Handler to refresh frontend library versions
+    const handleRefreshFrontendLibraryVersions = () => {
+        if (socket && socket.connected) {
+            dispatch(fetchFrontendLibraryVersions({ socket }));
         }
     };
 
@@ -996,7 +1007,7 @@ const MaintenanceForm = () => {
                             </Grid>
                         </Paper>
 
-                        {/* Library Versions Card */}
+                        {/* Library Versions Card with Tabs */}
                         <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                 <Typography variant="h6">
@@ -1005,74 +1016,158 @@ const MaintenanceForm = () => {
                                 <Button
                                     variant="outlined"
                                     size="small"
-                                    startIcon={libraryVersions.loading ? <CircularProgress size={16} /> : <RefreshIcon />}
-                                    onClick={handleRefreshLibraryVersions}
-                                    disabled={libraryVersions.loading}
+                                    startIcon={
+                                        (libraryVersionsTab === 0 ? libraryVersions.backend.loading : libraryVersions.frontend.loading)
+                                        ? <CircularProgress size={16} />
+                                        : <RefreshIcon />
+                                    }
+                                    onClick={libraryVersionsTab === 0 ? handleRefreshLibraryVersions : handleRefreshFrontendLibraryVersions}
+                                    disabled={libraryVersionsTab === 0 ? libraryVersions.backend.loading : libraryVersions.frontend.loading}
                                 >
                                     Refresh
                                 </Button>
                             </Box>
                             <Divider sx={{ mb: 2 }} />
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                Versions of installed libraries and dependencies
-                            </Typography>
 
-                            {libraryVersions.error && (
-                                <Alert severity="error" sx={{ mb: 2 }}>
-                                    {libraryVersions.error}
-                                </Alert>
+                            <Tabs value={libraryVersionsTab} onChange={(e, newValue) => setLibraryVersionsTab(newValue)} sx={{ mb: 2 }}>
+                                <Tab label="Backend" />
+                                <Tab label="Frontend" />
+                            </Tabs>
+
+                            {/* Backend Tab */}
+                            {libraryVersionsTab === 0 && (
+                                <>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                        Versions of installed backend libraries and dependencies
+                                    </Typography>
+
+                                    {libraryVersions.backend.error && (
+                                        <Alert severity="error" sx={{ mb: 2 }}>
+                                            {libraryVersions.backend.error}
+                                        </Alert>
+                                    )}
+
+                                    {libraryVersions.backend.loading && !Object.keys(libraryVersions.backend.categories).length ? (
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                                            <CircularProgress />
+                                        </Box>
+                                    ) : (
+                                        <>
+                                            {Object.keys(libraryVersions.backend.categories).length > 0 ? (
+                                                <>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                                        Total libraries: <strong>{libraryVersions.backend.totalCount}</strong>
+                                                    </Typography>
+                                                    <TableContainer>
+                                                        <Table size="small">
+                                                            <TableHead>
+                                                                <TableRow>
+                                                                    <TableCell><strong>Category</strong></TableCell>
+                                                                    <TableCell><strong>Library</strong></TableCell>
+                                                                    <TableCell><strong>Description</strong></TableCell>
+                                                                    <TableCell><strong>Version</strong></TableCell>
+                                                                </TableRow>
+                                                            </TableHead>
+                                                            <TableBody>
+                                                                {Object.entries(libraryVersions.backend.categories).map(([category, libraries]) => (
+                                                                    libraries.map((lib, index) => (
+                                                                        <TableRow key={lib.key} hover>
+                                                                            <TableCell sx={{ textTransform: 'capitalize' }}>
+                                                                                {index === 0 ? category : ''}
+                                                                            </TableCell>
+                                                                            <TableCell>
+                                                                                {lib.name}
+                                                                            </TableCell>
+                                                                            <TableCell>
+                                                                                <Typography variant="body2" color="text.secondary">
+                                                                                    {lib.description}
+                                                                                </Typography>
+                                                                            </TableCell>
+                                                                            <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                                                                {lib.version}
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    ))
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </TableContainer>
+                                                </>
+                                            ) : (
+                                                <Alert severity="info">
+                                                    No backend library version information available
+                                                </Alert>
+                                            )}
+                                        </>
+                                    )}
+                                </>
                             )}
 
-                            {libraryVersions.loading && !Object.keys(libraryVersions.categories).length ? (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                                    <CircularProgress />
-                                </Box>
-                            ) : (
+                            {/* Frontend Tab */}
+                            {libraryVersionsTab === 1 && (
                                 <>
-                                    {Object.keys(libraryVersions.categories).length > 0 ? (
-                                        <>
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                                Total libraries: <strong>{libraryVersions.totalCount}</strong>
-                                            </Typography>
-                                            <TableContainer>
-                                                <Table size="small">
-                                                    <TableHead>
-                                                        <TableRow>
-                                                            <TableCell><strong>Category</strong></TableCell>
-                                                            <TableCell><strong>Library</strong></TableCell>
-                                                            <TableCell><strong>Description</strong></TableCell>
-                                                            <TableCell><strong>Version</strong></TableCell>
-                                                        </TableRow>
-                                                    </TableHead>
-                                                    <TableBody>
-                                                        {Object.entries(libraryVersions.categories).map(([category, libraries]) => (
-                                                            libraries.map((lib, index) => (
-                                                                <TableRow key={lib.key} hover>
-                                                                    <TableCell sx={{ textTransform: 'capitalize' }}>
-                                                                        {index === 0 ? category : ''}
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        {lib.name}
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        <Typography variant="body2" color="text.secondary">
-                                                                            {lib.description}
-                                                                        </Typography>
-                                                                    </TableCell>
-                                                                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                                                                        {lib.version}
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            ))
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </TableContainer>
-                                        </>
-                                    ) : (
-                                        <Alert severity="info">
-                                            No library version information available
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                        Versions of frontend packages from package.json
+                                    </Typography>
+
+                                    {libraryVersions.frontend.error && (
+                                        <Alert severity="error" sx={{ mb: 2 }}>
+                                            {libraryVersions.frontend.error}
                                         </Alert>
+                                    )}
+
+                                    {libraryVersions.frontend.loading && !Object.keys(libraryVersions.frontend.categories).length ? (
+                                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                                            <CircularProgress />
+                                        </Box>
+                                    ) : (
+                                        <>
+                                            {Object.keys(libraryVersions.frontend.categories).length > 0 ? (
+                                                <>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                                        Total packages: <strong>{libraryVersions.frontend.totalCount}</strong>
+                                                    </Typography>
+                                                    <TableContainer>
+                                                        <Table size="small">
+                                                            <TableHead>
+                                                                <TableRow>
+                                                                    <TableCell><strong>Category</strong></TableCell>
+                                                                    <TableCell><strong>Package</strong></TableCell>
+                                                                    <TableCell><strong>Description</strong></TableCell>
+                                                                    <TableCell><strong>Version</strong></TableCell>
+                                                                </TableRow>
+                                                            </TableHead>
+                                                            <TableBody>
+                                                                {Object.entries(libraryVersions.frontend.categories).map(([category, libraries]) => (
+                                                                    libraries.map((lib, index) => (
+                                                                        <TableRow key={lib.key} hover>
+                                                                            <TableCell sx={{ textTransform: 'capitalize' }}>
+                                                                                {index === 0 ? category : ''}
+                                                                            </TableCell>
+                                                                            <TableCell>
+                                                                                {lib.name}
+                                                                            </TableCell>
+                                                                            <TableCell>
+                                                                                <Typography variant="body2" color="text.secondary">
+                                                                                    {lib.description}
+                                                                                </Typography>
+                                                                            </TableCell>
+                                                                            <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                                                                {lib.version}
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    ))
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </TableContainer>
+                                                </>
+                                            ) : (
+                                                <Alert severity="info">
+                                                    No frontend library version information available
+                                                </Alert>
+                                            )}
+                                        </>
                                     )}
                                 </>
                             )}
