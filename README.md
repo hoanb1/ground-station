@@ -55,16 +55,21 @@ live radio signals from satellites.
 *   **Automated Antenna Control:** Interface with popular antenna rotators to automatically track satellites as they pass overhead.
 *   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
 *   **IQ Recording & Playback:** Record raw IQ data in SigMF format with complete metadata (center frequency, sample rate, satellite info) and play back recordings through a virtual SDR device for analysis and debugging.
+*   **Data Decoding:** Decode SSTV images in real-time with live audio monitoring (additional decoders in development)
 *   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.
 
 ## Planned Features & Roadmap
 
-The following features are planned for future releases:
+The following features are planned or in development:
 
-*   **Data Decoding:** Decode and display images from weather satellites (e.g., NOAA APT, METEOR LRPT) and telemetry from various amateur satellites
+*   **Additional Decoders:**
+    *   Morse/CW decoder (in development)
+    *   AFSK packet decoder (in development)
+    *   LoRa/GMSK decoders (in development)
+    *   NOAA APT weather satellite images
+    *   METEOR LRPT weather satellite images
+    *   Additional telemetry formats
 *   **Pass Scheduler:** Automated scheduling and recording of satellite passes
-
-**Note:** Data decoding functionality is planned but not yet implemented.
 
 ## Architecture
 <a id="arch-v1"></a>
@@ -90,7 +95,7 @@ flowchart TB
         W2A[FFT Processor<br/>- Spectrum computation<br/>- Waterfall generation<br/>- Real-time FFT analysis]
         W2B[Demodulators<br/>- FM/SSB/AM modes<br/>- Normal & Internal modes<br/>- Frequency translation<br/>- Audio processing<br/>- Multi-VFO support]
         W2C[IQ Recorder<br/>- SigMF format recording<br/>- Metadata capture<br/>- Satellite info tagging<br/>- Waterfall snapshot saving]
-        W2D[Decoders<br/>- SSTV image decoder<br/>- Morse/CW decoder<br/>- AFSK packet decoder<br/>- LoRa/GMSK decoders<br/>- Audio Broadcaster for monitoring]
+        W2D[Decoders<br/>- SSTV image decoder ✓<br/>- Morse/CW decoder WIP<br/>- AFSK packet decoder WIP<br/>- LoRa/GMSK decoders WIP<br/>- Audio Broadcaster for monitoring]
         W3[SDR Local Probe<br/>- Device discovery<br/>- Local SoapySDR enumeration<br/>- Hardware capability detection]
         W4[SDR Remote Probe<br/>- Remote SoapySDR discovery<br/>- Network device scanning<br/>- Remote capability detection]
     end
@@ -217,7 +222,7 @@ flowchart TB
     %% Decoder Chain
     subgraph DecoderChain["Decoder Processing"]
         direction TB
-        DEC[Decoder<br/>SSTV/Morse/AFSK]
+        DEC[Decoder<br/>SSTV ✓ / Morse WIP / AFSK WIP]
         UIAUDIO[UI Audio Stream<br/>Live Monitoring]
     end
 
@@ -288,13 +293,13 @@ flowchart TB
 - Statistics tracking: delivered/dropped message counts per subscriber
 - Graceful slow consumer handling
 
-**Chain Processing Example (SSTV):**
+**Chain Processing Example (SSTV - Implemented ✓):**
 1. SDR → IQBroadcaster → Internal FM Demodulator (12.5 kHz BW)
 2. FM Demodulator → AudioBroadcaster input queue
 3. AudioBroadcaster → Decoder subscriber → SSTV Decoder → Image output
 4. AudioBroadcaster → UI subscriber → Browser audio player (user hears what decoder processes)
 
-**Chain Processing Example (Morse/CW):**
+**Chain Processing Example (Morse/CW - In Development):**
 1. SDR → IQBroadcaster → Internal SSB Demodulator (CW mode, 2.5 kHz BW)
 2. SSB Demodulator → AudioBroadcaster input queue
 3. AudioBroadcaster → Decoder subscriber → Morse Decoder → Text output
@@ -306,9 +311,9 @@ flowchart TB
 - **Monitoring:** Per-subscriber statistics and health monitoring
 - **Reliability:** Slow consumers don't block fast producers
 
-*   **Frontend:** The frontend is a single-page application built with React, Redux Toolkit, and Material-UI. It communicates with the backend using a socket.io connection for real-time updates.
-*   **Backend:** The backend is a Python application built with FastAPI. It provides a REST API and a socket.io interface for the frontend. It also manages the worker processes.
-*   **Workers:** The worker processes are responsible for the heavy lifting. They perform tasks such as satellite tracking, SDR streaming, and antenna control.
+*   **Frontend:** The frontend is a single-page application built with React, Redux Toolkit, and Material-UI. It communicates with the backend using a socket.io connection for real-time updates, including decoded data display and live audio monitoring.
+*   **Backend:** The backend is a Python application built with FastAPI. It provides a REST API and a socket.io interface for the frontend. It manages worker processes, decoder lifecycle, and coordinates the pub/sub architecture for signal distribution.
+*   **Workers:** The worker processes are responsible for the heavy lifting. They perform tasks such as satellite tracking, SDR streaming, signal demodulation, data decoding (SSTV implemented, Morse/AFSK/LoRa in development), and antenna control. Workers use IQ Broadcaster and Audio Broadcaster for efficient multi-consumer signal distribution.
 
 ## Third-Party Libraries & Technologies
 
@@ -340,13 +345,18 @@ Dedicated worker processes provide IQ acquisition, FFT processing, and demodulat
 *   **SoapySDR** devices locally or through SoapyRemote (Airspy, HackRF, LimeSDR, etc.)
 *   **UHD/USRP** radios via a UHD worker
 
-The SDR architecture separates IQ acquisition from signal processing:
-*   **IQ Acquisition Workers** stream raw samples to a queue
-*   **FFT Processor** consumes IQ for spectrum display
-*   **FM Demodulator** consumes IQ for real-time audio output
-*   **IQ Recorder** captures raw samples to SigMF format files
+The SDR architecture uses a pub/sub pattern (IQ Broadcaster) to separate IQ acquisition from signal processing:
+*   **IQ Acquisition Workers** stream raw samples to **IQ Broadcaster**
+*   **IQ Broadcaster** distributes to multiple subscribers independently:
+    *   **FFT Processor** for spectrum/waterfall display
+    *   **Demodulators** (FM/SSB/AM) for audio output in normal and internal modes
+    *   **IQ Recorder** for SigMF format file capture
+    *   **Raw IQ Decoders** (LoRa, GMSK) that bypass demodulation
+*   **Audio Broadcaster** distributes demodulated audio from internal demodulators to:
+    *   **Data Decoders** (SSTV ✓, Morse WIP, AFSK WIP) for signal decoding
+    *   **UI Audio Stream** for live monitoring in browser
 
-> **Note:** The current signal demodulator implementations (FM, AM, SSB) were developed with assistance from Claude AI (Anthropic) to handle the complex digital signal processing algorithms. These components are clearly marked in the source code and are licensed under GPL-3.0 like the rest of the project.
+> **Note:** The signal processing components (demodulators, broadcasters, decoders) were developed with assistance from Claude AI (Anthropic) to handle complex DSP algorithms and pub/sub architecture. These components are clearly marked in the source code and are licensed under GPL-3.0 like the rest of the project.
 
 ## IQ Recording & Playback
 
