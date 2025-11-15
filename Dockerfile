@@ -77,8 +77,8 @@ RUN git clone --depth=1 https://github.com/EttusResearch/uhd.git && \
     mkdir build && \
     cd build && \
     cmake -DENABLE_PYTHON_API=ON .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 RUN python3 -m venv /app/venv
@@ -101,8 +101,8 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapySDR.git && \
     mkdir build && \
     cd build && \
     cmake .. && \
-    make -j`nproc` && \
-    sudo make install -j`nproc` && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # compile SoapySDRRemote
@@ -112,8 +112,8 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapyRemote.git && \
     mkdir build && \
     cd build && \
     cmake .. && \
-    make -j`nproc` && \
-    sudo make install -j`nproc` && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # compile SoapySDR-RTLSDR
@@ -123,8 +123,8 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapyRTLSDR.git && \
     mkdir build && \
     cd build && \
     cmake .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # compile SoapySDR-Airspy
@@ -134,8 +134,8 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapyAirspy.git && \
     mkdir build && \
     cd build && \
     cmake .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # compile SoapySDR-UHD
@@ -145,8 +145,8 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapyUHD.git && \
     mkdir build && \
     cd build && \
     cmake .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # compile SoapySDR-hackrf
@@ -156,8 +156,8 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapyHackRF.git && \
     mkdir build && \
     cd build && \
     cmake .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # Install SDRplay API (prerequisite for SoapySDRPlay3)
@@ -183,8 +183,8 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapySDRPlay3.git && \
     mkdir build && \
     cd build && \
     cmake .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # compile LimeSuite
@@ -195,8 +195,8 @@ RUN git clone --depth=1 --branch=stable https://github.com/myriadrf/LimeSuite.gi
     mkdir builddir && \
     cd builddir && \
     cmake ../ && \
-    make -j4 && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # compile Hamlib
@@ -205,8 +205,8 @@ RUN git clone --depth=1 --branch=stable https://github.com/myriadrf/LimeSuite.gi
 #     cd Hamlib && \
 #     ./bootstrap && \
 #     ./configure --with-python-binding && \
-#     make && \
-#     sudo make install
+#     make -j$(nproc) && \
+#     sudo make install -j$(nproc)
 
 # compile csdr
 # WORKDIR /src
@@ -215,8 +215,8 @@ RUN git clone --depth=1 --branch=stable https://github.com/myriadrf/LimeSuite.gi
 #     mkdir build && \
 #     cd build && \
 #     cmake .. && \
-#     make && \
-#     make install && \
+#     make -j$(nproc) && \
+#     make install -j$(nproc) && \
 #     ldconfig
 
 # compile pycsdr
@@ -253,8 +253,8 @@ RUN git clone --depth=1 --recursive https://github.com/gnuradio/volk.git && \
     mkdir build && \
     cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # Compile GNU Radio 3.10
@@ -270,8 +270,8 @@ RUN git clone --depth=1 --branch=maint-3.10 --recursive https://github.com/gnura
           -DPython3_EXECUTABLE=/app/venv/bin/python3 \
           -DPYTHON_EXECUTABLE=/app/venv/bin/python3 \
           .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # Copy GNU Radio Python bindings to virtual environment
@@ -288,8 +288,8 @@ RUN git clone --depth=1 https://github.com/tapparelj/gr-lora_sdr.git && \
           -DPYTHON_EXECUTABLE=/app/venv/bin/python3 \
           -DPYTHON_INCLUDE_DIR=/usr/include/python3.12 \
           -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.12.so .. && \
-    make -j`nproc` && \
-    sudo make install && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
     sudo ldconfig
 
 # Copy gr-lora_sdr Python bindings to virtual environment
