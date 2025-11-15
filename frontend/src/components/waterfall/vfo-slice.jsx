@@ -147,6 +147,16 @@ export const vfoSlice = createSlice({
                         state.vfoMarkers[vfoNum].transcriptionLanguage = vfoState.transcription_language;
                     }
 
+                    // FIX: Enforce mutual exclusivity between audio demodulators and data decoders
+                    // When loading state from backend/storage, ensure that audio demod (mode) and
+                    // data decoder are not both active simultaneously. This prevents the UI bug where
+                    // both toggle groups appear selected on page load, requiring manual "none" click to unstick.
+                    // If a decoder is active (not 'none'), force audio demod to 'NONE'
+                    const currentDecoder = state.vfoMarkers[vfoNum].decoder;
+                    if (currentDecoder && currentDecoder !== 'none') {
+                        state.vfoMarkers[vfoNum].mode = 'NONE';
+                    }
+
                     // Update active state
                     state.vfoActive[vfoNum] = vfoState.active;
 
