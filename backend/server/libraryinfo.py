@@ -263,6 +263,156 @@ def get_library_versions() -> Dict[str, Any]:
             "description": "RTL-SDR library",
         }
 
+    # GNU Radio
+    gnuradio_version = get_system_library_version(["gnuradio-config-info", "--version"])
+    if gnuradio_version:
+        system_libraries["gnuradio"] = {
+            "name": "GNU Radio",
+            "version": gnuradio_version.strip(),
+            "category": "sdr",
+            "description": "Software-defined radio framework",
+        }
+    else:
+        # Fallback to Python import
+        try:
+            import gnuradio
+
+            system_libraries["gnuradio"] = {
+                "name": "GNU Radio",
+                "version": (
+                    gnuradio.__version__ if hasattr(gnuradio, "__version__") else "installed"
+                ),
+                "category": "sdr",
+                "description": "Software-defined radio framework",
+            }
+        except ImportError:
+            pass
+
+    # VOLK (Vector-Optimized Library of Kernels)
+    volk_version = get_system_library_version(["volk_profile", "--version"])
+    if volk_version:
+        # Extract version from output
+        for line in volk_version.split("\n"):
+            if "volk" in line.lower() and any(c.isdigit() for c in line):
+                parts = line.split()
+                for part in parts:
+                    if part[0].isdigit() or part.startswith("v"):
+                        system_libraries["volk"] = {
+                            "name": "VOLK",
+                            "version": part.lstrip("v"),
+                            "category": "sdr",
+                            "description": "Vector-Optimized Library of Kernels",
+                        }
+                        break
+                break
+
+    # LimeSuite
+    lime_version = get_system_library_version(["LimeUtil", "--info"])
+    if lime_version:
+        for line in lime_version.split("\n"):
+            if "library version" in line.lower():
+                parts = line.split(":")
+                if len(parts) > 1:
+                    system_libraries["limesuite"] = {
+                        "name": "LimeSuite",
+                        "version": parts[1].strip(),
+                        "category": "sdr",
+                        "description": "LimeSDR driver and tools",
+                    }
+                    break
+
+    # gr-lora_sdr
+    try:
+        import lora_sdr  # noqa: F401
+
+        system_libraries["gr-lora_sdr"] = {
+            "name": "gr-lora_sdr",
+            "version": "installed",
+            "category": "sdr",
+            "description": "GNU Radio LoRa decoder",
+        }
+    except ImportError:
+        pass
+
+    # SoapySDR modules (check which are installed and their versions)
+    soapy_modules = get_system_library_version(["SoapySDRUtil", "--info"])
+    if soapy_modules:
+        # Parse module information from "Module found:" lines
+        for line in soapy_modules.split("\n"):
+            if "Module found:" in line:
+                # Format: Module found: /path/libNAMESupport.so  (VERSION)
+                try:
+                    # Extract library name from path
+                    if "libHackRFSupport.so" in line or "hackrf" in line.lower():
+                        version = line.split("(")[1].split(")")[0] if "(" in line else "installed"
+                        system_libraries["soapysdr-hackrf"] = {
+                            "name": "SoapyHackRF",
+                            "version": version,
+                            "category": "sdr",
+                            "description": "SoapySDR HackRF support",
+                        }
+                    elif "libLMS7Support.so" in line or "lime" in line.lower():
+                        version = line.split("(")[1].split(")")[0] if "(" in line else "installed"
+                        system_libraries["soapysdr-lime"] = {
+                            "name": "SoapyLimeSDR",
+                            "version": version,
+                            "category": "sdr",
+                            "description": "SoapySDR LimeSDR support",
+                        }
+                    elif "libairspySupport.so" in line or "airspy" in line.lower():
+                        version = line.split("(")[1].split(")")[0] if "(" in line else "installed"
+                        system_libraries["soapysdr-airspy"] = {
+                            "name": "SoapyAirspy",
+                            "version": version,
+                            "category": "sdr",
+                            "description": "SoapySDR Airspy support",
+                        }
+                    elif "libuhdSupport.so" in line or (
+                        "uhd" in line.lower() and "Support.so" in line
+                    ):
+                        version = line.split("(")[1].split(")")[0] if "(" in line else "installed"
+                        system_libraries["soapysdr-uhd"] = {
+                            "name": "SoapyUHD",
+                            "version": version,
+                            "category": "sdr",
+                            "description": "SoapySDR UHD/USRP support",
+                        }
+                    elif "libremoteSupport.so" in line or "remote" in line.lower():
+                        version = line.split("(")[1].split(")")[0] if "(" in line else "installed"
+                        system_libraries["soapysdr-remote"] = {
+                            "name": "SoapyRemote",
+                            "version": version,
+                            "category": "sdr",
+                            "description": "SoapySDR remote access",
+                        }
+                    elif "librtlsdrSupport.so" in line or "rtlsdr" in line.lower():
+                        version = line.split("(")[1].split(")")[0] if "(" in line else "installed"
+                        system_libraries["soapysdr-rtlsdr"] = {
+                            "name": "SoapyRTLSDR",
+                            "version": version,
+                            "category": "sdr",
+                            "description": "SoapySDR RTL-SDR support",
+                        }
+                    elif "libsdrPlaySupport.so" in line or "sdrplay" in line.lower():
+                        version = line.split("(")[1].split(")")[0] if "(" in line else "installed"
+                        system_libraries["soapysdr-sdrplay"] = {
+                            "name": "SoapySDRPlay",
+                            "version": version,
+                            "category": "sdr",
+                            "description": "SoapySDR SDRplay support",
+                        }
+                    elif "libbladeRFSupport.so" in line or "bladerf" in line.lower():
+                        version = line.split("(")[1].split(")")[0] if "(" in line else "installed"
+                        system_libraries["soapysdr-bladerf"] = {
+                            "name": "SoapyBladeRF",
+                            "version": version,
+                            "category": "sdr",
+                            "description": "SoapySDR BladeRF support",
+                        }
+                except (IndexError, ValueError):
+                    # If parsing fails, skip this module
+                    pass
+
     # Combine all libraries
     all_libraries: Dict[str, Dict[str, Any]] = {**libraries, **system_libraries}
 
