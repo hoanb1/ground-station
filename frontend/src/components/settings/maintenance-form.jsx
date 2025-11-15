@@ -1327,6 +1327,10 @@ const MaintenanceForm = () => {
                 <Dialog open={confirmClearLayoutOpen} onClose={() => setConfirmClearLayoutOpen(false)}>
                     <DialogTitle>Clear All Grid Layouts?</DialogTitle>
                     <DialogContent>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            <AlertTitle>Local Browser Cache Only</AlertTitle>
+                            This will only clear layout preferences stored in your browser's local storage. No backend data will be affected.
+                        </Alert>
                         <Typography paragraph>
                             This will reset all widget layouts to their defaults on the following pages:
                         </Typography>
@@ -1351,20 +1355,24 @@ const MaintenanceForm = () => {
                 <Dialog open={confirmClearReduxOpen} onClose={() => setConfirmClearReduxOpen(false)}>
                     <DialogTitle>Clear All Redux Persistent State?</DialogTitle>
                     <DialogContent>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            <AlertTitle>Local Browser Cache Only</AlertTitle>
+                            This will only clear application settings stored in your browser's local storage. No backend data (satellites, rigs, rotators, recordings, etc.) will be deleted.
+                        </Alert>
                         <Alert severity="warning" sx={{ mb: 2 }}>
                             <AlertTitle>Warning</AlertTitle>
-                            This action will reset ALL application settings to their defaults!
+                            This action will reset ALL local application settings to their defaults!
                         </Alert>
                         <Typography paragraph>
-                            This will clear all persistent data including:
+                            This will clear all locally cached settings including:
                         </Typography>
                         <ul>
                             <li>Waterfall settings (frequency, gain, sample rate, colormap, FFT)</li>
                             <li>VFO settings (markers, frequencies, modes, active states)</li>
-                            <li>Rig configurations</li>
-                            <li>Rotator configurations</li>
-                            <li>TLE sources</li>
-                            <li>Satellite and group data</li>
+                            <li>Cached rig configurations</li>
+                            <li>Cached rotator configurations</li>
+                            <li>Cached TLE sources</li>
+                            <li>Cached satellite and group data</li>
                             <li>Location settings</li>
                             <li>User preferences (timezone, theme)</li>
                             <li>Dashboard settings</li>
@@ -1374,7 +1382,7 @@ const MaintenanceForm = () => {
                             <li>File browser settings</li>
                         </ul>
                         <Typography paragraph>
-                            <strong>You will need to refresh the page after clearing.</strong> Are you sure you want to continue?
+                            <strong>You will need to refresh the page after clearing.</strong> The application will re-fetch all configuration data from the backend. Are you sure you want to continue?
                         </Typography>
                     </DialogContent>
                     <DialogActions>
