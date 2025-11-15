@@ -353,12 +353,14 @@ ENV GS_ENVIRONMENT=${GS_ENVIRONMENT}
 RUN cd /app/backend && python -c "import os; from server.version import write_version_info_during_build; write_version_info_during_build({'gitCommit': os.environ.get('GIT_COMMIT', 'unknown')})"
 
 # Configure backend to serve static files
-# Create a volume for persistent data (database, recordings, snapshots)
+# Create a volume for persistent data (database, recordings, snapshots, UHD images)
 VOLUME /app/backend/data
 
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV STATIC_FILES_DIR=/app/frontend/dist
+ENV UHD_IMAGES_DIR=/app/backend/data/uhd_images
+ENV UHD_CONFIG_DIR=/app/backend/data/uhd_config
 
 # Expose the port the app runs on
 EXPOSE 7000

@@ -190,6 +190,8 @@ async def init_db():
         os.path.join(
             backend_dir, "data", "decoded"
         ),  # For SSTV images, AFSK packets, RTTY text, etc.
+        os.path.join(backend_dir, "data", "uhd_images"),  # For UHD FPGA images
+        os.path.join(backend_dir, "data", "uhd_config"),  # For UHD configuration files
     ]
     for directory in data_dirs:
         os.makedirs(directory, exist_ok=True)
