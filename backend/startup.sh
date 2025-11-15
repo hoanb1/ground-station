@@ -34,11 +34,7 @@ if [ ! -f "$UHD_CONFIG_DIR/uhd.conf" ]; then
 #
 # Format:
 # [type=b200,serial=XXXXXXXX]
-# fpga=/path/to/custom_fpga.bin
-#
-# Example for LibreSDR B210:
-# [type=b200,serial=31FA5E3]
-# fpga=/app/backend/data/uhd_images/usrp_b210_fpga.bin
+# fpga=/app/backend/data/uhd_images/custom_fpga.bin
 #
 # You can add multiple device configurations below:
 
@@ -49,14 +45,18 @@ fi
 # Download official UHD images to the configured directory
 /usr/local/bin/uhd_images_downloader
 
-# Use LibreSDR FPGA - copy if it exists in the build location
+# Copy LibreSDR FPGA image from build location to persistent storage
 if [ -f /usr/local/share/uhd/images/libresdr_b210.bin ]; then
-    cp /usr/local/share/uhd/images/libresdr_b210.bin "$UHD_IMAGES_DIR/usrp_b210_fpga.bin"
-    echo "LibreSDR FPGA image installed"
+    # Copy with original name
+    cp /usr/local/share/uhd/images/libresdr_b210.bin "$UHD_IMAGES_DIR/libresdr_b210.bin"
+    echo "LibreSDR FPGA image installed to $UHD_IMAGES_DIR"
+else
+    echo "Warning: LibreSDR FPGA image not found at /usr/local/share/uhd/images/libresdr_b210.bin"
 fi
 
 # Show a list of UHD images
-ls -l "$UHD_IMAGES_DIR"/*.bin 2>/dev/null || echo "No UHD images found yet in $UHD_IMAGES_DIR"
+echo "UHD FPGA images in $UHD_IMAGES_DIR:"
+ls -lh "$UHD_IMAGES_DIR"/*.bin 2>/dev/null || echo "No UHD images found yet in $UHD_IMAGES_DIR"
 
 # Start the application
 echo "Starting Ground Station application..."
