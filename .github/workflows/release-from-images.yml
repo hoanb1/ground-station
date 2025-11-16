@@ -79,6 +79,8 @@ jobs:
             ```
 
             ### Run the container:
+
+            **For AMD64 systems:**
             ```bash
             docker run -d \
               -p 7000:7000 \
@@ -86,10 +88,25 @@ jobs:
               --restart unless-stopped \
               --device=/dev/bus/usb \
               --privileged \
-              -v $(pwd)/data:/app/backend/data \
+              -v /path/to/data:/app/backend/data \
               -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
             ```
+
+            **For ARM64 systems (Raspberry Pi, etc):**
+            ```bash
+            docker run -d \
+              -p 7000:7000 \
+              --name ground-station \
+              --restart unless-stopped \
+              -v /dev:/dev \
+              --privileged \
+              -v /path/to/data:/app/backend/data \
+              -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            ```
+
+            > **Note:** Replace `/path/to/data` with your desired data directory path. For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible.
 
             ### Upgrading an existing container:
             ```bash
@@ -100,17 +117,8 @@ jobs:
             # Pull the new version
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
 
-            # Start the container with the new version
-            docker run -d \
-              -p 7000:7000 \
-              --name ground-station \
-              --restart unless-stopped \
-              --device=/dev/bus/usb \
-              --privileged \
-              -v $(pwd)/data:/app/backend/data \
-              -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            # Run the container again (use the appropriate command above for your architecture)
             ```
 
             ### Multi-arch support:
-            This image supports `linux/amd64` and `linux/arm64` platforms.
+            This image supports `linux/amd64` and `linux/arm64` platforms. Docker will automatically pull the correct architecture for your system.
