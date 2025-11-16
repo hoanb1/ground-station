@@ -19,7 +19,7 @@
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getDefaultVFOConfig, DEMODULATORS } from './vfo-config.js';
+import { getDefaultVFOConfig, DEMODULATORS, getDemodulatorConfig, getDecoderConfig, getEffectiveMode } from './vfo-config.js';
 
 export const updateVFOParameters = createAsyncThunk(
     'vfo/updateVFOParameters',
@@ -104,9 +104,35 @@ export const vfoSlice = createSlice({
         setVFOProperty: (state, action) => {
             const {vfoNumber, updates} = action.payload;
             if (state.vfoMarkers[vfoNumber]) {
+                const vfo = state.vfoMarkers[vfoNumber];
+
+                // Apply all updates
                 Object.entries(updates).forEach(([property, value]) => {
-                    state.vfoMarkers[vfoNumber][property] = value;
+                    vfo[property] = value;
                 });
+
+                // If mode or decoder was changed for the selected VFO, update bandwidth to default
+                const isSelectedVFO = state.selectedVFO === vfoNumber;
+                const modeChanged = updates.hasOwnProperty('mode');
+                const decoderChanged = updates.hasOwnProperty('decoder');
+
+                if (isSelectedVFO && (modeChanged || decoderChanged)) {
+                    // Determine the effective mode (considering decoder overrides)
+                    const effectiveMode = getEffectiveMode(vfo.mode, vfo.decoder);
+                    const demodConfig = getDemodulatorConfig(effectiveMode);
+
+                    if (demodConfig && demodConfig.defaultBandwidth) {
+                        vfo.bandwidth = demodConfig.defaultBandwidth;
+                    }
+
+                    // Check if decoder has its own default bandwidth (e.g., GMSK)
+                    if (decoderChanged && vfo.decoder) {
+                        const decoderConfig = getDecoderConfig(vfo.decoder);
+                        if (decoderConfig && decoderConfig.defaultBandwidth) {
+                            vfo.bandwidth = decoderConfig.defaultBandwidth;
+                        }
+                    }
+                }
             }
         },
         setSelectedVFO(state, action) {
@@ -116,7 +142,17 @@ export const vfoSlice = createSlice({
             state.streamingVFO = Number.isInteger(action.payload) ? parseInt(action.payload) : null;
         },
         setVfoActive: (state, action) => {
-            state.vfoActive[action.payload] = true;
+            const vfoNumber = action.payload;
+            state.vfoActive[vfoNumber] = true;
+
+            // Set bandwidth to defaultBandwidth for the current mode when activating VFO
+            const vfo = state.vfoMarkers[vfoNumber];
+            if (vfo && vfo.mode) {
+                const demodConfig = getDemodulatorConfig(vfo.mode);
+                if (demodConfig && demodConfig.defaultBandwidth) {
+                    vfo.bandwidth = demodConfig.defaultBandwidth;
+                }
+            }
         },
         setVfoInactive: (state, action) => {
             state.vfoActive[action.payload] = false;
