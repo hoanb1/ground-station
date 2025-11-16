@@ -203,6 +203,12 @@ const overviewSlice = createSlice({
         passesLoading: false,
         openMapSettingsDialog: false,
         nextPassesHours: 4.0,
+        satellitesTableColumnVisibility: {
+            launched: false,
+            alternative_name: false,
+            countries: false,
+            decayed: false,
+        },
     },
     reducers: {
         setShowPastOrbitPath(state, action) {
@@ -294,6 +300,9 @@ const overviewSlice = createSlice({
         },
         setLoadingSatellites(state, action) {
             state.loadingSatellites = action.payload;
+        },
+        setSatellitesTableColumnVisibility(state, action) {
+            state.satellitesTableColumnVisibility = action.payload;
         }
     },
     extraReducers: (builder) => {
@@ -431,6 +440,7 @@ export const {
     setSatelliteData,
     setSelectedSatellitePositions,
     setLoadingSatellites,
+    setSatellitesTableColumnVisibility,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;

@@ -32,6 +32,7 @@ import {
 } from "../common/common.jsx";
 import {
     setSelectedSatelliteId,
+    setSatellitesTableColumnVisibility,
 } from './overview-slice.jsx';
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
@@ -77,6 +78,8 @@ const MemoizedStyledDataGrid = React.memo(({
                                                onRowClick,
                                                selectedSatelliteId,
                                                loadingSatellites,
+                                               columnVisibility,
+                                               onColumnVisibilityChange,
                                             }) => {
     const { t, i18n } = useTranslation('overview');
     const currentLanguage = i18n.language;
@@ -437,6 +440,7 @@ const MemoizedStyledDataGrid = React.memo(({
             onRowClick={onRowClick}
             getRowId={(params) => params.norad_id}
             localeText={dataGridLocale.components.MuiDataGrid.defaultProps.localeText}
+            onColumnVisibilityModelChange={onColumnVisibilityChange}
             sx={{
                 border: 0,
                 marginTop: 0,
@@ -455,12 +459,7 @@ const MemoizedStyledDataGrid = React.memo(({
                     sortModel: [{ field: 'elevation', sort: 'desc' }],
                 },
                 columns: {
-                    columnVisibilityModel: {
-                        launched: false,
-                        alternative_name: false,
-                        countries: false,
-                        decayed: false,
-                    },
+                    columnVisibilityModel: columnVisibility,
                 },
 
             }}
@@ -485,6 +484,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const loadingSatellites = useSelector(state => state.overviewSatTrack.loadingSatellites);
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
     const selectedSatGroupId = useSelector(state => state.overviewSatTrack.selectedSatGroupId);
+    const columnVisibility = useSelector(state => state.overviewSatTrack.satellitesTableColumnVisibility);
 
     const minHeight = 200;
 
@@ -522,6 +522,10 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
 
     const handleOnRowClick = useCallback((params) => {
         dispatch(setSelectedSatelliteId(params.row.norad_id));
+    }, [dispatch]);
+
+    const handleColumnVisibilityChange = useCallback((newModel) => {
+        dispatch(setSatellitesTableColumnVisibility(newModel));
     }, [dispatch]);
 
     return (
@@ -571,6 +575,8 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                             onRowClick={handleOnRowClick}
                             selectedSatelliteId={selectedSatelliteId}
                             loadingSatellites={loadingSatellites}
+                            columnVisibility={columnVisibility}
+                            onColumnVisibilityChange={handleColumnVisibilityChange}
                         />
                     )}
                 </div>
