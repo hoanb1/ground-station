@@ -132,17 +132,17 @@ steps:
       registry: ghcr.io
       repo: ghcr.io/sgoudelis/ground-station
       tags:
-        - ${DRONE_TAG##v}-amd64
-        - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-amd64
+        - "${DRONE_TAG##v}-amd64"
+        - "${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-amd64"
         - latest-amd64
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
       build_args:
         - GS_ENVIRONMENT=production
-        - GIT_COMMIT=${DRONE_COMMIT_SHA}
-        - BUILD_DATE=${DRONE_BUILD_STARTED}
-        - BUILD_VERSION=${DRONE_TAG##v}
+        - "GIT_COMMIT=${DRONE_COMMIT_SHA}"
+        - "BUILD_DATE=${DRONE_BUILD_STARTED}"
+        - "BUILD_VERSION=${DRONE_TAG##v}"
       buildkit: true
       cache_from:
         - ghcr.io/sgoudelis/ground-station:latest-amd64
@@ -169,17 +169,17 @@ steps:
       registry: ghcr.io
       repo: ghcr.io/sgoudelis/ground-station
       tags:
-        - ${DRONE_TAG##v}-arm64
-        - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-arm64
+        - "${DRONE_TAG##v}-arm64"
+        - "${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-arm64"
         - latest-arm64
       dockerfile: Dockerfile
       platforms:
         - linux/arm64
       build_args:
         - GS_ENVIRONMENT=production
-        - GIT_COMMIT=${DRONE_COMMIT_SHA}
-        - BUILD_DATE=${DRONE_BUILD_STARTED}
-        - BUILD_VERSION=${DRONE_TAG##v}
+        - "GIT_COMMIT=${DRONE_COMMIT_SHA}"
+        - "BUILD_DATE=${DRONE_BUILD_STARTED}"
+        - "BUILD_VERSION=${DRONE_TAG##v}"
       buildkit: true
       cache_from:
         - ghcr.io/sgoudelis/ground-station:latest-arm64
@@ -203,8 +203,8 @@ steps:
         from_secret: ghcr_username
       password:
         from_secret: ghcr_token
-      target: ghcr.io/sgoudelis/ground-station:${DRONE_TAG##v}
-      template: ghcr.io/sgoudelis/ground-station:${DRONE_TAG##v}-ARCH
+      target: "ghcr.io/sgoudelis/ground-station:${DRONE_TAG##v}"
+      template: "ghcr.io/sgoudelis/ground-station:${DRONE_TAG##v}-ARCH"
       platforms:
         - linux/amd64
         - linux/arm64
