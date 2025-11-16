@@ -51,6 +51,7 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import { useTranslation } from 'react-i18next';
 import { setIsEditing } from "./dashboard-slice.jsx";
+import { setStreamingVFO } from "../waterfall/vfo-slice.jsx";
 import WakeLockStatus from "./wake-lock-icon.jsx";
 import ConnectionStatus from "./connection-popover.jsx";
 import Tooltip from "@mui/material/Tooltip";
@@ -371,6 +372,7 @@ export default function Layout() {
 
     // Use the audio context
     const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
+    const streamingTimeoutRef = useRef(null);
 
     useEffect(() => {
         console.info('Initializing audio...');
@@ -391,6 +393,24 @@ export default function Layout() {
     useEffect(() => {
         if (socket) {
             socket.on("audio-data", (data) => {
+                // Extract VFO number from audio data
+                const vfoNumber = data.vfo?.vfo_number;
+
+                if (vfoNumber !== undefined) {
+                    // Update Redux with which VFO is streaming
+                    dispatch(setStreamingVFO(vfoNumber));
+
+                    // Clear previous timeout
+                    if (streamingTimeoutRef.current) {
+                        clearTimeout(streamingTimeoutRef.current);
+                    }
+
+                    // Set timeout to clear streaming state after 500ms of no audio
+                    streamingTimeoutRef.current = setTimeout(() => {
+                        dispatch(setStreamingVFO(null));
+                    }, 500);
+                }
+
                 playAudioSamples(data);
             });
         }
@@ -399,8 +419,12 @@ export default function Layout() {
             if (socket) {
                 socket.off("audio-data");
             }
+            // Clear timeout on cleanup
+            if (streamingTimeoutRef.current) {
+                clearTimeout(streamingTimeoutRef.current);
+            }
         };
-    }, [socket, playAudioSamples]);
+    }, [socket, playAudioSamples, dispatch]);
 
     return (
         <DashboardLayout

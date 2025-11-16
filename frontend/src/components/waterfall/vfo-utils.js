@@ -83,7 +83,7 @@ export const canvasDrawingUtils = {
         ctx.fill();
     },
 
-    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false, decoderInfo = null, morseText = null) => {
+    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false, decoderInfo = null, morseText = null, isStreaming = false) => {
         ctx.font = 'bold 12px Monospace';
         const textMetrics = ctx.measureText(labelText);
 
@@ -129,13 +129,13 @@ export const canvasDrawingUtils = {
         const textY = 17; // Always use same text position
         ctx.fillText(labelText, centerX + textOffset, textY);
 
-        // Draw speaker icon (selected or muted) - scaled up by 1.5x
+        // Draw speaker icon - depends on both selection and streaming state
         // Position icon with more padding on the right side
         const iconX = centerX + (labelWidth / 2) - 20;
         const iconY = 7;
 
-        if (isSelected) {
-            // Draw active speaker icon
+        if (isSelected && isStreaming) {
+            // Draw active speaker icon with sound waves (audio is playing)
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             // Speaker body (trapezoid shape) - scaled up
@@ -158,7 +158,7 @@ export const canvasDrawingUtils = {
             ctx.arc(iconX + 9, iconY + 6, 6, -Math.PI/4, Math.PI/4);
             ctx.stroke();
         } else {
-            // Draw muted speaker icon (with X) - scaled up
+            // Draw muted speaker icon (with X) - either not selected or not streaming
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             // Speaker body (trapezoid shape) - scaled up

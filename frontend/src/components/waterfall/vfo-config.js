@@ -30,6 +30,20 @@
  * These handle the RF-to-audio conversion
  */
 export const DEMODULATORS = {
+    NONE: {
+        internalName: 'none',
+        displayName: 'None',
+        description: 'No demodulation - center line only',
+        defaultBandwidth: 1000, // 1 kHz minimal
+        minBandwidth: 100,
+        maxBandwidth: 10000,
+        bandwidthType: 'center-only', // no sidebands, just center line
+        showBothEdges: false,
+        allowLeftEdgeDrag: false,
+        allowRightEdgeDrag: false,
+        centerLineOnly: true, // only draw center line, no sidebands
+        bandwidthLabel: (bw) => '', // no bandwidth label for center-only
+    },
     FM: {
         internalName: 'FM',
         displayName: 'FM',
@@ -41,6 +55,7 @@ export const DEMODULATORS = {
         showBothEdges: true, // show both left and right edges on waterfall
         allowLeftEdgeDrag: true,
         allowRightEdgeDrag: true,
+        centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±5kHz
     },
     FM_STEREO: {
@@ -54,6 +69,7 @@ export const DEMODULATORS = {
         showBothEdges: true,
         allowLeftEdgeDrag: true,
         allowRightEdgeDrag: true,
+        centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
     },
     AM: {
@@ -67,6 +83,7 @@ export const DEMODULATORS = {
         showBothEdges: true,
         allowLeftEdgeDrag: true,
         allowRightEdgeDrag: true,
+        centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
     },
     USB: {
@@ -80,6 +97,7 @@ export const DEMODULATORS = {
         showBothEdges: false,
         allowLeftEdgeDrag: false,
         allowRightEdgeDrag: true,
+        centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
     },
     LSB: {
@@ -93,6 +111,7 @@ export const DEMODULATORS = {
         showBothEdges: false,
         allowLeftEdgeDrag: true,
         allowRightEdgeDrag: false,
+        centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
     },
     CW: {
@@ -106,6 +125,7 @@ export const DEMODULATORS = {
         showBothEdges: false,
         allowLeftEdgeDrag: false,
         allowRightEdgeDrag: true,
+        centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
     },
 };
@@ -121,6 +141,7 @@ export const DECODERS = {
         description: 'No decoder - audio pass-through',
         requiresDemodulator: null, // can work with any demodulator
         overrideDemodulator: null, // doesn't override demodulator mode
+        centerLineOnly: false, // normal display with sidebands
         hasStatusDisplay: false,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -131,6 +152,7 @@ export const DECODERS = {
         description: 'Slow Scan Television decoder',
         requiresDemodulator: 'FM', // requires FM demodulation
         overrideDemodulator: 'FM', // force FM mode when active
+        centerLineOnly: false,
         hasStatusDisplay: true, // shows decoder status (e.g., "detecting", "decoding")
         hasProgressDisplay: true, // shows percentage progress
         hasTextOutput: false, // no text output, outputs images
@@ -142,6 +164,7 @@ export const DECODERS = {
         description: 'Morse code (CW) decoder',
         requiresDemodulator: 'CW', // requires CW/SSB demodulation
         overrideDemodulator: 'CW', // force CW mode when active
+        centerLineOnly: false,
         hasStatusDisplay: false, // no status, always listening
         hasProgressDisplay: false, // no progress bar
         hasTextOutput: true, // outputs decoded text
@@ -156,6 +179,7 @@ export const DECODERS = {
         description: 'Automatic Picture Transmission (NOAA weather satellites)',
         requiresDemodulator: 'FM',
         overrideDemodulator: 'FM',
+        centerLineOnly: false,
         hasStatusDisplay: true,
         hasProgressDisplay: true,
         hasTextOutput: false,
@@ -166,7 +190,8 @@ export const DECODERS = {
         displayName: 'LoRa',
         description: 'LoRa decoder (processes raw IQ, no demodulator)',
         requiresDemodulator: null, // raw IQ decoder
-        overrideDemodulator: 'NONE', // disable audio demodulator
+        overrideDemodulator: 'none', // disable audio demodulator
+        centerLineOnly: true, // only show center line for raw IQ
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -177,7 +202,8 @@ export const DECODERS = {
         displayName: 'GMSK',
         description: 'GMSK decoder with USP FEC (processes raw IQ, no demodulator)',
         requiresDemodulator: null, // raw IQ decoder
-        overrideDemodulator: 'NONE', // disable audio demodulator
+        overrideDemodulator: 'none', // disable audio demodulator
+        centerLineOnly: true, // only show center line for raw IQ
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -275,6 +301,30 @@ export const getBandwidthConfig = (mode) => {
 export const shouldShowBothEdges = (mode) => {
     const demodConfig = getDemodulatorConfig(mode);
     return demodConfig ? demodConfig.showBothEdges : false;
+};
+
+/**
+ * Check if center line only mode is active (no sidebands)
+ * Considers both demodulator and decoder configurations
+ *
+ * @param {string} mode - Demodulator mode
+ * @param {string} decoder - Decoder name
+ * @returns {boolean} True if only center line should be shown
+ */
+export const isCenterLineOnly = (mode, decoder) => {
+    // Check demodulator config
+    const demodConfig = getDemodulatorConfig(mode);
+    if (demodConfig && demodConfig.centerLineOnly) {
+        return true;
+    }
+
+    // Check decoder config
+    const decoderConfig = getDecoderConfig(decoder);
+    if (decoderConfig && decoderConfig.centerLineOnly) {
+        return true;
+    }
+
+    return false;
 };
 
 /**

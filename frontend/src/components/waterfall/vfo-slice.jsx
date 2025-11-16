@@ -67,6 +67,7 @@ const initialState = {
     },
     maxVFOMarkers: 4,
     selectedVFO: null,
+    streamingVFO: null,
     vfoColors: ['#FF0000', '#207820', '#144bff', '#9e129e'],
     selectedVFOTab: 0,
     errorMessage: null,
@@ -110,6 +111,9 @@ export const vfoSlice = createSlice({
         },
         setSelectedVFO(state, action) {
             state.selectedVFO = Number.isInteger(action.payload) ? parseInt(action.payload) : null;
+        },
+        setStreamingVFO(state, action) {
+            state.streamingVFO = Number.isInteger(action.payload) ? parseInt(action.payload) : null;
         },
         setVfoActive: (state, action) => {
             state.vfoActive[action.payload] = true;
@@ -193,6 +197,7 @@ export const {
     disableVFO3,
     disableVFO4,
     setSelectedVFO,
+    setStreamingVFO,
     setVfoActive,
     setVfoInactive,
     setSelectedVFOTab,

@@ -46,7 +46,8 @@ import {
     getEffectiveMode,
     getBandwidthConfig,
     canDragLeftEdge,
-    canDragRightEdge
+    canDragRightEdge,
+    isCenterLineOnly
 } from './vfo-config.js';
 
 const VFOMarkersContainer = ({
@@ -63,6 +64,7 @@ const VFOMarkersContainer = ({
         vfoMarkers,
         maxVFOMarkers,
         selectedVFO,
+        streamingVFO,
         vfoColors,
         vfoActive,
     } = useSelector(state => state.vfo);
@@ -306,7 +308,7 @@ const VFOMarkersContainer = ({
     useEffect(() => {
         renderVFOMarkersDirect();
     }, [vfoActive, vfoMarkers, actualWidth, height,
-        centerFrequency, sampleRate, selectedVFO, containerWidth, currentPositionX, activeDecoders, decoderOutputs]);
+        centerFrequency, sampleRate, selectedVFO, streamingVFO, containerWidth, currentPositionX, activeDecoders, decoderOutputs]);
 
     // Rendering function with cached context
     const renderVFOMarkersDirect = () => {
@@ -364,21 +366,30 @@ const VFOMarkersContainer = ({
             const areaOpacity = isSelected ? '33' : '15';
             const lineOpacity = isSelected ? 'FF' : '99';
 
+            // Check if this is a center-only mode (no sidebands) using config
+            const centerOnly = isCenterLineOnly(mode, marker.decoder);
+
             // Use drawing utilities
-            canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, marker.color, areaOpacity);
+            if (!centerOnly) {
+                canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, marker.color, areaOpacity);
+            }
             canvasDrawingUtils.drawVFOLine(ctx, centerX, height, marker.color, lineOpacity, isSelected ? 2 : 1.5);
-            canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1);
-
-            // Draw edge handles based on mode configuration
-            const edgeHandleYPosition = edgeHandleYOffset;
-            const edgeHandleWidth = isSelected ? 14 : 6;
-
-            if (canDragRightEdge(mode)) {
-                canvasDrawingUtils.drawVFOHandle(ctx, rightEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
+            if (!centerOnly) {
+                canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1);
             }
 
-            if (canDragLeftEdge(mode)) {
-                canvasDrawingUtils.drawVFOHandle(ctx, leftEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
+            // Draw edge handles based on mode configuration (skip for center-only mode)
+            if (!centerOnly) {
+                const edgeHandleYPosition = edgeHandleYOffset;
+                const edgeHandleWidth = isSelected ? 14 : 6;
+
+                if (canDragRightEdge(mode)) {
+                    canvasDrawingUtils.drawVFOHandle(ctx, rightEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
+                }
+
+                if (canDragLeftEdge(mode)) {
+                    canvasDrawingUtils.drawVFOHandle(ctx, leftEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
+                }
             }
 
             // Draw frequency label
@@ -388,7 +399,10 @@ const VFOMarkersContainer = ({
             // Get morse output text if this VFO has a morse decoder
             const morseText = getMorseOutputForVFO(parseInt(markerIdx));
 
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText);
+            // Check if this VFO is currently streaming audio
+            const isStreaming = parseInt(markerIdx) === streamingVFO;
+
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText, isStreaming);
         });
     };
 
