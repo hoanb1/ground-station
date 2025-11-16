@@ -324,7 +324,23 @@ const overviewSlice = createSlice({
             })
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
                 const {passes, cached, forecast_hours} = action.payload;
-                state.passes = passes;
+
+                // Filter out expired passes (more than 1 minute old)
+                const now = new Date();
+                const filteredPasses = passes.filter(pass => {
+                    // Keep geostationary/geosynchronous satellites
+                    if (pass.is_geostationary || pass.is_geosynchronous) {
+                        return true;
+                    }
+
+                    const eventEnd = new Date(pass.event_end);
+                    const timeSinceEnd = now - eventEnd;
+
+                    // Keep passes that haven't ended or ended less than 1 minute ago
+                    return timeSinceEnd <= 60000;
+                });
+
+                state.passes = filteredPasses;
                 state.passesAreCached = cached;
                 state.passesLoading = false;
             })
