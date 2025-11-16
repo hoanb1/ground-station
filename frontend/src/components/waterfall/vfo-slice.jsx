@@ -111,12 +111,11 @@ export const vfoSlice = createSlice({
                     vfo[property] = value;
                 });
 
-                // If mode or decoder was changed for the selected VFO, update bandwidth to default
-                const isSelectedVFO = state.selectedVFO === vfoNumber;
+                // If mode or decoder was changed, update bandwidth to default
                 const modeChanged = updates.hasOwnProperty('mode');
                 const decoderChanged = updates.hasOwnProperty('decoder');
 
-                if (isSelectedVFO && (modeChanged || decoderChanged)) {
+                if (modeChanged || decoderChanged) {
                     // Determine the effective mode (considering decoder overrides)
                     const effectiveMode = getEffectiveMode(vfo.mode, vfo.decoder);
                     const demodConfig = getDemodulatorConfig(effectiveMode);
