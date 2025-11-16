@@ -129,12 +129,12 @@ export const canvasDrawingUtils = {
         const textY = 17; // Always use same text position
         ctx.fillText(labelText, centerX + textOffset, textY);
 
-        // Draw speaker icon - depends on both selection and streaming state
+        // Draw speaker icon - depends solely on streaming state
         // Position icon with more padding on the right side
         const iconX = centerX + (labelWidth / 2) - 20;
         const iconY = 7;
 
-        if (isSelected && isStreaming) {
+        if (isStreaming) {
             // Draw active speaker icon with sound waves (audio is playing)
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
@@ -158,7 +158,7 @@ export const canvasDrawingUtils = {
             ctx.arc(iconX + 9, iconY + 6, 6, -Math.PI/4, Math.PI/4);
             ctx.stroke();
         } else {
-            // Draw muted speaker icon (with X) - either not selected or not streaming
+            // Draw muted speaker icon (with X) - not streaming
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             // Speaker body (trapezoid shape) - scaled up
