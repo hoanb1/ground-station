@@ -38,19 +38,19 @@ steps:
       # Extract version with proper debugging
       - VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
       - echo "Extracted VERSION_BASE=$VERSION_BASE"
-      
+
       # Get git hash
       - GIT_SHA=$(git rev-parse --short HEAD)
       - echo "Extracted GIT_SHA=$GIT_SHA"
-      
+
       # Set environment type
       - if [ "$DRONE_BRANCH" = "main" ]; then ENV_TYPE="production"; else ENV_TYPE="development"; fi
       - echo "ENV_TYPE=$ENV_TYPE"
-      
+
       # Get build date
       - BUILD_DATE=$(date -u +'%Y%m%d')
       - echo "BUILD_DATE=$BUILD_DATE"
-      
+
       # Make a full version string
       - FULL_VERSION=$VERSION_BASE-$DRONE_BRANCH-$GIT_SHA
       - echo "FULL_VERSION=$FULL_VERSION"
@@ -108,17 +108,31 @@ steps:
     depends_on:
       - verify-docker-connection
 
+  - name: ghcr-auth
+    image: docker:cli
+    environment:
+      DOCKER_HOST: tcp://192.168.60.98:2375
+      GHCR_TOKEN:
+        from_secret: ghcr_token
+    commands:
+      - echo "Authenticating to GitHub Container Registry..."
+      - echo "$GHCR_TOKEN" | docker login ghcr.io -u sgoudelis --password-stdin
+      - echo "✅ GHCR authentication successful"
+    depends_on:
+      - docker-auth
+
   # AMD64 Build
   - name: build-amd64
     image: plugins/docker
     timeout: 240
     settings:
-      username:
-        from_secret: docker_username
+      username: sgoudelis
       password:
-        from_secret: docker_password
-      repo: sgoudelis/ground-station
+        from_secret: ghcr_token
+      registry: ghcr.io
+      repo: ghcr.io/sgoudelis/ground-station
       tags:
+        - ${DRONE_TAG##v}-amd64
         - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-amd64
         - latest-amd64
       dockerfile: Dockerfile
@@ -128,30 +142,34 @@ steps:
         - GS_ENVIRONMENT=production
         - GIT_COMMIT=${DRONE_COMMIT_SHA}
         - BUILD_DATE=${DRONE_BUILD_STARTED}
-        - BUILD_VERSION=${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+        - BUILD_VERSION=${DRONE_TAG##v}
       buildkit: true
       cache_from:
-        - sgoudelis/ground-station:latest-amd64
-        - sgoudelis/ground-station:latest
+        - ghcr.io/sgoudelis/ground-station:latest-amd64
+        - ghcr.io/sgoudelis/ground-station:latest
       pull: true
       daemon_off: true
       custom_dns: 8.8.8.8
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     depends_on:
-      - docker-auth
+      - ghcr-auth
+    when:
+      event:
+        - tag
 
   # ARM64 Build
   - name: build-arm64
     image: plugins/docker
     timeout: 240
     settings:
-      username:
-        from_secret: docker_username
+      username: sgoudelis
       password:
-        from_secret: docker_password
-      repo: sgoudelis/ground-station
+        from_secret: ghcr_token
+      registry: ghcr.io
+      repo: ghcr.io/sgoudelis/ground-station
       tags:
+        - ${DRONE_TAG##v}-arm64
         - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-arm64
         - latest-arm64
       dockerfile: Dockerfile
@@ -161,11 +179,11 @@ steps:
         - GS_ENVIRONMENT=production
         - GIT_COMMIT=${DRONE_COMMIT_SHA}
         - BUILD_DATE=${DRONE_BUILD_STARTED}
-        - BUILD_VERSION=${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+        - BUILD_VERSION=${DRONE_TAG##v}
       buildkit: true
       cache_from:
-        - sgoudelis/ground-station:latest-arm64
-        - sgoudelis/ground-station:latest
+        - ghcr.io/sgoudelis/ground-station:latest-arm64
+        - ghcr.io/sgoudelis/ground-station:latest
       pull: true
       daemon_off: true
       custom_dns: 8.8.8.8
@@ -173,20 +191,64 @@ steps:
       DOCKER_HOST: tcp://192.168.60.98:2375
     depends_on:
       - build-amd64
+    when:
+      event:
+        - tag
 
   # Create manifest for multi-arch
   - name: manifest
     image: plugins/manifest
     settings:
-      username:
-        from_secret: docker_username
+      username: sgoudelis
       password:
-        from_secret: docker_password
-      target: sgoudelis/ground-station:${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
-      template: sgoudelis/ground-station:${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-ARCH
+        from_secret: ghcr_token
+      target: ghcr.io/sgoudelis/ground-station:${DRONE_TAG##v}
+      template: ghcr.io/sgoudelis/ground-station:${DRONE_TAG##v}-ARCH
       platforms:
         - linux/amd64
         - linux/arm64
     depends_on:
       - build-amd64
       - build-arm64
+    when:
+      event:
+        - tag
+
+  # Create latest manifest
+  - name: manifest-latest
+    image: plugins/manifest
+    settings:
+      username: sgoudelis
+      password:
+        from_secret: ghcr_token
+      target: ghcr.io/sgoudelis/ground-station:latest
+      template: ghcr.io/sgoudelis/ground-station:latest-ARCH
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    depends_on:
+      - manifest
+    when:
+      event:
+        - tag
+    when:
+      event:
+        - tag
+
+  # Create latest manifest
+  - name: manifest-latest
+    image: plugins/manifest
+    settings:
+      username: sgoudelis
+      password:
+        from_secret: ghcr_token
+      target: ghcr.io/sgoudelis/ground-station:latest
+      template: ghcr.io/sgoudelis/ground-station:latest-ARCH
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    depends_on:
+      - manifest
+    when:
+      event:
+        - tag

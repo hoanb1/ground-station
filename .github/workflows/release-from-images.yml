@@ -1,0 +1,116 @@
+name: Create Release from Existing Images
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: sgoudelis/ground-station
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version information
+        id: version
+        run: |
+          VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+          echo "version_base=$VERSION_BASE" >> $GITHUB_OUTPUT
+
+          GIT_SHA=$(git rev-parse --short HEAD)
+          echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
+
+          ENV_TYPE="production"
+          echo "env_type=$ENV_TYPE" >> $GITHUB_OUTPUT
+
+          BUILD_DATE=$(date -u +'%Y%m%d')
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+
+          TAG_VERSION="${{ github.ref_name }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get previous tag
+        id: prev_tag
+        run: |
+          PREV_TAG=$(git tag --sort=-version:refname | grep -A1 "${{ github.ref_name }}" | tail -n1)
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate commit list
+        id: commits
+        run: |
+          if [ -n "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
+            COMMIT_LIST=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ github.ref_name }} --pretty=format:"- %h %s" --no-merges)
+            echo "commit_list<<EOF" >> $GITHUB_OUTPUT
+            echo "$COMMIT_LIST" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "commit_list=No previous tag found" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          body: |
+            ## Docker Image
+
+            **Version:** ${{ steps.version.outputs.tag_version }}
+            **Environment:** ${{ steps.version.outputs.env_type }}
+            **Git Commit:** ${{ steps.version.outputs.git_sha }}
+            **Build Date:** ${{ steps.version.outputs.build_date }}
+
+            ### Commits in this release:
+            ${{ steps.commits.outputs.commit_list }}
+
+            ### Pull the Docker image:
+            ```bash
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            ```
+
+            ### Run the container:
+            ```bash
+            docker run -d \
+              -p 7000:7000 \
+              --name ground-station \
+              --restart unless-stopped \
+              --device=/dev/bus/usb \
+              --privileged \
+              -v $(pwd)/data:/app/backend/data \
+              -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            ```
+
+            ### Upgrading an existing container:
+            ```bash
+            # Stop and remove the existing container
+            docker stop ground-station
+            docker rm ground-station
+
+            # Pull the new version
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+
+            # Start the container with the new version
+            docker run -d \
+              -p 7000:7000 \
+              --name ground-station \
+              --restart unless-stopped \
+              --device=/dev/bus/usb \
+              --privileged \
+              -v $(pwd)/data:/app/backend/data \
+              -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            ```
+
+            ### Multi-arch support:
+            This image supports `linux/amd64` and `linux/arm64` platforms.
