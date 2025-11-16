@@ -131,7 +131,6 @@ steps:
       repo: ghcr.io/sgoudelis/ground-station
       tags:
         - "${DRONE_TAG##v}-amd64"
-        - "${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-amd64"
         - latest-amd64
       dockerfile: Dockerfile
       platforms:
@@ -168,7 +167,6 @@ steps:
       repo: ghcr.io/sgoudelis/ground-station
       tags:
         - "${DRONE_TAG##v}-arm64"
-        - "${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-arm64"
         - latest-arm64
       dockerfile: Dockerfile
       platforms:
