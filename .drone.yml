@@ -165,7 +165,7 @@ steps:
       event:
         - tag
 
-  # ARM64 Build
+  # ARM64 Build (on local Drone CI host)
   - name: build-arm64
     image: plugins/docker
     timeout: 240
@@ -191,10 +191,11 @@ steps:
         - ghcr.io/sgoudelis/ground-station:latest-arm64
         - ghcr.io/sgoudelis/ground-station:latest
       pull: true
-      daemon_off: true
+      daemon_off: false
       custom_dns: 8.8.8.8
-    environment:
-      DOCKER_HOST: tcp://192.168.60.98:2375
+    volumes:
+      - name: docker-sock
+        path: /var/run/docker.sock
     depends_on:
       - build-amd64
     when:
@@ -239,3 +240,8 @@ steps:
     when:
       event:
         - tag
+
+volumes:
+  - name: docker-sock
+    host:
+      path: /var/run/docker.sock
