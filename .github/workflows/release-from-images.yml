@@ -74,8 +74,24 @@ jobs:
             ${{ steps.commits.outputs.commit_list }}
 
             ### Pull the Docker image:
+
+            **For AMD64 systems:**
             ```bash
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            docker pull --platform linux/amd64 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            ```
+
+            **For ARM64 systems (Raspberry Pi, etc):**
+            ```bash
+            docker pull --platform linux/arm64 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            ```
+
+            Or pull architecture-specific tags directly:
+            ```bash
+            # AMD64
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}-amd64
+
+            # ARM64
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}-arm64
             ```
 
             ### Run the container:
@@ -83,6 +99,7 @@ jobs:
             **For AMD64 systems:**
             ```bash
             docker run -d \
+              --platform linux/amd64 \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
@@ -96,6 +113,7 @@ jobs:
             **For ARM64 systems (Raspberry Pi, etc):**
             ```bash
             docker run -d \
+              --platform linux/arm64 \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
@@ -106,7 +124,7 @@ jobs:
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
             ```
 
-            > **Note:** Replace `/path/to/data` with your desired data directory path. For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible.
+            > **Note:** Replace `/path/to/data` with your desired data directory path. The `--platform` flag ensures the correct architecture is used. For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible.
 
             ### Upgrading an existing container:
             ```bash
