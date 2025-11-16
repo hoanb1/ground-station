@@ -136,9 +136,11 @@ const VFOMarkersContainer = ({
             return null;
         }
 
-        // Find the output for this decoder session
+        // Find the output for this decoder session AND VFO
         const output = decoderOutputs?.find(
-            out => out.session_id === decoderInfo.session_id && out.decoder_type === 'morse'
+            out => out.session_id === decoderInfo.session_id &&
+                   out.decoder_type === 'morse' &&
+                   out.vfo === vfoNumber
         );
 
         if (output && output.output && output.output.text) {

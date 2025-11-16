@@ -252,31 +252,33 @@ class ProcessManager:
             sdr_id, session_id, decoder_class, data_queue, audio_out_queue, **kwargs
         )
 
-    def stop_decoder(self, sdr_id, session_id):
+    def stop_decoder(self, sdr_id, session_id, vfo_number=None):
         """
-        Stop a decoder thread for a specific session.
+        Stop a decoder thread for a specific session and optionally a specific VFO.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
+            vfo_number: VFO number (1-4). If None, stops all decoders for session
 
         Returns:
             bool: True if stopped successfully, False otherwise
         """
-        return self.decoder_manager.stop_decoder(sdr_id, session_id)
+        return self.decoder_manager.stop_decoder(sdr_id, session_id, vfo_number)
 
-    def get_active_decoder(self, sdr_id, session_id):
+    def get_active_decoder(self, sdr_id, session_id, vfo_number=None):
         """
-        Get the active decoder for a session.
+        Get the active decoder for a session and optionally a specific VFO.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
+            vfo_number: VFO number (1-4). If None, returns first decoder found
 
         Returns:
             Decoder instance or None if not found
         """
-        return self.decoder_manager.get_active_decoder(sdr_id, session_id)
+        return self.decoder_manager.get_active_decoder(sdr_id, session_id, vfo_number)
 
     # ==================== Utility Methods ====================
 

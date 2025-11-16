@@ -373,6 +373,7 @@ export default function Layout() {
     // Use the audio context
     const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
     const streamingTimeoutRef = useRef(null);
+    const currentStreamingVFORef = useRef(null);
 
     useEffect(() => {
         console.info('Initializing audio...');
@@ -397,8 +398,11 @@ export default function Layout() {
                 const vfoNumber = data.vfo?.vfo_number;
 
                 if (vfoNumber !== undefined) {
-                    // Update Redux with which VFO is streaming
-                    dispatch(setStreamingVFO(vfoNumber));
+                    // Only dispatch if VFO actually changed
+                    if (currentStreamingVFORef.current !== vfoNumber) {
+                        currentStreamingVFORef.current = vfoNumber;
+                        dispatch(setStreamingVFO(vfoNumber));
+                    }
 
                     // Clear previous timeout
                     if (streamingTimeoutRef.current) {
@@ -407,6 +411,7 @@ export default function Layout() {
 
                     // Set timeout to clear streaming state after 500ms of no audio
                     streamingTimeoutRef.current = setTimeout(() => {
+                        currentStreamingVFORef.current = null;
                         dispatch(setStreamingVFO(null));
                     }, 500);
                 }

@@ -47,15 +47,18 @@ export const decodersSlice = createSlice({
         decoderStatusChanged: (state, action) => {
             const { session_id, status, mode, decoder_type, vfo, timestamp, progress } = action.payload;
 
+            // Create unique key combining session_id and VFO number
+            const decoderKey = vfo ? `${session_id}_vfo${vfo}` : session_id;
+
             if (status === 'idle' || status === 'error' || status === 'closed') {
                 // Remove from active decoders when idle, error, or closed
-                if (state.active[session_id]) {
-                    delete state.active[session_id];
+                if (state.active[decoderKey]) {
+                    delete state.active[decoderKey];
                 }
             } else {
                 // Update or create active decoder entry
-                if (!state.active[session_id]) {
-                    state.active[session_id] = {
+                if (!state.active[decoderKey]) {
+                    state.active[decoderKey] = {
                         decoder_type,
                         session_id,
                         vfo,
@@ -64,25 +67,28 @@ export const decodersSlice = createSlice({
                     };
                 }
 
-                state.active[session_id].status = status;
-                state.active[session_id].mode = mode;
-                state.active[session_id].vfo = vfo;
-                state.active[session_id].last_update = timestamp;
+                state.active[decoderKey].status = status;
+                state.active[decoderKey].mode = mode;
+                state.active[decoderKey].vfo = vfo;
+                state.active[decoderKey].last_update = timestamp;
 
                 // Update progress if provided in the payload (including null to reset)
                 if (progress !== undefined) {
-                    state.active[session_id].progress = progress;
+                    state.active[decoderKey].progress = progress;
                 }
             }
         },
 
         // Progress update
         decoderProgressUpdated: (state, action) => {
-            const { session_id, progress, timestamp } = action.payload;
+            const { session_id, vfo, progress, timestamp } = action.payload;
 
-            if (state.active[session_id]) {
-                state.active[session_id].progress = progress;
-                state.active[session_id].last_update = timestamp;
+            // Create unique key combining session_id and VFO number
+            const decoderKey = vfo ? `${session_id}_vfo${vfo}` : session_id;
+
+            if (state.active[decoderKey]) {
+                state.active[decoderKey].progress = progress;
+                state.active[decoderKey].last_update = timestamp;
             }
         },
 
@@ -90,16 +96,20 @@ export const decodersSlice = createSlice({
         decoderOutputReceived: (state, action) => {
             const output = action.payload;
 
-            // Special handling for Morse decoder - keep only latest output per session
+            // Special handling for Morse decoder - keep only latest output per session+VFO
             if (output.decoder_type === 'morse') {
-                // Find and remove any existing Morse output for this session
+                // Find and remove any existing Morse output for this session+VFO combination
                 state.outputs = state.outputs.filter(
-                    o => !(o.decoder_type === 'morse' && o.session_id === output.session_id)
+                    o => !(o.decoder_type === 'morse' && o.session_id === output.session_id && o.vfo === output.vfo)
                 );
 
-                // Add the new output
+                // Add the new output with VFO in the ID
+                const outputId = output.vfo
+                    ? `output_${output.session_id}_vfo${output.vfo}_morse`
+                    : `output_${output.session_id}_morse`;
+
                 state.outputs.unshift({
-                    id: `output_${output.session_id}_morse`,
+                    id: outputId,
                     ...output
                 });
             } else {
@@ -139,10 +149,13 @@ export const decodersSlice = createSlice({
 
         // Clear decoder session (user stopped decoder)
         clearDecoderSession: (state, action) => {
-            const { session_id } = action.payload;
+            const { session_id, vfo } = action.payload;
 
-            if (state.active[session_id]) {
-                delete state.active[session_id];
+            // Create unique key combining session_id and VFO number
+            const decoderKey = vfo ? `${session_id}_vfo${vfo}` : session_id;
+
+            if (state.active[decoderKey]) {
+                delete state.active[decoderKey];
             }
         },
 
@@ -220,7 +233,10 @@ export const {
 
 // Selectors
 export const selectActiveDecoders = (state) => state.decoders.active;
-export const selectDecoderBySession = (session_id) => (state) => state.decoders.active[session_id];
+export const selectDecoderBySession = (session_id, vfo = null) => (state) => {
+    const decoderKey = vfo ? `${session_id}_vfo${vfo}` : session_id;
+    return state.decoders.active[decoderKey];
+};
 export const selectAllOutputs = (state) => state.decoders.outputs;
 export const selectFilteredOutputs = (state) => {
     const { outputs, ui } = state.decoders;
