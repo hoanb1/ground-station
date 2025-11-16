@@ -58,7 +58,7 @@ class AudioBroadcaster(threading.Thread):
         # Statistics
         self.stats = {"messages_received": 0, "messages_broadcast": 0, "errors": 0}
 
-    def subscribe(self, name: str, maxsize: int = 5) -> queue.Queue:
+    def subscribe(self, name: str, maxsize: int = 10) -> queue.Queue:
         """
         Subscribe to audio stream.
 
