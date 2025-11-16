@@ -199,7 +199,8 @@ steps:
   - name: manifest
     image: plugins/manifest
     settings:
-      username: sgoudelis
+      username:
+        from_secret: ghcr_username
       password:
         from_secret: ghcr_token
       target: ghcr.io/sgoudelis/ground-station:${DRONE_TAG##v}
@@ -218,7 +219,8 @@ steps:
   - name: manifest-latest
     image: plugins/manifest
     settings:
-      username: sgoudelis
+      username:
+        from_secret: ghcr_username
       password:
         from_secret: ghcr_token
       target: ghcr.io/sgoudelis/ground-station:latest
