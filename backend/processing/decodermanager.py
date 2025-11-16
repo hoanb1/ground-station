@@ -242,13 +242,13 @@ class DecoderManager:
 
                 # Subscribe decoder to audio broadcaster
                 decoder_audio_queue = audio_broadcaster.subscribe(
-                    f"decoder:{session_id}", maxsize=10
+                    f"decoder:{session_id}", maxsize=5
                 )
 
                 # If UI audio streaming requested, subscribe UI as well
                 ui_forwarder_thread = None
                 if audio_out_queue is not None:
-                    ui_audio_queue = audio_broadcaster.subscribe(f"ui:{session_id}", maxsize=10)
+                    ui_audio_queue = audio_broadcaster.subscribe(f"ui:{session_id}", maxsize=5)
                     self.logger.info("UI audio streaming enabled via AudioBroadcaster")
 
                     # Start a daemon thread to forward audio from ui_audio_queue to audio_out_queue
