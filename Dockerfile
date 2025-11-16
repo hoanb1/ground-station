@@ -166,13 +166,18 @@ RUN apt-get update && apt-get install -y libusb-1.0-0 libudev1 && rm -rf /var/li
 RUN wget https://www.sdrplay.com/software/SDRplay_RSP_API-Linux-3.15.2.run && \
     chmod +x SDRplay_RSP_API-Linux-3.15.2.run && \
     ./SDRplay_RSP_API-Linux-3.15.2.run --tar -xvf && \
-    cp amd64/libsdrplay_api.so.3.15 /usr/local/lib/ && \
+    ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then SDRPLAY_ARCH="amd64"; \
+    elif [ "$ARCH" = "aarch64" ]; then SDRPLAY_ARCH="arm64"; \
+    else SDRPLAY_ARCH="$ARCH"; fi && \
+    echo "Detected architecture: $ARCH, using SDRplay folder: $SDRPLAY_ARCH" && \
+    cp $SDRPLAY_ARCH/libsdrplay_api.so.3.15 /usr/local/lib/ && \
     cd /usr/local/lib && \
     ln -s libsdrplay_api.so.3.15 libsdrplay_api.so.3 && \
     ln -s libsdrplay_api.so.3 libsdrplay_api.so && \
     cp -r /src/inc/* /usr/local/include/ && \
     mkdir -p /opt/sdrplay_api && \
-    cp /src/amd64/sdrplay_apiService /opt/sdrplay_api/ && \
+    cp /src/$SDRPLAY_ARCH/sdrplay_apiService /opt/sdrplay_api/ && \
     chmod +x /opt/sdrplay_api/sdrplay_apiService && \
     ldconfig
 
