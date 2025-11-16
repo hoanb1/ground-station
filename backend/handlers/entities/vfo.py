@@ -63,8 +63,16 @@ async def update_vfo_parameters(
     vfomanager.update_vfo_state(
         session_id=sid,
         vfo_id=vfo_id,
-        center_freq=int(data["frequency"]) if "frequency" in data else None,
-        bandwidth=int(data["bandwidth"]) if "bandwidth" in data else None,
+        center_freq=(
+            int(data["frequency"])
+            if "frequency" in data and data["frequency"] is not None
+            else None
+        ),
+        bandwidth=(
+            int(data["bandwidth"])
+            if "bandwidth" in data and data["bandwidth"] is not None
+            else None
+        ),
         modulation=data.get("mode") if "mode" in data else None,
         active=data.get("active"),
         selected=data.get("selected"),

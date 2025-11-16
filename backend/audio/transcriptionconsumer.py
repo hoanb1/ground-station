@@ -131,11 +131,13 @@ class TranscriptionConsumer(threading.Thread):
                     continue
 
                 # Check if transcription is enabled for this VFO
-                # Try to get specific VFO if vfo_number is provided, otherwise get selected VFO
-                if vfo_number is not None:
-                    vfo_state = self.vfo_manager.get_vfo_state(session_id, vfo_number)
-                else:
-                    vfo_state = self.vfo_manager.get_selected_vfo(session_id)
+                # vfo_number is required
+                if vfo_number is None:
+                    logger.error(f"vfo_number is required for transcription (session {session_id})")
+                    self.transcription_queue.task_done()
+                    continue
+
+                vfo_state = self.vfo_manager.get_vfo_state(session_id, vfo_number)
 
                 if vfo_state is None:
                     # Silently skip if no VFO state (could be internal demodulator for decoder)
@@ -210,7 +212,15 @@ class TranscriptionConsumer(threading.Thread):
         audio_array = np.concatenate(buffer_data["buffer"])
 
         # Get current VFO state to check if stereo and get settings
-        vfo_state = self.vfo_manager.get_selected_vfo(session_id)
+        # Note: We need to find which VFO this session is using for transcription
+        # For now, we'll check all VFOs and use the selected one with transcription enabled
+        vfo_state = None
+        all_vfos = self.vfo_manager.get_all_vfo_states(session_id)
+        for vfo_num, vfo in all_vfos.items():
+            if vfo.selected and getattr(vfo, "transcription_enabled", False):
+                vfo_state = vfo
+                break
+
         is_stereo = (
             vfo_state and vfo_state.modulation and vfo_state.modulation.upper() == "FM_STEREO"
         )

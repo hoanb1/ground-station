@@ -66,14 +66,15 @@ class WebAudioConsumer(threading.Thread):
 
                 # Only process audio for the originating session
                 try:
-                    # Get VFO state - use vfo_number if provided (multi-VFO), otherwise get selected VFO
-                    if vfo_number is not None:
-                        vfo_state = self.vfo_manager.get_vfo_state(
-                            originating_session_id, vfo_number
+                    # Get VFO state - vfo_number is required
+                    if vfo_number is None:
+                        logger.error(
+                            f"vfo_number is required for audio routing (session {originating_session_id})"
                         )
-                    else:
-                        # Legacy mode: get selected VFO
-                        vfo_state = self.vfo_manager.get_selected_vfo(originating_session_id)
+                        self.audio_queue.task_done()
+                        continue
+
+                    vfo_state = self.vfo_manager.get_vfo_state(originating_session_id, vfo_number)
 
                     # Check if VFO exists and is selected
                     # In multi-VFO mode, only play audio from the selected VFO

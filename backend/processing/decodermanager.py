@@ -74,45 +74,26 @@ class DecoderManager:
         decoders_dict = process_info.get("decoders", {})
         session_decoders = decoders_dict.get(session_id, {})
 
-        # Support both legacy (single decoder) and multi-VFO modes
-        if vfo_number:
-            # Multi-VFO mode: check if this specific VFO has a decoder
-            if vfo_number in session_decoders:
-                existing_entry = session_decoders[vfo_number]
-                existing = (
-                    existing_entry.get("instance")
-                    if isinstance(existing_entry, dict)
-                    else existing_entry
+        # Check if this specific VFO has a decoder
+        if vfo_number and vfo_number in session_decoders:
+            existing_entry = session_decoders[vfo_number]
+            existing = (
+                existing_entry.get("instance")
+                if isinstance(existing_entry, dict)
+                else existing_entry
+            )
+            # If same type, just return success (already running)
+            if isinstance(existing, decoder_class):
+                self.logger.debug(
+                    f"{decoder_class.__name__} already running for session {session_id} VFO {vfo_number}"
                 )
-                # If same type, just return success (already running)
-                if isinstance(existing, decoder_class):
-                    self.logger.debug(
-                        f"{decoder_class.__name__} already running for session {session_id} VFO {vfo_number}"
-                    )
-                    return True
-                else:
-                    # Different type, stop the old one first
-                    self.logger.info(
-                        f"Switching from {type(existing).__name__} to {decoder_class.__name__} for session {session_id} VFO {vfo_number}"
-                    )
-                    self.stop_decoder(sdr_id, session_id, vfo_number)
-        else:
-            # Legacy mode: single decoder per session (check if session_decoders contains instance)
-            if session_decoders and "instance" in session_decoders:
-                existing_entry = session_decoders
-                existing = existing_entry.get("instance")
-                # If same type, just return success (already running)
-                if isinstance(existing, decoder_class):
-                    self.logger.debug(
-                        f"{decoder_class.__name__} already running for session {session_id}"
-                    )
-                    return True
-                else:
-                    # Different type, stop the old one first
-                    self.logger.info(
-                        f"Switching from {type(existing).__name__} to {decoder_class.__name__} for session {session_id}"
-                    )
-                    self.stop_decoder(sdr_id, session_id)
+                return True
+            else:
+                # Different type, stop the old one first
+                self.logger.info(
+                    f"Switching from {type(existing).__name__} to {decoder_class.__name__} for session {session_id} VFO {vfo_number}"
+                )
+                self.stop_decoder(sdr_id, session_id, vfo_number)
 
         try:
             # Import decoder classes to determine demodulator requirements
@@ -144,10 +125,9 @@ class DecoderManager:
                     f"Creating internal FM demodulator for decoder."
                 )
             else:
-                # In multi-VFO mode, demod_entry is a nested dict {vfo_number: {instance, subscription_key}}
-                # In legacy mode, demod_entry is {instance, subscription_key}
+                # demod_entry is a nested dict {vfo_number: {instance, subscription_key}}
                 if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
-                    # Multi-VFO mode: check specific VFO's demodulator
+                    # Check specific VFO's demodulator
                     vfo_entry = demod_entry[vfo_number]
                     demodulator = vfo_entry.get("instance")
                     if not getattr(demodulator, "internal_mode", False):
@@ -158,19 +138,8 @@ class DecoderManager:
                         )
                         # Stop only the specific VFO's demodulator
                         self.demodulator_manager.stop_demodulator(sdr_id, session_id, vfo_number)
-                elif isinstance(demod_entry, dict) and "instance" in demod_entry:
-                    # Legacy mode: single demodulator for session
-                    demodulator = demod_entry.get("instance")
-                    if not getattr(demodulator, "internal_mode", False):
-                        need_internal_demod = True
-                        self.logger.info(
-                            f"Existing demodulator for session {session_id} is not in internal mode. "
-                            f"Stopping it and creating internal FM demodulator for decoder."
-                        )
-                        # Stop the existing non-internal demodulator (legacy mode, no VFO number)
-                        self.demodulator_manager.stop_demodulator(sdr_id, session_id)
                 elif isinstance(demod_entry, dict) and vfo_number:
-                    # Multi-VFO mode but this VFO doesn't have a demodulator yet
+                    # This VFO doesn't have a demodulator yet
                     need_internal_demod = True
                     self.logger.info(
                         f"No demodulator for VFO {vfo_number} in session {session_id}. "
@@ -336,12 +305,14 @@ class DecoderManager:
                 ),  # UI forwarder thread reference
             }
 
+            # Store under VFO number (multi-VFO mode only)
             if vfo_number:
-                # Multi-VFO mode: store under VFO number
                 process_info["decoders"][session_id][vfo_number] = decoder_info
             else:
-                # Legacy mode: store directly under session_id
-                process_info["decoders"][session_id] = decoder_info
+                self.logger.error(
+                    f"vfo_number is required to start decoder {decoder_class.__name__} for session {session_id}"
+                )
+                return False
 
             self.logger.info(
                 f"Started {decoder_class.__name__} for session {session_id} on device {sdr_id}"
@@ -390,22 +361,14 @@ class DecoderManager:
                 sdr_id, session_id, vfo_number, session_decoders[vfo_number], process_info
             )
         else:
-            # Stop all decoders for this session (legacy mode or stop all VFOs)
-            # Check if legacy mode (dict with "instance" key) or multi-VFO mode
-            if "instance" in session_decoders:
-                # Legacy mode: single decoder
-                return self._stop_single_decoder(
-                    sdr_id, session_id, None, session_decoders, process_info
-                )
-            else:
-                # Multi-VFO mode: stop all VFO decoders
-                success = True
-                for vfo_num in list(session_decoders.keys()):
-                    if not self._stop_single_decoder(
-                        sdr_id, session_id, vfo_num, session_decoders[vfo_num], process_info
-                    ):
-                        success = False
-                return success
+            # Stop all VFO decoders for this session
+            success = True
+            for vfo_num in list(session_decoders.keys()):
+                if not self._stop_single_decoder(
+                    sdr_id, session_id, vfo_num, session_decoders[vfo_num], process_info
+                ):
+                    success = False
+            return success
 
     def _stop_single_decoder(self, sdr_id, session_id, vfo_number, decoder_entry, process_info):
         """
@@ -414,7 +377,7 @@ class DecoderManager:
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
-            vfo_number: VFO number or None for legacy mode
+            vfo_number: VFO number
             decoder_entry: The decoder entry dict
             process_info: Process info dict
 
@@ -422,31 +385,13 @@ class DecoderManager:
             bool: True if stopped successfully, False otherwise
         """
         try:
-            # Handle both old format (direct instance) and new format (dict with instance)
-            if isinstance(decoder_entry, dict):
-                decoder = decoder_entry["instance"]
-                internal_demod = decoder_entry.get("internal_demod", False)
-                stored_vfo = decoder_entry.get("vfo_number")  # Get VFO number if present
-                subscription_key = decoder_entry.get("subscription_key")  # For raw IQ decoders
-                needs_raw_iq = decoder_entry.get("needs_raw_iq", False)
-                audio_broadcaster = decoder_entry.get(
-                    "audio_broadcaster"
-                )  # AudioBroadcaster instance
-                ui_forwarder_thread = decoder_entry.get(
-                    "ui_forwarder_thread"
-                )  # UI forwarder thread  # noqa: F841
-            else:
-                decoder = decoder_entry
-                internal_demod = False
-                stored_vfo = None
-                subscription_key = None
-                needs_raw_iq = False
-                audio_broadcaster = None
-                ui_forwarder_thread = None  # noqa: F841
-
-            # Use stored VFO if vfo_number not provided (for cleanup)
-            if vfo_number is None:
-                vfo_number = stored_vfo
+            # Extract decoder info from entry dict
+            decoder = decoder_entry["instance"]
+            internal_demod = decoder_entry.get("internal_demod", False)
+            subscription_key = decoder_entry.get("subscription_key")  # For raw IQ decoders
+            needs_raw_iq = decoder_entry.get("needs_raw_iq", False)
+            audio_broadcaster = decoder_entry.get("audio_broadcaster")  # AudioBroadcaster instance
+            ui_forwarder_thread = decoder_entry.get("ui_forwarder_thread")  # noqa: F841
 
             decoder_name = type(decoder).__name__
             decoder.stop()
@@ -473,16 +418,12 @@ class DecoderManager:
                 should_stop_demod = False
 
                 if demod_entry:
-                    # Check if this is multi-VFO mode or legacy mode
+                    # Check if this is multi-VFO mode
                     if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
-                        # Multi-VFO mode: check specific VFO's demodulator
+                        # Check specific VFO's demodulator
                         vfo_demod = demod_entry[vfo_number].get("instance")
                         # Only stop if it's still in internal mode (not replaced by normal demod)
                         should_stop_demod = getattr(vfo_demod, "internal_mode", False)
-                    elif isinstance(demod_entry, dict) and "instance" in demod_entry:
-                        # Legacy mode: check single demodulator
-                        demod_instance = demod_entry.get("instance")
-                        should_stop_demod = getattr(demod_instance, "internal_mode", False)
 
                 if should_stop_demod:
                     # Determine demodulator type from the decoder type for better logging
@@ -490,16 +431,10 @@ class DecoderManager:
 
                     demod_type = "SSB" if isinstance(decoder, MorseDecoder) else "FM"
 
-                    if vfo_number:
-                        self.logger.info(
-                            f"Stopping internal {demod_type} demodulator for session {session_id} VFO {vfo_number}"
-                        )
-                        self.demodulator_manager.stop_demodulator(sdr_id, session_id, vfo_number)
-                    else:
-                        self.logger.info(
-                            f"Stopping internal {demod_type} demodulator for session {session_id}"
-                        )
-                        self.demodulator_manager.stop_demodulator(sdr_id, session_id)
+                    self.logger.info(
+                        f"Stopping internal {demod_type} demodulator for session {session_id} VFO {vfo_number}"
+                    )
+                    self.demodulator_manager.stop_demodulator(sdr_id, session_id, vfo_number)
                 else:
                     self.logger.debug(
                         f"Internal demodulator for session {session_id} was already replaced, skipping cleanup"
@@ -507,21 +442,13 @@ class DecoderManager:
 
             # Delete the decoder entry
             decoders = process_info.get("decoders", {})
-            if vfo_number:
-                # Multi-VFO mode: delete specific VFO entry
-                if session_id in decoders and vfo_number in decoders[session_id]:
-                    del decoders[session_id][vfo_number]
-                    # If no more VFO decoders, clean up session entry
-                    if not decoders[session_id]:
-                        del decoders[session_id]
-                log_msg = f"Stopped {decoder_name} for session {session_id} VFO {vfo_number}"
-            else:
-                # Legacy mode: delete entire session entry
-                if session_id in decoders:
+            if session_id in decoders and vfo_number in decoders[session_id]:
+                del decoders[session_id][vfo_number]
+                # If no more VFO decoders, clean up session entry
+                if not decoders[session_id]:
                     del decoders[session_id]
-                log_msg = f"Stopped {decoder_name} for session {session_id}"
 
-            self.logger.info(log_msg)
+            self.logger.info(f"Stopped {decoder_name} for session {session_id} VFO {vfo_number}")
             return True
 
         except Exception as e:
@@ -535,7 +462,7 @@ class DecoderManager:
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
-            vfo_number: VFO number (1-4). If None, returns first decoder found or legacy decoder
+            vfo_number: VFO number (1-4). If None, returns first decoder found
 
         Returns:
             Decoder instance or None if not found
@@ -559,17 +486,11 @@ class DecoderManager:
                 return vfo_entry
             return None
 
-        # No VFO specified: return legacy single decoder or first VFO decoder found
-        # Handle both old format (direct instance) and new format (dict with instance)
+        # No VFO specified: return first VFO decoder found
         if isinstance(session_decoders, dict):
-            if "instance" in session_decoders:
-                # Legacy mode: single decoder
-                return session_decoders.get("instance")
-            else:
-                # Multi-VFO mode: return first VFO decoder found (for backward compatibility)
-                for vfo_num in sorted(session_decoders.keys()):
-                    vfo_entry = session_decoders[vfo_num]
-                    if isinstance(vfo_entry, dict):
-                        return vfo_entry.get("instance")
-                    return vfo_entry
-        return session_decoders
+            for vfo_num in sorted(session_decoders.keys()):
+                vfo_entry = session_decoders[vfo_num]
+                if isinstance(vfo_entry, dict):
+                    return vfo_entry.get("instance")
+                return vfo_entry
+        return None

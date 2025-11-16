@@ -96,16 +96,13 @@ class FMDemodulator(threading.Thread):
 
     def _get_active_vfo(self):
         """Get VFO state for this demodulator's VFO."""
-        if self.vfo_number is not None:
-            # Multi-VFO mode: get specific VFO state
-            vfo_state = self.vfo_manager.get_vfo_state(self.session_id, self.vfo_number)
-            if vfo_state and vfo_state.active:
-                return vfo_state
-        else:
-            # Legacy mode: get selected VFO
-            vfo_state = self.vfo_manager.get_selected_vfo(self.session_id)
-            if vfo_state and vfo_state.active and vfo_state.selected:
-                return vfo_state
+        if self.vfo_number is None:
+            logger.error(f"vfo_number is required for FMDemodulator (session {self.session_id})")
+            return None
+
+        vfo_state = self.vfo_manager.get_vfo_state(self.session_id, self.vfo_number)
+        if vfo_state and vfo_state.active:
+            return vfo_state
         return None
 
     def _resize_filter_state(self, old_state, b_coeffs, initial_value, a_coeffs=None):

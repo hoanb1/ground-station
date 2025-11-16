@@ -155,7 +155,15 @@ class VFOManager:
         return [vfo_state for vfo_state in session_vfos.values() if vfo_state.active]
 
     def get_selected_vfo(self, session_id: str) -> Optional[VFOState]:
-        """Returns the currently selected VFO state or None if no VFO is selected."""
+        """
+        DEPRECATED: Returns the currently selected VFO state or None if no VFO is selected.
+
+        This method is deprecated and should not be used. Legacy mode has been removed.
+        Use get_vfo_state(session_id, vfo_number) with explicit VFO number instead.
+        """
+        logger.warning(
+            "get_selected_vfo() is deprecated. Use get_vfo_state() with explicit vfo_number instead."
+        )
         self._ensure_session_vfos(session_id)
         session_vfos = self._session_vfo_states[session_id]
 

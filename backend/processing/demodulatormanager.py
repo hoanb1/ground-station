@@ -58,12 +58,12 @@ class DemodulatorManager(ConsumerManager):
 
     def stop_demodulator(self, sdr_id, session_id, vfo_number=None):
         """
-        Stop a demodulator thread for a specific session and optionally a specific VFO.
+        Stop a demodulator thread for a specific session and VFO.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
-            vfo_number: VFO number (1-4). If None, stops all demodulators for session (legacy mode)
+            vfo_number: VFO number (1-4). If None, stops all demodulators for session
 
         Returns:
             bool: True if stopped successfully, False otherwise
@@ -78,11 +78,16 @@ class DemodulatorManager(ConsumerManager):
             return False
 
         try:
-            # Check if this is multi-VFO mode (nested dict) or legacy mode
             demod_entry = demodulators[session_id]
 
-            if isinstance(demod_entry, dict) and vfo_number in demod_entry:
-                # Multi-VFO mode: stop specific VFO
+            if vfo_number is not None:
+                # Stop specific VFO
+                if vfo_number not in demod_entry:
+                    self.logger.warning(
+                        f"No demodulator found for session {session_id} VFO {vfo_number}"
+                    )
+                    return False
+
                 vfo_entry = demod_entry[vfo_number]
                 demodulator = vfo_entry["instance"]
                 subscription_key = vfo_entry["subscription_key"]
@@ -105,26 +110,7 @@ class DemodulatorManager(ConsumerManager):
                     del demodulators[session_id]
 
                 return True
-
-            elif isinstance(demod_entry, dict) and "instance" in demod_entry:
-                # Legacy mode: stop single demodulator
-                demodulator = demod_entry["instance"]
-                subscription_key = demod_entry["subscription_key"]
-
-                demod_name = type(demodulator).__name__
-                demodulator.stop()
-                demodulator.join(timeout=2.0)
-
-                # Unsubscribe from the broadcaster
-                broadcaster = process_info.get("iq_broadcaster")
-                if broadcaster:
-                    broadcaster.unsubscribe(subscription_key)
-
-                del demodulators[session_id]
-                self.logger.info(f"Stopped {demod_name} for session {session_id}")
-                return True
-
-            elif vfo_number is None and isinstance(demod_entry, dict):
+            else:
                 # Stop all VFOs for this session
                 broadcaster = process_info.get("iq_broadcaster")
                 stopped_count = 0
@@ -147,12 +133,6 @@ class DemodulatorManager(ConsumerManager):
                 del demodulators[session_id]
                 self.logger.info(f"Stopped {stopped_count} demodulator(s) for session {session_id}")
                 return True
-
-            else:
-                self.logger.warning(
-                    f"No demodulator found for session {session_id} VFO {vfo_number}"
-                )
-                return False
 
         except Exception as e:
             self.logger.error(f"Error stopping demodulator: {str(e)}")
