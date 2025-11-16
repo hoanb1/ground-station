@@ -19,6 +19,8 @@ import logging
 import signal
 from typing import Any, Dict
 
+from common.constants import SocketEvents
+from monitoring.performancemonitor import PerformanceMonitor
 from processing.decodermanager import DecoderManager
 from processing.demodulatormanager import DemodulatorManager
 from processing.processlifecycle import ProcessLifecycleManager
@@ -53,6 +55,15 @@ class ProcessManager:
             self.decoder_manager,
         )
 
+        # Initialize performance monitor
+        self.performance_monitor = PerformanceMonitor(self, update_interval=1.0)
+        self.performance_monitor.start()
+
+        # Start background task to emit performance metrics to UI
+        self._metrics_emission_task = None
+        if self.sio:
+            self._start_metrics_emission()
+
         # Set up signal handlers
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -66,6 +77,65 @@ class ProcessManager:
         """
         self.sio = sio
         self.lifecycle_manager.sio = sio
+
+        # Try to start metrics emission (will be deferred if no event loop)
+        self._start_metrics_emission()
+
+    def get_audio_consumer(self):
+        """Get the global audio consumer from shutdown module."""
+        try:
+            from server import shutdown
+
+            return getattr(shutdown, "audio_consumer", None)
+        except Exception:
+            return None
+
+    def start_monitoring(self):
+        """
+        Start performance monitoring emission.
+
+        This should be called from within an async context (e.g., FastAPI lifespan).
+        """
+        if self.sio and not self._metrics_emission_task:
+            self._start_metrics_emission()
+
+    def _start_metrics_emission(self):
+        """
+        Start background task to emit performance metrics to UI.
+
+        Note: This must be called from within an async context (running event loop).
+        If called during module initialization, it will be deferred until start_monitoring() is called.
+        """
+        try:
+            # Try to get the running event loop
+            asyncio.get_running_loop()
+            if self.sio and not self._metrics_emission_task:
+                self._metrics_emission_task = asyncio.create_task(self._emit_performance_metrics())
+                self.logger.info("Started performance metrics emission task")
+        except RuntimeError:
+            # No event loop running yet - this is okay, will be started later via start_monitoring()
+            self.logger.debug("Event loop not running yet, metrics emission will be started later")
+
+    async def _emit_performance_metrics(self):
+        """Background task that reads metrics from monitor and emits to UI via WebSocket"""
+        self.logger.info("Performance metrics emission task started")
+
+        while True:
+            try:
+                # Get latest metrics from monitor (blocking with timeout)
+                metrics = await asyncio.get_event_loop().run_in_executor(
+                    None, self.performance_monitor.get_latest_metrics, 2.0
+                )
+
+                if metrics and self.sio:
+                    # Emit to all connected clients
+                    await self.sio.emit(SocketEvents.PERFORMANCE_METRICS, metrics)
+
+            except Exception as e:
+                self.logger.error(f"Error emitting performance metrics: {e}")
+                self.logger.exception(e)
+                # Continue running even if there's an error
+                await asyncio.sleep(1.0)
 
     # ==================== Process Lifecycle Methods ====================
 
@@ -293,6 +363,27 @@ class ProcessManager:
         self.logger.info(f"Received signal {signum}, shutting down all SDR processes...")
         for sdr_id in list(self.processes.keys()):
             asyncio.create_task(self.stop_sdr_process(sdr_id))
+
+        # Stop performance monitor
+        if self.performance_monitor:
+            self.performance_monitor.stop()
+            self.logger.info("Stopped performance monitor")
+
+    def shutdown(self):
+        """
+        Gracefully shutdown the process manager and all monitoring tasks
+        """
+        self.logger.info("Shutting down process manager...")
+
+        # Stop performance monitor
+        if self.performance_monitor:
+            self.performance_monitor.stop()
+            self.logger.info("Stopped performance monitor")
+
+        # Cancel metrics emission task
+        if self._metrics_emission_task:
+            self._metrics_emission_task.cancel()
+            self.logger.info("Cancelled metrics emission task")
 
 
 # Set up the process manager

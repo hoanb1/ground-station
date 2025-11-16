@@ -21,6 +21,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict
 
 logger = logging.getLogger("iq-recorder")
 
@@ -64,6 +65,18 @@ class IQRecorder(threading.Thread):
             datetime.now(timezone.utc).replace(microsecond=0, tzinfo=None).isoformat() + "Z"
         )
 
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "iq_chunks_in": 0,
+            "iq_samples_in": 0,
+            "samples_written": 0,
+            "bytes_written": 0,
+            "queue_timeouts": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
+
         # Open data file for writing
         self.data_file = open(f"{recording_path}.sigmf-data", "wb")
 
@@ -82,6 +95,11 @@ class IQRecorder(threading.Thread):
 
                 iq_message = self.iq_queue.get(timeout=0.1)
 
+                # Update stats
+                with self.stats_lock:
+                    self.stats["iq_chunks_in"] += 1
+                    self.stats["last_activity"] = time.time()
+
                 samples = iq_message.get("samples")
                 center_freq = iq_message.get("center_freq")
                 sample_rate = iq_message.get("sample_rate")
@@ -89,6 +107,10 @@ class IQRecorder(threading.Thread):
 
                 if samples is None or len(samples) == 0:
                     continue
+
+                # Update sample count
+                with self.stats_lock:
+                    self.stats["iq_samples_in"] += len(samples)
 
                 # Check if parameters changed (new capture segment needed)
                 if (
@@ -123,10 +145,17 @@ class IQRecorder(threading.Thread):
                 samples.tofile(self.data_file)
                 self.total_samples += len(samples)
 
+                # Update stats (cf32_le = 8 bytes per sample)
+                with self.stats_lock:
+                    self.stats["samples_written"] += len(samples)
+                    self.stats["bytes_written"] += len(samples) * 8
+
             except Exception as e:
                 if self.running:
                     logger.error(f"Error in IQ recorder: {str(e)}")
                     logger.exception(e)
+                    with self.stats_lock:
+                        self.stats["errors"] += 1
                 time.sleep(0.1)
 
         logger.info(f"IQ recorder stopped: {self.total_samples} samples written")

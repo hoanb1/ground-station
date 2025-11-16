@@ -29,7 +29,7 @@ import queue
 import threading
 import time
 from copy import deepcopy
-from typing import Any, Dict
+from typing import Dict
 
 # Configure logging
 logger = logging.getLogger("audio-broadcaster")
@@ -57,7 +57,7 @@ class AudioBroadcaster(threading.Thread):
         self.running = True
 
         # Statistics
-        self.stats: Dict[str, Any] = {
+        self.stats = {
             "messages_received": 0,
             "messages_broadcast": 0,
             "errors": 0,

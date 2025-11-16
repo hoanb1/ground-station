@@ -3,13 +3,13 @@ import os
 from typing import Optional
 
 from audio.audiobroadcaster import AudioBroadcaster
-from audio.audioconsumer import WebAudioConsumer
+from audio.audiostreamer import WebAudioStreamer
 from audio.transcriptionconsumer import TranscriptionConsumer
 from common.logger import logger
 from processing.utils import cleanup_sdr_session
 
 # Globals used by audio threads
-audio_consumer: Optional[WebAudioConsumer] = None
+audio_consumer: Optional[WebAudioStreamer] = None
 audio_broadcaster: Optional[AudioBroadcaster] = None
 transcription_consumer: Optional[TranscriptionConsumer] = None
 

@@ -19,7 +19,7 @@ import logging
 import queue
 import threading
 import time
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from scipy import signal
@@ -76,6 +76,18 @@ class AMDemodulator(threading.Thread):
         self.decimation_filter: Optional[Tuple[np.ndarray, int]] = None
         self.audio_filter: Optional[np.ndarray] = None
         self.dc_blocker: Optional[Tuple[np.ndarray, np.ndarray]] = None
+
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "iq_chunks_in": 0,
+            "iq_samples_in": 0,
+            "audio_chunks_out": 0,
+            "audio_samples_out": 0,
+            "queue_timeouts": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
 
     def _get_active_vfo(self):
         """Get VFO state for this demodulator's VFO."""
@@ -246,6 +258,11 @@ class AMDemodulator(threading.Thread):
 
                 iq_message = self.iq_queue.get(timeout=0.1)
 
+                # Update stats
+                with self.stats_lock:
+                    self.stats["iq_chunks_in"] += 1
+                    self.stats["last_activity"] = time.time()
+
                 # Check if there's an active VFO AFTER getting samples
                 vfo_state = self._get_active_vfo()
                 if not vfo_state:
@@ -267,6 +284,10 @@ class AMDemodulator(threading.Thread):
 
                 if samples is None or len(samples) == 0:
                     continue
+
+                # Update sample count
+                with self.stats_lock:
+                    self.stats["iq_samples_in"] += len(samples)
 
                 # Check if we need to reinitialize filters
                 if (
@@ -437,6 +458,10 @@ class AMDemodulator(threading.Thread):
                                     "vfo_number": self.vfo_number,  # Tag audio with VFO number
                                 }
                             )
+                            # Update stats
+                            with self.stats_lock:
+                                self.stats["audio_chunks_out"] += 1
+                                self.stats["audio_samples_out"] += len(chunk)
                         except queue.Full:
                             # Queue is full - drop this chunk to prevent lag accumulation
                             logger.debug(
@@ -451,6 +476,8 @@ class AMDemodulator(threading.Thread):
                 if self.running:
                     logger.error(f"Error in AM demodulator: {str(e)}")
                     logger.exception(e)
+                    with self.stats_lock:
+                        self.stats["errors"] += 1
                 time.sleep(0.1)
 
         logger.info(f"AM demodulator stopped for session {self.session_id}")

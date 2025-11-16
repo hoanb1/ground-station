@@ -42,6 +42,7 @@ import versionReducer from "../dashboard/version-slice.jsx";
 import fileBrowserReducer from '../filebrowser/filebrowser-slice.jsx';
 import decodersReducer from '../decoders/decoders-slice.jsx';
 import libraryVersionsReducer from '../settings/library-versions-slice.jsx';
+import performanceReducer from '../performance/performance-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
 
 
@@ -211,6 +212,13 @@ const libraryVersionsPersistConfig = {
     whitelist: []  // Don't persist library versions
 };
 
+// Persist configuration for performance slice
+const performancePersistConfig = {
+    key: 'performance',
+    storage,
+    whitelist: []  // Don't persist performance metrics (runtime only)
+};
+
 
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
@@ -233,6 +241,7 @@ const persistedVersionInfoReducer = persistReducer(versionInfoConfig, versionRed
 const persistedFileBrowserReducer = persistReducer(fileBrowserPersistConfig, fileBrowserReducer);
 const persistedDecodersReducer = persistReducer(decodersPersistConfig, decodersReducer);
 const persistedLibraryVersionsReducer = persistReducer(libraryVersionsPersistConfig, libraryVersionsReducer);
+const persistedPerformanceReducer = persistReducer(performancePersistConfig, performanceReducer);
 
 
 export const store = configureStore({
@@ -257,6 +266,7 @@ export const store = configureStore({
         filebrowser: persistedFileBrowserReducer,
         decoders: persistedDecodersReducer,
         libraryVersions: persistedLibraryVersionsReducer,
+        performance: persistedPerformanceReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>

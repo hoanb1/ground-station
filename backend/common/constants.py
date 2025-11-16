@@ -49,6 +49,9 @@ class SocketEvents:
     # TLE Sync
     SAT_SYNC_EVENTS = "sat-sync-events"
 
+    # Performance Monitoring
+    PERFORMANCE_METRICS = "performance-metrics"
+
 
 # ============================================================================
 # Queue Message Types (inter-process communication)

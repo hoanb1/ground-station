@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from audio.audiobroadcaster import AudioBroadcaster
-from audio.audioconsumer import WebAudioConsumer
+from audio.audiostreamer import WebAudioStreamer
 from audio.transcriptionconsumer import TranscriptionConsumer
 from common.arguments import arguments
 from common.logger import logger
@@ -66,7 +66,7 @@ async def lifespan(fastapiapp: FastAPI):
 
     # Subscribe consumers to broadcaster
     playback_queue = audio_broadcaster.subscribe("playback", maxsize=10)
-    shutdown.audio_consumer = WebAudioConsumer(playback_queue, sio, event_loop)
+    shutdown.audio_consumer = WebAudioStreamer(playback_queue, sio, event_loop)
     shutdown.audio_consumer.start()
 
     # Start transcription consumer (will be used when DeBabel URL is configured)
@@ -91,11 +91,16 @@ async def lifespan(fastapiapp: FastAPI):
     # Start the background task scheduler
     start_scheduler(sio)
 
+    # Start performance monitoring
+    process_manager.start_monitoring()
+    logger.info("Performance monitoring started")
+
     try:
         yield
     finally:
         logger.info("FastAPI lifespan cleanup...")
         stop_scheduler()
+        process_manager.shutdown()
         shutdown.cleanup_everything()
 
 

@@ -10,6 +10,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ErrorIcon from '@mui/icons-material/Error';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import LockIcon from '@mui/icons-material/Lock';
+import SpeedIcon from '@mui/icons-material/Speed';
 import {
     VFO1Icon,
     VFO2Icon,
@@ -24,7 +25,9 @@ import {
     RotatorLinesIcon
 } from '../common/custom-icons.jsx';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { setDialogOpen } from '../performance/performance-slice.jsx';
+import { useSocket } from '../common/socket.jsx';
 
 const WaterfallToolbar = ({
                               startStreamingLoading,
@@ -54,6 +57,8 @@ const WaterfallToolbar = ({
                               takeSnapshot
                           }) => {
     const { t } = useTranslation('waterfall');
+    const dispatch = useDispatch();
+    const { socket } = useSocket();
     const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
     const menuOpen = Boolean(menuAnchorEl);
     const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
@@ -254,6 +259,21 @@ const WaterfallToolbar = ({
                     disabled={!isStreaming}
                 >
                     <CameraAltIcon/>
+                </IconButton>
+
+                {/* Performance metrics button */}
+                <IconButton
+                    sx={{ borderRadius: 0 }}
+                    onClick={() => {
+                        dispatch(setDialogOpen(true));
+                        if (socket) {
+                            socket.emit('start-monitoring');
+                        }
+                    }}
+                    color="primary"
+                    title="Performance Metrics"
+                >
+                    <SpeedIcon/>
                 </IconButton>
 
                 <Box sx={{ position: 'relative', display: 'inline-flex' }}>

@@ -335,6 +335,7 @@ class ProcessLifecycleManager:
                 "demodulators": {},  # Will store demodulator threads per session
                 "recorders": {},  # Will store recorder threads per session (separate from demodulators)
                 "decoders": {},  # Will store decoder threads per session (SSTV, AFSK, RTTY, etc.)
+                "fft_stats": {},  # Latest stats from FFT processor
             }
 
             # Send initial configuration
@@ -549,6 +550,10 @@ class ProcessLifecycleManager:
                             await self.sio.emit(
                                 SocketEvents.SDR_FFT_DATA, data[DictKeys.DATA], room=sdr_id
                             )
+
+                        elif data_type == "stats":
+                            # Store FFT processor stats for performance monitoring
+                            process_info["fft_stats"] = data.get("stats", {})
 
                         elif data_type == QueueMessageTypes.STREAMING_START:
                             # Send streaming status to all clients connected to this SDR

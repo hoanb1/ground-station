@@ -72,6 +72,7 @@ import {
     decoderOutputReceived,
     decoderErrorOccurred
 } from '../components/decoders/decoders-slice.jsx';
+import { updateMetrics } from '../components/performance/performance-slice.jsx';
 import ImageIcon from '@mui/icons-material/Image';
 
 /**
@@ -452,6 +453,11 @@ export const useSocketEventHandlers = (socket) => {
             }
         });
 
+        // Performance metrics events
+        socket.on('performance-metrics', (data) => {
+            store.dispatch(updateMetrics(data));
+        });
+
         // Decoder data events (SSTV, AFSK, RTTY, PSK31, etc.)
         socket.on('decoder-data', (data) => {
             switch (data.type) {
@@ -541,6 +547,7 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("sdr-error");
             socket.off("sdr-config");
             socket.off("sdr-status");
+            socket.off("performance-metrics");
             socket.off("decoder-data");
         };
     }, [socket, dispatch, t]);

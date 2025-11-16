@@ -17,7 +17,8 @@
 import logging
 import queue
 import threading
-from typing import Dict
+import time
+from typing import Any, Dict
 
 
 class IQBroadcaster(threading.Thread):
@@ -43,12 +44,23 @@ class IQBroadcaster(threading.Thread):
         super().__init__(daemon=True, name=f"IQBroadcaster-{sdr_id}")
         self.source_queue = source_queue
         self.sdr_id = sdr_id
-        self.subscribers: Dict[str, queue.Queue] = {}  # session_id -> queue
+        self.subscribers: Dict[str, dict] = {}  # session_id -> {queue, delivered, dropped}
         self.running = True
         self.lock = threading.Lock()
         self.logger = logging.getLogger("iq-broadcaster")
 
-    def subscribe(self, session_id: str, maxsize: int = 50) -> queue.Queue:
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "messages_in": 0,
+            "messages_broadcast": 0,
+            "messages_dropped": 0,
+            "queue_timeouts": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
+
+    def subscribe(self, session_id: str, maxsize: int = 50) -> "queue.Queue[Any]":
         """
         Create a new subscriber queue for a session.
 
@@ -63,10 +75,16 @@ class IQBroadcaster(threading.Thread):
         """
         with self.lock:
             if session_id not in self.subscribers:
-                subscriber_queue: queue.Queue = queue.Queue(maxsize=maxsize)
-                self.subscribers[session_id] = subscriber_queue
+                subscriber_queue: "queue.Queue[Any]" = queue.Queue(maxsize=maxsize)
+                self.subscribers[session_id] = {
+                    "queue": subscriber_queue,
+                    "maxsize": maxsize,
+                    "delivered": 0,
+                    "dropped": 0,
+                }
                 self.logger.info(f"Subscribed session {session_id}")
-            return self.subscribers[session_id]
+            result: "queue.Queue[Any]" = self.subscribers[session_id]["queue"]
+            return result
 
     def unsubscribe(self, session_id: str):
         """
@@ -98,7 +116,8 @@ class IQBroadcaster(threading.Thread):
         at the old sample rate becomes invalid.
         """
         with self.lock:
-            for session_id, subscriber_queue in self.subscribers.items():
+            for session_id, subscriber_info in self.subscribers.items():
+                subscriber_queue = subscriber_info["queue"]
                 flushed_count = 0
                 while not subscriber_queue.empty():
                     try:
@@ -127,21 +146,34 @@ class IQBroadcaster(threading.Thread):
                 # Use timeout to allow checking self.running periodically
                 try:
                     iq_message = self.source_queue.get(timeout=0.1)
+
+                    # Update stats
+                    with self.stats_lock:
+                        self.stats["messages_in"] += 1
+                        self.stats["last_activity"] = time.time()
+
                 except queue.Empty:
+                    with self.stats_lock:
+                        self.stats["queue_timeouts"] += 1
                     continue
 
                 # Broadcast to all subscribers
                 with self.lock:
                     dead_subscribers = []
-                    for session_id, subscriber_queue in self.subscribers.items():
+                    for session_id, subscriber_info in self.subscribers.items():
+                        subscriber_queue = subscriber_info["queue"]
                         try:
                             # Non-blocking put - drop sample if queue is full
                             # This prevents slow demodulators from blocking others
                             subscriber_queue.put_nowait(iq_message)
+                            subscriber_info["delivered"] += 1
+                            with self.stats_lock:
+                                self.stats["messages_broadcast"] += 1
                         except queue.Full:
                             # Subscriber can't keep up - drop this sample
-                            # Consider logging this occasionally to detect performance issues
-                            pass
+                            subscriber_info["dropped"] += 1
+                            with self.stats_lock:
+                                self.stats["messages_dropped"] += 1
                         except Exception as e:
                             # Mark subscriber for removal if there's an error
                             self.logger.warning(f"Error broadcasting to session {session_id}: {e}")
@@ -156,6 +188,8 @@ class IQBroadcaster(threading.Thread):
                 if self.running:
                     self.logger.error(f"Error in broadcaster loop: {e}")
                     self.logger.exception(e)
+                    with self.stats_lock:
+                        self.stats["errors"] += 1
 
         self.logger.info(f"IQ broadcaster stopped for SDR {self.sdr_id}")
 

@@ -16,6 +16,7 @@
 
 import logging
 import time
+from typing import Any, Dict
 
 import numpy as np
 
@@ -50,6 +51,18 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
     # Initialize FFT averager
     fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
 
+    # Performance monitoring stats
+    stats: Dict[str, Any] = {
+        "iq_chunks_in": 0,
+        "iq_samples_in": 0,
+        "fft_results_out": 0,
+        "queue_timeouts": 0,
+        "last_activity": None,
+        "errors": 0,
+    }
+    last_stats_send = time.time()
+    stats_send_interval = 1.0  # Send stats every second
+
     try:
         while not stop_event.is_set():
             try:
@@ -61,6 +74,10 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                     continue
 
                 iq_message = iq_queue.get(timeout=0.1)
+
+                # Update stats
+                stats["iq_chunks_in"] += 1
+                stats["last_activity"] = time.time()
 
                 # Handle configuration updates
                 if "config" in iq_message:
@@ -93,6 +110,9 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                 samples = iq_message.get("samples")
                 if samples is None or len(samples) == 0:
                     continue
+
+                # Update sample count
+                stats["iq_samples_in"] += len(samples)
 
                 # Calculate the number of samples needed for the FFT
                 actual_fft_size = fft_size
@@ -156,6 +176,9 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                 # Add FFT to averager and send only when ready
                 averaged_fft = fft_averager.add_fft(fft_result)
                 if averaged_fft is not None:
+                    # Update stats
+                    stats["fft_results_out"] += 1
+
                     # Send the averaged result back to the main process
                     data_queue.put(
                         {
@@ -166,6 +189,19 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                         }
                     )
 
+                # Periodically send stats to main process
+                current_time = time.time()
+                if current_time - last_stats_send >= stats_send_interval:
+                    data_queue.put(
+                        {
+                            "type": "stats",
+                            "client_id": client_id,
+                            "stats": stats.copy(),
+                            "timestamp": current_time,
+                        }
+                    )
+                    last_stats_send = current_time
+
                 # Brief sleep to prevent CPU spinning
                 time.sleep(0.001)
 
@@ -173,6 +209,7 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                 if not stop_event.is_set():
                     logger.error(f"Error processing IQ data for FFT: {str(e)}")
                     logger.exception(e)
+                    stats["errors"] += 1
                 time.sleep(0.1)
 
     except Exception as e:

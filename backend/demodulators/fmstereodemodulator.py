@@ -19,7 +19,7 @@ import logging
 import queue
 import threading
 import time
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from scipy import signal
@@ -96,6 +96,18 @@ class FMStereoDemodulator(threading.Thread):
         # PLL state for pilot tone tracking
         self.pll_phase = 0.0
         self.pll_freq = 19000.0  # 19 kHz pilot tone
+
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "iq_chunks_in": 0,
+            "iq_samples_in": 0,
+            "audio_chunks_out": 0,
+            "audio_samples_out": 0,
+            "queue_timeouts": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
 
     def _get_active_vfo(self):
         """Get VFO state for this demodulator's VFO."""
@@ -441,6 +453,11 @@ class FMStereoDemodulator(threading.Thread):
 
                 iq_message = self.iq_queue.get(timeout=0.1)
 
+                # Update stats
+                with self.stats_lock:
+                    self.stats["iq_chunks_in"] += 1
+                    self.stats["last_activity"] = time.time()
+
                 # Check if there's an active VFO AFTER getting samples
                 vfo_state = self._get_active_vfo()
                 if not vfo_state:
@@ -463,6 +480,10 @@ class FMStereoDemodulator(threading.Thread):
 
                 if samples is None or len(samples) == 0:
                     continue
+
+                # Update sample count
+                with self.stats_lock:
+                    self.stats["iq_samples_in"] += len(samples)
 
                 logger.debug(
                     f"Processing {len(samples)} IQ samples at {sdr_sample_rate/1e6:.2f} MHz"
@@ -610,7 +631,7 @@ class FMStereoDemodulator(threading.Thread):
                     audio_stereo[0::2] = left_resampled
                     audio_stereo[1::2] = right_resampled
 
-                    # NOTE: Volume is applied by WebAudioConsumer, not here
+                    # NOTE: Volume is applied by WebAudioStreamer, not here
                     # This allows per-session volume control
 
                     # No squelch for FM Stereo - let all audio through
@@ -656,6 +677,10 @@ class FMStereoDemodulator(threading.Thread):
                                     "vfo_number": self.vfo_number,  # Tag audio with VFO number
                                 }
                             )
+                            # Update stats
+                            with self.stats_lock:
+                                self.stats["audio_chunks_out"] += 1
+                                self.stats["audio_samples_out"] += len(chunk)
                             logger.debug(f"Queued {len(chunk)} stereo samples")
                         except queue.Full:
                             # Queue is full - drop this chunk to prevent lag accumulation
@@ -671,6 +696,8 @@ class FMStereoDemodulator(threading.Thread):
                 if self.running:
                     logger.error(f"Error in FM Stereo demodulator: {str(e)}")
                     logger.exception(e)
+                    with self.stats_lock:
+                        self.stats["errors"] += 1
                 time.sleep(0.1)
 
         logger.info(f"FM Stereo demodulator stopped for session {self.session_id}")

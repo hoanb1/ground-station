@@ -19,7 +19,7 @@ import logging
 import queue
 import threading
 import time
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from scipy import signal
@@ -92,6 +92,18 @@ class SSBDemodulator(threading.Thread):
         # Filters (will be initialized when we know sample rates)
         self.decimation_filter: Optional[Tuple[np.ndarray, int]] = None
         self.audio_filter: Optional[np.ndarray] = None
+
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "iq_chunks_in": 0,
+            "iq_samples_in": 0,
+            "audio_chunks_out": 0,
+            "audio_samples_out": 0,
+            "queue_timeouts": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
 
     def _get_active_vfo(self):
         """Get the VFO state for this demodulator's VFO."""
@@ -269,6 +281,11 @@ class SSBDemodulator(threading.Thread):
 
                 iq_message = self.iq_queue.get(timeout=0.1)
 
+                # Update stats
+                with self.stats_lock:
+                    self.stats["iq_chunks_in"] += 1
+                    self.stats["last_activity"] = time.time()
+
                 # Extract samples and metadata first
                 samples = iq_message.get("samples")
                 sdr_center_freq = iq_message.get("center_freq")
@@ -276,6 +293,10 @@ class SSBDemodulator(threading.Thread):
 
                 if samples is None or len(samples) == 0:
                     continue
+
+                # Update sample count
+                with self.stats_lock:
+                    self.stats["iq_samples_in"] += len(samples)
 
                 # Determine VFO parameters based on mode
                 if self.internal_mode:
@@ -495,6 +516,10 @@ class SSBDemodulator(threading.Thread):
                             # In normal mode, this goes directly to audio consumers
                             try:
                                 self.audio_queue.put_nowait(audio_message)
+                                # Update stats
+                                with self.stats_lock:
+                                    self.stats["audio_chunks_out"] += 1
+                                    self.stats["audio_samples_out"] += len(chunk)
                             except queue.Full:
                                 # Queue is full - drop this chunk to prevent lag accumulation
                                 logger.debug(
@@ -509,6 +534,8 @@ class SSBDemodulator(threading.Thread):
                 if self.running:
                     logger.error(f"Error in SSB demodulator: {str(e)}")
                     logger.exception(e)
+                    with self.stats_lock:
+                        self.stats["errors"] += 1
                 time.sleep(0.1)
 
         logger.info(f"SSB demodulator stopped for session {self.session_id}")

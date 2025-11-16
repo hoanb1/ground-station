@@ -19,7 +19,7 @@ import logging
 import queue
 import threading
 import time
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from scipy import signal
@@ -93,6 +93,18 @@ class FMDemodulator(threading.Thread):
 
         # De-emphasis time constant (75 microseconds for US, 50 for EU)
         self.deemphasis_tau = 75e-6
+
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "iq_chunks_in": 0,
+            "iq_samples_in": 0,
+            "audio_chunks_out": 0,
+            "audio_samples_out": 0,
+            "queue_timeouts": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
 
     def _get_active_vfo(self):
         """Get VFO state for this demodulator's VFO."""
@@ -291,6 +303,11 @@ class FMDemodulator(threading.Thread):
 
                 iq_message = self.iq_queue.get(timeout=0.1)
 
+                # Update stats
+                with self.stats_lock:
+                    self.stats["iq_chunks_in"] += 1
+                    self.stats["last_activity"] = time.time()
+
                 # Extract samples and metadata first
                 samples = iq_message.get("samples")
                 sdr_center_freq = iq_message.get("center_freq")
@@ -298,6 +315,10 @@ class FMDemodulator(threading.Thread):
 
                 if samples is None or len(samples) == 0:
                     continue
+
+                # Update sample count
+                with self.stats_lock:
+                    self.stats["iq_samples_in"] += len(samples)
 
                 # Determine VFO parameters based on mode
                 if self.internal_mode:
@@ -462,7 +483,7 @@ class FMDemodulator(threading.Thread):
                     # Only clip values that exceed [-1, 1] range
                     audio = np.clip(audio, -0.95, 0.95)
 
-                    # NOTE: Volume is applied by WebAudioConsumer, not here
+                    # NOTE: Volume is applied by WebAudioStreamer, not here
                     # This allows per-session volume control
 
                     # Apply squelch based on RF signal strength (measured earlier)
@@ -540,6 +561,10 @@ class FMDemodulator(threading.Thread):
                             # In normal mode, this goes directly to audio consumers
                             try:
                                 self.audio_queue.put_nowait(audio_message)
+                                # Update stats
+                                with self.stats_lock:
+                                    self.stats["audio_chunks_out"] += 1
+                                    self.stats["audio_samples_out"] += len(chunk)
                             except queue.Full:
                                 # Queue is full - drop this chunk to prevent lag accumulation
                                 logger.debug(
@@ -554,6 +579,8 @@ class FMDemodulator(threading.Thread):
                 if self.running:
                     logger.error(f"Error in FM demodulator: {str(e)}")
                     logger.exception(e)
+                    with self.stats_lock:
+                        self.stats["errors"] += 1
                 time.sleep(0.1)
 
         logger.info(f"FM demodulator stopped for session {self.session_id}")

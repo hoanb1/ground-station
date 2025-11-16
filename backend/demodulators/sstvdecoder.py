@@ -26,6 +26,7 @@ import queue
 import threading
 import time
 from enum import Enum
+from typing import Any, Dict
 
 import numpy as np
 from PIL import Image
@@ -216,6 +217,19 @@ class SSTVDecoder(threading.Thread):
         self.vfo = vfo
         self.vfo_manager = VFOManager()  # Access VFO state for squelch/volume
         os.makedirs(self.output_dir, exist_ok=True)
+
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "audio_chunks_in": 0,
+            "audio_samples_in": 0,
+            "data_messages_out": 0,
+            "queue_timeouts": 0,
+            "images_decoded": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
+
         logger.info(f"SSTV decoder initialized for session {session_id}, VFO {vfo}")
 
     def _barycentric_peak_interp(self, bins, x):
@@ -461,6 +475,8 @@ class SSTVDecoder(threading.Thread):
         logger.info(f"Sending status update: {status.value} (mode: {mode_name})")
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping status update")
 
@@ -481,6 +497,8 @@ class SSTVDecoder(threading.Thread):
         logger.info(f"Sending VIS detection: {mode_spec['name']} (code {vis_code})")
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping VIS detection")
 
@@ -499,6 +517,8 @@ class SSTVDecoder(threading.Thread):
         logger.info(f"Sending progress update: {progress}% (line {current_line}/{total_lines})")
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping progress update")
 
@@ -531,6 +551,8 @@ class SSTVDecoder(threading.Thread):
         }
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             pass
 
@@ -555,6 +577,11 @@ class SSTVDecoder(threading.Thread):
                 try:
                     audio_chunk = self.audio_queue.get(timeout=0.1)
 
+                    # Update stats
+                    with self.stats_lock:
+                        self.stats["audio_chunks_in"] += 1
+                        self.stats["last_activity"] = time.time()
+
                     # Extract audio from dict wrapper if needed
                     if isinstance(audio_chunk, dict):
                         if "audio" in audio_chunk:
@@ -569,6 +596,10 @@ class SSTVDecoder(threading.Thread):
                         audio_chunk = np.array(audio_chunk, dtype=np.float32)
                     elif audio_chunk.ndim == 0:
                         audio_chunk = audio_chunk.reshape(1)
+
+                    # Update sample count
+                    with self.stats_lock:
+                        self.stats["audio_samples_in"] += len(audio_chunk)
 
                     # If processing, buffer audio for next decode; otherwise add to main buffer
                     if processing:
@@ -587,6 +618,8 @@ class SSTVDecoder(threading.Thread):
                         )
 
                 except queue.Empty:
+                    with self.stats_lock:
+                        self.stats["queue_timeouts"] += 1
                     pass
 
                 if len(self.audio_buffer) < min_buffer_size:
@@ -671,6 +704,10 @@ class SSTVDecoder(threading.Thread):
                     )
                     self._send_completed_image(image, mode_spec["name"])
 
+                    # Update images decoded count
+                    with self.stats_lock:
+                        self.stats["images_decoded"] += 1
+
                     # Return to LISTENING for next transmission
                     self.mode = None
                     # Start next decode with audio that arrived during processing
@@ -685,6 +722,8 @@ class SSTVDecoder(threading.Thread):
         except Exception as e:
             logger.error(f"SSTV decoder error: {e}")
             logger.exception(e)
+            with self.stats_lock:
+                self.stats["errors"] += 1
             self._send_status_update(DecoderStatus.ERROR)
 
         logger.info(f"SSTV decoder stopped for {self.session_id}")
@@ -705,5 +744,7 @@ class SSTVDecoder(threading.Thread):
         logger.info("Sending final status update: closed")
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping final status update")

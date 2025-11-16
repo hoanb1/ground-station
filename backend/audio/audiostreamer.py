@@ -30,29 +30,47 @@ import asyncio
 import logging
 import queue
 import threading
+import time
+from typing import Any, Dict
 
 import numpy as np
 
 from vfos.state import VFOManager
 
 # Configure logging
-logger = logging.getLogger("audio-consumer")
+logger = logging.getLogger("audio-streamer")
 
 
-class WebAudioConsumer(threading.Thread):
+class WebAudioStreamer(threading.Thread):
     def __init__(self, audio_queue, sio, loop):
-        super().__init__(daemon=True, name="Ground Station - WebAudioConsumer")
+        super().__init__(daemon=True, name="Ground Station - WebAudioStreamer")
         self.audio_queue = audio_queue
         self.sio = sio
         self.loop = loop  # Pass the main event loop
         self.vfo_manager = VFOManager()  # Singleton VFO manager
         self.running = True
 
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "audio_chunks_in": 0,
+            "audio_samples_in": 0,
+            "messages_emitted": 0,
+            "queue_timeouts": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
+
     def run(self):
         while self.running:
             try:
                 # Get audio message from queue (now contains session_id and audio data)
                 audio_message = self.audio_queue.get(timeout=1.0)
+
+                # Update stats
+                with self.stats_lock:
+                    self.stats["audio_chunks_in"] += 1
+                    self.stats["last_activity"] = time.time()
 
                 # Extract session_id, audio chunk, and vfo_number from the message
                 originating_session_id = audio_message.get("session_id")
@@ -63,6 +81,10 @@ class WebAudioConsumer(threading.Thread):
                     logger.warning("Received malformed audio message, skipping")
                     self.audio_queue.task_done()
                     continue
+
+                # Update sample count
+                with self.stats_lock:
+                    self.stats["audio_samples_in"] += len(audio_chunk)
 
                 # Only process audio for the originating session
                 try:
@@ -140,16 +162,24 @@ class WebAudioConsumer(threading.Thread):
                     )
                     # Don't wait for result - fire and forget to keep audio flowing
 
+                    # Update stats
+                    with self.stats_lock:
+                        self.stats["messages_emitted"] += 1
+
                 except Exception as e:
                     logger.error(
                         f"Error processing audio for session {originating_session_id} when sending audio data: {e}"
                     )
+                    with self.stats_lock:
+                        self.stats["errors"] += 1
 
                 # Mark the task as done after processing
                 self.audio_queue.task_done()
 
             except queue.Empty:
                 # Continue if no data available
+                with self.stats_lock:
+                    self.stats["queue_timeouts"] += 1
                 continue
             except Exception as e:
                 logger.error(f"Audio consumer error: {e}")

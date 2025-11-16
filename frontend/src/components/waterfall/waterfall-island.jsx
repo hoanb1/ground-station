@@ -98,6 +98,7 @@ import {
     paintLeftMarginFiller
 } from './waterfall-utils.jsx';
 import { useWaterfallEventHandlers, useSnapshotHandlers } from './waterfall-events.jsx';
+import PerformanceMetricsDialog from '../performance/performance-metrics-dialog.jsx';
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -798,6 +799,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                 message={errorMessage}
                 onClose={() => dispatch(setErrorDialogOpen(false))}
             />
+            <PerformanceMetricsDialog />
             <WaterfallStatusBar isStreaming={isStreaming} eventMetrics={eventMetrics} centerFrequency={centerFrequency} sampleRate={sampleRate} gain={gain} />
         </div>
     );

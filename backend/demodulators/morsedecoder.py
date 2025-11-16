@@ -22,7 +22,7 @@ import time
 import warnings
 from collections import deque
 from enum import Enum
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 import sklearn.cluster
@@ -173,6 +173,17 @@ class MorseDecoder(threading.Thread):
 
         # Create output directory
         os.makedirs(self.output_dir, exist_ok=True)
+
+        # Performance monitoring stats
+        self.stats: Dict[str, Any] = {
+            "audio_chunks_in": 0,
+            "audio_samples_in": 0,
+            "data_messages_out": 0,
+            "queue_timeouts": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
 
         # Design bandpass filter for CW tone extraction
         self._design_bandpass_filter()
@@ -607,6 +618,8 @@ class MorseDecoder(threading.Thread):
         logger.info(f"Sending status update: {status.value}")
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping status update")
 
@@ -627,6 +640,8 @@ class MorseDecoder(threading.Thread):
         }
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping params update")
 
@@ -673,6 +688,8 @@ class MorseDecoder(threading.Thread):
         }
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping decoded output")
 
@@ -692,6 +709,8 @@ class MorseDecoder(threading.Thread):
         }
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             pass
 
@@ -705,6 +724,11 @@ class MorseDecoder(threading.Thread):
                 # Get audio from queue
                 try:
                     audio_chunk = self.audio_queue.get(timeout=0.1)
+
+                    # Update stats
+                    with self.stats_lock:
+                        self.stats["audio_chunks_in"] += 1
+                        self.stats["last_activity"] = time.time()
 
                     # Extract audio from dict wrapper if needed
                     if isinstance(audio_chunk, dict):
@@ -720,6 +744,10 @@ class MorseDecoder(threading.Thread):
                         audio_chunk = np.array(audio_chunk, dtype=np.float32)
                     elif audio_chunk.ndim == 0:
                         audio_chunk = audio_chunk.reshape(1)
+
+                    # Update sample count
+                    with self.stats_lock:
+                        self.stats["audio_samples_in"] += len(audio_chunk)
 
                     # Process audio and get current level
                     current_level = self._process_audio(audio_chunk)
@@ -781,6 +809,8 @@ class MorseDecoder(threading.Thread):
                             self.last_update_time = current_time
 
                 except queue.Empty:
+                    with self.stats_lock:
+                        self.stats["queue_timeouts"] += 1
                     # Check for long silence timeout
                     current_time = time.time()
                     if (
@@ -798,6 +828,8 @@ class MorseDecoder(threading.Thread):
         except Exception as e:
             logger.error(f"Morse decoder error: {e}")
             logger.exception(e)
+            with self.stats_lock:
+                self.stats["errors"] += 1
             self._send_status_update(DecoderStatus.ERROR)
 
         logger.info(f"Morse decoder stopped for {self.session_id}")
@@ -827,5 +859,7 @@ class MorseDecoder(threading.Thread):
         logger.info("Sending final status update: closed")
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping final status update")

@@ -116,4 +116,20 @@ def register_socketio_handlers(sio):
             }
         return {"status": "error", "message": "Unknown service control command"}
 
+    @sio.on("start-monitoring")
+    async def handle_start_monitoring(sid):
+        """Start performance monitoring when client requests it."""
+        logger.info(f"Performance monitoring start requested by client {sid}")
+        from processing.processmanager import process_manager
+
+        process_manager.performance_monitor.enable_monitoring()
+
+    @sio.on("stop-monitoring")
+    async def handle_stop_monitoring(sid):
+        """Stop performance monitoring when client closes dialog."""
+        logger.info(f"Performance monitoring stop requested by client {sid}")
+        from processing.processmanager import process_manager
+
+        process_manager.performance_monitor.disable_monitoring()
+
     return SESSIONS
