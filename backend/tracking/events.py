@@ -517,11 +517,6 @@ async def fetch_next_events_for_satellite(
                     should_extend = (time_until_start <= 120) and (time_since_end <= 30)
                     extend_start_minutes = 30 if should_extend else 0
 
-                    if extend_start_minutes > 0:
-                        logger.info(
-                            f"Extending pass {event['id']} by {extend_start_minutes} minutes (starts_in: {time_until_start:.1f}min, ended_ago: {time_since_end:.1f}min)"
-                        )
-
                     # Calculate elevation curve for this pass
                     elevation_curve = _calculate_elevation_curve(
                         satellite,
