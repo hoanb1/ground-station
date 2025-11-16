@@ -28,6 +28,7 @@
     "@reduxjs/toolkit": "^2.6.1",
     "@toolpad/core": "^0.13.0",
     "cities.json": "^1.1.47",
+    "dagre": "^0.8.5",
     "hls.js": "^1.6.0",
     "hugeicons-react": "^0.3.0",
     "i18next": "^24.2.0",

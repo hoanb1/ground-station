@@ -17,27 +17,68 @@
  *
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import ReactFlow, {
     Background,
     Controls,
     MiniMap,
     useNodesState,
     useEdgesState,
+    useReactFlow,
+    Panel,
+    ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Box } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import { ComponentNode } from './flow-node.jsx';
 import { createFlowFromMetrics } from './flow-layout.js';
+import dagre from 'dagre';
 
 const nodeTypes = {
     componentNode: ComponentNode,
 };
 
-const PerformanceFlow = ({ metrics }) => {
+// Dagre layout configuration
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+const getLayoutedElements = (nodes, edges, direction = 'LR') => {
+    const nodeWidth = 300;
+    const nodeHeight = 200;
+    const isHorizontal = direction === 'LR';
+
+    dagreGraph.setGraph({ rankdir: direction, nodesep: 100, ranksep: 250 });
+
+    nodes.forEach((node) => {
+        dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    });
+
+    edges.forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(dagreGraph);
+
+    const layoutedNodes = nodes.map((node) => {
+        const nodeWithPosition = dagreGraph.node(node.id);
+        return {
+            ...node,
+            position: {
+                x: nodeWithPosition.x - nodeWidth / 2,
+                y: nodeWithPosition.y - nodeHeight / 2,
+            },
+        };
+    });
+
+    return { nodes: layoutedNodes, edges };
+};
+
+const FlowContent = ({ metrics }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const initializedRef = useRef(false);
+    const autoArrangedRef = useRef(false);
+    const { fitView } = useReactFlow();
 
     // Convert metrics to nodes and edges
     const { nodes: flowNodes, edges: flowEdges } = useMemo(() => {
@@ -72,6 +113,29 @@ const PerformanceFlow = ({ metrics }) => {
             setEdges(flowEdges);
         }
     }, [flowNodes, flowEdges, setNodes, setEdges]);
+
+    // Auto-arrange handler
+    const onAutoArrange = useCallback(() => {
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
+
+        // Fit view after layout with a small delay
+        window.requestAnimationFrame(() => {
+            fitView({ padding: 0.2, duration: 300 });
+        });
+    }, [nodes, edges, setNodes, setEdges, fitView]);
+
+    // Auto-arrange on first load
+    useEffect(() => {
+        if (nodes.length > 0 && !autoArrangedRef.current) {
+            autoArrangedRef.current = true;
+            // Small delay to ensure nodes are rendered
+            setTimeout(() => {
+                onAutoArrange();
+            }, 100);
+        }
+    }, [nodes.length, onAutoArrange]);
 
     return (
         <Box
@@ -111,8 +175,26 @@ const PerformanceFlow = ({ metrics }) => {
                     }}
                     maskColor="rgba(0, 0, 0, 0.6)"
                 />
+                <Panel position="top-right">
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={onAutoArrange}
+                        sx={{ boxShadow: 2 }}
+                    >
+                        Auto Arrange
+                    </Button>
+                </Panel>
             </ReactFlow>
         </Box>
+    );
+};
+
+const PerformanceFlow = ({ metrics }) => {
+    return (
+        <ReactFlowProvider>
+            <FlowContent metrics={metrics} />
+        </ReactFlowProvider>
     );
 };
 
