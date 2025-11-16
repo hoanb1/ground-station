@@ -231,24 +231,3 @@ steps:
     when:
       event:
         - tag
-    when:
-      event:
-        - tag
-
-  # Create latest manifest
-  - name: manifest-latest
-    image: plugins/manifest
-    settings:
-      username: sgoudelis
-      password:
-        from_secret: ghcr_token
-      target: ghcr.io/sgoudelis/ground-station:latest
-      template: ghcr.io/sgoudelis/ground-station:latest-ARCH
-      platforms:
-        - linux/amd64
-        - linux/arm64
-    depends_on:
-      - manifest
-    when:
-      event:
-        - tag
