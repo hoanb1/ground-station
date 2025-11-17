@@ -19,6 +19,7 @@ import time
 from typing import Any, Dict
 
 import numpy as np
+import psutil
 
 from fft.averager import FFTAverager
 from workers.common import window_functions
@@ -59,13 +60,39 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
         "queue_timeouts": 0,
         "last_activity": None,
         "errors": 0,
+        "cpu_percent": 0.0,
+        "memory_mb": 0.0,
+        "memory_percent": 0.0,
     }
     last_stats_send = time.time()
     stats_send_interval = 1.0  # Send stats every second
 
+    # CPU and memory monitoring
+    process = psutil.Process()
+    last_cpu_check = time.time()
+    cpu_check_interval = 0.5  # Update CPU usage every 0.5 seconds
+
     try:
         while not stop_event.is_set():
             try:
+                # Update CPU and memory usage periodically
+                current_time = time.time()
+                if current_time - last_cpu_check >= cpu_check_interval:
+                    try:
+                        cpu_percent = process.cpu_percent()
+
+                        # Get memory usage
+                        mem_info = process.memory_info()
+                        memory_mb = mem_info.rss / (1024 * 1024)  # Convert bytes to MB
+                        memory_percent = process.memory_percent()
+
+                        stats["cpu_percent"] = cpu_percent
+                        stats["memory_mb"] = memory_mb
+                        stats["memory_percent"] = memory_percent
+                        last_cpu_check = current_time
+                    except Exception as e:
+                        logger.debug(f"Error updating CPU/memory usage: {e}")
+
                 # Get IQ data from queue with timeout
                 # Message format: {'samples': ndarray, 'center_freq': float,
                 #                  'sample_rate': float, 'timestamp': float, 'config': dict}

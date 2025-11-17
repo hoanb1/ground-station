@@ -721,6 +721,7 @@ class MorseDecoder(threading.Thread):
 
         try:
             while self.running:
+
                 # Get audio from queue
                 try:
                     audio_chunk = self.audio_queue.get(timeout=0.1)

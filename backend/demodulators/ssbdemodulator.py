@@ -273,6 +273,7 @@ class SSBDemodulator(threading.Thread):
 
         while self.running:
             try:
+
                 # CRITICAL: Always drain iq_queue to prevent buffer buildup
                 # Even if VFO is inactive, we must consume samples to avoid lag
                 if self.iq_queue.empty():

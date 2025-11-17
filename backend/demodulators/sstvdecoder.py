@@ -572,6 +572,7 @@ class SSTVDecoder(threading.Thread):
 
         try:
             while self.running:
+
                 # ALWAYS consume audio to prevent queue backup and chopped audio
                 # During processing, store audio in next_decode_buffer for the next image
                 try:

@@ -47,6 +47,87 @@ const MetricRow = ({ label, value, unit }) => (
     </Box>
 );
 
+const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
+    const cappedCpuPercent = Math.min(cpuPercent || 0, 100);
+    const cappedMemPercent = Math.min(memoryPercent || 0, 100);
+
+    const getCpuColor = (percent) => {
+        if (percent < 50) return '#4caf50'; // Green
+        if (percent < 80) return '#ff9800'; // Orange
+        return '#f44336'; // Red
+    };
+
+    const getMemColor = (percent) => {
+        if (percent < 50) return '#2196f3'; // Blue
+        if (percent < 80) return '#9c27b0'; // Purple
+        return '#f44336'; // Red
+    };
+
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', height: '100%', gap: 1.5 }}>
+            {/* CPU Bar */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, fontSize: '0.65rem' }}>
+                    CPU
+                </Typography>
+                <Box sx={{
+                    flex: 1,
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    backgroundColor: 'rgba(128, 128, 128, 0.2)',
+                    borderRadius: 0.5,
+                    position: 'relative',
+                    minHeight: '50px',
+                }}>
+                    <Box sx={{
+                        width: '100%',
+                        height: `${cappedCpuPercent}%`,
+                        backgroundColor: getCpuColor(cappedCpuPercent),
+                        borderRadius: 0.5,
+                        transition: 'height 0.3s ease, background-color 0.3s ease',
+                    }} />
+                </Box>
+                <Typography variant="caption" sx={{ mt: 0.3, fontWeight: 'medium', fontSize: '0.65rem' }}>
+                    {cappedCpuPercent.toFixed(1)}%
+                </Typography>
+            </Box>
+
+            {/* Memory Bar */}
+            {memoryMb !== undefined && memoryPercent !== undefined && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, fontSize: '0.65rem' }}>
+                        MEM
+                    </Typography>
+                    <Box sx={{
+                        flex: 1,
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'flex-end',
+                        backgroundColor: 'rgba(128, 128, 128, 0.2)',
+                        borderRadius: 0.5,
+                        position: 'relative',
+                        minHeight: '50px',
+                    }}>
+                        <Box sx={{
+                            width: '100%',
+                            height: `${cappedMemPercent}%`,
+                            backgroundColor: getMemColor(cappedMemPercent),
+                            borderRadius: 0.5,
+                            transition: 'height 0.3s ease, background-color 0.3s ease',
+                        }} />
+                    </Box>
+                    <Typography variant="caption" sx={{ mt: 0.3, fontWeight: 'medium', fontSize: '0.65rem' }}>
+                        {memoryMb.toFixed(0)}MB
+                    </Typography>
+                </Box>
+            )}
+        </Box>
+    );
+};
+
 export const ComponentNode = ({ data }) => {
     const { component, type, inputCount = 1, outputCount = 1 } = data;
 
@@ -120,8 +201,8 @@ export const ComponentNode = ({ data }) => {
 
                 <Divider sx={{ mb: 1 }} />
 
-                {/* Metrics - Two column layout with divider */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 1 }}>
+                {/* Metrics - Two or Three column layout with dividers */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: type === 'fft' ? '1fr auto 80px auto 1fr' : '1fr auto 1fr', gap: 1 }}>
                     {/* Broadcaster metrics */}
                     {type === 'broadcaster' && (
                         <>
@@ -195,6 +276,16 @@ export const ComponentNode = ({ data }) => {
                                         unit="/s"
                                     />
                                 </Stack>
+                            </Box>
+                            {/* Vertical divider */}
+                            <Divider orientation="vertical" flexItem />
+                            {/* Middle column - CPU & Memory Bars */}
+                            <Box>
+                                <CpuMemoryBars
+                                    cpuPercent={component.stats?.cpu_percent}
+                                    memoryMb={component.stats?.memory_mb}
+                                    memoryPercent={component.stats?.memory_percent}
+                                />
                             </Box>
                             {/* Vertical divider */}
                             <Divider orientation="vertical" flexItem />
@@ -506,7 +597,7 @@ export const ComponentNode = ({ data }) => {
 
                     {/* Show errors if any - full width */}
                     {component.stats?.errors > 0 && (
-                        <Box sx={{ gridColumn: '1 / -1' }}>
+                        <Box sx={{ gridColumn: type === 'fft' ? '1 / 6' : '1 / 4' }}>
                             <Divider sx={{ my: 0.5 }} />
                             <MetricRow
                                 label="Errors"
