@@ -282,11 +282,12 @@ const FlowContent = ({ metrics }) => {
                 <Panel position="top-left" style={{ zIndex: 1 }}>
                     <Box
                         sx={{
-                            backgroundColor: 'rgba(128, 128, 128, 0.225)',
+                            backgroundColor: 'rgba(128, 128, 128, 0.15)',
                             padding: 1.5,
                             borderRadius: 1,
                             minWidth: 200,
                             pointerEvents: 'none',
+                            opacity: 0.5,
                         }}
                     >
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
