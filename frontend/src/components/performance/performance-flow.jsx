@@ -167,11 +167,6 @@ const FlowContent = ({ metrics }) => {
                     const layoutedNodes = applyDagreLayout(nodesWithCounts, edges);
                     return layoutedNodes;
                 });
-
-                // Trigger fitView with animation after layout
-                window.requestAnimationFrame(() => {
-                    fitView({ padding: 0.2, duration: 800 });
-                });
             }, 50); // 50ms delay to ensure edges state has updated
 
             return () => clearTimeout(timeoutId);
@@ -191,7 +186,7 @@ const FlowContent = ({ metrics }) => {
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 1,
                     bottom: '20px !important',
-                    zIndex: 1,
+                    zIndex: 10,
                     pointerEvents: 'auto',
                 },
                 '& .react-flow__controls-button': {
