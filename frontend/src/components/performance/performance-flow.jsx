@@ -277,13 +277,14 @@ const FlowContent = ({ metrics }) => {
                         Auto Arrange
                     </Button>
                 </Panel>
-                <Panel position="top-left">
+                <Panel position="top-left" style={{ zIndex: 1 }}>
                     <Box
                         sx={{
                             backgroundColor: 'rgba(128, 128, 128, 0.225)',
                             padding: 1.5,
                             borderRadius: 1,
                             minWidth: 200,
+                            pointerEvents: 'none',
                         }}
                     >
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
