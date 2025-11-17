@@ -76,7 +76,6 @@ const FlowContent = ({ metrics }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const initializedRef = useRef(false);
-    const autoArrangedRef = useRef(false);
     const previousNodeCountRef = useRef(0);
     const { fitView } = useReactFlow();
 
@@ -93,6 +92,13 @@ const FlowContent = ({ metrics }) => {
             setNodes(flowNodes);
             setEdges(flowEdges);
             initializedRef.current = true;
+
+            // Fit view after initial render
+            window.requestAnimationFrame(() => {
+                setTimeout(() => {
+                    fitView({ padding: 0.2, duration: 300 });
+                }, 150);
+            });
         } else {
             // Subsequent updates: preserve user positions, only update data, add new nodes
             setNodes((currentNodes) => {
@@ -134,16 +140,6 @@ const FlowContent = ({ metrics }) => {
         });
     }, [nodes, edges, setNodes, setEdges, fitView]);
 
-    // Auto-arrange on first load
-    useEffect(() => {
-        if (nodes.length > 0 && !autoArrangedRef.current) {
-            autoArrangedRef.current = true;
-            // Small delay to ensure nodes are rendered
-            setTimeout(() => {
-                onAutoArrange();
-            }, 100);
-        }
-    }, [nodes.length, onAutoArrange]);
 
     // Detect node count changes and trigger re-layout
     useEffect(() => {
