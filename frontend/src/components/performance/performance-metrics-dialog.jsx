@@ -69,13 +69,22 @@ const PerformanceMetricsDialog = () => {
                 }}
             >
                 <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Box display="flex" alignItems="center" gap={2}>
-                        <Typography variant="h6">Performance Metrics</Typography>
-                        <Chip
-                            label={connected ? 'Connected' : 'Disconnected'}
-                            size="small"
-                            color={connected ? 'success' : 'error'}
-                        />
+                    <Box display="flex" flexDirection="column" gap={0.5}>
+                        <Box display="flex" alignItems="center" gap={2}>
+                            <Typography variant="h6">System Topology</Typography>
+                            <Chip
+                                label={connected ? 'Connected' : 'Disconnected'}
+                                size="small"
+                                color={connected ? 'success' : 'error'}
+                            />
+                        </Box>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ opacity: 0.7, fontSize: '0.75rem' }}
+                        >
+                            Real-time visualization of system components and data flow
+                        </Typography>
                     </Box>
                     <IconButton onClick={handleClose} size="small">
                         <CloseIcon />

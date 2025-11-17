@@ -62,6 +62,7 @@ import SatelliteInfoPopover from "./target-popover.jsx";
 import VersionInfo from "./version-info.jsx";
 import VersionUpdateOverlay from "./version-update-overlay.jsx";
 import SatelliteSyncPopover from "./tlesync-popover.jsx";
+import PerformanceMetricsDialog from "../performance/performance-metrics-dialog.jsx";
 
 
 function DashboardEditor() {
@@ -448,6 +449,7 @@ export default function Layout() {
             }}>
             {connected? <Outlet />: <ConnectionOverlay />}
             {hasVersionChanged && <VersionUpdateOverlay />}
+            <PerformanceMetricsDialog />
 
         </DashboardLayout>
     );
