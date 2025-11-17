@@ -200,8 +200,8 @@ export const createFlowFromMetrics = (metrics) => {
     };
 
     // Layout configuration - increased spacing to prevent overlap
-    const HORIZONTAL_SPACING = 450;
-    const VERTICAL_SPACING = 280;
+    const HORIZONTAL_SPACING = 200;
+    const VERTICAL_SPACING = 100;
     const START_X = 50;
     const START_Y = 50;
 
@@ -264,6 +264,8 @@ export const createFlowFromMetrics = (metrics) => {
                         id: `edge-${iqBroadcasterId}-${nodeId}`,
                         source: iqBroadcasterId,
                         target: nodeId,
+                        sourceHandle: getNextOutputHandle(iqBroadcasterId),
+                        targetHandle: getNextInputHandle(nodeId),
                         animated: isAnimated,
                         style: { stroke: getEdgeColor('iq', 0, isAnimated), strokeWidth: 2 },
                         type: 'smoothstep',
@@ -303,6 +305,8 @@ export const createFlowFromMetrics = (metrics) => {
                             id: `edge-${iqBroadcasterId}-${nodeId}`,
                             source: iqBroadcasterId,
                             target: nodeId,
+                            sourceHandle: getNextOutputHandle(iqBroadcasterId),
+                            targetHandle: getNextInputHandle(nodeId),
                             animated: isAnimated,
                             style: { stroke: getEdgeColor('iq', queueUtilization, isAnimated), strokeWidth: 2 },
                             label: demod.input_queue_size ? `${demod.input_queue_size}` : undefined,
@@ -365,6 +369,8 @@ export const createFlowFromMetrics = (metrics) => {
                                     id: `edge-${demodId}-${nodeId}`,
                                     source: demodId,
                                     target: nodeId,
+                                    sourceHandle: getNextOutputHandle(demodId),
+                                    targetHandle: getNextInputHandle(nodeId),
                                     animated: isAnimated,
                                     style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                                     type: 'smoothstep',
@@ -418,6 +424,8 @@ export const createFlowFromMetrics = (metrics) => {
                             id: `edge-${iqBroadcasterId}-${nodeId}`,
                             source: iqBroadcasterId,
                             target: nodeId,
+                            sourceHandle: getNextOutputHandle(iqBroadcasterId),
+                            targetHandle: getNextInputHandle(nodeId),
                             animated: isAnimated,
                             style: { stroke: getEdgeColor('iq', queueUtilization, isAnimated), strokeWidth: 2 },
                             label: recorder.input_queue_size ? `${recorder.input_queue_size}` : undefined,
@@ -477,6 +485,8 @@ export const createFlowFromMetrics = (metrics) => {
                                 id: `edge-${audioBroadcasterId}-${nodeId}`,
                                 source: audioBroadcasterId,
                                 target: nodeId,
+                                sourceHandle: getNextOutputHandle(audioBroadcasterId),
+                                targetHandle: getNextInputHandle(nodeId),
                                 animated: isAnimated,
                                 style: { stroke: getEdgeColor('audio', queueUtilization, isAnimated), strokeWidth: 2 },
                                 label: decoder.input_queue_size ? `${decoder.input_queue_size}` : undefined,
@@ -596,6 +606,8 @@ export const createFlowFromMetrics = (metrics) => {
                 id: `edge-${webAudioStreamerNodeId}-${browserNodeId}`,
                 source: webAudioStreamerNodeId,
                 target: browserNodeId,
+                sourceHandle: getNextOutputHandle(webAudioStreamerNodeId),
+                targetHandle: getNextInputHandle(browserNodeId),
                 animated: isAnimated,
                 style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                 type: 'smoothstep',
@@ -609,6 +621,8 @@ export const createFlowFromMetrics = (metrics) => {
                     id: `edge-implicit-fft-${fftNodeId}-${browserNodeId}`,
                     source: fftNodeId,
                     target: browserNodeId,
+                    sourceHandle: getNextOutputHandle(fftNodeId),
+                    targetHandle: getNextInputHandle(browserNodeId),
                     animated: isAnimated,
                     style: { stroke: getEdgeColor('fft', 0, isAnimated), strokeWidth: 1.5 },
                     type: 'smoothstep',
@@ -624,6 +638,8 @@ export const createFlowFromMetrics = (metrics) => {
                     id: `edge-implicit-decoder-${decoderNodeId}-${browserNodeId}`,
                     source: decoderNodeId,
                     target: browserNodeId,
+                    sourceHandle: getNextOutputHandle(decoderNodeId),
+                    targetHandle: getNextInputHandle(browserNodeId),
                     animated: isAnimated,
                     style: { stroke: getEdgeColor('decoded', 0, isAnimated), strokeWidth: 1.5 },
                     type: 'smoothstep',
@@ -649,6 +665,8 @@ export const createFlowFromMetrics = (metrics) => {
                         id: `edge-${audioBroadcasterId}-${webAudioStreamerId}`,
                         source: audioBroadcasterId,
                         target: webAudioStreamerId,
+                        sourceHandle: getNextOutputHandle(audioBroadcasterId),
+                        targetHandle: getNextInputHandle(webAudioStreamerId),
                         animated: isAnimated,
                         style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                         type: 'smoothstep',
@@ -670,6 +688,8 @@ export const createFlowFromMetrics = (metrics) => {
                     id: `edge-${demodulatorId}-${streamerId}`,
                     source: demodulatorId,
                     target: streamerId,
+                    sourceHandle: getNextOutputHandle(demodulatorId),
+                    targetHandle: getNextInputHandle(streamerId),
                     animated: isAnimated,
                     style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                     type: 'smoothstep',

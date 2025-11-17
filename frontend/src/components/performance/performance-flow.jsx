@@ -46,7 +46,7 @@ const getLayoutedElements = (nodes, edges, direction = 'LR') => {
     const nodeHeight = 200;
     const isHorizontal = direction === 'LR';
 
-    dagreGraph.setGraph({ rankdir: direction, nodesep: 100, ranksep: 250 });
+    dagreGraph.setGraph({ rankdir: direction, nodesep: 80, ranksep: 180 });
 
     nodes.forEach((node) => {
         dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -76,6 +76,7 @@ const FlowContent = ({ metrics }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const initializedRef = useRef(false);
+    const fitViewCalledRef = useRef(false);
     const previousNodeCountRef = useRef(0);
     const { fitView } = useReactFlow();
 
@@ -92,13 +93,6 @@ const FlowContent = ({ metrics }) => {
             setNodes(flowNodes);
             setEdges(flowEdges);
             initializedRef.current = true;
-
-            // Fit view after initial render
-            window.requestAnimationFrame(() => {
-                setTimeout(() => {
-                    fitView({ padding: 0.2, duration: 300 });
-                }, 150);
-            });
         } else {
             // Subsequent updates: preserve user positions, only update data, add new nodes
             setNodes((currentNodes) => {
@@ -128,15 +122,27 @@ const FlowContent = ({ metrics }) => {
         }
     }, [flowNodes, flowEdges, setNodes, setEdges]);
 
+    // Fit view after nodes are rendered (only on first load)
+    useEffect(() => {
+        if (nodes.length > 0 && initializedRef.current && !fitViewCalledRef.current) {
+            fitViewCalledRef.current = true;
+            // Wait for nodes to be fully rendered with their dimensions
+            const timeoutId = setTimeout(() => {
+                fitView({ padding: 0.2, duration: 0 });
+            }, 200);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [nodes.length, fitView]);
+
     // Auto-arrange handler
     const onAutoArrange = useCallback(() => {
         const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
         setNodes(layoutedNodes);
         setEdges(layoutedEdges);
 
-        // Fit view after layout with a small delay
+        // Fit view after layout instantly
         window.requestAnimationFrame(() => {
-            fitView({ padding: 0.2, duration: 300 });
+            fitView({ padding: 0.2, duration: 0 });
         });
     }, [nodes, edges, setNodes, setEdges, fitView]);
 
@@ -283,78 +289,78 @@ const FlowContent = ({ metrics }) => {
                     <Box
                         sx={{
                             backgroundColor: 'rgba(128, 128, 128, 0.15)',
-                            padding: 1.5,
-                            borderRadius: 1,
-                            minWidth: 200,
+                            padding: 1,
+                            borderRadius: 0.75,
+                            minWidth: 150,
                             pointerEvents: 'none',
                             opacity: 0.5,
                         }}
                     >
-                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 0.5, fontSize: '0.65rem' }}>
                             Data Types
                         </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: '#2196f3' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3, mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 1.5, backgroundColor: '#2196f3' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     IQ Samples
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: '#4caf50' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 1.5, backgroundColor: '#4caf50' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     Audio
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: '#9c27b0' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 1.5, backgroundColor: '#9c27b0' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     FFT/Waterfall
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: '#ff9800' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 1.5, backgroundColor: '#ff9800' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     Decoded Data
                                 </Typography>
                             </Box>
                         </Box>
-                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 0.5, fontSize: '0.65rem' }}>
                             Line Styles
                         </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 0, borderTop: '2px dotted #fff' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3, mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 0, borderTop: '1.5px dotted #fff' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     Data Flowing
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 1.5, backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     No Flow / Idle
                                 </Typography>
                             </Box>
                         </Box>
-                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 0.5, fontSize: '0.65rem' }}>
                             Queue Health
                         </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: '#4caf50' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 1.5, backgroundColor: '#4caf50' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     Healthy (&lt;50%)
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: '#ff9800' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 1.5, backgroundColor: '#ff9800' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     Warning (50-80%)
                                 </Typography>
                             </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: '#f44336' }} />
-                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Box sx={{ width: 18, height: 1.5, backgroundColor: '#f44336' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
                                     Critical (&gt;80%)
                                 </Typography>
                             </Box>
