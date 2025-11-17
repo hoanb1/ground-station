@@ -20,9 +20,31 @@
 import dagre from 'dagre';
 
 /**
- * Get edge color based on data type and queue health
+ * Check if a component has positive output rate (data is flowing)
  */
-const getEdgeColor = (dataType, queueUtilization = 0) => {
+const hasPositiveOutputRate = (component) => {
+    if (!component || !component.rates) return false;
+
+    const rates = component.rates;
+
+    // Check various rate fields depending on component type
+    return (rates.messages_in_per_sec > 0) ||
+           (rates.messages_broadcast_per_sec > 0) ||
+           (rates.messages_received_per_sec > 0) ||
+           (rates.iq_chunks_per_sec > 0) ||
+           (rates.audio_chunks_out_per_sec > 0) ||
+           (rates.fft_results_per_sec > 0) ||
+           (rates.messages_emitted_per_sec > 0) ||
+           (rates.data_messages_out_per_sec > 0);
+};
+
+/**
+ * Get edge color based on data type and queue health
+ * @param {string} dataType - Type of data flowing through edge
+ * @param {number} queueUtilization - Queue utilization percentage (0-1)
+ * @param {boolean} isAnimated - Whether the edge is animated (has flow)
+ */
+const getEdgeColor = (dataType, queueUtilization = 0, isAnimated = true) => {
     // Base colors by data type
     const baseColors = {
         'iq': '#2196f3',        // Blue for IQ samples
@@ -34,11 +56,21 @@ const getEdgeColor = (dataType, queueUtilization = 0) => {
 
     const baseColor = baseColors[dataType] || '#4caf50';
 
-    // Apply queue health overlay
+    // Apply queue health overlay (keep these bright for visibility)
     if (queueUtilization > 0.8) {
         return '#f44336'; // Critical - Red
     } else if (queueUtilization > 0.5) {
         return '#ff9800'; // Warning - Orange
+    }
+
+    // If not animated (no flow), make it dimmer
+    if (!isAnimated) {
+        // Convert hex to rgba with 0.3 opacity
+        const hex = baseColor;
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, 0.3)`;
     }
 
     return baseColor;
@@ -226,12 +258,14 @@ export const createFlowFromMetrics = (metrics) => {
                 // Edge: IQ Broadcaster -> FFT Processor
                 const iqBroadcasterId = nodeMap.get(`${sdrId}-iq-broadcaster`);
                 if (iqBroadcasterId) {
+                    const iqBroadcaster = sdrData.broadcasters[`iq_${sdrId}`];
+                    const isAnimated = hasPositiveOutputRate(iqBroadcaster);
                     edges.push({
                         id: `edge-${iqBroadcasterId}-${nodeId}`,
                         source: iqBroadcasterId,
                         target: nodeId,
-                        animated: true,
-                        style: { stroke: getEdgeColor('iq'), strokeWidth: 2 },
+                        animated: isAnimated,
+                        style: { stroke: getEdgeColor('iq', 0, isAnimated), strokeWidth: 2 },
                         type: 'smoothstep',
                     });
                 }
@@ -261,14 +295,16 @@ export const createFlowFromMetrics = (metrics) => {
                     // Edge: IQ Broadcaster -> Demodulator
                     const iqBroadcasterId = nodeMap.get(`${sdrId}-iq-broadcaster`);
                     if (iqBroadcasterId) {
+                        const iqBroadcaster = sdrData.broadcasters[`iq_${sdrId}`];
+                        const isAnimated = hasPositiveOutputRate(iqBroadcaster);
                         const queueUtilization = demod.input_queue_size / Math.max(demod.input_queue_maxsize || 10, 1);
 
                         edges.push({
                             id: `edge-${iqBroadcasterId}-${nodeId}`,
                             source: iqBroadcasterId,
                             target: nodeId,
-                            animated: demod.is_alive,
-                            style: { stroke: getEdgeColor('iq', queueUtilization), strokeWidth: 2 },
+                            animated: isAnimated,
+                            style: { stroke: getEdgeColor('iq', queueUtilization, isAnimated), strokeWidth: 2 },
                             label: demod.input_queue_size ? `${demod.input_queue_size}` : undefined,
                             type: 'smoothstep',
                         });
@@ -321,14 +357,16 @@ export const createFlowFromMetrics = (metrics) => {
                             // The source_id is the full demodulator key (e.g., "-WClwJW9jcoFpBTGAAAV_vfo1")
                             const demodKey = `${sdrId}-demod-${sourceConnection.source_id}`;
                             const demodId = nodeMap.get(demodKey);
+                            const sourceDemod = sdrData.demodulators[sourceConnection.source_id];
 
                             if (demodId) {
+                                const isAnimated = hasPositiveOutputRate(sourceDemod);
                                 edges.push({
                                     id: `edge-${demodId}-${nodeId}`,
                                     source: demodId,
                                     target: nodeId,
-                                    animated: broadcaster.is_alive,
-                                    style: { stroke: getEdgeColor('audio'), strokeWidth: 2 },
+                                    animated: isAnimated,
+                                    style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                                     type: 'smoothstep',
                                 });
                             }
@@ -372,14 +410,16 @@ export const createFlowFromMetrics = (metrics) => {
                     // Edge: IQ Broadcaster -> Recorder
                     const iqBroadcasterId = nodeMap.get(`${sdrId}-iq-broadcaster`);
                     if (iqBroadcasterId) {
+                        const iqBroadcaster = sdrData.broadcasters[`iq_${sdrId}`];
+                        const isAnimated = hasPositiveOutputRate(iqBroadcaster);
                         const queueUtilization = recorder.input_queue_size / Math.max(recorder.input_queue_maxsize || 10, 1);
 
                         edges.push({
                             id: `edge-${iqBroadcasterId}-${nodeId}`,
                             source: iqBroadcasterId,
                             target: nodeId,
-                            animated: recorder.is_alive,
-                            style: { stroke: getEdgeColor('iq', queueUtilization), strokeWidth: 2 },
+                            animated: isAnimated,
+                            style: { stroke: getEdgeColor('iq', queueUtilization, isAnimated), strokeWidth: 2 },
                             label: recorder.input_queue_size ? `${recorder.input_queue_size}` : undefined,
                             type: 'smoothstep',
                         });
@@ -429,14 +469,16 @@ export const createFlowFromMetrics = (metrics) => {
                         const audioBroadcasterId = nodeMap.get(`${sdrId}-audio-broadcaster-${sessionId}_${vfoNum}`);
 
                         if (audioBroadcasterId) {
+                            const audioBroadcaster = sdrData.broadcasters[`audio_${sessionId}_${vfoNum}`];
+                            const isAnimated = hasPositiveOutputRate(audioBroadcaster);
                             const queueUtilization = decoder.input_queue_size / Math.max(decoder.input_queue_maxsize || 10, 1);
 
                             edges.push({
                                 id: `edge-${audioBroadcasterId}-${nodeId}`,
                                 source: audioBroadcasterId,
                                 target: nodeId,
-                                animated: decoder.is_alive,
-                                style: { stroke: getEdgeColor('audio', queueUtilization), strokeWidth: 2 },
+                                animated: isAnimated,
+                                style: { stroke: getEdgeColor('audio', queueUtilization, isAnimated), strokeWidth: 2 },
                                 label: decoder.input_queue_size ? `${decoder.input_queue_size}` : undefined,
                                 type: 'smoothstep',
                             });
@@ -546,12 +588,16 @@ export const createFlowFromMetrics = (metrics) => {
             });
 
             // Edge from WebAudioStreamer to Browser
+            const webAudioStreamerComponent = {
+                rates: totalRates // Use the aggregated rates
+            };
+            const isAnimated = hasPositiveOutputRate(webAudioStreamerComponent);
             edges.push({
                 id: `edge-${webAudioStreamerNodeId}-${browserNodeId}`,
                 source: webAudioStreamerNodeId,
                 target: browserNodeId,
-                animated: true,
-                style: { stroke: getEdgeColor('audio'), strokeWidth: 2 },
+                animated: isAnimated,
+                style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                 type: 'smoothstep',
             });
 
@@ -563,7 +609,7 @@ export const createFlowFromMetrics = (metrics) => {
                     source: fftNodeId,
                     target: browserNodeId,
                     animated: false,
-                    style: { stroke: getEdgeColor('fft'), strokeWidth: 1.5, strokeDasharray: '5,5' },
+                    style: { stroke: getEdgeColor('fft', 0, false), strokeWidth: 1.5 },
                     type: 'smoothstep',
                 });
             });
@@ -577,7 +623,7 @@ export const createFlowFromMetrics = (metrics) => {
                     source: decoderNodeId,
                     target: browserNodeId,
                     animated: false,
-                    style: { stroke: getEdgeColor('decoded'), strokeWidth: 1.5, strokeDasharray: '5,5' },
+                    style: { stroke: getEdgeColor('decoded', 0, false), strokeWidth: 1.5 },
                     type: 'smoothstep',
                 });
             });
@@ -596,12 +642,13 @@ export const createFlowFromMetrics = (metrics) => {
                 // Connect to the single WebAudioStreamer
                 const webAudioStreamerId = nodeMap.get('audio-streamer-web_audio');
                 if (webAudioStreamerId) {
+                    const isAnimated = hasPositiveOutputRate(broadcaster);
                     edges.push({
                         id: `edge-${audioBroadcasterId}-${webAudioStreamerId}`,
                         source: audioBroadcasterId,
                         target: webAudioStreamerId,
-                        animated: broadcaster.is_alive,
-                        style: { stroke: getEdgeColor('audio'), strokeWidth: 2 },
+                        animated: isAnimated,
+                        style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                         type: 'smoothstep',
                     });
                 }
@@ -616,12 +663,13 @@ export const createFlowFromMetrics = (metrics) => {
             // Connect to the single WebAudioStreamer
             const streamerId = nodeMap.get('audio-streamer-web_audio');
             if (streamerId) {
+                const isAnimated = hasPositiveOutputRate(demodulator);
                 edges.push({
                     id: `edge-${demodulatorId}-${streamerId}`,
                     source: demodulatorId,
                     target: streamerId,
-                    animated: demodulator.is_alive,
-                    style: { stroke: getEdgeColor('audio'), strokeWidth: 2 },
+                    animated: isAnimated,
+                    style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                     type: 'smoothstep',
                 });
             }
