@@ -39,9 +39,7 @@ const nodeTypes = {
 const FlowContent = ({ metrics }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-    const initializedRef = useRef(false);
     const fitViewCalledRef = useRef(false);
-    const previousNodeCountRef = useRef(0);
     const { fitView } = useReactFlow();
 
     // Convert metrics to nodes and edges
@@ -50,45 +48,15 @@ const FlowContent = ({ metrics }) => {
         return createFlowFromMetrics(metrics);
     }, [metrics]);
 
-    // Update nodes and edges when metrics change
+    // Update nodes and edges when metrics change - always use fresh layout from createFlowFromMetrics
     useEffect(() => {
-        if (!initializedRef.current) {
-            // First time: set positions from layout algorithm
-            setNodes(flowNodes);
-            setEdges(flowEdges);
-            initializedRef.current = true;
-        } else {
-            // Subsequent updates: preserve user positions, only update data, add new nodes
-            setNodes((currentNodes) => {
-                const updatedNodes = currentNodes
-                    .map((node) => {
-                        const newNode = flowNodes.find((n) => n.id === node.id);
-                        if (newNode) {
-                            // Keep user's position, update only the data
-                            return {
-                                ...node,
-                                data: newNode.data,
-                            };
-                        }
-                        return node;
-                    })
-                    .filter((node) => flowNodes.some((n) => n.id === node.id)); // Remove deleted nodes
-
-                // Add new nodes that don't exist in current nodes
-                const newNodeIds = new Set(updatedNodes.map((n) => n.id));
-                const addedNodes = flowNodes.filter((n) => !newNodeIds.has(n.id));
-
-                return [...updatedNodes, ...addedNodes];
-            });
-
-            // Update edges (they don't have user-modified positions)
-            setEdges(flowEdges);
-        }
+        setNodes(flowNodes);
+        setEdges(flowEdges);
     }, [flowNodes, flowEdges, setNodes, setEdges]);
 
     // Fit view after nodes are rendered (only on first load)
     useEffect(() => {
-        if (nodes.length > 0 && initializedRef.current && !fitViewCalledRef.current) {
+        if (nodes.length > 0 && !fitViewCalledRef.current) {
             fitViewCalledRef.current = true;
             // Wait for nodes to be fully rendered with their dimensions
             const timeoutId = setTimeout(() => {
@@ -108,72 +76,6 @@ const FlowContent = ({ metrics }) => {
             fitView({ padding: 0.2, duration: 0 });
         });
     }, [nodes, edges, setNodes, fitView]);
-
-
-    // Detect node count changes and trigger re-layout
-    useEffect(() => {
-        const currentNodeCount = nodes.length;
-
-        if (previousNodeCountRef.current !== 0 && previousNodeCountRef.current !== currentNodeCount) {
-            // Node count changed (node added or removed)
-            // Wait a tick to ensure edges state is fully updated before re-layouting
-            const timeoutId = setTimeout(() => {
-                // Re-calculate connection counts and re-apply layout
-                setNodes((currentNodes) => {
-                    // Recalculate connection counts for each node
-                    const connectionCounts = new Map();
-                    const initNodeConnections = (nodeId) => {
-                        if (!connectionCounts.has(nodeId)) {
-                            connectionCounts.set(nodeId, { inputs: 0, outputs: 0 });
-                        }
-                    };
-
-                    // Track implicit broadcast sources to only count them once
-                    const implicitBroadcastSources = new Set();
-
-                    edges.forEach(edge => {
-                        initNodeConnections(edge.source);
-                        initNodeConnections(edge.target);
-
-                        // Check if this is an implicit broadcast edge
-                        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-');
-
-                        if (isImplicitBroadcast) {
-                            if (!implicitBroadcastSources.has(edge.source)) {
-                                connectionCounts.get(edge.source).outputs++;
-                                implicitBroadcastSources.add(edge.source);
-                            }
-                        } else {
-                            connectionCounts.get(edge.source).outputs++;
-                        }
-
-                        connectionCounts.get(edge.target).inputs++;
-                    });
-
-                    // Update nodes with recalculated connection counts
-                    const nodesWithCounts = currentNodes.map(node => {
-                        const counts = connectionCounts.get(node.id) || { inputs: 1, outputs: 1 };
-                        return {
-                            ...node,
-                            data: {
-                                ...node.data,
-                                inputCount: Math.max(counts.inputs, 1),
-                                outputCount: Math.max(counts.outputs, 1),
-                            }
-                        };
-                    });
-
-                    // Apply layout to nodes with updated connection counts
-                    const layoutedNodes = applyDagreLayout(nodesWithCounts, edges);
-                    return layoutedNodes;
-                });
-            }, 50); // 50ms delay to ensure edges state has updated
-
-            return () => clearTimeout(timeoutId);
-        }
-
-        previousNodeCountRef.current = currentNodeCount;
-    }, [nodes.length, edges, fitView, setNodes]);
 
     return (
         <Box
