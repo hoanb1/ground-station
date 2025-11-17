@@ -216,6 +216,41 @@ const FlowContent = ({ metrics }) => {
                 width: '100%',
                 height: '100%',
                 backgroundColor: (theme) => theme.palette.background?.default || theme.palette.background.default,
+                '& .react-flow__controls': {
+                    backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                    bottom: '20px !important',
+                },
+                '& .react-flow__controls-button': {
+                    backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
+                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                    color: (theme) => theme.palette.text.primary,
+                    '&:hover': {
+                        backgroundColor: (theme) => theme.palette.action?.hover || 'rgba(255, 255, 255, 0.08)',
+                    },
+                    '&:last-child': {
+                        borderBottom: 'none',
+                    },
+                },
+                '& .react-flow__controls-button svg': {
+                    fill: (theme) => theme.palette.text.primary,
+                },
+                '& .react-flow__attribution': {
+                    backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
+                    color: (theme) => theme.palette.text.secondary,
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                },
+                '& .react-flow__attribution a': {
+                    color: (theme) => theme.palette.primary.main,
+                    textDecoration: 'none',
+                    '&:hover': {
+                        textDecoration: 'underline',
+                    },
+                },
             }}
         >
             <ReactFlow
@@ -226,6 +261,9 @@ const FlowContent = ({ metrics }) => {
                 nodeTypes={nodeTypes}
                 fitView
                 attributionPosition="bottom-left"
+                nodesDraggable={false}
+                nodesConnectable={false}
+                elementsSelectable={false}
             >
                 <Background
                     color="#888"
