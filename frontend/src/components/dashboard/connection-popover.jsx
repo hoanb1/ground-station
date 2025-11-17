@@ -10,7 +10,7 @@ import RadioIcon from '@mui/icons-material/Radio';
 import LanIcon from '@mui/icons-material/Lan';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import {Avatar, Box, Button, Divider, IconButton, ListItemIcon, ListItemText, MenuItem, MenuList, Popover, Switch} from "@mui/material";
+import {Avatar, Box, Button, Divider, IconButton, ListItemIcon, ListItemText, MenuItem, MenuList, Popover} from "@mui/material";
 import {GroundStationLogoGreenBlue} from "../common/dataurl-icons.jsx";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
 import * as React from "react";
@@ -22,7 +22,7 @@ import {useCallback, useEffect, useState} from "react";
 import {setConnected, setConnecting, setConnectionError, setReConnectAttempt} from "./dashboard-slice.jsx";
 import Tooltip from "@mui/material/Tooltip";
 import { useTranslation } from 'react-i18next';
-import { setDialogOpen, setMonitoringEnabled } from '../performance/performance-slice.jsx';
+import { setDialogOpen } from '../performance/performance-slice.jsx';
 
 function ConnectionStatus() {
     const { t } = useTranslation('dashboard');
@@ -30,7 +30,6 @@ function ConnectionStatus() {
     const { socket, trafficStatsRef } = useSocket();
     const [anchorEl, setAnchorEl] = useState(null);
     const [, forceUpdate] = useState(0);
-    const monitoringEnabled = useSelector((state) => state.performance.monitoringEnabled);
 
     // Force update stats every second to get fresh data
     useEffect(() => {
@@ -99,29 +98,10 @@ function ConnectionStatus() {
         }
     }, []);
 
-    const handleMonitoringToggle = useCallback((event) => {
-        const enabled = event.target.checked;
-        dispatch(setMonitoringEnabled(enabled));
-
-        if (socket) {
-            if (enabled) {
-                socket.emit('start-monitoring');
-            } else {
-                socket.emit('stop-monitoring');
-            }
-        }
-    }, [dispatch, socket]);
-
     const handleOpenTopology = useCallback(() => {
         handleClose();
         dispatch(setDialogOpen(true));
-
-        // Ensure monitoring is enabled when opening dialog
-        if (!monitoringEnabled && socket) {
-            dispatch(setMonitoringEnabled(true));
-            socket.emit('start-monitoring');
-        }
-    }, [dispatch, socket, monitoringEnabled]);
+    }, [dispatch]);
 
     return (
         <>
@@ -275,20 +255,9 @@ function ConnectionStatus() {
                     <Divider sx={{ my: 2 }} />
 
                     <Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                             System Monitoring
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="caption" color="text.secondary">
-                                Performance Monitoring
-                            </Typography>
-                            <Switch
-                                checked={monitoringEnabled}
-                                onChange={handleMonitoringToggle}
-                                size="small"
-                                color="primary"
-                            />
-                        </Box>
                         <Button
                             variant="outlined"
                             size="small"

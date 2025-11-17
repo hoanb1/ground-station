@@ -33,9 +33,6 @@ const performanceSlice = createSlice({
         setDialogOpen: (state, action) => {
             state.dialogOpen = action.payload;
         },
-        setMonitoringEnabled: (state, action) => {
-            state.monitoringEnabled = action.payload;
-        },
         updateMetrics: (state, action) => {
             state.latestMetrics = action.payload;
             state.timestamp = action.payload?.timestamp || Date.now();
@@ -49,6 +46,6 @@ const performanceSlice = createSlice({
     },
 });
 
-export const { setDialogOpen, setMonitoringEnabled, updateMetrics, clearMetrics } = performanceSlice.actions;
+export const { setDialogOpen, updateMetrics, clearMetrics } = performanceSlice.actions;
 
 export default performanceSlice.reducer;

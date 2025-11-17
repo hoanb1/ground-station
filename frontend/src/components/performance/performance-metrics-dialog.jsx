@@ -17,7 +17,7 @@
  *
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -40,11 +40,21 @@ const PerformanceMetricsDialog = () => {
     const metrics = useSelector((state) => state.performance.latestMetrics);
     const connected = useSelector((state) => state.performance.connected);
 
+    // Start monitoring when dialog opens, stop when it closes
+    useEffect(() => {
+        if (open && socket) {
+            socket.emit('start-monitoring');
+        }
+
+        return () => {
+            if (socket) {
+                socket.emit('stop-monitoring');
+            }
+        };
+    }, [open, socket]);
+
     const handleClose = () => {
         dispatch(setDialogOpen(false));
-        if (socket) {
-            socket.emit('stop-monitoring');
-        }
     };
 
     return (
