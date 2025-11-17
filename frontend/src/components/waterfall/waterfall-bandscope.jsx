@@ -577,7 +577,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                     width={waterFallCanvasWidth}
                     height={waterFallCanvasHeight}
                     style={{
-                        imageRendering: 'auto',
+                        imageRendering: 'smooth',
+                        WebkitFontSmoothing: 'antialiased',
                         width: '100%',
                         height: `${waterFallCanvasHeight}px`,
                         backgroundColor: theme.palette.background.default,
