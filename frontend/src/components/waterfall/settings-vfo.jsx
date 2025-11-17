@@ -516,7 +516,7 @@ const VfoAccordion = ({
                             <ToggleButtonGroup
                                 value={vfoMarkers[vfoIndex]?.mode || 'none'}
                                 exclusive
-                                disabled={!vfoActive[vfoIndex] || ['gmsk', 'lora'].includes(vfoMarkers[vfoIndex]?.decoder)}
+                                disabled={!vfoActive[vfoIndex] || ['gmsk', 'lora', 'bpsk'].includes(vfoMarkers[vfoIndex]?.decoder)}
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
                                         // When selecting an audio demod mode (not NONE), clear decoder
@@ -602,8 +602,8 @@ const VfoAccordion = ({
                                                 updates.bandwidth = 500000; // 500 kHz for LoRa (auto-detects 125/250/500 kHz signals)
                                             } else if (newValue === 'morse') {
                                                 updates.bandwidth = 2500; // 2.5 kHz for Morse decoder (narrowband)
-                                            } else if (newValue === 'gmsk') {
-                                                // Get locked transmitter for GMSK bandwidth calculation
+                                            } else if (newValue === 'gmsk' || newValue === 'bpsk') {
+                                                // Get locked transmitter for GMSK/BPSK bandwidth calculation
                                                 // TODO maybe we should remove this logic and let the user adjust the
                                                 // bandwidth themselves?  It's not clear that this is a good idea.
                                                 const currentVFO = vfoMarkers[vfoIndex];
@@ -612,7 +612,7 @@ const VfoAccordion = ({
                                                     : null;
 
                                                 if (lockedTransmitter && lockedTransmitter.baud) {
-                                                    // Calculate bandwidth: 3x baud rate (GMSK + Doppler margin)
+                                                    // Calculate bandwidth: 3x baud rate (GMSK/BPSK + Doppler margin)
                                                     updates.bandwidth = lockedTransmitter.baud * 3;
                                                     updates.transmitterBaud = lockedTransmitter.baud;
                                                 } else {
@@ -677,6 +677,7 @@ const VfoAccordion = ({
                                 <ToggleButton value="morse">{t('vfo.decoders_modes.morse', 'Morse')}</ToggleButton>
                                 <ToggleButton value="lora">{t('vfo.decoders_modes.lora', 'LoRa')}</ToggleButton>
                                 <ToggleButton value="gmsk">{t('vfo.decoders_modes.gmsk', 'GMSK')}</ToggleButton>
+                                <ToggleButton value="bpsk">{t('vfo.decoders_modes.bpsk', 'BPSK')}</ToggleButton>
                                 <ToggleButton value="afsk">{t('vfo.decoders_modes.afsk', 'AFSK')}</ToggleButton>
                                 <ToggleButton value="rtty">{t('vfo.decoders_modes.rtty', 'RTTY')}</ToggleButton>
                                 <ToggleButton value="psk31">{t('vfo.decoders_modes.psk31', 'PSK31')}</ToggleButton>

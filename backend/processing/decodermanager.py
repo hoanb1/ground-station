@@ -97,12 +97,13 @@ class DecoderManager:
 
         try:
             # Import decoder classes to determine demodulator requirements
+            from demodulators.bpskdecoder import BPSKDecoder
             from demodulators.gmskdecoder import GMSKDecoder
             from demodulators.loradecoder import LoRaDecoder
             from demodulators.morsedecoder import MorseDecoder
 
             # Determine if this decoder needs raw IQ (no demodulator) or audio (internal demod)
-            needs_raw_iq = decoder_class in (LoRaDecoder, GMSKDecoder)
+            needs_raw_iq = decoder_class in (LoRaDecoder, GMSKDecoder, BPSKDecoder)
             needs_ssb_demod = decoder_class == MorseDecoder  # Morse needs SSB (CW mode), not FM
 
             # Check if there's an active demodulator for this session

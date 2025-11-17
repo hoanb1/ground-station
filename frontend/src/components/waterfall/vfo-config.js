@@ -218,6 +218,27 @@ export const DECODERS = {
             return 30000; // fallback to default
         },
     },
+    bpsk: {
+        internalName: 'bpsk',
+        displayName: 'BPSK',
+        description: 'BPSK decoder with AX.25 support (processes raw IQ, no demodulator)',
+        requiresDemodulator: null, // raw IQ decoder
+        overrideDemodulator: 'none', // disable audio demodulator
+        centerLineOnly: true, // only show center line for raw IQ
+        hasStatusDisplay: true,
+        hasProgressDisplay: false,
+        hasTextOutput: false,
+        hasModeDisplay: false,
+        defaultBandwidth: 30000, // 30 kHz default (suitable for 9600 baud + Doppler)
+        calculateBandwidth: (transmitter) => {
+            // Calculate optimal bandwidth based on transmitter baud rate
+            // Formula: 3x baud rate (for BPSK spectral width + Doppler margin)
+            if (transmitter && transmitter.baud) {
+                return transmitter.baud * 3;
+            }
+            return 30000; // fallback to default
+        },
+    },
 };
 
 /**

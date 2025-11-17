@@ -144,15 +144,22 @@ const ConnectionVisualizer = ({ sdrData, containerRef }) => {
                     const targetId = decoder.decoder_id;
                     const targetPos = elementPositions.get(targetId);
 
+                    console.log('Decoder:', decoder.type, 'ID:', targetId, 'Found position:', !!targetPos, 'Connections:', decoder.connections);
+
                     if (targetPos && decoder.connections) {
                         decoder.connections.forEach((conn) => {
                             const sourcePos = elementPositions.get(conn.source_id);
+                            console.log('  Decoder source conn:', conn.source_id, 'Type:', conn.source_type, 'Found:', !!sourcePos);
                             if (sourcePos) {
+                                // Use green for IQ-based decoders (BPSK, GMSK, LoRa), blue for audio-based
+                                const color = conn.source_type === 'iq_broadcaster' ? '#4caf50' : '#2196f3';
+                                const type = conn.source_type === 'iq_broadcaster' ? 'iq_to_decoder' : 'audio_to_decoder';
+
                                 newConnections.push({
                                     from: sourcePos,
                                     to: targetPos,
-                                    type: 'audio_to_decoder',
-                                    color: '#2196f3',
+                                    type: type,
+                                    color: color,
                                 });
                             }
                         });

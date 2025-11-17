@@ -725,13 +725,18 @@ class PerformanceMonitor(threading.Thread):
                 with decoder_instance.stats_lock:
                     stats_snapshot = decoder_instance.stats.copy()
 
-                # Get queue sizes
-                input_queue_size = decoder_instance.audio_queue.qsize()
+                # Get queue sizes - handle both audio_queue (SSTV, Morse) and iq_queue (BPSK, GMSK, LoRa)
+                input_queue_size = 0
+                if hasattr(decoder_instance, "audio_queue"):
+                    input_queue_size = decoder_instance.audio_queue.qsize()
+                elif hasattr(decoder_instance, "iq_queue"):
+                    input_queue_size = decoder_instance.iq_queue.qsize()
 
-                # Calculate rates
+                # Calculate rates - handle both audio-based and IQ-based decoders
                 prev_key = f"decoder_{sdr_id}_{key}"
                 prev_snapshot = self.previous_snapshots.get(prev_key, {})
 
+                # For audio-based decoders (SSTV, Morse)
                 audio_chunks_in_rate = self._calculate_rate(
                     stats_snapshot.get("audio_chunks_in", 0),
                     prev_snapshot.get("audio_chunks_in", 0),
@@ -744,6 +749,19 @@ class PerformanceMonitor(threading.Thread):
                     time_delta,
                 )
 
+                # For IQ-based decoders (BPSK, GMSK, LoRa)
+                iq_chunks_in_rate = self._calculate_rate(
+                    stats_snapshot.get("iq_chunks_in", 0),
+                    prev_snapshot.get("iq_chunks_in", 0),
+                    time_delta,
+                )
+
+                samples_in_rate = self._calculate_rate(
+                    stats_snapshot.get("samples_in", 0),
+                    prev_snapshot.get("samples_in", 0),
+                    time_delta,
+                )
+
                 data_messages_out_rate = self._calculate_rate(
                     stats_snapshot.get("data_messages_out", 0),
                     prev_snapshot.get("data_messages_out", 0),
@@ -753,28 +771,53 @@ class PerformanceMonitor(threading.Thread):
                 # Store current snapshot
                 self.previous_snapshots[prev_key] = stats_snapshot.copy()
 
-                # Add connection info: decoder receives from audio broadcaster
+                # Determine decoder type and connection info
+                decoder_type = type(decoder_instance).__name__
                 decoder_name = vfo_num  # Using vfo_num as decoder name based on the key structure
-                connections = [
-                    {
-                        "source_type": "audio_broadcaster",
-                        "source_id": f"audio_{session_id}_{decoder_name}",
-                    }
-                ]
+
+                # Check if this is an IQ-based decoder (BPSK, GMSK, LoRa)
+                is_iq_decoder = hasattr(decoder_instance, "iq_queue")
+
+                if is_iq_decoder:
+                    # IQ-based decoder receives from IQ broadcaster
+                    connections = [
+                        {
+                            "source_type": "iq_broadcaster",
+                            "source_id": f"iq_{sdr_id}",
+                        }
+                    ]
+                else:
+                    # Audio-based decoder receives from audio broadcaster
+                    connections = [
+                        {
+                            "source_type": "audio_broadcaster",
+                            "source_id": f"audio_{session_id}_{decoder_name}",
+                        }
+                    ]
+
+                # Build rates dict with appropriate fields based on decoder type
+                rates = {
+                    "data_messages_out_per_sec": data_messages_out_rate,
+                }
+
+                if is_iq_decoder:
+                    # IQ-based decoder rates
+                    rates["iq_chunks_in_per_sec"] = iq_chunks_in_rate
+                    rates["samples_in_per_sec"] = samples_in_rate
+                else:
+                    # Audio-based decoder rates
+                    rates["audio_chunks_in_per_sec"] = audio_chunks_in_rate
+                    rates["audio_samples_in_per_sec"] = audio_samples_in_rate
 
                 metrics_entry = {
-                    "type": type(decoder_instance).__name__,
+                    "type": decoder_type,
                     "session_id": session_id,
                     "vfo_number": vfo_num,
                     "decoder_id": key,
                     "input_queue_size": input_queue_size,
                     "is_alive": decoder_instance.is_alive(),
                     "stats": stats_snapshot,
-                    "rates": {
-                        "audio_chunks_in_per_sec": audio_chunks_in_rate,
-                        "audio_samples_in_per_sec": audio_samples_in_rate,
-                        "data_messages_out_per_sec": data_messages_out_rate,
-                    },
+                    "rates": rates,
                     "connections": connections,
                 }
 
