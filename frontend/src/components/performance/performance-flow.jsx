@@ -29,7 +29,7 @@ import ReactFlow, {
     ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Box, Button } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { ComponentNode } from './flow-node.jsx';
 import { createFlowFromMetrics } from './flow-layout.js';
 import dagre from 'dagre';
@@ -94,20 +94,28 @@ const FlowContent = ({ metrics }) => {
             setEdges(flowEdges);
             initializedRef.current = true;
         } else {
-            // Subsequent updates: preserve user positions, only update data
-            setNodes((currentNodes) =>
-                currentNodes.map((node) => {
-                    const newNode = flowNodes.find((n) => n.id === node.id);
-                    if (newNode) {
-                        // Keep user's position, update only the data
-                        return {
-                            ...node,
-                            data: newNode.data,
-                        };
-                    }
-                    return node;
-                })
-            );
+            // Subsequent updates: preserve user positions, only update data, add new nodes
+            setNodes((currentNodes) => {
+                const updatedNodes = currentNodes
+                    .map((node) => {
+                        const newNode = flowNodes.find((n) => n.id === node.id);
+                        if (newNode) {
+                            // Keep user's position, update only the data
+                            return {
+                                ...node,
+                                data: newNode.data,
+                            };
+                        }
+                        return node;
+                    })
+                    .filter((node) => flowNodes.some((n) => n.id === node.id)); // Remove deleted nodes
+
+                // Add new nodes that don't exist in current nodes
+                const newNodeIds = new Set(updatedNodes.map((n) => n.id));
+                const addedNodes = flowNodes.filter((n) => !newNodeIds.has(n.id));
+
+                return [...updatedNodes, ...addedNodes];
+            });
 
             // Update edges (they don't have user-modified positions)
             setEdges(flowEdges);
@@ -170,6 +178,7 @@ const FlowContent = ({ metrics }) => {
                             case 'recorder': return '#f44336';
                             case 'decoder': return '#ff9800';
                             case 'streamer': return '#00bcd4';
+                            case 'browser': return '#9c27b0';
                             default: return '#888';
                         }
                     }}
@@ -184,6 +193,69 @@ const FlowContent = ({ metrics }) => {
                     >
                         Auto Arrange
                     </Button>
+                </Panel>
+                <Panel position="top-left">
+                    <Box
+                        sx={{
+                            backgroundColor: 'rgba(128, 128, 128, 0.225)',
+                            padding: 1.5,
+                            borderRadius: 1,
+                            minWidth: 200,
+                        }}
+                    >
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
+                            Data Types
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 2, backgroundColor: '#2196f3' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    IQ Samples
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 2, backgroundColor: '#00bcd4' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    Audio
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 2, backgroundColor: '#9c27b0' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    FFT/Waterfall
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 2, backgroundColor: '#ff9800' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    Decoded Data
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
+                            Queue Health
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 2, backgroundColor: '#4caf50' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    Healthy (&lt;50%)
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 2, backgroundColor: '#ff9800' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    Warning (50-80%)
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 2, backgroundColor: '#f44336' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    Critical (&gt;80%)
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Box>
                 </Panel>
             </ReactFlow>
         </Box>

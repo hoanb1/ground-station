@@ -48,27 +48,46 @@ const MetricRow = ({ label, value, unit }) => (
 );
 
 export const ComponentNode = ({ data }) => {
-    const { component, type } = data;
+    const { component, type, inputCount = 1, outputCount = 1 } = data;
 
     // Only IQ broadcasters don't have input handles (they're the source)
     const isIQBroadcaster = type === 'broadcaster' && component.broadcaster_type === 'iq';
     const isAudioBroadcaster = type === 'broadcaster' && component.broadcaster_type === 'audio';
 
+    // Calculate handle positions for multiple connections
+    const calculateHandlePositions = (count) => {
+        if (count === 1) return [50]; // Single handle at center (50%)
+        const positions = [];
+        const spacing = 80 / (count + 1); // Distribute across 80% of height
+        for (let i = 0; i < count; i++) {
+            positions.push(10 + spacing * (i + 1)); // Start at 10%, space evenly
+        }
+        return positions;
+    };
+
+    const inputPositions = calculateHandlePositions(inputCount);
+    const outputPositions = calculateHandlePositions(outputCount);
+
     return (
         <>
-            {/* Input handle - all except IQ broadcaster */}
-            {!isIQBroadcaster && (
+            {/* Input handles - all except IQ broadcaster */}
+            {!isIQBroadcaster && inputPositions.map((pos, idx) => (
                 <Handle
+                    key={`input-${idx}`}
+                    id={`input-${idx}`}
                     type="target"
                     position={Position.Left}
-                    style={{ background: '#555' }}
+                    style={{
+                        background: '#555',
+                        top: `${pos}%`,
+                    }}
                 />
-            )}
+            ))}
 
             <Paper
                 elevation={3}
                 sx={{
-                    p: 1.5,
+                    p: 0.5,
                     minWidth: 280,
                     backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
                     border: 1,
@@ -85,12 +104,15 @@ export const ComponentNode = ({ data }) => {
                             label={component.is_alive ? (type === 'recorder' ? 'Recording' : 'Running') : 'Stopped'}
                             size="small"
                             color={component.is_alive ? (type === 'recorder' ? 'error' : 'success') : 'error'}
+                            sx={{ fontSize: '0.65rem', height: '18px', '& .MuiChip-label': { px: 0.5, py: 0 } }}
                         />
                     )}
                 </Box>
 
+                <Divider sx={{ mb: 1 }} />
+
                 {/* Metrics - Two column layout with divider */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 1, mt: 1 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 1 }}>
                     {/* Broadcaster metrics */}
                     {type === 'broadcaster' && (
                         <>
@@ -100,6 +122,10 @@ export const ComponentNode = ({ data }) => {
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Queue"
+                                        value={component.source_queue_size || 0}
+                                    />
                                     <MetricRow
                                         label="Msgs"
                                         value={formatNumber(component.stats?.messages_in || component.stats?.messages_received)}
@@ -120,6 +146,10 @@ export const ComponentNode = ({ data }) => {
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
+                                        label="Subscribers"
+                                        value={component.subscriber_count || 0}
+                                    />
+                                    <MetricRow
                                         label="Msgs"
                                         value={formatNumber(component.stats?.messages_broadcast)}
                                     />
@@ -127,20 +157,6 @@ export const ComponentNode = ({ data }) => {
                                         label="Rate"
                                         value={formatRate(component.rates?.messages_broadcast_per_sec)}
                                         unit="/s"
-                                    />
-                                </Stack>
-                            </Box>
-                            {/* Full width metrics */}
-                            <Box sx={{ gridColumn: '1 / 4' }}>
-                                <Divider sx={{ my: 0.5 }} />
-                                <Stack spacing={0.25}>
-                                    <MetricRow
-                                        label="Queue"
-                                        value={component.source_queue_size || 0}
-                                    />
-                                    <MetricRow
-                                        label="Subscribers"
-                                        value={component.subscriber_count || 0}
                                     />
                                 </Stack>
                             </Box>
@@ -156,6 +172,10 @@ export const ComponentNode = ({ data }) => {
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Queue"
+                                        value={component.input_queue_size || 0}
+                                    />
                                     <MetricRow
                                         label="IQ"
                                         value={formatNumber(component.stats?.iq_chunks_in)}
@@ -176,6 +196,10 @@ export const ComponentNode = ({ data }) => {
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
+                                        label="Queue"
+                                        value={component.output_queue_size || 0}
+                                    />
+                                    <MetricRow
                                         label="FFT"
                                         value={formatNumber(component.stats?.fft_results_out)}
                                     />
@@ -185,14 +209,6 @@ export const ComponentNode = ({ data }) => {
                                         unit="/s"
                                     />
                                 </Stack>
-                            </Box>
-                            {/* Full width */}
-                            <Box sx={{ gridColumn: '1 / 4' }}>
-                                <Divider sx={{ my: 0.5 }} />
-                                <MetricRow
-                                    label="Queue"
-                                    value={`${component.input_queue_size || 0}/${component.output_queue_size || 0}`}
-                                />
                             </Box>
                         </>
                     )}
@@ -206,6 +222,10 @@ export const ComponentNode = ({ data }) => {
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Queue"
+                                        value={component.input_queue_size || 0}
+                                    />
                                     <MetricRow
                                         label="IQ"
                                         value={formatNumber(component.stats?.iq_chunks_in)}
@@ -226,6 +246,10 @@ export const ComponentNode = ({ data }) => {
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
+                                        label="Queue"
+                                        value={component.output_queue_size || 0}
+                                    />
+                                    <MetricRow
                                         label="Audio"
                                         value={formatNumber(component.stats?.audio_chunks_out)}
                                     />
@@ -235,14 +259,6 @@ export const ComponentNode = ({ data }) => {
                                         unit="/s"
                                     />
                                 </Stack>
-                            </Box>
-                            {/* Full width */}
-                            <Box sx={{ gridColumn: '1 / 4' }}>
-                                <Divider sx={{ my: 0.5 }} />
-                                <MetricRow
-                                    label="Queue"
-                                    value={`${component.input_queue_size || 0}/${component.output_queue_size || 0}`}
-                                />
                             </Box>
                         </>
                     )}
@@ -256,6 +272,10 @@ export const ComponentNode = ({ data }) => {
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Queue"
+                                        value={component.input_queue_size || 0}
+                                    />
                                     <MetricRow
                                         label="IQ"
                                         value={formatNumber(component.stats?.iq_chunks_in)}
@@ -286,14 +306,6 @@ export const ComponentNode = ({ data }) => {
                                     />
                                 </Stack>
                             </Box>
-                            {/* Full width */}
-                            <Box sx={{ gridColumn: '1 / 4' }}>
-                                <Divider sx={{ my: 0.5 }} />
-                                <MetricRow
-                                    label="Queue"
-                                    value={component.input_queue_size || 0}
-                                />
-                            </Box>
                         </>
                     )}
 
@@ -306,6 +318,10 @@ export const ComponentNode = ({ data }) => {
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Queue"
+                                        value={component.input_queue_size || 0}
+                                    />
                                     <MetricRow
                                         label="Audio"
                                         value={formatNumber(component.stats?.audio_chunks_in)}
@@ -337,14 +353,6 @@ export const ComponentNode = ({ data }) => {
                                     )}
                                 </Stack>
                             </Box>
-                            {/* Full width */}
-                            <Box sx={{ gridColumn: '1 / -1' }}>
-                                <Divider sx={{ my: 0.5 }} />
-                                <MetricRow
-                                    label="Queue"
-                                    value={component.input_queue_size || 0}
-                                />
-                            </Box>
                         </>
                     )}
 
@@ -357,6 +365,10 @@ export const ComponentNode = ({ data }) => {
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Queue"
+                                        value={component.input_queue_size || 0}
+                                    />
                                     <MetricRow
                                         label="Audio"
                                         value={formatNumber(component.stats?.audio_chunks_in)}
@@ -387,13 +399,93 @@ export const ComponentNode = ({ data }) => {
                                     />
                                 </Stack>
                             </Box>
-                            {/* Full width */}
-                            <Box sx={{ gridColumn: '1 / -1' }}>
-                                <Divider sx={{ my: 0.5 }} />
-                                <MetricRow
-                                    label="Queue"
-                                    value={component.input_queue_size || 0}
-                                />
+                            {/* Active sessions - full width */}
+                            {component.active_sessions && Object.keys(component.active_sessions).length > 0 && (
+                                <Box sx={{ gridColumn: '1 / 4', mt: 1 }}>
+                                    <Divider sx={{ mb: 0.5 }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                        Active Sessions
+                                    </Typography>
+                                    <Stack spacing={0.25}>
+                                        {Object.entries(component.active_sessions).map(([sessionId, session]) => (
+                                            <Box key={sessionId} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                                    {session.ip}
+                                                </Typography>
+                                                <Typography variant="caption" fontWeight="medium" sx={{ fontSize: '0.7rem' }}>
+                                                    {formatRate(session.rates?.messages_emitted_per_sec || 0)}/s
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Stack>
+                                </Box>
+                            )}
+                        </>
+                    )}
+
+                    {/* Browser metrics */}
+                    {type === 'browser' && (
+                        <>
+                            <Box sx={{ gridColumn: '1 / 4' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                    Connection Info
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Session"
+                                        value={component.session_id?.substring(0, 12) + '...'}
+                                    />
+                                    <MetricRow
+                                        label="IP"
+                                        value={component.client_ip || 'unknown'}
+                                    />
+                                    {component.user_agent && component.user_agent !== 'unknown' && (
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 0.25 }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                User Agent:
+                                            </Typography>
+                                            <Typography
+                                                variant="caption"
+                                                fontWeight="medium"
+                                                sx={{
+                                                    maxWidth: '160px',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap',
+                                                    textAlign: 'right'
+                                                }}
+                                                title={component.user_agent}
+                                            >
+                                                {component.user_agent}
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                </Stack>
+                            </Box>
+                            <Box sx={{ gridColumn: '1 / 4', mt: 1 }}>
+                                <Divider sx={{ mb: 0.5 }} />
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                    Received
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Audio"
+                                        value={formatNumber(component.stats?.audio_chunks_in)}
+                                    />
+                                    <MetricRow
+                                        label="Samples"
+                                        value={formatNumber(component.stats?.audio_samples_in)}
+                                    />
+                                    <MetricRow
+                                        label="Messages"
+                                        value={formatNumber(component.stats?.messages_emitted)}
+                                    />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.messages_emitted_per_sec)}
+                                        unit="/s"
+                                    />
+                                </Stack>
                             </Box>
                         </>
                     )}
@@ -411,14 +503,19 @@ export const ComponentNode = ({ data }) => {
                 </Box>
             </Paper>
 
-            {/* Output handle */}
-            {type !== 'decoder' && type !== 'recorder' && type !== 'streamer' && (
+            {/* Output handles */}
+            {type !== 'recorder' && type !== 'browser' && outputPositions.map((pos, idx) => (
                 <Handle
+                    key={`output-${idx}`}
+                    id={`output-${idx}`}
                     type="source"
                     position={Position.Right}
-                    style={{ background: '#555' }}
+                    style={{
+                        background: '#555',
+                        top: `${pos}%`,
+                    }}
                 />
-            )}
+            ))}
         </>
     );
 };

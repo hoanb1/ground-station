@@ -18,6 +18,31 @@
  */
 
 /**
+ * Get edge color based on data type and queue health
+ */
+const getEdgeColor = (dataType, queueUtilization = 0) => {
+    // Base colors by data type
+    const baseColors = {
+        'iq': '#2196f3',        // Blue for IQ samples
+        'audio': '#00bcd4',     // Cyan for audio
+        'decoded': '#ff9800',   // Orange for decoded data (morse, SSTV)
+        'fft': '#9c27b0',       // Purple for FFT/waterfall
+        'implicit': '#666',     // Gray for implicit connections
+    };
+
+    const baseColor = baseColors[dataType] || '#4caf50';
+
+    // Apply queue health overlay
+    if (queueUtilization > 0.8) {
+        return '#f44336'; // Critical - Red
+    } else if (queueUtilization > 0.5) {
+        return '#ff9800'; // Warning - Orange
+    }
+
+    return baseColor;
+};
+
+/**
  * Convert performance metrics to ReactFlow nodes and edges
  */
 export const createFlowFromMetrics = (metrics) => {
@@ -26,6 +51,33 @@ export const createFlowFromMetrics = (metrics) => {
 
     let nodeIdCounter = 0;
     const nodeMap = new Map(); // Track node IDs for creating edges
+
+    // Track connection counts for each node
+    const connectionCounts = new Map(); // nodeId -> { inputs: count, outputs: count }
+    const nodeHandleCounters = new Map(); // nodeId -> { inputIndex: num, outputIndex: num }
+
+    const initNodeConnections = (nodeId) => {
+        if (!connectionCounts.has(nodeId)) {
+            connectionCounts.set(nodeId, { inputs: 0, outputs: 0 });
+            nodeHandleCounters.set(nodeId, { inputIndex: 0, outputIndex: 0 });
+        }
+    };
+
+    const getNextInputHandle = (nodeId) => {
+        initNodeConnections(nodeId);
+        const counter = nodeHandleCounters.get(nodeId);
+        const handleId = `input-${counter.inputIndex}`;
+        counter.inputIndex++;
+        return handleId;
+    };
+
+    const getNextOutputHandle = (nodeId) => {
+        initNodeConnections(nodeId);
+        const counter = nodeHandleCounters.get(nodeId);
+        const handleId = `output-${counter.outputIndex}`;
+        counter.outputIndex++;
+        return handleId;
+    };
 
     // Layout configuration - increased spacing to prevent overlap
     const HORIZONTAL_SPACING = 450;
@@ -66,6 +118,12 @@ export const createFlowFromMetrics = (metrics) => {
                 const nodeId = `node-${nodeIdCounter++}`;
                 nodeMap.set(`${sdrId}-fft`, nodeId);
 
+                // Store FFT node for implicit browser connections later
+                if (!nodeMap.has('fft-processors')) {
+                    nodeMap.set('fft-processors', []);
+                }
+                nodeMap.get('fft-processors').push(nodeId);
+
                 nodes.push({
                     id: nodeId,
                     type: 'componentNode',
@@ -85,7 +143,8 @@ export const createFlowFromMetrics = (metrics) => {
                         source: iqBroadcasterId,
                         target: nodeId,
                         animated: true,
-                        style: { stroke: '#4caf50', strokeWidth: 2 },
+                        style: { stroke: getEdgeColor('iq'), strokeWidth: 2 },
+                        type: 'smoothstep',
                     });
                 }
             }
@@ -115,15 +174,29 @@ export const createFlowFromMetrics = (metrics) => {
                     const iqBroadcasterId = nodeMap.get(`${sdrId}-iq-broadcaster`);
                     if (iqBroadcasterId) {
                         const queueUtilization = demod.input_queue_size / Math.max(demod.input_queue_maxsize || 10, 1);
-                        const edgeColor = queueUtilization > 0.8 ? '#f44336' : queueUtilization > 0.5 ? '#ff9800' : '#4caf50';
 
                         edges.push({
                             id: `edge-${iqBroadcasterId}-${nodeId}`,
                             source: iqBroadcasterId,
                             target: nodeId,
                             animated: demod.is_alive,
-                            style: { stroke: edgeColor, strokeWidth: 2 },
+                            style: { stroke: getEdgeColor('iq', queueUtilization), strokeWidth: 2 },
                             label: demod.input_queue_size ? `${demod.input_queue_size}` : undefined,
+                            type: 'smoothstep',
+                        });
+                    }
+
+                    // Check if demodulator connects directly to audio streamer
+                    const audioStreamerConnection = demod.connections?.find(c => c.target_type === 'audio_streamer');
+                    if (audioStreamerConnection) {
+                        // Store for later connection to WebAudioStreamer
+                        if (!nodeMap.has('pending-demod-to-streamer-edges')) {
+                            nodeMap.set('pending-demod-to-streamer-edges', []);
+                        }
+                        nodeMap.get('pending-demod-to-streamer-edges').push({
+                            demodulatorId: nodeId,
+                            demodulator: demod,
+                            targetId: audioStreamerConnection.target_id,
                         });
                     }
 
@@ -167,7 +240,8 @@ export const createFlowFromMetrics = (metrics) => {
                                     source: demodId,
                                     target: nodeId,
                                     animated: broadcaster.is_alive,
-                                    style: { stroke: '#4caf50', strokeWidth: 2 },
+                                    style: { stroke: getEdgeColor('audio'), strokeWidth: 2 },
+                                    type: 'smoothstep',
                                 });
                             }
                         }
@@ -211,15 +285,15 @@ export const createFlowFromMetrics = (metrics) => {
                     const iqBroadcasterId = nodeMap.get(`${sdrId}-iq-broadcaster`);
                     if (iqBroadcasterId) {
                         const queueUtilization = recorder.input_queue_size / Math.max(recorder.input_queue_maxsize || 10, 1);
-                        const edgeColor = queueUtilization > 0.8 ? '#f44336' : queueUtilization > 0.5 ? '#ff9800' : '#4caf50';
 
                         edges.push({
                             id: `edge-${iqBroadcasterId}-${nodeId}`,
                             source: iqBroadcasterId,
                             target: nodeId,
                             animated: recorder.is_alive,
-                            style: { stroke: edgeColor, strokeWidth: 2 },
+                            style: { stroke: getEdgeColor('iq', queueUtilization), strokeWidth: 2 },
                             label: recorder.input_queue_size ? `${recorder.input_queue_size}` : undefined,
+                            type: 'smoothstep',
                         });
                     }
 
@@ -234,6 +308,18 @@ export const createFlowFromMetrics = (metrics) => {
 
                 Object.entries(sdrData.decoders).forEach(([decKey, decoder]) => {
                     const nodeId = `node-${nodeIdCounter++}`;
+
+                    // Store decoder node by session for implicit browser connections later
+                    if (decoder.session_id) {
+                        if (!nodeMap.has('decoders-by-session')) {
+                            nodeMap.set('decoders-by-session', {});
+                        }
+                        const decodersBySession = nodeMap.get('decoders-by-session');
+                        if (!decodersBySession[decoder.session_id]) {
+                            decodersBySession[decoder.session_id] = [];
+                        }
+                        decodersBySession[decoder.session_id].push(nodeId);
+                    }
 
                     nodes.push({
                         id: nodeId,
@@ -256,15 +342,15 @@ export const createFlowFromMetrics = (metrics) => {
 
                         if (audioBroadcasterId) {
                             const queueUtilization = decoder.input_queue_size / Math.max(decoder.input_queue_maxsize || 10, 1);
-                            const edgeColor = queueUtilization > 0.8 ? '#f44336' : queueUtilization > 0.5 ? '#ff9800' : '#4caf50';
 
                             edges.push({
                                 id: `edge-${audioBroadcasterId}-${nodeId}`,
                                 source: audioBroadcasterId,
                                 target: nodeId,
                                 animated: decoder.is_alive,
-                                style: { stroke: edgeColor, strokeWidth: 2 },
+                                style: { stroke: getEdgeColor('audio', queueUtilization), strokeWidth: 2 },
                                 label: decoder.input_queue_size ? `${decoder.input_queue_size}` : undefined,
+                                type: 'smoothstep',
                             });
                         }
                     }
@@ -275,27 +361,140 @@ export const createFlowFromMetrics = (metrics) => {
         });
     }
 
-    // Audio Streamers (global, at the bottom)
-    if (metrics.audio_streamers) {
-        let streamerY = START_Y + (Object.keys(metrics.sdrs || {}).length * 1000);
-        let streamerX = START_X + HORIZONTAL_SPACING * 2;
+    // Collect all active sessions (browsers)
+    const activeSessions = {};
 
-        Object.entries(metrics.audio_streamers).forEach(([key, streamer]) => {
-            const nodeId = `node-${nodeIdCounter++}`;
-            nodeMap.set(`audio-streamer-${key}`, nodeId);
+    // Primary source: sessions data from _poll_sessions()
+    if (metrics.sessions) {
+        Object.values(metrics.sessions).forEach(session => {
+            activeSessions[session.session_id] = {
+                ip: session.client_ip || 'unknown',
+                user_agent: session.user_agent || 'unknown',
+                stats: { audio_chunks_in: 0, audio_samples_in: 0, messages_emitted: 0 },
+                rates: { audio_chunks_in_per_sec: 0, audio_samples_in_per_sec: 0, messages_emitted_per_sec: 0 }
+            };
+        });
+    }
+
+    // Overlay audio streaming stats from audio_streamers
+    if (metrics.audio_streamers) {
+        Object.values(metrics.audio_streamers).forEach(streamer => {
+            if (streamer.session_id && activeSessions[streamer.session_id]) {
+                activeSessions[streamer.session_id].stats = streamer.stats;
+                activeSessions[streamer.session_id].rates = streamer.rates;
+            }
+        });
+    }
+
+    // Audio Streamer (single global instance)
+    let webAudioStreamerNodeId = null;
+    if (Object.keys(activeSessions).length > 0) {
+        const streamerY = START_Y + (Object.keys(metrics.sdrs || {}).length * 1000);
+        const streamerX = START_X + HORIZONTAL_SPACING * 2;
+
+        const nodeId = `node-${nodeIdCounter++}`;
+        nodeMap.set('audio-streamer-web_audio', nodeId);
+        webAudioStreamerNodeId = nodeId;
+
+        // Aggregate stats across all sessions
+        const totalStats = Object.values(activeSessions).reduce((acc, session) => {
+            acc.audio_chunks_in += session.stats.audio_chunks_in || 0;
+            acc.audio_samples_in += session.stats.audio_samples_in || 0;
+            acc.messages_emitted += session.stats.messages_emitted || 0;
+            return acc;
+        }, { audio_chunks_in: 0, audio_samples_in: 0, messages_emitted: 0 });
+
+        const totalRates = Object.values(activeSessions).reduce((acc, session) => {
+            acc.audio_chunks_in_per_sec += session.rates.audio_chunks_in_per_sec || 0;
+            acc.audio_samples_in_per_sec += session.rates.audio_samples_in_per_sec || 0;
+            acc.messages_emitted_per_sec += session.rates.messages_emitted_per_sec || 0;
+            return acc;
+        }, { audio_chunks_in_per_sec: 0, audio_samples_in_per_sec: 0, messages_emitted_per_sec: 0 });
+
+        nodes.push({
+            id: nodeId,
+            type: 'componentNode',
+            position: { x: streamerX, y: streamerY },
+            data: {
+                label: 'WebAudioStreamer',
+                component: {
+                    type: 'WebAudioStreamer',
+                    streamer_id: 'web_audio',
+                    input_queue_size: 0,
+                    is_alive: true,
+                    stats: totalStats,
+                    rates: totalRates,
+                    active_sessions: activeSessions,
+                },
+                type: 'streamer',
+            },
+        });
+
+        // Browser/Client nodes (one per session)
+        const browserX = streamerX + HORIZONTAL_SPACING;
+        let browserY = streamerY - 100;
+
+        Object.entries(activeSessions).forEach(([sessionId, session]) => {
+            const browserNodeId = `node-${nodeIdCounter++}`;
+            nodeMap.set(`browser-${sessionId}`, browserNodeId);
 
             nodes.push({
-                id: nodeId,
+                id: browserNodeId,
                 type: 'componentNode',
-                position: { x: streamerX, y: streamerY },
+                position: { x: browserX, y: browserY },
                 data: {
-                    label: streamer.type,
-                    component: streamer,
-                    type: 'streamer',
+                    label: `Browser - ${session.ip}`,
+                    component: {
+                        type: 'Browser',
+                        session_id: sessionId,
+                        client_ip: session.ip,
+                        user_agent: session.user_agent,
+                        is_alive: true,
+                        stats: session.stats,
+                        rates: session.rates,
+                    },
+                    type: 'browser',
                 },
             });
 
-            streamerY += VERTICAL_SPACING;
+            // Edge from WebAudioStreamer to Browser
+            edges.push({
+                id: `edge-${webAudioStreamerNodeId}-${browserNodeId}`,
+                source: webAudioStreamerNodeId,
+                target: browserNodeId,
+                animated: true,
+                style: { stroke: getEdgeColor('audio'), strokeWidth: 2 },
+                type: 'smoothstep',
+            });
+
+            // Implicit edge: FFT Processor -> Browser (all FFT processors send to all browsers)
+            const fftProcessors = nodeMap.get('fft-processors') || [];
+            fftProcessors.forEach(fftNodeId => {
+                edges.push({
+                    id: `edge-implicit-fft-${fftNodeId}-${browserNodeId}`,
+                    source: fftNodeId,
+                    target: browserNodeId,
+                    animated: false,
+                    style: { stroke: getEdgeColor('fft'), strokeWidth: 1.5, strokeDasharray: '5,5' },
+                    type: 'smoothstep',
+                });
+            });
+
+            // Implicit edge: Decoders -> Browser (by session)
+            const decodersBySession = nodeMap.get('decoders-by-session') || {};
+            const sessionDecoders = decodersBySession[sessionId] || [];
+            sessionDecoders.forEach(decoderNodeId => {
+                edges.push({
+                    id: `edge-implicit-decoder-${decoderNodeId}-${browserNodeId}`,
+                    source: decoderNodeId,
+                    target: browserNodeId,
+                    animated: false,
+                    style: { stroke: getEdgeColor('decoded'), strokeWidth: 1.5, strokeDasharray: '5,5' },
+                    type: 'smoothstep',
+                });
+            });
+
+            browserY += VERTICAL_SPACING;
         });
     }
 
@@ -306,7 +505,7 @@ export const createFlowFromMetrics = (metrics) => {
             // Look for UI target in connections
             const uiConnection = broadcaster.connections?.find(c => c.target_type === 'ui');
             if (uiConnection) {
-                // WebAudioStreamer is typically under the key 'web_audio'
+                // Connect to the single WebAudioStreamer
                 const webAudioStreamerId = nodeMap.get('audio-streamer-web_audio');
                 if (webAudioStreamerId) {
                     edges.push({
@@ -314,12 +513,96 @@ export const createFlowFromMetrics = (metrics) => {
                         source: audioBroadcasterId,
                         target: webAudioStreamerId,
                         animated: broadcaster.is_alive,
-                        style: { stroke: '#00bcd4', strokeWidth: 2 },
+                        style: { stroke: getEdgeColor('audio'), strokeWidth: 2 },
+                        type: 'smoothstep',
                     });
                 }
             }
         });
     }
+
+    // Process pending demodulator -> WebAudioStreamer edges
+    const pendingDemodEdges = nodeMap.get('pending-demod-to-streamer-edges');
+    if (pendingDemodEdges && pendingDemodEdges.length > 0) {
+        pendingDemodEdges.forEach(({ demodulatorId, demodulator, targetId }) => {
+            // Connect to the single WebAudioStreamer
+            const streamerId = nodeMap.get('audio-streamer-web_audio');
+            if (streamerId) {
+                edges.push({
+                    id: `edge-${demodulatorId}-${streamerId}`,
+                    source: demodulatorId,
+                    target: streamerId,
+                    animated: demodulator.is_alive,
+                    style: { stroke: getEdgeColor('audio'), strokeWidth: 2 },
+                    type: 'smoothstep',
+                });
+            }
+        });
+    }
+
+    // Count connections for each node
+    // Track implicit broadcast sources to only count them once
+    const implicitBroadcastSources = new Set();
+
+    edges.forEach(edge => {
+        const sourceId = edge.source;
+        const targetId = edge.target;
+
+        initNodeConnections(sourceId);
+        initNodeConnections(targetId);
+
+        // Check if this is an implicit broadcast edge
+        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-');
+
+        if (isImplicitBroadcast) {
+            // Only count implicit broadcast once per source (they all share one handle)
+            if (!implicitBroadcastSources.has(sourceId)) {
+                connectionCounts.get(sourceId).outputs++;
+                implicitBroadcastSources.add(sourceId);
+            }
+        } else {
+            // Normal edges count individually
+            connectionCounts.get(sourceId).outputs++;
+        }
+
+        // Inputs always count individually (each browser gets separate input)
+        connectionCounts.get(targetId).inputs++;
+    });
+
+    // Update nodes with connection counts
+    nodes.forEach(node => {
+        const counts = connectionCounts.get(node.id) || { inputs: 1, outputs: 1 };
+        node.data.inputCount = Math.max(counts.inputs, 1);
+        node.data.outputCount = Math.max(counts.outputs, 1);
+    });
+
+    // Reset handle counters and assign handle IDs to edges
+    nodeHandleCounters.clear();
+    // Re-initialize all node counters
+    nodes.forEach(node => {
+        nodeHandleCounters.set(node.id, { inputIndex: 0, outputIndex: 0 });
+    });
+
+    // Track handles for implicit broadcast connections (all use same source handle)
+    const implicitHandles = new Map(); // nodeId -> handleId for FFT and decoder broadcasts
+
+    edges.forEach(edge => {
+        // Check if this is an implicit broadcast edge (FFT→Browser or Decoder→Browser)
+        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-');
+
+        if (isImplicitBroadcast) {
+            // All implicit edges from same source share the same output handle
+            if (!implicitHandles.has(edge.source)) {
+                implicitHandles.set(edge.source, getNextOutputHandle(edge.source));
+            }
+            edge.sourceHandle = implicitHandles.get(edge.source);
+            edge.targetHandle = getNextInputHandle(edge.target);
+        } else {
+            // Normal edges get unique handles
+            edge.sourceHandle = getNextOutputHandle(edge.source);
+            edge.targetHandle = getNextInputHandle(edge.target);
+        }
+    });
 
     return { nodes, edges };
 };

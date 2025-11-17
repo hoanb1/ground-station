@@ -61,6 +61,10 @@ class WebAudioStreamer(threading.Thread):
         }
         self.stats_lock = threading.Lock()
 
+        # Per-session activity tracking
+        self.session_stats: Dict[str, Dict[str, Any]] = {}
+        self.session_stats_lock = threading.Lock()
+
     def run(self):
         while self.running:
             try:
@@ -165,6 +169,21 @@ class WebAudioStreamer(threading.Thread):
                     # Update stats
                     with self.stats_lock:
                         self.stats["messages_emitted"] += 1
+
+                    # Update per-session stats
+                    with self.session_stats_lock:
+                        if originating_session_id not in self.session_stats:
+                            self.session_stats[originating_session_id] = {
+                                "audio_chunks_in": 0,
+                                "audio_samples_in": 0,
+                                "messages_emitted": 0,
+                                "last_activity": None,
+                            }
+                        session_stat = self.session_stats[originating_session_id]
+                        session_stat["audio_chunks_in"] += 1
+                        session_stat["audio_samples_in"] += len(audio_chunk)
+                        session_stat["messages_emitted"] += 1
+                        session_stat["last_activity"] = time.time()
 
                 except Exception as e:
                     logger.error(

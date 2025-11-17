@@ -137,6 +137,9 @@ class PerformanceMonitor(threading.Thread):
         # Poll audio streamers (global, not per-SDR)
         all_metrics["audio_streamers"] = self._poll_audio_streamers(time_delta)
 
+        # Poll active sessions/browsers (global, not per-SDR)
+        all_metrics["sessions"] = self._poll_sessions(time_delta)
+
         return all_metrics
 
     def _poll_broadcasters(self, sdr_id, process_info, time_delta):
@@ -466,6 +469,7 @@ class PerformanceMonitor(threading.Thread):
                 connections = [{"source_type": "iq_broadcaster", "source_id": f"iq_{sdr_id}"}]
 
                 # Check if this demodulator feeds an audio broadcaster (via decoder)
+                has_audio_broadcaster = False
                 decoders = process_info.get("decoders", {})
                 for dec_session_id, session_decoders in decoders.items():
                     for decoder_name, decoder_entry in session_decoders.items():
@@ -480,6 +484,32 @@ class PerformanceMonitor(threading.Thread):
                                         "target_id": f"audio_{session_id}_{decoder_name}",
                                     }
                                 )
+                                has_audio_broadcaster = True
+
+                # Check if demodulator outputs to global WebAudioStreamer
+                # Demodulators without audio broadcasters output to the global audio_queue
+                # which is consumed by WebAudioStreamer
+                if not has_audio_broadcaster:
+                    # Get the global audio queue from server.startup
+                    try:
+                        from server import startup
+
+                        global_audio_queue = getattr(startup, "audio_queue", None)
+
+                        # Check if this demodulator's audio_queue is the global queue
+                        if (
+                            global_audio_queue is not None
+                            and demod_instance.audio_queue is global_audio_queue
+                        ):
+                            # Connect to the session-specific WebAudioStreamer
+                            connections.append(
+                                {
+                                    "target_type": "audio_streamer",
+                                    "target_id": f"web_audio_{session_id}",
+                                }
+                            )
+                    except Exception as e:
+                        logger.debug(f"Could not check audio queue connection: {e}")
 
                 demod_metrics[key] = {
                     "type": type(demod_instance).__name__,
@@ -686,63 +716,145 @@ class PerformanceMonitor(threading.Thread):
     def _poll_audio_streamers(self, time_delta):
         """
         Poll audio streamers (WebAudioStreamer that streams to web clients).
+        Creates one streamer entry per active session.
 
         Args:
             time_delta: Time since last poll
 
         Returns:
-            dict: Audio streamer metrics
+            dict: Audio streamer metrics per session
         """
         streamers = {}
 
         # Get the web audio streamer
         audio_consumer = self.process_manager.get_audio_consumer()
-        if audio_consumer and hasattr(audio_consumer, "stats_lock"):
-            with audio_consumer.stats_lock:
-                stats_snapshot = audio_consumer.stats.copy()
+        if audio_consumer and hasattr(audio_consumer, "session_stats_lock"):
+            # Get per-session stats
+            with audio_consumer.session_stats_lock:
+                session_stats_snapshot = {
+                    sid: stats.copy() for sid, stats in audio_consumer.session_stats.items()
+                }
 
-            # Get queue size
+            # Get queue size (shared across all sessions)
             input_queue_size = audio_consumer.audio_queue.qsize()
 
-            # Calculate rates
-            prev_key = "audio_consumer_web"
-            prev_snapshot = self.previous_snapshots.get(prev_key, {})
+            # Get session IP addresses and user agents from Socket.IO
+            session_info = {}
+            try:
+                from handlers.socket import SESSIONS
 
-            audio_chunks_in_rate = self._calculate_rate(
-                stats_snapshot.get("audio_chunks_in", 0),
-                prev_snapshot.get("audio_chunks_in", 0),
-                time_delta,
-            )
+                for sid, environ in SESSIONS.items():
+                    # Check for real IP behind reverse proxy
+                    real_ip = (
+                        environ.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+                        or environ.get("HTTP_X_REAL_IP", "")
+                        or environ.get("REMOTE_ADDR", "unknown")
+                    )
 
-            audio_samples_in_rate = self._calculate_rate(
-                stats_snapshot.get("audio_samples_in", 0),
-                prev_snapshot.get("audio_samples_in", 0),
-                time_delta,
-            )
+                    session_info[sid] = {
+                        "ip": real_ip,
+                        "user_agent": environ.get("HTTP_USER_AGENT", "unknown"),
+                    }
+            except Exception as e:
+                logger.debug(f"Could not get session info: {e}")
 
-            messages_emitted_rate = self._calculate_rate(
-                stats_snapshot.get("messages_emitted", 0),
-                prev_snapshot.get("messages_emitted", 0),
-                time_delta,
-            )
+            # Create a streamer entry for each active session
+            for session_id, session_stats in session_stats_snapshot.items():
+                # Calculate rates
+                prev_key = f"audio_consumer_web_{session_id}"
+                prev_snapshot = self.previous_snapshots.get(prev_key, {})
 
-            # Store current snapshot
-            self.previous_snapshots[prev_key] = stats_snapshot.copy()
+                audio_chunks_in_rate = self._calculate_rate(
+                    session_stats.get("audio_chunks_in", 0),
+                    prev_snapshot.get("audio_chunks_in", 0),
+                    time_delta,
+                )
 
-            streamers["web_audio"] = {
-                "type": "WebAudioStreamer",
-                "streamer_id": "web_audio",
-                "input_queue_size": input_queue_size,
-                "is_alive": audio_consumer.is_alive(),
-                "stats": stats_snapshot,
-                "rates": {
-                    "audio_chunks_in_per_sec": audio_chunks_in_rate,
-                    "audio_samples_in_per_sec": audio_samples_in_rate,
-                    "messages_emitted_per_sec": messages_emitted_rate,
-                },
-            }
+                audio_samples_in_rate = self._calculate_rate(
+                    session_stats.get("audio_samples_in", 0),
+                    prev_snapshot.get("audio_samples_in", 0),
+                    time_delta,
+                )
+
+                messages_emitted_rate = self._calculate_rate(
+                    session_stats.get("messages_emitted", 0),
+                    prev_snapshot.get("messages_emitted", 0),
+                    time_delta,
+                )
+
+                # Store current snapshot
+                self.previous_snapshots[prev_key] = session_stats.copy()
+
+                session_data = session_info.get(session_id, {})
+                streamers[f"web_audio_{session_id}"] = {
+                    "type": "WebAudioStreamer",
+                    "streamer_id": f"web_audio_{session_id}",
+                    "session_id": session_id,
+                    "client_ip": session_data.get("ip", "unknown"),
+                    "user_agent": session_data.get("user_agent", "unknown"),
+                    "input_queue_size": input_queue_size,  # Shared queue
+                    "is_alive": audio_consumer.is_alive(),
+                    "stats": session_stats,
+                    "rates": {
+                        "audio_chunks_in_per_sec": audio_chunks_in_rate,
+                        "audio_samples_in_per_sec": audio_samples_in_rate,
+                        "messages_emitted_per_sec": messages_emitted_rate,
+                    },
+                }
 
         return streamers
+
+    def _poll_sessions(self, time_delta):
+        """
+        Poll active Socket.IO sessions (connected browsers/clients).
+
+        This method tracks all connected clients regardless of whether they're
+        actively streaming audio or not.
+
+        Args:
+            time_delta: Time since last poll
+
+        Returns:
+            dict: Session/browser metrics for all connected clients
+        """
+        sessions = {}
+
+        try:
+            from handlers.socket import SESSIONS
+
+            for sid, environ in SESSIONS.items():
+                # Extract real IP address (support reverse proxy and ASGI)
+                real_ip = "unknown"
+
+                # Try X-Forwarded-For header first (standard reverse proxy)
+                x_forwarded = environ.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+                if x_forwarded:
+                    real_ip = x_forwarded
+                # Try X-Real-IP header
+                elif environ.get("HTTP_X_REAL_IP"):
+                    real_ip = environ.get("HTTP_X_REAL_IP")
+                # Try ASGI scope client tuple (ASGI-specific)
+                elif "asgi.scope" in environ and "client" in environ["asgi.scope"]:
+                    client = environ["asgi.scope"]["client"]
+                    if client and len(client) >= 1:
+                        real_ip = client[0]
+                # Fallback to REMOTE_ADDR
+                elif environ.get("REMOTE_ADDR"):
+                    real_ip = environ.get("REMOTE_ADDR")
+
+                sessions[sid] = {
+                    "type": "Browser",
+                    "session_id": sid,
+                    "client_ip": real_ip,
+                    "user_agent": environ.get("HTTP_USER_AGENT", "unknown"),
+                    "is_alive": True,
+                    "connected": True,
+                }
+
+        except Exception as e:
+            logger.error(f"Could not poll sessions: {e}")
+
+        return sessions
 
     def _calculate_rate(self, current_value, previous_value, time_delta):
         """
