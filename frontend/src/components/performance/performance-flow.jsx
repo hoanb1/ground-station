@@ -153,60 +153,65 @@ const FlowContent = ({ metrics }) => {
 
         if (previousNodeCountRef.current !== 0 && previousNodeCountRef.current !== currentNodeCount) {
             // Node count changed (node added or removed)
-            // Re-calculate connection counts and re-apply layout
-            setNodes((currentNodes) => {
-                // Recalculate connection counts for each node
-                const connectionCounts = new Map();
-                const initNodeConnections = (nodeId) => {
-                    if (!connectionCounts.has(nodeId)) {
-                        connectionCounts.set(nodeId, { inputs: 0, outputs: 0 });
-                    }
-                };
-
-                // Track implicit broadcast sources to only count them once
-                const implicitBroadcastSources = new Set();
-
-                edges.forEach(edge => {
-                    initNodeConnections(edge.source);
-                    initNodeConnections(edge.target);
-
-                    // Check if this is an implicit broadcast edge
-                    const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-');
-
-                    if (isImplicitBroadcast) {
-                        if (!implicitBroadcastSources.has(edge.source)) {
-                            connectionCounts.get(edge.source).outputs++;
-                            implicitBroadcastSources.add(edge.source);
-                        }
-                    } else {
-                        connectionCounts.get(edge.source).outputs++;
-                    }
-
-                    connectionCounts.get(edge.target).inputs++;
-                });
-
-                // Update nodes with recalculated connection counts
-                const nodesWithCounts = currentNodes.map(node => {
-                    const counts = connectionCounts.get(node.id) || { inputs: 1, outputs: 1 };
-                    return {
-                        ...node,
-                        data: {
-                            ...node.data,
-                            inputCount: Math.max(counts.inputs, 1),
-                            outputCount: Math.max(counts.outputs, 1),
+            // Wait a tick to ensure edges state is fully updated before re-layouting
+            const timeoutId = setTimeout(() => {
+                // Re-calculate connection counts and re-apply layout
+                setNodes((currentNodes) => {
+                    // Recalculate connection counts for each node
+                    const connectionCounts = new Map();
+                    const initNodeConnections = (nodeId) => {
+                        if (!connectionCounts.has(nodeId)) {
+                            connectionCounts.set(nodeId, { inputs: 0, outputs: 0 });
                         }
                     };
+
+                    // Track implicit broadcast sources to only count them once
+                    const implicitBroadcastSources = new Set();
+
+                    edges.forEach(edge => {
+                        initNodeConnections(edge.source);
+                        initNodeConnections(edge.target);
+
+                        // Check if this is an implicit broadcast edge
+                        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-');
+
+                        if (isImplicitBroadcast) {
+                            if (!implicitBroadcastSources.has(edge.source)) {
+                                connectionCounts.get(edge.source).outputs++;
+                                implicitBroadcastSources.add(edge.source);
+                            }
+                        } else {
+                            connectionCounts.get(edge.source).outputs++;
+                        }
+
+                        connectionCounts.get(edge.target).inputs++;
+                    });
+
+                    // Update nodes with recalculated connection counts
+                    const nodesWithCounts = currentNodes.map(node => {
+                        const counts = connectionCounts.get(node.id) || { inputs: 1, outputs: 1 };
+                        return {
+                            ...node,
+                            data: {
+                                ...node.data,
+                                inputCount: Math.max(counts.inputs, 1),
+                                outputCount: Math.max(counts.outputs, 1),
+                            }
+                        };
+                    });
+
+                    // Apply layout to nodes with updated connection counts
+                    const { nodes: layoutedNodes } = getLayoutedElements(nodesWithCounts, edges);
+                    return layoutedNodes;
                 });
 
-                // Apply layout to nodes with updated connection counts
-                const { nodes: layoutedNodes } = getLayoutedElements(nodesWithCounts, edges);
-                return layoutedNodes;
-            });
+                // Trigger fitView with animation after layout
+                window.requestAnimationFrame(() => {
+                    fitView({ padding: 0.2, duration: 800 });
+                });
+            }, 50); // 50ms delay to ensure edges state has updated
 
-            // Trigger fitView with animation after layout
-            window.requestAnimationFrame(() => {
-                fitView({ padding: 0.2, duration: 800 });
-            });
+            return () => clearTimeout(timeoutId);
         }
 
         previousNodeCountRef.current = currentNodeCount;
