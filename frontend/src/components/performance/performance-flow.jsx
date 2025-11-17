@@ -217,6 +217,8 @@ const FlowContent = ({ metrics }) => {
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 1,
                     bottom: '20px !important',
+                    zIndex: 1,
+                    pointerEvents: 'auto',
                 },
                 '& .react-flow__controls-button': {
                     backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
