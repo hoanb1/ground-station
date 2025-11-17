@@ -21,7 +21,6 @@ import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import ReactFlow, {
     Background,
     Controls,
-    MiniMap,
     useNodesState,
     useEdgesState,
     useReactFlow,
@@ -234,22 +233,6 @@ const FlowContent = ({ metrics }) => {
                     variant="dots"
                 />
                 <Controls />
-                <MiniMap
-                    nodeColor={(node) => {
-                        if (!node.data?.component?.is_alive) return '#999';
-                        switch (node.data?.type) {
-                            case 'broadcaster': return '#2196f3';
-                            case 'fft': return '#9c27b0';
-                            case 'demodulator': return '#4caf50';
-                            case 'recorder': return '#f44336';
-                            case 'decoder': return '#ff9800';
-                            case 'streamer': return '#00bcd4';
-                            case 'browser': return '#9c27b0';
-                            default: return '#888';
-                        }
-                    }}
-                    maskColor="rgba(0, 0, 0, 0.6)"
-                />
                 <Panel position="top-right">
                     <Button
                         variant="contained"
