@@ -354,6 +354,11 @@ export const ComponentNode = ({ data }) => {
                                         label="Data"
                                         value={formatNumber(component.stats?.data_messages_out)}
                                     />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.data_messages_out_per_sec)}
+                                        unit="/s"
+                                    />
                                     {component.stats?.images_decoded !== undefined && (
                                         <MetricRow
                                             label="Images"

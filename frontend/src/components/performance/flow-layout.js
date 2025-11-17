@@ -242,7 +242,7 @@ export const createFlowFromMetrics = (metrics) => {
                 if (!nodeMap.has('fft-processors')) {
                     nodeMap.set('fft-processors', []);
                 }
-                nodeMap.get('fft-processors').push(nodeId);
+                nodeMap.get('fft-processors').push({ nodeId, fftProcessor: sdrData.fft_processor });
 
                 nodes.push({
                     id: nodeId,
@@ -446,7 +446,7 @@ export const createFlowFromMetrics = (metrics) => {
                         if (!decodersBySession[decoder.session_id]) {
                             decodersBySession[decoder.session_id] = [];
                         }
-                        decodersBySession[decoder.session_id].push(nodeId);
+                        decodersBySession[decoder.session_id].push({ nodeId, decoder });
                     }
 
                     nodes.push({
@@ -603,13 +603,14 @@ export const createFlowFromMetrics = (metrics) => {
 
             // Implicit edge: FFT Processor -> Browser (all FFT processors send to all browsers)
             const fftProcessors = nodeMap.get('fft-processors') || [];
-            fftProcessors.forEach(fftNodeId => {
+            fftProcessors.forEach(({ nodeId: fftNodeId, fftProcessor }) => {
+                const isAnimated = hasPositiveOutputRate(fftProcessor);
                 edges.push({
                     id: `edge-implicit-fft-${fftNodeId}-${browserNodeId}`,
                     source: fftNodeId,
                     target: browserNodeId,
-                    animated: false,
-                    style: { stroke: getEdgeColor('fft', 0, false), strokeWidth: 1.5 },
+                    animated: isAnimated,
+                    style: { stroke: getEdgeColor('fft', 0, isAnimated), strokeWidth: 1.5 },
                     type: 'smoothstep',
                 });
             });
@@ -617,13 +618,14 @@ export const createFlowFromMetrics = (metrics) => {
             // Implicit edge: Decoders -> Browser (by session)
             const decodersBySession = nodeMap.get('decoders-by-session') || {};
             const sessionDecoders = decodersBySession[sessionId] || [];
-            sessionDecoders.forEach(decoderNodeId => {
+            sessionDecoders.forEach(({ nodeId: decoderNodeId, decoder }) => {
+                const isAnimated = hasPositiveOutputRate(decoder);
                 edges.push({
                     id: `edge-implicit-decoder-${decoderNodeId}-${browserNodeId}`,
                     source: decoderNodeId,
                     target: browserNodeId,
-                    animated: false,
-                    style: { stroke: getEdgeColor('decoded', 0, false), strokeWidth: 1.5 },
+                    animated: isAnimated,
+                    style: { stroke: getEdgeColor('decoded', 0, isAnimated), strokeWidth: 1.5 },
                     type: 'smoothstep',
                 });
             });

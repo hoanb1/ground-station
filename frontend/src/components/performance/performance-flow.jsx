@@ -299,6 +299,23 @@ const FlowContent = ({ metrics }) => {
                             </Box>
                         </Box>
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
+                            Line Styles
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 0, borderTop: '2px dotted #fff' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    Data Flowing
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 25, height: 2, backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+                                <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
+                                    No Flow / Idle
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 1 }}>
                             Queue Health
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
