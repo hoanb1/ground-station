@@ -121,11 +121,13 @@ class PerformanceMonitor(threading.Thread):
             "timestamp": time.time(),
             "time_delta": time_delta,
             "sdrs": {},
+            "trackers": {},
         }
 
         for sdr_id, process_info in self.process_manager.processes.items():
             sdr_metrics = {
                 "sdr_id": sdr_id,
+                "worker": self._poll_worker_process(sdr_id, process_info, time_delta),
                 "broadcasters": self._poll_broadcasters(sdr_id, process_info, time_delta),
                 "fft_processor": self._poll_fft_processor(sdr_id, process_info, time_delta),
                 "demodulators": self._poll_demodulators(sdr_id, process_info, time_delta),
@@ -140,7 +142,75 @@ class PerformanceMonitor(threading.Thread):
         # Poll active sessions/browsers (global, not per-SDR)
         all_metrics["sessions"] = self._poll_sessions(time_delta)
 
+        # Poll satellite trackers
+        all_metrics["trackers"] = self._poll_trackers(time_delta)
+
         return all_metrics
+
+    def _poll_worker_process(self, sdr_id, process_info, time_delta):
+        """
+        Poll SDR worker process metrics.
+
+        Args:
+            sdr_id: SDR device identifier
+            process_info: Process information dictionary
+            time_delta: Time since last poll
+
+        Returns:
+            dict: Worker process metrics or None if not available
+        """
+        worker_stats = process_info.get("worker_stats", {})
+        if not worker_stats:
+            return None
+
+        # Calculate rates from previous snapshot
+        prev_key = f"worker_{sdr_id}"
+        previous = self.previous_snapshots.get(prev_key, {})
+
+        samples_rate = self._calculate_rate(
+            worker_stats.get("samples_read", 0),
+            previous.get("samples_read", 0),
+            time_delta,
+        )
+
+        iq_chunks_rate = self._calculate_rate(
+            worker_stats.get("iq_chunks_out", 0),
+            previous.get("iq_chunks_out", 0),
+            time_delta,
+        )
+
+        read_errors_rate = self._calculate_rate(
+            worker_stats.get("read_errors", 0),
+            previous.get("read_errors", 0),
+            time_delta,
+        )
+
+        queue_drops_rate = self._calculate_rate(
+            worker_stats.get("queue_drops", 0),
+            previous.get("queue_drops", 0),
+            time_delta,
+        )
+
+        # Store current snapshot for next iteration
+        self.previous_snapshots[prev_key] = worker_stats.copy()
+
+        # Add connection info: Worker feeds IQ broadcaster
+        connections = [{"target_type": "iq_broadcaster", "target_id": f"iq_{sdr_id}"}]
+
+        return {
+            "worker_id": sdr_id,
+            "stats": worker_stats,
+            "rates": {
+                "samples_per_sec": samples_rate,
+                "iq_chunks_per_sec": iq_chunks_rate,
+                "read_errors_per_sec": read_errors_rate,
+                "queue_drops_per_sec": queue_drops_rate,
+            },
+            "connections": connections,
+            "is_alive": (
+                process_info.get("process").is_alive() if process_info.get("process") else False
+            ),
+        }
 
     def _poll_broadcasters(self, sdr_id, process_info, time_delta):
         """
@@ -159,8 +229,11 @@ class PerformanceMonitor(threading.Thread):
         # Poll IQ Broadcaster
         iq_broadcaster_metrics = self._poll_iq_broadcaster(sdr_id, process_info, time_delta)
         if iq_broadcaster_metrics:
-            # Add connection info: IQ broadcaster feeds FFT processor and demodulators
+            # Add connection info: IQ broadcaster receives from worker and feeds FFT processor and demodulators
             connections = []
+            # Source: Worker process
+            connections.append({"source_type": "worker", "source_id": sdr_id})
+            # Targets: FFT processor and demodulators
             connections.append({"target_type": "fft_processor", "target_id": sdr_id})
 
             # Add connections to demodulators
@@ -855,6 +928,82 @@ class PerformanceMonitor(threading.Thread):
             logger.error(f"Could not poll sessions: {e}")
 
         return sessions
+
+    def _poll_trackers(self, time_delta):
+        """
+        Poll satellite tracker processes.
+
+        Args:
+            time_delta: Time since last poll
+
+        Returns:
+            dict: Tracker metrics
+        """
+        trackers = {}
+
+        try:
+            from tracker.messages import tracker_stats
+            from tracker.runner import tracker_process
+
+            for tracker_id, stats_data in tracker_stats.items():
+                if not stats_data:
+                    continue
+
+                # Calculate rates from previous snapshot
+                prev_key = f"tracker_{tracker_id}"
+                previous = self.previous_snapshots.get(prev_key, {})
+
+                updates_rate = self._calculate_rate(
+                    stats_data.get("updates_sent", 0),
+                    previous.get("updates_sent", 0),
+                    time_delta,
+                )
+
+                commands_rate = self._calculate_rate(
+                    stats_data.get("commands_processed", 0),
+                    previous.get("commands_processed", 0),
+                    time_delta,
+                )
+
+                db_queries_rate = self._calculate_rate(
+                    stats_data.get("db_queries", 0),
+                    previous.get("db_queries", 0),
+                    time_delta,
+                )
+
+                tracking_cycles_rate = self._calculate_rate(
+                    stats_data.get("tracking_cycles", 0),
+                    previous.get("tracking_cycles", 0),
+                    time_delta,
+                )
+
+                # Store current snapshot for next iteration
+                self.previous_snapshots[prev_key] = stats_data.copy()
+
+                # Connections: Tracker outputs to all browser sessions
+                connections = []
+                from handlers.socket import SESSIONS
+
+                for sid in SESSIONS.keys():
+                    connections.append({"target_type": "browser", "target_id": sid})
+
+                trackers[tracker_id] = {
+                    "tracker_id": tracker_id,
+                    "stats": stats_data,
+                    "rates": {
+                        "updates_per_sec": updates_rate,
+                        "commands_per_sec": commands_rate,
+                        "db_queries_per_sec": db_queries_rate,
+                        "tracking_cycles_per_sec": tracking_cycles_rate,
+                    },
+                    "connections": connections,
+                    "is_alive": tracker_process.is_alive() if tracker_process else False,
+                }
+
+        except Exception as e:
+            logger.error(f"Could not poll trackers: {e}")
+
+        return trackers
 
     def _calculate_rate(self, current_value, previous_value, time_delta):
         """

@@ -100,33 +100,41 @@ export const applyDagreLayout = (nodes, edges) => {
         const type = node.data.type;
         const componentType = node.data.component?.type;
 
-        // Rank 0: IQ Broadcasters (leftmost)
-        if (type === 'broadcaster' && node.data.component?.broadcaster_type === 'iq') {
+        // Rank 0: SDR Workers (leftmost - source of data)
+        if (type === 'worker') {
             return 0;
         }
-        // Rank 1: FFT Processors
-        if (type === 'fft') {
+        // Rank 1: IQ Broadcasters
+        if (type === 'broadcaster' && node.data.component?.broadcaster_type === 'iq') {
             return 1;
         }
-        // Rank 2: Demodulators and Recorders
-        if (type === 'demodulator' || type === 'recorder') {
+        // Rank 2: FFT Processors
+        if (type === 'fft') {
             return 2;
         }
-        // Rank 3: Audio Broadcasters
-        if (type === 'broadcaster' && node.data.component?.broadcaster_type === 'audio') {
+        // Rank 3: Demodulators and Recorders
+        if (type === 'demodulator' || type === 'recorder') {
             return 3;
         }
-        // Rank 4: Decoders
-        if (type === 'decoder') {
+        // Rank 4: Audio Broadcasters
+        if (type === 'broadcaster' && node.data.component?.broadcaster_type === 'audio') {
             return 4;
         }
-        // Rank 5: WebAudioStreamer
-        if (type === 'streamer') {
+        // Rank 5: Decoders
+        if (type === 'decoder') {
             return 5;
         }
-        // Rank 6: Browsers (rightmost)
-        if (type === 'browser') {
+        // Rank 6: WebAudioStreamer
+        if (type === 'streamer') {
             return 6;
+        }
+        // Rank 7: Trackers
+        if (type === 'tracker') {
+            return 7;
+        }
+        // Rank 8: Browsers (rightmost)
+        if (type === 'browser') {
+            return 8;
         }
 
         return 10; // Default rank for unknown types
@@ -211,7 +219,25 @@ export const createFlowFromMetrics = (metrics) => {
             const sdrStartY = START_Y + (sdrIndex * 1000); // Stack SDRs vertically
             let columnX = START_X;
 
-            // Column 0: IQ Broadcaster
+            // Column 0: SDR Worker
+            if (sdrData.worker) {
+                const nodeId = `node-${nodeIdCounter++}`;
+                nodeMap.set(`${sdrId}-worker`, nodeId);
+
+                nodes.push({
+                    id: nodeId,
+                    type: 'componentNode',
+                    position: { x: columnX, y: sdrStartY },
+                    data: {
+                        label: `SDR Worker - ${sdrId}`,
+                        component: sdrData.worker,
+                        type: 'worker',
+                    },
+                });
+            }
+
+            // Column 1: IQ Broadcaster
+            columnX += HORIZONTAL_SPACING;
             if (sdrData.broadcasters) {
                 Object.entries(sdrData.broadcasters).forEach(([broadcasterId, broadcaster]) => {
                     if (broadcaster.broadcaster_type === 'iq') {
@@ -228,6 +254,22 @@ export const createFlowFromMetrics = (metrics) => {
                                 type: 'broadcaster',
                             },
                         });
+
+                        // Edge: Worker -> IQ Broadcaster
+                        const workerId = nodeMap.get(`${sdrId}-worker`);
+                        if (workerId && sdrData.worker) {
+                            const isAnimated = hasPositiveOutputRate(sdrData.worker);
+                            edges.push({
+                                id: `edge-${workerId}-${nodeId}`,
+                                source: workerId,
+                                target: nodeId,
+                                sourceHandle: getNextOutputHandle(workerId),
+                                targetHandle: getNextInputHandle(nodeId),
+                                animated: isAnimated,
+                                style: { stroke: getEdgeColor('iq', 0, isAnimated), strokeWidth: 2 },
+                                type: 'smoothstep',
+                            });
+                        }
                     }
                 });
             }
@@ -501,6 +543,45 @@ export const createFlowFromMetrics = (metrics) => {
         });
     }
 
+    // Trackers (satellite trackers, etc.)
+    if (metrics.trackers) {
+        const trackerY = START_Y + (Object.keys(metrics.sdrs || {}).length * 1000);
+        const trackerX = START_X + HORIZONTAL_SPACING * 2;
+
+        Object.entries(metrics.trackers).forEach(([trackerId, tracker], index) => {
+            const nodeId = `node-${nodeIdCounter++}`;
+            nodeMap.set(`tracker-${trackerId}`, nodeId);
+
+            nodes.push({
+                id: nodeId,
+                type: 'componentNode',
+                position: { x: trackerX, y: trackerY + (index * VERTICAL_SPACING) },
+                data: {
+                    label: `Satellite Tracker`,
+                    component: tracker,
+                    type: 'tracker',
+                },
+            });
+
+            // Edges: Tracker -> Browsers (connections stored in tracker.connections)
+            if (tracker.connections) {
+                tracker.connections.forEach(conn => {
+                    if (conn.target_type === 'browser') {
+                        // Store for later connection to browser nodes
+                        if (!nodeMap.has('pending-tracker-to-browser-edges')) {
+                            nodeMap.set('pending-tracker-to-browser-edges', []);
+                        }
+                        nodeMap.get('pending-tracker-to-browser-edges').push({
+                            trackerId: nodeId,
+                            tracker: tracker,
+                            targetId: conn.target_id,
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     // Collect all active sessions (browsers)
     const activeSessions = {};
 
@@ -611,6 +692,24 @@ export const createFlowFromMetrics = (metrics) => {
                 animated: isAnimated,
                 style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                 type: 'smoothstep',
+            });
+
+            // Edge from Trackers to Browser
+            const trackerEdges = nodeMap.get('pending-tracker-to-browser-edges') || [];
+            trackerEdges.forEach(({ trackerId, tracker, targetId }) => {
+                if (targetId === sessionId) {
+                    const isAnimated = hasPositiveOutputRate(tracker);
+                    edges.push({
+                        id: `edge-tracker-${trackerId}-${browserNodeId}`,
+                        source: trackerId,
+                        target: browserNodeId,
+                        sourceHandle: getNextOutputHandle(trackerId),
+                        targetHandle: getNextInputHandle(browserNodeId),
+                        animated: isAnimated,
+                        style: { stroke: getEdgeColor('decoded', 0, isAnimated), strokeWidth: 2 },
+                        type: 'smoothstep',
+                    });
+                }
             });
 
             // Implicit edge: FFT Processor -> Browser (all FFT processors send to all browsers)

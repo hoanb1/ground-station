@@ -16,9 +16,10 @@
 
 import logging
 import time
-from typing import List
+from typing import Any, Dict, List
 
 import numpy as np
+import psutil
 import SoapySDR
 from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 
@@ -217,10 +218,61 @@ def soapysdr_remote_worker_process(
             }
         )
 
+        # Performance monitoring stats
+        stats: Dict[str, Any] = {
+            "samples_read": 0,  # Total IQ samples read from SDR
+            "iq_chunks_out": 0,  # IQ chunks sent to queues
+            "read_errors": 0,  # Read errors (timeouts, overflows, etc.)
+            "queue_drops": 0,  # Dropped due to full queues
+            "last_activity": None,
+            "errors": 0,
+            "cpu_percent": 0.0,
+            "memory_mb": 0.0,
+            "memory_percent": 0.0,
+        }
+        last_stats_send = time.time()
+        stats_send_interval = 1.0  # Send stats every second
+
+        # CPU and memory monitoring
+        process = psutil.Process()
+        last_cpu_check = time.time()
+        cpu_check_interval = 0.5  # Update CPU usage every 0.5 seconds
+
         frame_counter = 0
 
         # Main processing loop
         while not stop_event.is_set():
+            # Update CPU and memory usage periodically
+            current_time = time.time()
+            if current_time - last_cpu_check >= cpu_check_interval:
+                try:
+                    cpu_percent = process.cpu_percent()
+
+                    # Get memory usage
+                    mem_info = process.memory_info()
+                    memory_mb = mem_info.rss / (1024 * 1024)  # Convert bytes to MB
+                    memory_percent = process.memory_percent()
+
+                    stats["cpu_percent"] = cpu_percent
+                    stats["memory_mb"] = memory_mb
+                    stats["memory_percent"] = memory_percent
+                    last_cpu_check = current_time
+                except Exception as e:
+                    logger.debug(f"Error updating CPU/memory usage: {e}")
+
+            # Send stats periodically via data_queue
+            if current_time - last_stats_send >= stats_send_interval:
+                data_queue.put(
+                    {
+                        "type": "stats",
+                        "client_id": client_id,
+                        "sdr_id": sdr_id,
+                        "stats": stats.copy(),
+                        "timestamp": current_time,
+                    }
+                )
+                last_stats_send = current_time
+
             # Check for new configuration without blocking
             try:
                 if not config_queue.empty():
@@ -378,6 +430,10 @@ def soapysdr_remote_worker_process(
                         samples_read = sr.ret
                         logger.debug(f"Read {samples_read}/{read_size} samples")
 
+                        # Track samples read
+                        stats["samples_read"] += samples_read
+                        stats["last_activity"] = time.time()
+
                         # Calculate how many samples we can still add to our buffer
                         samples_remaining = num_samples - buffer_position
                         samples_to_add = min(samples_read, samples_remaining)
@@ -401,6 +457,7 @@ def soapysdr_remote_worker_process(
 
                     elif sr.ret < 0:
                         # An error occurred, handle based on the error code
+                        stats["read_errors"] += 1
 
                         # If the error is a timeout or stream error, clear the buffer to prevent contamination
                         if sr.ret in [-1, -2 - 3]:
@@ -495,16 +552,22 @@ def soapysdr_remote_worker_process(
                                         "timestamp": time.time(),
                                     }
                                     iq_queue_demod.put_nowait(demod_message)
+                                    stats["iq_chunks_out"] += 1
+                                else:
+                                    stats["queue_drops"] += 1
                             except Exception:
-                                pass  # Drop if can't queue
+                                stats["queue_drops"] += 1
 
                         # Broadcast to FFT queue (lower priority, can drop frames)
                         if iq_queue_fft is not None:
                             try:
                                 if not iq_queue_fft.full():
                                     iq_queue_fft.put_nowait(iq_message)
+                                    stats["iq_chunks_out"] += 1
+                                else:
+                                    stats["queue_drops"] += 1
                             except Exception:
-                                pass  # Drop if can't queue
+                                stats["queue_drops"] += 1
 
                     except Exception as e:
                         logger.debug(f"Could not queue IQ data: {str(e)}")
@@ -512,6 +575,7 @@ def soapysdr_remote_worker_process(
             except Exception as e:
                 logger.error(f"Error processing SDR data: {str(e)}")
                 logger.exception(e)
+                stats["errors"] += 1
 
                 # Send error back to the main process
                 data_queue.put(

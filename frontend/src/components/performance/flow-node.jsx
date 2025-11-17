@@ -131,7 +131,9 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
 export const ComponentNode = ({ data }) => {
     const { component, type, inputCount = 1, outputCount = 1 } = data;
 
-    // Only IQ broadcasters don't have input handles (they're the source)
+    // Workers and Trackers don't have input handles (they're sources)
+    const isWorker = type === 'worker';
+    const isTracker = type === 'tracker';
     const isIQBroadcaster = type === 'broadcaster' && component.broadcaster_type === 'iq';
     const isAudioBroadcaster = type === 'broadcaster' && component.broadcaster_type === 'audio';
 
@@ -151,8 +153,8 @@ export const ComponentNode = ({ data }) => {
 
     return (
         <>
-            {/* Input handles - all except IQ broadcaster */}
-            {!isIQBroadcaster && inputPositions.map((pos, idx) => (
+            {/* Input handles - all except Worker and Tracker */}
+            {!isWorker && !isTracker && inputPositions.map((pos, idx) => (
                 <Handle
                     key={`input-${idx}`}
                     id={`input-${idx}`}
@@ -202,7 +204,127 @@ export const ComponentNode = ({ data }) => {
                 <Divider sx={{ mb: 1 }} />
 
                 {/* Metrics - Two or Three column layout with dividers */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: type === 'fft' ? '1fr auto 80px auto 1fr' : '1fr auto 1fr', gap: 1 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker') ? '1fr auto 80px auto 1fr' : '1fr auto 1fr', gap: 1 }}>
+                    {/* Tracker metrics */}
+                    {type === 'tracker' && (
+                        <>
+                            {/* Left column - Processing */}
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                    Processing
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Cycles"
+                                        value={formatNumber(component.stats?.tracking_cycles)}
+                                    />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.tracking_cycles_per_sec)}
+                                        unit="/s"
+                                    />
+                                    <MetricRow
+                                        label="DB Queries"
+                                        value={formatNumber(component.stats?.db_queries)}
+                                    />
+                                </Stack>
+                            </Box>
+                            {/* Vertical divider */}
+                            <Divider orientation="vertical" flexItem />
+                            {/* Middle column - CPU & Memory Bars */}
+                            <Box>
+                                <CpuMemoryBars
+                                    cpuPercent={component.stats?.cpu_percent}
+                                    memoryMb={component.stats?.memory_mb}
+                                    memoryPercent={component.stats?.memory_percent}
+                                />
+                            </Box>
+                            {/* Vertical divider */}
+                            <Divider orientation="vertical" flexItem />
+                            {/* Right column - Output */}
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                    Output
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Updates"
+                                        value={formatNumber(component.stats?.updates_sent)}
+                                    />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.updates_per_sec)}
+                                        unit="/s"
+                                    />
+                                    <MetricRow
+                                        label="Commands"
+                                        value={formatNumber(component.stats?.commands_processed)}
+                                    />
+                                </Stack>
+                            </Box>
+                        </>
+                    )}
+
+                    {/* Worker metrics */}
+                    {type === 'worker' && (
+                        <>
+                            {/* Left column - Empty (no input) */}
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                    SDR
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Samples"
+                                        value={formatNumber(component.stats?.samples_read)}
+                                    />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.samples_per_sec)}
+                                        unit="/s"
+                                    />
+                                    <MetricRow
+                                        label="Errors"
+                                        value={formatNumber(component.stats?.read_errors)}
+                                    />
+                                </Stack>
+                            </Box>
+                            {/* Vertical divider */}
+                            <Divider orientation="vertical" flexItem />
+                            {/* Middle column - CPU & Memory Bars */}
+                            <Box>
+                                <CpuMemoryBars
+                                    cpuPercent={component.stats?.cpu_percent}
+                                    memoryMb={component.stats?.memory_mb}
+                                    memoryPercent={component.stats?.memory_percent}
+                                />
+                            </Box>
+                            {/* Vertical divider */}
+                            <Divider orientation="vertical" flexItem />
+                            {/* Right column - Output */}
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                    Output
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="IQ Chunks"
+                                        value={formatNumber(component.stats?.iq_chunks_out)}
+                                    />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.iq_chunks_per_sec)}
+                                        unit="/s"
+                                    />
+                                    <MetricRow
+                                        label="Drops"
+                                        value={formatNumber(component.stats?.queue_drops)}
+                                    />
+                                </Stack>
+                            </Box>
+                        </>
+                    )}
+
                     {/* Broadcaster metrics */}
                     {type === 'broadcaster' && (
                         <>
@@ -597,7 +719,7 @@ export const ComponentNode = ({ data }) => {
 
                     {/* Show errors if any - full width */}
                     {component.stats?.errors > 0 && (
-                        <Box sx={{ gridColumn: type === 'fft' ? '1 / 6' : '1 / 4' }}>
+                        <Box sx={{ gridColumn: (type === 'fft' || type === 'worker' || type === 'tracker') ? '1 / 6' : '1 / 4' }}>
                             <Divider sx={{ my: 0.5 }} />
                             <MetricRow
                                 label="Errors"

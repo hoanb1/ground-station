@@ -17,11 +17,15 @@
 
 import asyncio
 import logging
+from typing import Any, Dict
 
 from tracker.runner import queue_from_tracker
 from vfos.updates import handle_vfo_updates_for_tracking
 
 logger = logging.getLogger(__name__)
+
+# Global storage for tracker stats (accessed by performance monitor)
+tracker_stats: Dict[str, Any] = {}
 
 
 async def handle_tracker_messages(sockio):
@@ -38,10 +42,16 @@ async def handle_tracker_messages(sockio):
         try:
             if queue_from_tracker is not None and not queue_from_tracker.empty():
                 message = queue_from_tracker.get_nowait()
+                msg_type = message.get("type")
                 event = message.get("event")
                 data = message.get("data", {})
 
-                if event:
+                # Handle stats messages
+                if msg_type == "stats":
+                    global tracker_stats
+                    tracker_id = message.get("tracker_id", "satellite_tracker")
+                    tracker_stats[tracker_id] = message.get("stats", {})
+                elif event:
                     await sockio.emit(event, data)
 
                     # Handle VFO updates for SDR tracking

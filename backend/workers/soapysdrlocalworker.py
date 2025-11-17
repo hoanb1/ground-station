@@ -16,9 +16,10 @@
 
 import logging
 import time
-from typing import List
+from typing import Any, Dict, List
 
 import numpy as np
+import psutil
 import SoapySDR
 from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 
@@ -191,8 +192,55 @@ def soapysdr_local_worker_process(
             }
         )
 
+        # Performance monitoring stats
+        stats: Dict[str, Any] = {
+            "samples_read": 0,
+            "iq_chunks_out": 0,
+            "read_errors": 0,
+            "queue_drops": 0,
+            "last_activity": None,
+            "errors": 0,
+            "cpu_percent": 0.0,
+            "memory_mb": 0.0,
+            "memory_percent": 0.0,
+        }
+        last_stats_send = time.time()
+        stats_send_interval = 1.0
+
+        # CPU and memory monitoring
+        process = psutil.Process()
+        last_cpu_check = time.time()
+        cpu_check_interval = 0.5
+
         # Main processing loop
         while not stop_event.is_set():
+            # Update CPU and memory usage periodically
+            current_time = time.time()
+            if current_time - last_cpu_check >= cpu_check_interval:
+                try:
+                    cpu_percent = process.cpu_percent()
+                    mem_info = process.memory_info()
+                    memory_mb = mem_info.rss / (1024 * 1024)
+                    memory_percent = process.memory_percent()
+                    stats["cpu_percent"] = cpu_percent
+                    stats["memory_mb"] = memory_mb
+                    stats["memory_percent"] = memory_percent
+                    last_cpu_check = current_time
+                except Exception as e:
+                    logger.debug(f"Error updating CPU/memory usage: {e}")
+
+            # Send stats periodically via data_queue
+            if current_time - last_stats_send >= stats_send_interval:
+                data_queue.put(
+                    {
+                        "type": "stats",
+                        "client_id": client_id,
+                        "sdr_id": sdr_id,
+                        "stats": stats.copy(),
+                        "timestamp": current_time,
+                    }
+                )
+                last_stats_send = current_time
             # Check for new configuration without blocking
             try:
                 if not config_queue.empty():
@@ -346,35 +394,45 @@ def soapysdr_local_worker_process(
                         # We got samples - add to our position
                         samples_read = sr.ret
                         buffer_position += samples_read
+                        stats["samples_read"] += samples_read
+                        stats["last_activity"] = time.time()
                         logger.debug(
                             f"Read {samples_read} samples, accumulated {buffer_position}/{num_samples}"
                         )
 
                     elif sr.ret == -4:  # SOAPY_SDR_OVERFLOW
+                        stats["read_errors"] += 1
                         # Overflow error - the internal ring buffer filled up because we didn't read fast enough
                         logger.warning(
                             "Buffer overflow detected (SOAPY_SDR_OVERFLOW), samples may have been lost"
                         )
 
                     elif sr.ret == -1:  # SOAPY_SDR_TIMEOUT
+                        stats["read_errors"] += 1
                         logger.warning("Stream timeout detected (SOAPY_SDR_TIMEOUT)")
 
                     elif sr.ret == -2:  # SOAPY_SDR_STREAM_ERROR
+                        stats["read_errors"] += 1
                         logger.warning("Stream error detected (SOAPY_SDR_STREAM_ERROR)")
 
                     elif sr.ret == -3:  # SOAPY_SDR_CORRUPTION
+                        stats["read_errors"] += 1
                         logger.warning("Data corruption detected (SOAPY_SDR_CORRUPTION)")
 
                     elif sr.ret == -5:  # SOAPY_SDR_NOT_SUPPORTED
+                        stats["read_errors"] += 1
                         logger.warning("Operation not supported (SOAPY_SDR_NOT_SUPPORTED)")
 
                     elif sr.ret == -6:  # SOAPY_SDR_TIME_ERROR
+                        stats["read_errors"] += 1
                         logger.warning("Timestamp error detected (SOAPY_SDR_TIME_ERROR)")
 
                     elif sr.ret == -7:  # SOAPY_SDR_UNDERFLOW
+                        stats["read_errors"] += 1
                         logger.warning("Buffer underflow detected (SOAPY_SDR_UNDERFLOW)")
 
                     else:
+                        stats["read_errors"] += 1
                         logger.warning(f"readStream returned unknown error code {sr.ret}")
                         time.sleep(0.1)
                         attempts += 1
@@ -417,8 +475,11 @@ def soapysdr_local_worker_process(
                                         },
                                     }
                                     iq_queue_fft.put_nowait(iq_message)
+                                    stats["iq_chunks_out"] += 1
+                                else:
+                                    stats["queue_drops"] += 1
                             except Exception:
-                                pass  # Drop if can't queue
+                                stats["queue_drops"] += 1
 
                         # Broadcast to demodulation queue
                         if iq_queue_demod is not None:
@@ -432,8 +493,11 @@ def soapysdr_local_worker_process(
                                         "timestamp": timestamp,
                                     }
                                     iq_queue_demod.put_nowait(demod_message)
+                                    stats["iq_chunks_out"] += 1
+                                else:
+                                    stats["queue_drops"] += 1
                             except Exception:
-                                pass  # Drop if can't queue
+                                stats["queue_drops"] += 1
 
                     except Exception as e:
                         logger.debug(f"Could not queue IQ data: {str(e)}")
@@ -441,6 +505,7 @@ def soapysdr_local_worker_process(
             except Exception as e:
                 logger.error(f"Error processing SDR data: {str(e)}")
                 logger.exception(e)
+                stats["errors"] += 1
 
                 # Send error back to the main process
                 data_queue.put(

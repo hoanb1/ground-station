@@ -17,8 +17,10 @@
 import json
 import logging
 import time
+from typing import Any, Dict
 
 import numpy as np
+import psutil
 import rtlsdr
 
 from workers.rtlsdrtcpclient import RtlSdrTcpClient
@@ -111,8 +113,55 @@ def rtlsdr_worker_process(
             }
         )
 
+        # Performance monitoring stats
+        stats: Dict[str, Any] = {
+            "samples_read": 0,
+            "iq_chunks_out": 0,
+            "read_errors": 0,
+            "queue_drops": 0,
+            "last_activity": None,
+            "errors": 0,
+            "cpu_percent": 0.0,
+            "memory_mb": 0.0,
+            "memory_percent": 0.0,
+        }
+        last_stats_send = time.time()
+        stats_send_interval = 1.0
+
+        # CPU and memory monitoring
+        process = psutil.Process()
+        last_cpu_check = time.time()
+        cpu_check_interval = 0.5
+
         # Main processing loop
         while not stop_event.is_set():
+            # Update CPU and memory usage periodically
+            current_time = time.time()
+            if current_time - last_cpu_check >= cpu_check_interval:
+                try:
+                    cpu_percent = process.cpu_percent()
+                    mem_info = process.memory_info()
+                    memory_mb = mem_info.rss / (1024 * 1024)
+                    memory_percent = process.memory_percent()
+                    stats["cpu_percent"] = cpu_percent
+                    stats["memory_mb"] = memory_mb
+                    stats["memory_percent"] = memory_percent
+                    last_cpu_check = current_time
+                except Exception as e:
+                    logger.debug(f"Error updating CPU/memory usage: {e}")
+
+            # Send stats periodically via data_queue
+            if current_time - last_stats_send >= stats_send_interval:
+                data_queue.put(
+                    {
+                        "type": "stats",
+                        "client_id": client_id,
+                        "sdr_id": sdr_id,
+                        "stats": stats.copy(),
+                        "timestamp": current_time,
+                    }
+                )
+                last_stats_send = current_time
             # Check for new configuration without blocking
             try:
                 if not config_queue.empty():
@@ -195,6 +244,8 @@ def rtlsdr_worker_process(
 
                 # Read samples
                 samples = sdr.read_samples(num_samples)
+                stats["samples_read"] += len(samples)
+                stats["last_activity"] = time.time()
 
                 # Remove DC offset
                 samples = remove_dc_offset(samples)
@@ -206,35 +257,50 @@ def rtlsdr_worker_process(
 
                     # Broadcast to FFT queue (for waterfall display)
                     if iq_queue_fft is not None:
-                        if not iq_queue_fft.full():
-                            iq_message = {
-                                "samples": samples,
-                                "center_freq": sdr.center_freq,
-                                "sample_rate": sdr.sample_rate,
-                                "timestamp": timestamp,
-                                "config": {
-                                    "fft_size": fft_size,
-                                    "fft_window": fft_window,
-                                    "fft_averaging": fft_averaging,
-                                    "fft_overlap": fft_overlap,
-                                },
-                            }
-                            iq_queue_fft.put_nowait(iq_message)
+                        try:
+                            if not iq_queue_fft.full():
+                                iq_message = {
+                                    "samples": samples,
+                                    "center_freq": sdr.center_freq,
+                                    "sample_rate": sdr.sample_rate,
+                                    "timestamp": timestamp,
+                                    "config": {
+                                        "fft_size": fft_size,
+                                        "fft_window": fft_window,
+                                        "fft_averaging": fft_averaging,
+                                        "fft_overlap": fft_overlap,
+                                    },
+                                }
+                                iq_queue_fft.put_nowait(iq_message)
+                                stats["iq_chunks_out"] += 1
+                            else:
+                                stats["queue_drops"] += 1
+                        except Exception:
+                            stats["queue_drops"] += 1
 
                     # Broadcast to demodulation queue
                     if iq_queue_demod is not None:
-                        if not iq_queue_demod.full():
-                            demod_message = {
-                                "samples": samples,
-                                "center_freq": sdr.center_freq,
-                                "sample_rate": sdr.sample_rate,
-                                "timestamp": timestamp,
-                            }
-                            iq_queue_demod.put_nowait(demod_message)
+                        try:
+                            if not iq_queue_demod.full():
+                                demod_message = {
+                                    "samples": samples,
+                                    "center_freq": sdr.center_freq,
+                                    "sample_rate": sdr.sample_rate,
+                                    "timestamp": timestamp,
+                                }
+                                iq_queue_demod.put_nowait(demod_message)
+                                stats["iq_chunks_out"] += 1
+                            else:
+                                stats["queue_drops"] += 1
+                        except Exception:
+                            stats["queue_drops"] += 1
 
             except Exception as e:
                 logger.error(f"Error processing SDR data: {str(e)}")
+
                 logger.exception(e)
+
+                stats["errors"] += 1
 
                 # Send error back to the main process
                 data_queue.put(

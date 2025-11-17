@@ -552,8 +552,14 @@ class ProcessLifecycleManager:
                             )
 
                         elif data_type == "stats":
-                            # Store FFT processor stats for performance monitoring
-                            process_info["fft_stats"] = data.get("stats", {})
+                            # Store stats for performance monitoring
+                            # Check if it's FFT stats or worker stats based on presence of sdr_id
+                            if "sdr_id" in data:
+                                # Worker process stats
+                                process_info["worker_stats"] = data.get("stats", {})
+                            else:
+                                # FFT processor stats
+                                process_info["fft_stats"] = data.get("stats", {})
 
                         elif data_type == QueueMessageTypes.STREAMING_START:
                             # Send streaming status to all clients connected to this SDR

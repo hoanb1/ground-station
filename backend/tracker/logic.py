@@ -17,8 +17,11 @@
 import asyncio
 import logging
 import multiprocessing
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+import psutil
 
 import crud
 from common.arguments import arguments as args
@@ -140,6 +143,28 @@ class SatelliteTracker:
         # Performance monitoring
         self.start_loop_date: Optional[datetime] = None
 
+        # Stats tracking
+        self.stats: Dict[str, Any] = {
+            "updates_sent": 0,
+            "commands_processed": 0,
+            "db_queries": 0,
+            "tracking_cycles": 0,
+            "rotator_updates": 0,
+            "rig_updates": 0,
+            "last_activity": None,
+            "errors": 0,
+            "cpu_percent": 0.0,
+            "memory_mb": 0.0,
+            "memory_percent": 0.0,
+        }
+        self.last_stats_send = time.time()
+        self.stats_send_interval = 1.0
+
+        # CPU and memory monitoring
+        self.process = psutil.Process()
+        self.last_cpu_check = time.time()
+        self.cpu_check_interval = 0.5
+
         # Initialize handlers
         self.rotator_handler = RotatorHandler(self)
         self.rig_handler = RigHandler(self)
@@ -159,6 +184,33 @@ class SatelliteTracker:
         tracker: Dict[str, Any] = {}
 
         while True:
+            # Update CPU and memory usage periodically
+            current_time = time.time()
+            if current_time - self.last_cpu_check >= self.cpu_check_interval:
+                try:
+                    cpu_percent = self.process.cpu_percent()
+                    mem_info = self.process.memory_info()
+                    memory_mb = mem_info.rss / (1024 * 1024)
+                    memory_percent = self.process.memory_percent()
+                    self.stats["cpu_percent"] = cpu_percent
+                    self.stats["memory_mb"] = memory_mb
+                    self.stats["memory_percent"] = memory_percent
+                    self.last_cpu_check = current_time
+                except Exception as e:
+                    logger.debug(f"Error updating CPU/memory usage: {e}")
+
+            # Send stats periodically via queue_out
+            if current_time - self.last_stats_send >= self.stats_send_interval:
+                self.queue_out.put(
+                    {
+                        "type": "stats",
+                        "tracker_id": "satellite_tracker",
+                        "stats": self.stats.copy(),
+                        "timestamp": current_time,
+                    }
+                )
+                self.last_stats_send = current_time
+
             # Process commands first
             should_stop = await self.state_manager.process_commands()
             if should_stop:
@@ -168,16 +220,20 @@ class SatelliteTracker:
             initial_tracking_state = None
 
             try:
+                self.stats["tracking_cycles"] += 1
+                self.stats["last_activity"] = time.time()
                 self.start_loop_date = datetime.now(timezone.utc)
                 self.events = []
 
                 # Get tracking data from database
                 async with AsyncSessionLocal() as dbsession:
+                    self.stats["db_queries"] += 1
 
                     # Get tracking state from the db (snapshot at start of iteration)
                     tracking_state_reply = await crud.tracking_state.get_tracking_state(
                         dbsession, name=TrackingStateNames.SATELLITE_TRACKING
                     )
+                    self.stats["db_queries"] += 1
 
                     # Handle missing or empty tracking state (first-time users)
                     if not tracking_state_reply.get("success"):
@@ -209,6 +265,7 @@ class SatelliteTracker:
 
                     # Fetch the location of the ground station
                     location_reply = await crud.locations.fetch_all_locations(dbsession)
+                    self.stats["db_queries"] += 1
                     if not location_reply["data"] or len(location_reply["data"]) == 0:
                         raise Exception("No location found in the database")
                     location = location_reply["data"][0]
@@ -218,6 +275,7 @@ class SatelliteTracker:
                     self.satellite_data = await compiled_satellite_data(
                         dbsession, tracking_state_reply["data"]["value"]["norad_id"]
                     )
+                    self.stats["db_queries"] += 1
                     assert not self.satellite_data["error"], (
                         f"Could not compute satellite details for satellite "
                         f"{tracking_state_reply['data']['value']['norad_id']}"
@@ -282,6 +340,7 @@ class SatelliteTracker:
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")
                 logger.exception(e)
+                self.stats["errors"] += 1
 
             finally:
                 # Check for race condition: re-read tracking state and compare
@@ -327,9 +386,11 @@ class SatelliteTracker:
                                 f"Sending satellite tracking data: " f"\n{pretty_dict(full_msg)}"
                             )
                             self.queue_out.put(full_msg)
+                            self.stats["updates_sent"] += 1
 
                         except Exception as e:
                             logger.critical(f"Error sending satellite tracking data: {e}")
+                            self.stats["errors"] += 1
                             logger.exception(e)
 
                 # Calculate sleep time
