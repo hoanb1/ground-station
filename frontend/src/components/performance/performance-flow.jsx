@@ -30,46 +30,10 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { Box, Button, Typography } from '@mui/material';
 import { ComponentNode } from './flow-node.jsx';
-import { createFlowFromMetrics } from './flow-layout.js';
-import dagre from 'dagre';
+import { createFlowFromMetrics, applyDagreLayout } from './flow-layout.js';
 
 const nodeTypes = {
     componentNode: ComponentNode,
-};
-
-// Dagre layout configuration
-const dagreGraph = new dagre.graphlib.Graph();
-dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-const getLayoutedElements = (nodes, edges, direction = 'LR') => {
-    const nodeWidth = 300;
-    const nodeHeight = 200;
-    const isHorizontal = direction === 'LR';
-
-    dagreGraph.setGraph({ rankdir: direction, nodesep: 80, ranksep: 180 });
-
-    nodes.forEach((node) => {
-        dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
-    });
-
-    edges.forEach((edge) => {
-        dagreGraph.setEdge(edge.source, edge.target);
-    });
-
-    dagre.layout(dagreGraph);
-
-    const layoutedNodes = nodes.map((node) => {
-        const nodeWithPosition = dagreGraph.node(node.id);
-        return {
-            ...node,
-            position: {
-                x: nodeWithPosition.x - nodeWidth / 2,
-                y: nodeWithPosition.y - nodeHeight / 2,
-            },
-        };
-    });
-
-    return { nodes: layoutedNodes, edges };
 };
 
 const FlowContent = ({ metrics }) => {
@@ -136,15 +100,14 @@ const FlowContent = ({ metrics }) => {
 
     // Auto-arrange handler
     const onAutoArrange = useCallback(() => {
-        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
+        const layoutedNodes = applyDagreLayout(nodes, edges);
         setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
 
         // Fit view after layout instantly
         window.requestAnimationFrame(() => {
             fitView({ padding: 0.2, duration: 0 });
         });
-    }, [nodes, edges, setNodes, setEdges, fitView]);
+    }, [nodes, edges, setNodes, fitView]);
 
 
     // Detect node count changes and trigger re-layout
@@ -201,7 +164,7 @@ const FlowContent = ({ metrics }) => {
                     });
 
                     // Apply layout to nodes with updated connection counts
-                    const { nodes: layoutedNodes } = getLayoutedElements(nodesWithCounts, edges);
+                    const layoutedNodes = applyDagreLayout(nodesWithCounts, edges);
                     return layoutedNodes;
                 });
 

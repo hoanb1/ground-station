@@ -82,7 +82,7 @@ const getEdgeColor = (dataType, queueUtilization = 0, isAnimated = true) => {
  * @param {Array} edges - ReactFlow edges
  * @returns {Array} - Nodes with updated positions
  */
-const applyDagreLayout = (nodes, edges) => {
+export const applyDagreLayout = (nodes, edges) => {
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
 
