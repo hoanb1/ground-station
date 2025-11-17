@@ -78,6 +78,7 @@ const FlowContent = ({ metrics }) => {
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const initializedRef = useRef(false);
     const autoArrangedRef = useRef(false);
+    const previousNodeCountRef = useRef(0);
     const { fitView } = useReactFlow();
 
     // Convert metrics to nodes and edges
@@ -144,6 +145,28 @@ const FlowContent = ({ metrics }) => {
             }, 100);
         }
     }, [nodes.length, onAutoArrange]);
+
+    // Detect node count changes and trigger re-layout
+    useEffect(() => {
+        const currentNodeCount = nodes.length;
+
+        if (previousNodeCountRef.current !== 0 && previousNodeCountRef.current !== currentNodeCount) {
+            // Node count changed (node added or removed)
+            // Re-apply Dagre layout to all nodes with updated positions
+            setNodes((currentNodes) => {
+                // Apply layout to current nodes and edges
+                const { nodes: layoutedNodes } = getLayoutedElements(currentNodes, edges);
+                return layoutedNodes;
+            });
+
+            // Trigger fitView with animation after layout
+            window.requestAnimationFrame(() => {
+                fitView({ padding: 0.2, duration: 800 });
+            });
+        }
+
+        previousNodeCountRef.current = currentNodeCount;
+    }, [nodes.length, edges, fitView, setNodes]);
 
     return (
         <Box

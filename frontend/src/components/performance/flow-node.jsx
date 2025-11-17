@@ -100,11 +100,20 @@ export const ComponentNode = ({ data }) => {
                         {data.label}
                     </Typography>
                     {component.is_alive !== undefined && (
-                        <Chip
-                            label={component.is_alive ? (type === 'recorder' ? 'Recording' : 'Running') : 'Stopped'}
-                            size="small"
-                            color={component.is_alive ? (type === 'recorder' ? 'error' : 'success') : 'error'}
-                            sx={{ fontSize: '0.65rem', height: '18px', '& .MuiChip-label': { px: 0.5, py: 0 } }}
+                        <Box
+                            sx={{
+                                width: 10,
+                                height: 10,
+                                borderRadius: '50%',
+                                ml: 1,
+                                mr: '5px',
+                                backgroundColor: component.is_alive
+                                    ? (type === 'recorder' ? '#f44336' : '#4caf50')
+                                    : '#9e9e9e',
+                                boxShadow: component.is_alive
+                                    ? `0 0 8px ${type === 'recorder' ? '#f44336' : '#4caf50'}`
+                                    : 'none',
+                            }}
                         />
                     )}
                 </Box>

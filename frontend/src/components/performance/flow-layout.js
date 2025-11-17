@@ -17,6 +17,8 @@
  *
  */
 
+import dagre from 'dagre';
+
 /**
  * Get edge color based on data type and queue health
  */
@@ -40,6 +42,92 @@ const getEdgeColor = (dataType, queueUtilization = 0) => {
     }
 
     return baseColor;
+};
+
+/**
+ * Apply Dagre layout with rank constraints to organize nodes hierarchically
+ * @param {Array} nodes - ReactFlow nodes
+ * @param {Array} edges - ReactFlow edges
+ * @returns {Array} - Nodes with updated positions
+ */
+const applyDagreLayout = (nodes, edges) => {
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+    // Configure graph layout
+    dagreGraph.setGraph({
+        rankdir: 'LR', // Left to right
+        ranksep: 150,  // Horizontal spacing between ranks
+        nodesep: 80,   // Vertical spacing between nodes
+        edgesep: 30,   // Spacing between edges
+        ranker: 'network-simplex', // Best for hierarchical layouts
+    });
+
+    // Define rank order for different node types
+    const getRank = (node) => {
+        const type = node.data.type;
+        const componentType = node.data.component?.type;
+
+        // Rank 0: IQ Broadcasters (leftmost)
+        if (type === 'broadcaster' && node.data.component?.broadcaster_type === 'iq') {
+            return 0;
+        }
+        // Rank 1: FFT Processors
+        if (type === 'fft') {
+            return 1;
+        }
+        // Rank 2: Demodulators and Recorders
+        if (type === 'demodulator' || type === 'recorder') {
+            return 2;
+        }
+        // Rank 3: Audio Broadcasters
+        if (type === 'broadcaster' && node.data.component?.broadcaster_type === 'audio') {
+            return 3;
+        }
+        // Rank 4: Decoders
+        if (type === 'decoder') {
+            return 4;
+        }
+        // Rank 5: WebAudioStreamer
+        if (type === 'streamer') {
+            return 5;
+        }
+        // Rank 6: Browsers (rightmost)
+        if (type === 'browser') {
+            return 6;
+        }
+
+        return 10; // Default rank for unknown types
+    };
+
+    // Add nodes to dagre graph with rank constraints
+    nodes.forEach((node) => {
+        dagreGraph.setNode(node.id, {
+            width: 280,
+            height: 200,
+            rank: getRank(node),
+        });
+    });
+
+    // Add edges to dagre graph
+    edges.forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    // Compute layout
+    dagre.layout(dagreGraph);
+
+    // Apply computed positions to nodes
+    return nodes.map((node) => {
+        const nodeWithPosition = dagreGraph.node(node.id);
+        return {
+            ...node,
+            position: {
+                x: nodeWithPosition.x - nodeWithPosition.width / 2,
+                y: nodeWithPosition.y - nodeWithPosition.height / 2,
+            },
+        };
+    });
 };
 
 /**
@@ -604,5 +692,8 @@ export const createFlowFromMetrics = (metrics) => {
         }
     });
 
-    return { nodes, edges };
+    // Apply Dagre layout with rank constraints
+    const layoutedNodes = applyDagreLayout(nodes, edges);
+
+    return { nodes: layoutedNodes, edges };
 };

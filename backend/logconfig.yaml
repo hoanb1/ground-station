@@ -251,6 +251,12 @@ loggers:
       - default
     propagate: no
 
+  morsedecoder:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:
