@@ -152,10 +152,53 @@ const FlowContent = ({ metrics }) => {
 
         if (previousNodeCountRef.current !== 0 && previousNodeCountRef.current !== currentNodeCount) {
             // Node count changed (node added or removed)
-            // Re-apply Dagre layout to all nodes with updated positions
+            // Re-calculate connection counts and re-apply layout
             setNodes((currentNodes) => {
-                // Apply layout to current nodes and edges
-                const { nodes: layoutedNodes } = getLayoutedElements(currentNodes, edges);
+                // Recalculate connection counts for each node
+                const connectionCounts = new Map();
+                const initNodeConnections = (nodeId) => {
+                    if (!connectionCounts.has(nodeId)) {
+                        connectionCounts.set(nodeId, { inputs: 0, outputs: 0 });
+                    }
+                };
+
+                // Track implicit broadcast sources to only count them once
+                const implicitBroadcastSources = new Set();
+
+                edges.forEach(edge => {
+                    initNodeConnections(edge.source);
+                    initNodeConnections(edge.target);
+
+                    // Check if this is an implicit broadcast edge
+                    const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-');
+
+                    if (isImplicitBroadcast) {
+                        if (!implicitBroadcastSources.has(edge.source)) {
+                            connectionCounts.get(edge.source).outputs++;
+                            implicitBroadcastSources.add(edge.source);
+                        }
+                    } else {
+                        connectionCounts.get(edge.source).outputs++;
+                    }
+
+                    connectionCounts.get(edge.target).inputs++;
+                });
+
+                // Update nodes with recalculated connection counts
+                const nodesWithCounts = currentNodes.map(node => {
+                    const counts = connectionCounts.get(node.id) || { inputs: 1, outputs: 1 };
+                    return {
+                        ...node,
+                        data: {
+                            ...node.data,
+                            inputCount: Math.max(counts.inputs, 1),
+                            outputCount: Math.max(counts.outputs, 1),
+                        }
+                    };
+                });
+
+                // Apply layout to nodes with updated connection counts
+                const { nodes: layoutedNodes } = getLayoutedElements(nodesWithCounts, edges);
                 return layoutedNodes;
             });
 
