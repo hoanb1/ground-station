@@ -48,7 +48,7 @@ const getEdgeColor = (dataType, queueUtilization = 0, isAnimated = true) => {
     // Base colors by data type
     const baseColors = {
         'iq': '#2196f3',        // Blue for IQ samples
-        'audio': '#00bcd4',     // Cyan for audio
+        'audio': '#4caf50',     // Green for audio
         'decoded': '#ff9800',   // Orange for decoded data (morse, SSTV)
         'fft': '#9c27b0',       // Purple for FFT/waterfall
         'implicit': '#666',     // Gray for implicit connections

@@ -297,7 +297,7 @@ const FlowContent = ({ metrics }) => {
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box sx={{ width: 25, height: 2, backgroundColor: '#00bcd4' }} />
+                                <Box sx={{ width: 25, height: 2, backgroundColor: '#4caf50' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.7rem' }}>
                                     Audio
                                 </Typography>
