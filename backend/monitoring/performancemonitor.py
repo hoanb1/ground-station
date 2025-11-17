@@ -194,8 +194,12 @@ class PerformanceMonitor(threading.Thread):
         # Store current snapshot for next iteration
         self.previous_snapshots[prev_key] = worker_stats.copy()
 
-        # Add connection info: Worker feeds IQ broadcaster
-        connections = [{"target_type": "iq_broadcaster", "target_id": f"iq_{sdr_id}"}]
+        # Add connection info: Worker feeds BOTH FFT processor (via iq_queue_fft)
+        # and IQ broadcaster (via iq_queue_demod)
+        connections = [
+            {"target_type": "fft_processor", "target_id": sdr_id},
+            {"target_type": "iq_broadcaster", "target_id": f"iq_{sdr_id}"},
+        ]
 
         return {
             "worker_id": sdr_id,
@@ -229,12 +233,12 @@ class PerformanceMonitor(threading.Thread):
         # Poll IQ Broadcaster
         iq_broadcaster_metrics = self._poll_iq_broadcaster(sdr_id, process_info, time_delta)
         if iq_broadcaster_metrics:
-            # Add connection info: IQ broadcaster receives from worker and feeds FFT processor and demodulators
+            # Add connection info: IQ broadcaster receives from worker and feeds demodulators
+            # (NOT FFT processor - that gets data directly from worker via iq_queue_fft)
             connections = []
-            # Source: Worker process
+            # Source: Worker process (via iq_queue_demod)
             connections.append({"source_type": "worker", "source_id": sdr_id})
-            # Targets: FFT processor and demodulators
-            connections.append({"target_type": "fft_processor", "target_id": sdr_id})
+            # Targets: Only demodulators (FFT processor has direct connection from worker)
 
             # Add connections to demodulators
             demodulators = process_info.get("demodulators", {})
@@ -397,8 +401,8 @@ class PerformanceMonitor(threading.Thread):
         # Store current snapshot for next iteration
         self.previous_snapshots[prev_key] = fft_stats.copy()
 
-        # Add connection info: FFT processor receives from IQ broadcaster
-        connections = [{"source_type": "iq_broadcaster", "source_id": f"iq_{sdr_id}"}]
+        # Add connection info: FFT processor receives DIRECTLY from worker (via iq_queue_fft)
+        connections = [{"source_type": "worker", "source_id": sdr_id}]
 
         return {
             "fft_id": sdr_id,

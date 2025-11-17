@@ -297,19 +297,18 @@ export const createFlowFromMetrics = (metrics) => {
                     },
                 });
 
-                // Edge: IQ Broadcaster -> FFT Processor
-                const iqBroadcasterId = nodeMap.get(`${sdrId}-iq-broadcaster`);
-                if (iqBroadcasterId) {
-                    const iqBroadcaster = sdrData.broadcasters[`iq_${sdrId}`];
-                    const isAnimated = hasPositiveOutputRate(iqBroadcaster);
+                // Edge: Worker -> FFT Processor (direct connection via iq_queue_fft)
+                const workerId = nodeMap.get(`${sdrId}-worker`);
+                if (workerId && sdrData.worker) {
+                    const isAnimated = hasPositiveOutputRate(sdrData.worker);
                     edges.push({
-                        id: `edge-${iqBroadcasterId}-${nodeId}`,
-                        source: iqBroadcasterId,
+                        id: `edge-${workerId}-${nodeId}`,
+                        source: workerId,
                         target: nodeId,
-                        sourceHandle: getNextOutputHandle(iqBroadcasterId),
+                        sourceHandle: getNextOutputHandle(workerId),
                         targetHandle: getNextInputHandle(nodeId),
                         animated: isAnimated,
-                        style: { stroke: getEdgeColor('iq', 0, isAnimated), strokeWidth: 2 },
+                        style: { stroke: getEdgeColor('fft', 0, isAnimated), strokeWidth: 2 },
                         type: 'smoothstep',
                     });
                 }
