@@ -29,6 +29,10 @@ import {
     Grid2,
     Button,
     Card,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    Link,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useState, useRef } from "react";
@@ -39,6 +43,8 @@ import { useTranslation } from 'react-i18next';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import InfoIcon from '@mui/icons-material/Info';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import EditIcon from '@mui/icons-material/Edit';
+import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -46,16 +52,24 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { humanizeFrequency, formatLegibleDateTime, betterStatusValue } from "../common/common.jsx";
 import SatSelectorIsland from "../target/satellite-selector.jsx";
 import { SatellitePassTimeline } from "../target/timeline-main.jsx";
+import TransmittersTable from "../satellites/transmitters-table.jsx";
 
 const SatelliteInfoPopover = () => {
     const theme = useTheme();
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(null);
+    const [transmittersDialogOpen, setTransmittersDialogOpen] = useState(false);
     const navigate = useNavigate();
     const { t } = useTranslation('dashboard');
 
     // Get satellite data from Redux store
     const { satelliteData, trackingState, rotatorData, satellitePasses, activePass } = useSelector(state => state.targetSatTrack);
+
+    // Combine details and transmitters for the TransmittersTable component
+    const targetSatelliteData = satelliteData.details ? {
+        ...satelliteData.details,
+        transmitters: satelliteData.transmitters || []
+    } : null;
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -364,24 +378,52 @@ const SatelliteInfoPopover = () => {
                                     <Typography variant="subtitle2" sx={{ color: 'info.light', fontWeight: 'bold' }}>
                                         {t('target_popover.sections.current_position')}
                                     </Typography>
-                                    <Button
-                                        size="small"
-                                        onClick={handleNavigateToSatelliteInfo}
-                                        endIcon={<OpenInNewIcon sx={{ fontSize: '0.9rem' }} />}
-                                        sx={{
-                                            color: 'text.disabled',
-                                            fontSize: '0.7rem',
-                                            textTransform: 'none',
-                                            minWidth: 'auto',
-                                            padding: '2px 6px',
-                                            '&:hover': {
-                                                color: 'info.light',
-                                                backgroundColor: 'transparent',
-                                            },
-                                        }}
-                                    >
-                                        More info
-                                    </Button>
+                                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                        <Link
+                                            component="button"
+                                            onClick={handleNavigateToSatelliteInfo}
+                                            sx={{
+                                                color: 'text.disabled',
+                                                fontSize: '0.7rem',
+                                                textDecoration: 'none',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 0.3,
+                                                '&:hover': {
+                                                    color: 'info.light',
+                                                    textDecoration: 'underline',
+                                                },
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            View info
+                                            <OpenInNewIcon sx={{ fontSize: '0.75rem' }} />
+                                        </Link>
+                                        <Typography sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>•</Typography>
+                                        <Link
+                                            component="button"
+                                            onClick={() => {
+                                                setTransmittersDialogOpen(true);
+                                                handleClose();
+                                            }}
+                                            sx={{
+                                                color: 'text.disabled',
+                                                fontSize: '0.7rem',
+                                                textDecoration: 'none',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 0.3,
+                                                '&:hover': {
+                                                    color: 'info.light',
+                                                    textDecoration: 'underline',
+                                                },
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            Edit transmitters
+                                            <EditIcon sx={{ fontSize: '0.75rem' }} />
+                                        </Link>
+                                    </Box>
                                 </Box>
                                 <Grid2 container spacing={1}>
                                     <Grid2 size={4}>
@@ -486,6 +528,35 @@ const SatelliteInfoPopover = () => {
                     </Box>
                 </Box>
             </Popover>
+
+            {/* Transmitters Dialog */}
+            <Dialog
+                open={transmittersDialogOpen}
+                onClose={() => setTransmittersDialogOpen(false)}
+                maxWidth="xl"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        backgroundColor: 'background.default',
+                    }
+                }}
+            >
+                <DialogTitle sx={{ backgroundColor: 'background.default', color: 'text.primary' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6">
+                            {satelliteData.details?.name} - Transmitters
+                        </Typography>
+                        <IconButton onClick={() => setTransmittersDialogOpen(false)} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.default' }}>
+                    {targetSatelliteData && (
+                        <TransmittersTable satelliteData={targetSatelliteData} inDialog={true} />
+                    )}
+                </DialogContent>
+            </Dialog>
         </>
     );
 };

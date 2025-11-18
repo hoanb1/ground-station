@@ -20,12 +20,12 @@
 import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, Stack} from "@mui/material";
 import Button from "@mui/material/Button";
 import * as React from "react";
-import {useState} from "react";
+import {useState, useEffect} from "react";
 import {
     DataGrid,
     gridClasses,
 } from "@mui/x-data-grid";
-import {useDispatch, useSelector} from "react-redux";
+import {useDispatch} from "react-redux";
 import {deleteTransmitter} from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import TransmitterModal from "./transmitter-modal.jsx";
@@ -75,15 +75,43 @@ const formatFrequency = (frequency) => {
 
 const paginationModel = {page: 0, pageSize: 10};
 
-const SatelliteTransmittersTable = ({ rows, setRows, clickedSatellite }) => {
+const TransmittersTable = ({ satelliteData, inDialog = false }) => {
     const { t } = useTranslation('satellites');
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [editingTransmitter, setEditingTransmitter] = useState(null);
     const [isNewTransmitter, setIsNewTransmitter] = useState(false);
     const [selected, setSelected] = useState([]);
+    const [rows, setRows] = useState([]);
     const dispatch = useDispatch();
     const {socket} = useSocket();
+
+    // Update rows when satelliteData changes
+    useEffect(() => {
+        if (satelliteData && satelliteData.transmitters) {
+            const mappedRows = satelliteData.transmitters.map((transmitter, index) => ({
+                id: transmitter.id || `existing-${index}`,
+                description: transmitter.description || "-",
+                type: transmitter.type || "-",
+                status: transmitter.status || "-",
+                alive: transmitter.alive || "-",
+                uplinkLow: transmitter.uplink_low || "-",
+                uplinkHigh: transmitter.uplink_high || "-",
+                uplinkDrift: transmitter.uplink_drift || "-",
+                downlinkLow: transmitter.downlink_low || "-",
+                downlinkHigh: transmitter.downlink_high || "-",
+                downlinkDrift: transmitter.downlink_drift || "-",
+                mode: transmitter.mode || "-",
+                uplinkMode: transmitter.uplink_mode || "-",
+                invert: transmitter.invert || "-",
+                baud: transmitter.baud || "-",
+                _original: transmitter,
+            }));
+            setRows(mappedRows);
+        } else {
+            setRows([]);
+        }
+    }, [satelliteData]);
 
     const handleAddClick = () => {
         setEditingTransmitter(null);
@@ -112,7 +140,7 @@ const SatelliteTransmittersTable = ({ rows, setRows, clickedSatellite }) => {
                     await dispatch(deleteTransmitter({
                         socket,
                         transmitterId: transmitter._original.id,
-                        satelliteId: clickedSatellite.norad_id,
+                        satelliteId: satelliteData.norad_id,
                     })).unwrap();
                 }
             }
@@ -190,12 +218,27 @@ const SatelliteTransmittersTable = ({ rows, setRows, clickedSatellite }) => {
         {field: "baud", headerName: t('satellite_info.transmitters.columns.baud'), flex: 0.8, minWidth: 80},
     ];
 
+    if (!satelliteData || !satelliteData.norad_id) {
+        return (
+            <Box sx={{flexShrink: 0}}>
+                <Typography variant="h6" component="h3" sx={{mb: 2}}>
+                    {t('satellite_info.transmitters.title')}
+                </Typography>
+                <div style={{textAlign: 'center'}}>
+                    <span>{t('satellite_info.transmitters.no_data')}</span>
+                </div>
+            </Box>
+        );
+    }
+
     return (
         <Box sx={{flexShrink: 0}}>
-            <Typography variant="h6" component="h3" sx={{mb: 2}}>
-                {t('satellite_info.transmitters.title')}
-            </Typography>
-            {clickedSatellite['transmitters'] ? (
+            {!inDialog && (
+                <Typography variant="h6" component="h3" sx={{mb: 2}}>
+                    {t('satellite_info.transmitters.title')}
+                </Typography>
+            )}
+            {satelliteData.transmitters ? (
                 <Box sx={{width: '100%'}}>
                     <DataGrid
                         rows={rows}
@@ -210,7 +253,8 @@ const SatelliteTransmittersTable = ({ rows, setRows, clickedSatellite }) => {
                             border: 'none',
                             backgroundColor: 'background.paper',
                             color: 'text.primary',
-                            height: '100%',
+                            height: inDialog ? '500px' : '100%',
+                            minHeight: inDialog ? '500px' : 'auto',
                             [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                                 outline: 'none',
                             },
@@ -291,11 +335,11 @@ const SatelliteTransmittersTable = ({ rows, setRows, clickedSatellite }) => {
                 open={editModalOpen}
                 onClose={handleModalClose}
                 transmitter={editingTransmitter}
-                satelliteId={clickedSatellite.norad_id}
+                satelliteId={satelliteData.norad_id}
                 isNew={isNewTransmitter}
             />
         </Box>
     );
 };
 
-export default SatelliteTransmittersTable;
+export default TransmittersTable;

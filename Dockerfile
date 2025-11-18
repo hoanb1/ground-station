@@ -243,10 +243,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-packaging \
     pybind11-dev \
     python3-pybind11 \
+    libzmq3-dev \
+    libcppzmq-dev \
+    python3-zmq \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages needed for GNU Radio in the venv
-RUN pip install packaging pybind11
+RUN pip install packaging pybind11 pyzmq
 
 # Reinstall numpy in the venv (was installed with --break-system-packages earlier)
 RUN pip install --force-reinstall numpy==2.3.1
@@ -272,6 +275,7 @@ RUN git clone --depth=1 --branch=maint-3.10 --recursive https://github.com/gnura
           -DENABLE_PYTHON=ON \
           -DENABLE_GR_QTGUI=OFF \
           -DENABLE_TESTING=OFF \
+          -DENABLE_GR_ZEROMQ=ON \
           -DPython3_EXECUTABLE=/app/venv/bin/python3 \
           -DPYTHON_EXECUTABLE=/app/venv/bin/python3 \
           .. && \
@@ -301,6 +305,25 @@ RUN git clone --depth=1 https://github.com/tapparelj/gr-lora_sdr.git && \
 RUN cp -r /usr/local/lib/python3/dist-packages/lora_sdr* /app/venv/lib/python3.12/site-packages/ 2>/dev/null || \
     cp -r /usr/local/lib/python3.12/site-packages/lora_sdr* /app/venv/lib/python3.12/site-packages/ 2>/dev/null || \
     echo "Warning: Could not find lora_sdr Python bindings"
+
+# Compile gr-satellites
+WORKDIR /src
+RUN git clone --depth=1 https://github.com/daniestevez/gr-satellites.git && \
+    cd gr-satellites && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
+          -DPYTHON_EXECUTABLE=/app/venv/bin/python3 \
+          -DPYTHON_INCLUDE_DIR=/usr/include/python3.12 \
+          -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.12.so .. && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
+    sudo ldconfig
+
+# Copy gr-satellites Python bindings to virtual environment
+RUN cp -r /usr/local/lib/python3/dist-packages/satellites* /app/venv/lib/python3.12/site-packages/ 2>/dev/null || \
+    cp -r /usr/local/lib/python3.12/site-packages/satellites* /app/venv/lib/python3.12/site-packages/ 2>/dev/null || \
+    echo "Warning: Could not find gr-satellites Python bindings"
 
 # Configure library paths and copy Python bindings
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \

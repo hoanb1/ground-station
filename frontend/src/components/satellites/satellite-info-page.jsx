@@ -34,7 +34,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import SatelliteMapContainer from "./satellite-map.jsx";
-import SatelliteTransmittersTable from "./satellite-transmitters-table.jsx";
+import TransmittersTable from "./transmitters-table.jsx";
 import { useParams, useNavigate } from 'react-router';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloseIcon from '@mui/icons-material/Close';
@@ -62,7 +62,6 @@ const SatelliteInfoContent = ({
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const navigate = useNavigate();
-    const [rows, setRows] = useState([]);
     const [imageError, setImageError] = useState(false);
     const [satellitePosition, setSatellitePosition] = useState([0, 0]);
     const [deleteSatelliteConfirmOpen, setDeleteSatelliteConfirmOpen] = useState(false);
@@ -74,34 +73,12 @@ const SatelliteInfoContent = ({
     });
 
     useEffect(() => {
-        if (satelliteData && satelliteData.transmitters) {
-            const mappedRows = satelliteData.transmitters.map((transmitter, index) => ({
-                id: transmitter.id || `existing-${index}`,
-                description: transmitter.description || "-",
-                type: transmitter.type || "-",
-                status: transmitter.status || "-",
-                alive: transmitter.alive || "-",
-                uplinkLow: transmitter.uplink_low || "-",
-                uplinkHigh: transmitter.uplink_high || "-",
-                uplinkDrift: transmitter.uplink_drift || "-",
-                downlinkLow: transmitter.downlink_low || "-",
-                downlinkHigh: transmitter.downlink_high || "-",
-                downlinkDrift: transmitter.downlink_drift || "-",
-                mode: transmitter.mode || "-",
-                uplinkMode: transmitter.uplink_mode || "-",
-                invert: transmitter.invert || "-",
-                baud: transmitter.baud || "-",
-                _original: transmitter,
-            }));
-            setRows(mappedRows);
-
+        if (satelliteData) {
             if (satelliteData.latitude && satelliteData.longitude) {
                 setSatellitePosition([satelliteData.latitude, satelliteData.longitude]);
             } else {
                 setSatellitePosition([0, 0]);
             }
-        } else {
-            setRows([]);
         }
     }, [satelliteData]);
 
@@ -440,10 +417,8 @@ const SatelliteInfoContent = ({
             </Grid>
 
             {/* Transmitters section */}
-            <SatelliteTransmittersTable
-                rows={rows}
-                setRows={setRows}
-                clickedSatellite={satelliteData}
+            <TransmittersTable
+                satelliteData={satelliteData}
             />
         </Box>
     );

@@ -369,33 +369,40 @@ class GMSKDecoder(threading.Thread):
             if self.symbol_count % 10000 == 0:
                 logger.debug(f"GMSK decoder: {self.symbol_count} symbols decoded")
 
-            # Save symbols to file for inspection
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"gmsk_{self.baudrate}baud_symbols_{timestamp}.bin"
-            filepath = os.path.join(self.output_dir, filename)
+                # Send status update to show we're still decoding
+                self._send_status_update(
+                    DecoderStatus.DECODING, {"symbols_decoded": self.symbol_count}
+                )
 
-            # Save as float32 binary
-            symbols.astype(np.float32).tofile(filepath)
+            # Save symbols to file periodically (every 50k symbols to avoid too many files)
+            if self.symbol_count % 50000 < len(symbols):
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                filename = f"gmsk_{self.baudrate}baud_symbols_{timestamp}.bin"
+                filepath = os.path.join(self.output_dir, filename)
 
-            # Send to UI (for now, just send symbol stats)
-            msg = {
-                "type": "decoder-output",
-                "decoder_type": "gmsk",
-                "session_id": self.session_id,
-                "vfo": self.vfo,
-                "timestamp": time.time(),
-                "output": {
-                    "format": "symbols",
-                    "symbol_count": len(symbols),
-                    "total_symbols": self.symbol_count,
-                    "baudrate": self.baudrate,
-                    "filepath": filepath,
-                },
-            }
-            try:
-                self.data_queue.put(msg, block=False)
-            except queue.Full:
-                logger.warning("Data queue full, dropping symbol output")
+                # Save as float32 binary
+                symbols.astype(np.float32).tofile(filepath)
+                logger.info(f"Saved {self.symbol_count} symbols to {filepath}")
+
+                # Send to UI
+                msg = {
+                    "type": "decoder-output",
+                    "decoder_type": "gmsk",
+                    "session_id": self.session_id,
+                    "vfo": self.vfo,
+                    "timestamp": time.time(),
+                    "output": {
+                        "format": "symbols",
+                        "symbol_count": len(symbols),
+                        "total_symbols": self.symbol_count,
+                        "baudrate": self.baudrate,
+                        "filepath": filepath,
+                    },
+                }
+                try:
+                    self.data_queue.put(msg, block=False)
+                except queue.Full:
+                    logger.warning("Data queue full, dropping symbol output")
 
         except Exception as e:
             logger.error(f"Error processing decoded symbols: {e}")

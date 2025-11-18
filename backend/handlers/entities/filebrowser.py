@@ -354,7 +354,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             if show_decoded and decoded_dir.exists():
                 # Support multiple file types in decoded directory
                 decoded_files = []
-                for pattern in ["*.png", "*.jpg", "*.jpeg", "*.json", "*.txt"]:
+                for pattern in ["*.png", "*.jpg", "*.jpeg", "*.json", "*.txt", "*.bin"]:
                     decoded_files.extend(list(decoded_dir.glob(pattern)))
 
                 for decoded_file in decoded_files:

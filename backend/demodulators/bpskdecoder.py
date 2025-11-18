@@ -29,7 +29,6 @@ import queue
 import threading
 import time
 from enum import Enum
-from math import ceil, pi
 from typing import Any, Dict
 
 import numpy as np
@@ -43,8 +42,7 @@ logger = logging.getLogger("bpskdecoder")
 GNURADIO_AVAILABLE = False
 
 try:
-    from gnuradio import analog, blocks, digital, filter, gr
-    from gnuradio.filter import firdes
+    from gnuradio import blocks, gr
 
     GNURADIO_AVAILABLE = True
     logger.info("GNU Radio available - BPSK decoder enabled")
@@ -64,66 +62,243 @@ class DecoderStatus(Enum):
     ERROR = "error"
 
 
-class BPSKPacketSink(gr.sync_block):
-    """Custom GNU Radio sink block to receive decoded BPSK packets with AX.25 framing"""
+class BPSKMessageHandler(gr.basic_block):
+    """Message handler to receive PDU messages from HDLC deframer"""
 
-    def __init__(self, callback, packet_size=256, sync_word=None):
+    def __init__(self, callback):
+        gr.basic_block.__init__(self, name="bpsk_message_handler", in_sig=None, out_sig=None)
+        self.callback = callback
+        self.message_port_register_in(gr.pmt.intern("in"))
+        self.set_msg_handler(gr.pmt.intern("in"), self.handle_msg)
+        self.packets_decoded = 0
+
+    def handle_msg(self, msg):
+        """Handle incoming PDU messages from HDLC deframer"""
+        try:
+            # Extract packet data from PDU
+            if gr.pmt.is_pair(msg):
+                packet_data = gr.pmt.to_python(gr.pmt.cdr(msg))
+            else:
+                packet_data = gr.pmt.to_python(msg)
+
+            # Convert numpy array to bytes
+            if isinstance(packet_data, np.ndarray):
+                packet_data = bytes(packet_data)
+
+            if isinstance(packet_data, bytes):
+                self.packets_decoded += 1
+                logger.info(
+                    f"BPSK decoded packet #{self.packets_decoded}: {len(packet_data)} bytes"
+                )
+
+                # Parse and log AX.25 callsigns
+                try:
+                    if len(packet_data) >= 14:
+                        dest_call = "".join(
+                            chr((packet_data[i] >> 1) & 0x7F) for i in range(6)
+                        ).strip()
+                        dest_ssid = (packet_data[6] >> 1) & 0x0F
+                        src_call = "".join(
+                            chr((packet_data[i] >> 1) & 0x7F) for i in range(7, 13)
+                        ).strip()
+                        src_ssid = (packet_data[13] >> 1) & 0x0F
+                        logger.info(
+                            f"  Callsigns: {dest_call}-{dest_ssid} <- {src_call}-{src_ssid}"
+                        )
+                        logger.info(f"  First 20 bytes: {packet_data[:20].hex()}")
+                except Exception as parse_err:
+                    logger.debug(f"Could not parse callsigns: {parse_err}")
+
+                # Add HDLC flags for compatibility
+                packet_with_flags = bytes([0x7E]) + packet_data + bytes([0x7E])
+
+                if self.callback:
+                    self.callback(packet_with_flags)
+            else:
+                logger.warning(f"Unexpected packet data type: {type(packet_data)}")
+
+        except Exception as e:
+            logger.error(f"Error handling message: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+
+class BPSKPacketSink(gr.sync_block):
+    """
+    Custom GNU Radio sink block to receive decoded BPSK packets with AX.25 framing
+
+    This sink expects bytes that have already been:
+    1. NRZI decoded
+    2. G3RUH descrambled
+    3. Ready for HDLC framing detection
+    """
+
+    def __init__(self, callback, packet_size=256):
         gr.sync_block.__init__(self, name="bpsk_packet_sink", in_sig=[np.uint8], out_sig=None)
         self.callback = callback
         self.packet_size = packet_size
         self.buffer = []
-        # AX.25 flag sequence: 0x7E (01111110)
-        self.sync_word = sync_word or b"\x7E"
+        # AX.25 HDLC flag sequence: 0x7E (01111110)
+        self.HDLC_FLAG = 0x7E
         self.last_packet_time: float = 0.0
-        self.min_packet_interval = 0.1  # Minimum 100ms between packets
+        self.min_packet_interval = 0.05  # Minimum 50ms between packets
         self.packets_decoded = 0
+        self.in_frame = False
+        self.frame_buffer = []
 
-    def _validate_ax25_packet(self, packet):
-        """Validate AX.25 packet structure"""
-        if len(packet) < 16:  # Minimum AX.25 frame size
+    def _parse_ax25_callsign(self, data, offset):
+        """Parse AX.25 callsign (6 bytes + SSID byte)"""
+        if offset + 7 > len(data):
+            return None, offset
+
+        callsign = ""
+        for i in range(6):
+            char = (data[offset + i] >> 1) & 0x7F
+            if 32 <= char <= 126:
+                callsign += chr(char)
+        callsign = callsign.strip()
+
+        ssid = (data[offset + 6] >> 1) & 0x0F
+        if ssid > 0:
+            callsign += f"-{ssid}"
+
+        return callsign, offset + 7
+
+    def _validate_ax25_frame(self, frame):
+        """Validate AX.25 frame structure with strict checks to avoid false positives"""
+        # Minimum size check
+        if len(frame) < 16:  # Minimum: dest(7) + src(7) + ctrl(1) + pid(1)
+            logger.debug(f"Frame too short: {len(frame)} bytes")
             return False
 
-        # Check for AX.25 flag at start and end
-        if packet[0] != 0x7E:
+        # Maximum reasonable size (typical satellite frames are < 300 bytes)
+        if len(frame) > 512:
+            logger.debug(f"Frame too long: {len(frame)} bytes")
             return False
 
-        # Check for reasonable entropy (not all zeros or all ones)
-        unique_bytes = len(set(packet))
-        if unique_bytes < 4:
+        # Validate callsign bytes BEFORE parsing
+        # AX.25 callsign bytes must be in valid range when shifted
+        # Valid chars: A-Z (0x41-0x5A), 0-9 (0x30-0x39), space (0x20)
+        # When left-shifted: 0x82-0xB4, 0x60-0x72, 0x40
+        for i in range(14):  # dest (7 bytes) + src (7 bytes)
+            if i % 7 == 6:
+                # SSID byte - skip for now
+                continue
+            byte_val = frame[i]
+            char = (byte_val >> 1) & 0x7F
+            # Must be uppercase letter, digit, or space
+            if not ((0x41 <= char <= 0x5A) or (0x30 <= char <= 0x39) or char == 0x20):
+                logger.debug(
+                    f"Invalid callsign byte at offset {i}: 0x{byte_val:02x} (char: 0x{char:02x})"
+                )
+                return False
+
+        # Try to parse destination and source
+        dest, offset = self._parse_ax25_callsign(frame, 0)
+        if not dest or len(dest) < 3:
+            return False
+
+        src, offset = self._parse_ax25_callsign(frame, 7)
+        if not src or len(src) < 3:
+            return False
+
+        # Strict callsign validation
+        for callsign in [dest.split("-")[0], src.split("-")[0]]:
+            if not callsign:
+                return False
+
+            # Callsign must be 3-6 characters
+            if len(callsign) < 3 or len(callsign) > 6:
+                return False
+
+            # Must contain at least one letter and one digit (typical amateur radio format)
+            has_letter = any(c.isalpha() for c in callsign)
+            has_digit = any(c.isdigit() for c in callsign)
+            if not (has_letter and has_digit):
+                return False
+
+            # All characters must be alphanumeric or space
+            if not all(c.isalnum() or c.isspace() for c in callsign):
+                return False
+
+            # Check for reasonable amateur radio callsign patterns
+            # First character is usually a letter or digit
+            if not callsign[0].isalnum():
+                return False
+
+        # Check for reasonable entropy in the frame (not all zeros or repeated patterns)
+        unique_bytes = len(set(frame))
+        if unique_bytes < 10:  # At least 10 different byte values
+            return False
+
+        # Check for excessive repetition (noise often has repeated patterns)
+        max_run = 1
+        current_run = 1
+        for i in range(1, len(frame)):
+            if frame[i] == frame[i - 1]:
+                current_run += 1
+                max_run = max(max_run, current_run)
+            else:
+                current_run = 1
+
+        if max_run > 20:  # More than 20 identical bytes in a row is suspicious
             return False
 
         return True
 
     def work(self, input_items, output_items):
-        """Process incoming bytes"""
+        """Process incoming bytes and extract HDLC frames"""
         try:
             current_time = time.time()
 
             for byte_val in input_items[0]:
-                self.buffer.append(int(byte_val))
+                byte_val = int(byte_val)
 
-                # Look for AX.25 flag (0x7E) to detect packet boundaries
-                if byte_val == 0x7E and len(self.buffer) >= 16:
-                    # Rate limiting: don't process packets too frequently
-                    if current_time - self.last_packet_time < self.min_packet_interval:
-                        continue
+                if byte_val == self.HDLC_FLAG:
+                    if self.in_frame and len(self.frame_buffer) >= 16:
+                        # End of frame - process it
+                        if current_time - self.last_packet_time >= self.min_packet_interval:
+                            frame = bytes(self.frame_buffer)
+                            logger.info(
+                                f"BPSK found potential frame: {len(frame)} bytes, first 20 bytes: {frame[:20].hex()}"
+                            )
 
-                    # Extract potential packet
-                    packet = bytes(self.buffer)
+                            # Try to parse callsigns to see what we're getting
+                            try:
+                                dest, _ = self._parse_ax25_callsign(frame, 0)
+                                src, _ = self._parse_ax25_callsign(frame, 7)
+                                logger.info(f"Parsed callsigns: dest='{dest}', src='{src}'")
+                            except Exception:
+                                pass
 
-                    # Validate packet
-                    if self._validate_ax25_packet(packet):
-                        self.last_packet_time = current_time
-                        if self.callback:
-                            self.callback(packet)
-                        self.packets_decoded += 1
+                            # TEMPORARILY: Output frame without validation to see what we get
+                            packet = bytes([self.HDLC_FLAG]) + frame + bytes([self.HDLC_FLAG])
+                            self.last_packet_time = current_time
+                            if self.callback:
+                                self.callback(packet)
+                            self.packets_decoded += 1
+                            logger.info(
+                                f"BPSK output frame #{self.packets_decoded}: {len(frame)} bytes"
+                            )
 
-                    # Clear buffer after flag
-                    self.buffer = []
+                        # Reset for next frame
+                        self.frame_buffer = []
+                        self.in_frame = True  # Next flag starts new frame
+                    else:
+                        # Start of new frame
+                        self.in_frame = True
+                        self.frame_buffer = []
+                else:
+                    # Data byte - add to frame if we're inside one
+                    if self.in_frame:
+                        self.frame_buffer.append(byte_val)
 
-                # Limit buffer size to prevent memory issues
-                if len(self.buffer) > self.packet_size * 2:
-                    self.buffer = self.buffer[-self.packet_size :]
+                        # Limit frame size to prevent memory issues
+                        if len(self.frame_buffer) > self.packet_size * 2:
+                            # Frame too long, reset
+                            self.in_frame = False
+                            self.frame_buffer = []
 
         except Exception as e:
             logger.error(f"Error in BPSK packet sink: {e}")
@@ -143,10 +318,9 @@ else:
 
 class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
     """
-    GNU Radio flowgraph for BPSK demodulation
+    Simplified BPSK flowgraph using gr-satellites components directly
 
-    Based on gr-satellites bpsk_demodulator.py by Daniel Estevez
-    Adapted for ground station framework integration
+    Uses tested gr-satellites bpsk_demodulator and ax25_deframer components
     """
 
     def __init__(
@@ -164,7 +338,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         packet_size=256,
     ):
         """
-        Initialize BPSK decoder flowgraph
+        Initialize BPSK decoder flowgraph using gr-satellites components
 
         Args:
             sample_rate: Input sample rate (Hz)
@@ -177,7 +351,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             clk_bw: Clock recovery bandwidth (relative to baudrate)
             clk_limit: Clock recovery limit (relative to baudrate)
             costas_bw: Costas loop bandwidth (Hz)
-            packet_size: Size of packet in bytes
+            packet_size: Size of packet in bytes (unused, kept for compatibility)
         """
         if not GNURADIO_AVAILABLE:
             raise RuntimeError("GNU Radio not available - BPSK decoder cannot be initialized")
@@ -188,140 +362,75 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         self.baudrate = baudrate
         self.callback = callback
 
-        # Prevent problems due to baudrate too high
-        if baudrate >= sample_rate / 4:
-            logger.error(
-                f"Sample rate {sample_rate} sps insufficient for {baudrate} "
-                "baud BPSK demodulation. Demodulator will not work."
-            )
-            baudrate = sample_rate / 4
-
-        sps = sample_rate / baudrate
-        max_sps = 10
-        if sps > max_sps:
-            decimation = ceil(sps / max_sps)
-        else:
-            decimation = 1
-        sps /= decimation
-
-        self.samples_per_symbol = sps
-
-        logger.info(
-            f"BPSK decoder: sample_rate={sample_rate}, baudrate={baudrate}, "
-            f"samples_per_symbol={sps:.2f}, decimation={decimation}"
-        )
-
         # Create vector source for IQ input
         self.vector_source = blocks.vector_source_c([], repeat=False)
 
-        # 1. Frequency translation and low-pass filter
-        filter_cutoff = baudrate * 2.0
-        filter_transition = baudrate * 0.2
-        taps = firdes.low_pass(1, sample_rate, filter_cutoff, filter_transition)
-        self.xlating = filter.freq_xlating_fir_filter_ccf(decimation, taps, f_offset, sample_rate)
+        # Create options namespace for gr-satellites components
+        import argparse
 
-        # 2. AGC (Automatic Gain Control)
-        agc_constant = 2e-2 / sps  # Time constant of 50 symbols
-        self.agc = analog.agc2_cc(agc_constant, agc_constant, 1.0, 1.0)
-
-        # 3. FLL (Frequency-Locked Loop) for frequency tracking
-        fll_bw_rad = 2 * pi * decimation / sample_rate * fll_bw
-        self.fll = digital.fll_band_edge_cc(sps, rrc_alpha, 100, fll_bw_rad)
-
-        # 4. Symbol synchronization (clock recovery)
-        nfilts = 16
-        rrc_taps = firdes.root_raised_cosine(
-            nfilts, nfilts, 1.0 / float(sps), rrc_alpha, int(ceil(11 * sps * nfilts))
-        )
-        ted_gain = 0.5  # Timing Error Detector gain
-        damping = 1.0
-        self.clock_recovery = digital.symbol_sync_cc(
-            digital.TED_SIGNAL_TIMES_SLOPE_ML,
-            sps,
-            clk_bw,
-            damping,
-            ted_gain,
-            clk_limit * sps,
-            1,
-            digital.constellation_bpsk().base(),
-            digital.IR_PFB_MF,
-            nfilts,
-            rrc_taps,
+        options = argparse.Namespace(
+            rrc_alpha=rrc_alpha,
+            fll_bw=fll_bw,
+            clk_bw=clk_bw,
+            clk_limit=clk_limit,
+            costas_bw=costas_bw,
+            f_offset=f_offset,
+            disable_fll=False,
+            manchester_block_size=32,
         )
 
-        # 5. Carrier recovery or differential decoding
-        self.complex_to_real = blocks.complex_to_real(1)
+        # Use gr-satellites BPSK demodulator (outputs soft symbols)
+        from satellites.components.demodulators.bpsk_demodulator import bpsk_demodulator
 
-        if differential:
-            # Differential decoding (DBPSK)
-            self.delay = blocks.delay(gr.sizeof_gr_complex, 1)
-            self.multiply_conj = blocks.multiply_conjugate_cc(1)
-            self.connect(self.clock_recovery, (self.multiply_conj, 0))
-            self.connect(self.clock_recovery, self.delay, (self.multiply_conj, 1))
-            self.connect(self.multiply_conj, self.complex_to_real)
-        else:
-            # Coherent BPSK with Costas loop
-            costas_bw_rad = 2 * pi / baudrate * costas_bw
-            self.costas = digital.costas_loop_cc(costas_bw_rad, 2, False)
-            self.connect(self.clock_recovery, self.costas, self.complex_to_real)
+        self.demodulator = bpsk_demodulator(
+            baudrate=baudrate,
+            samp_rate=sample_rate,
+            iq=True,
+            f_offset=f_offset,
+            differential=differential,
+            manchester=False,
+            options=options,
+        )
 
-        # 6. Binary slicer to convert soft symbols to hard bits
-        self.binary_slicer = digital.binary_slicer_fb()
+        # Use gr-satellites AX.25 deframer (takes soft symbols, outputs PDUs)
+        from satellites.components.deframers.ax25_deframer import ax25_deframer
 
-        # 7. NRZI decode (AX.25 uses NRZI encoding)
-        # NRZI: transition = 0, no transition = 1
-        # Implemented as: output[n] = input[n] XOR input[n-1]
-        self.nrzi_decode = digital.diff_decoder_bb(2)  # Differential decoder for NRZI
+        self.deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
 
-        # 8. G3RUH descrambler (polynomial 0x21, 16-bit)
-        self.descrambler = digital.descrambler_bb(0x21, 0, 16)
+        # Message handler for decoded packets
+        self.msg_handler = BPSKMessageHandler(self._on_packet_decoded)
 
-        # 9. Pack bits into bytes
-        self.pack_bits = blocks.pack_k_bits_bb(8)
-
-        # 10. Message sink to receive decoded packets
-        self.msg_sink = BPSKPacketSink(self._on_packet_decoded, packet_size)
-
-        # Connect the flowgraph
-        self.connect(self.vector_source, self.xlating)
-        self.connect(self.xlating, self.agc)
-        self.connect(self.agc, self.fll)
-        self.connect(self.fll, self.clock_recovery)
-        self.connect(self.complex_to_real, self.binary_slicer)
-        self.connect(self.binary_slicer, self.nrzi_decode)
-        self.connect(self.nrzi_decode, self.descrambler)
-        self.connect(self.descrambler, self.pack_bits)
-        self.connect(self.pack_bits, self.msg_sink)
+        # Connect flowgraph: vector_source -> demodulator -> deframer -> msg_handler
+        self.connect(self.vector_source, self.demodulator, self.deframer)
+        self.msg_connect((self.deframer, "out"), (self.msg_handler, "in"))
 
         logger.info(
-            f"BPSK flowgraph initialized: {baudrate} baud, RRC alpha={rrc_alpha}, "
-            f"sps={sps:.2f}, differential={differential}"
+            f"BPSK flowgraph initialized using gr-satellites components: "
+            f"{baudrate} baud, {sample_rate} sps, differential={differential}"
         )
 
     def process_batch(self, samples):
-        """Process a batch of IQ samples (non-blocking)"""
+        """Process a batch of IQ samples - processes all samples in one continuous run"""
         try:
-            # Process in chunks to avoid memory issues
-            chunk_size = 8192 * 10
+            # Set all the data at once to maintain state continuity
+            # This is critical for NRZI, descrambler, and HDLC deframer state
+            self.vector_source.set_data(samples.tolist())
 
-            for i in range(0, len(samples), chunk_size):
-                chunk = samples[i : i + chunk_size]
+            # Start the flowgraph once
+            self.start()
 
-                # Set the data for this chunk
-                self.vector_source.set_data(chunk.tolist())
+            # Wait for all samples to be processed
+            # Calculate processing time based on sample rate and number of samples
+            processing_time = len(samples) / self.sample_rate
+            # Add extra time for processing overhead
+            time.sleep(processing_time + 0.5)
 
-                # Start the flowgraph
-                self.start()
-
-                # Wait for processing
-                time.sleep(0.01)  # 10ms per chunk
-
-                # Stop gracefully
-                try:
-                    self.stop()
-                    self.wait()
-                except Exception:
-                    pass
+            # Stop the flowgraph
+            try:
+                self.stop()
+                self.wait()
+            except Exception:
+                pass
 
         except Exception as e:
             logger.error(f"Error processing batch: {e}")
@@ -651,40 +760,18 @@ class BPSKDecoder(threading.Thread):
                         decimation = 1
                     decimated = self._decimate_iq(translated, decimation)
 
-                    # Add to buffer
+                    # Add to buffer - accumulate ALL samples for continuous processing
                     samples_buffer = np.concatenate([samples_buffer, decimated])
 
-                    # Process when we have enough samples
-                    if len(samples_buffer) >= process_samples:
-                        # Process the buffered samples
-                        if chunks_received % 20 == 0:
-                            logger.debug(
-                                f"Processing {len(samples_buffer)} samples ({self.baudrate} baud)"
-                            )
-
-                        # Send status update
-                        if chunks_received % 50 == 0:
-                            self._send_status_update(
-                                DecoderStatus.DECODING,
-                                {
-                                    "samples_buffered": len(samples_buffer),
-                                    "packets_decoded": self.packet_count,
-                                },
-                            )
-
-                        # Process batch
-                        if self.flowgraph:
-                            self.flowgraph.process_batch(samples_buffer)
-
-                        # Keep overlap for packet boundaries
-                        if self.sample_rate:
-                            overlap_samples = int(self.sample_rate * 0.2)
-                        else:
-                            overlap_samples = 0
-                        if len(samples_buffer) > overlap_samples:
-                            samples_buffer = samples_buffer[-overlap_samples:]
-                        else:
-                            samples_buffer = np.array([], dtype=np.complex64)
+                    # Send status updates but don't process yet
+                    if chunks_received % 50 == 0:
+                        self._send_status_update(
+                            DecoderStatus.DECODING,
+                            {
+                                "samples_buffered": len(samples_buffer),
+                                "packets_decoded": self.packet_count,
+                            },
+                        )
 
                     chunks_received += 1
                     if chunks_received % 100 == 0:
@@ -709,6 +796,14 @@ class BPSKDecoder(threading.Thread):
             self._send_status_update(DecoderStatus.ERROR)
         except KeyboardInterrupt:
             pass
+        finally:
+            # Process all accumulated samples at the end in one continuous run
+            if len(samples_buffer) > 0 and self.flowgraph:
+                logger.info(f"Processing final batch of {len(samples_buffer)} samples")
+                try:
+                    self.flowgraph.process_batch(samples_buffer)
+                except Exception as e:
+                    logger.error(f"Error processing final batch: {e}")
 
         logger.info(f"BPSK decoder stopped for {self.session_id}")
 

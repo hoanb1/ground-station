@@ -1,4 +1,4 @@
-import React from 'react';
+    import React from 'react';
 import {
     Accordion,
     AccordionSummary,
@@ -20,17 +20,24 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    IconButton,
+    Link,
 } from "@mui/material";
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
+import CloseIcon from '@mui/icons-material/Close';
 // import TranscribeIcon from '@mui/icons-material/Transcribe';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
 import {SquelchIcon} from "../common/dataurl-icons.jsx";
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
+import TransmittersTable from '../satellites/transmitters-table.jsx';
 
 const BANDWIDTHS = {
     "500": "500 Hz",
@@ -75,9 +82,21 @@ const VfoAccordion = ({
     const { t } = useTranslation('waterfall');
     const squelchSliderRef = React.useRef(null);
     const volumeSliderRef = React.useRef(null);
+    const [transmittersDialogOpen, setTransmittersDialogOpen] = React.useState(false);
 
     // Get doppler-corrected transmitters from Redux state (includes alive field)
     const transmitters = useSelector(state => state.targetSatTrack.rigData.transmitters || []);
+
+    // Get target satellite data
+    const satelliteDetails = useSelector(state => state.targetSatTrack.satelliteData?.details || null);
+    const satelliteTransmitters = useSelector(state => state.targetSatTrack.satelliteData?.transmitters || []);
+    const targetSatelliteName = satelliteDetails?.name || '';
+
+    // Combine details and transmitters for the TransmittersTable component
+    const targetSatelliteData = satelliteDetails ? {
+        ...satelliteDetails,
+        transmitters: satelliteTransmitters
+    } : null;
 
     React.useEffect(() => {
         const handleWheel = (e, vfoIndex, property, min, max, current) => {
@@ -290,6 +309,29 @@ const VfoAccordion = ({
                                     </Select>
                                 </FormControl>
                             </Box>
+
+                            {/* Discreet link to edit transmitters */}
+                            {targetSatelliteData && (
+                                <Box sx={{ mt: 0.5, textAlign: 'center' }}>
+                                    <Link
+                                        component="button"
+                                        variant="caption"
+                                        onClick={() => setTransmittersDialogOpen(true)}
+                                        sx={{
+                                            fontSize: '0.7rem',
+                                            color: 'text.disabled',
+                                            textDecoration: 'none',
+                                            '&:hover': {
+                                                color: 'text.secondary',
+                                                textDecoration: 'underline',
+                                            },
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        Edit {targetSatelliteName} transmitters here
+                                    </Link>
+                                </Box>
+                            )}
 
                             {/* Transcription Section - Commented Out */}
                             {/*
@@ -758,6 +800,35 @@ const VfoAccordion = ({
                     </Box>
                 ))}
             </AccordionDetails>
+
+            {/* Transmitters Dialog */}
+            <Dialog
+                open={transmittersDialogOpen}
+                onClose={() => setTransmittersDialogOpen(false)}
+                maxWidth="xl"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        backgroundColor: 'background.default',
+                    }
+                }}
+            >
+                <DialogTitle sx={{ backgroundColor: 'background.default', color: 'text.primary' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6">
+                            {targetSatelliteName} - Transmitters
+                        </Typography>
+                        <IconButton onClick={() => setTransmittersDialogOpen(false)} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.default' }}>
+                    {targetSatelliteData && (
+                        <TransmittersTable satelliteData={targetSatelliteData} inDialog={true} />
+                    )}
+                </DialogContent>
+            </Dialog>
         </Accordion>
     );
 };
