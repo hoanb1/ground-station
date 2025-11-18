@@ -36,7 +36,7 @@ const nodeTypes = {
     componentNode: ComponentNode,
 };
 
-const FlowContent = ({ metrics }) => {
+const FlowContent = ({ metrics, onAutoArrangeCallback }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const fitViewCalledRef = useRef(false);
@@ -77,6 +77,13 @@ const FlowContent = ({ metrics }) => {
         });
     }, [nodes, edges, setNodes, fitView]);
 
+    // Expose the auto-arrange handler to parent
+    useEffect(() => {
+        if (onAutoArrangeCallback) {
+            onAutoArrangeCallback(onAutoArrange);
+        }
+    }, [onAutoArrange, onAutoArrangeCallback]);
+
     return (
         <Box
             sx={{
@@ -87,7 +94,10 @@ const FlowContent = ({ metrics }) => {
                     backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 1,
-                    bottom: '20px !important',
+                    top: '20px !important',
+                    right: '20px !important',
+                    bottom: 'auto !important',
+                    left: 'auto !important',
                     zIndex: 10,
                     pointerEvents: 'auto',
                 },
@@ -140,16 +150,6 @@ const FlowContent = ({ metrics }) => {
                     variant="dots"
                 />
                 <Controls />
-                <Panel position="top-right">
-                    <Button
-                        variant="contained"
-                        size="small"
-                        onClick={onAutoArrange}
-                        sx={{ boxShadow: 2 }}
-                    >
-                        Auto Arrange
-                    </Button>
-                </Panel>
                 <Panel position="top-left" style={{ zIndex: 1 }}>
                     <Box
                         sx={{
@@ -237,10 +237,10 @@ const FlowContent = ({ metrics }) => {
     );
 };
 
-const PerformanceFlow = ({ metrics }) => {
+const PerformanceFlow = ({ metrics, onAutoArrangeCallback }) => {
     return (
         <ReactFlowProvider>
-            <FlowContent metrics={metrics} />
+            <FlowContent metrics={metrics} onAutoArrangeCallback={onAutoArrangeCallback} />
         </ReactFlowProvider>
     );
 };

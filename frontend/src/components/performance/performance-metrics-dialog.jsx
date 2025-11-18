@@ -17,7 +17,7 @@
  *
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -26,8 +26,10 @@ import {
     Box,
     Typography,
     Chip,
+    Button,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useSelector, useDispatch } from 'react-redux';
 import { setDialogOpen } from './performance-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
@@ -39,6 +41,7 @@ const PerformanceMetricsDialog = () => {
     const open = useSelector((state) => state.performance.dialogOpen);
     const metrics = useSelector((state) => state.performance.latestMetrics);
     const connected = useSelector((state) => state.performance.connected);
+    const [autoArrangeHandler, setAutoArrangeHandler] = useState(null);
 
     // Start monitoring when dialog opens, stop when it closes
     useEffect(() => {
@@ -74,6 +77,12 @@ const PerformanceMetricsDialog = () => {
         dispatch(setDialogOpen(false));
     };
 
+    const handleAutoArrange = () => {
+        if (autoArrangeHandler) {
+            autoArrangeHandler();
+        }
+    };
+
     return (
         <Dialog
             open={open}
@@ -93,18 +102,13 @@ const PerformanceMetricsDialog = () => {
                     borderBottom: 1,
                     borderColor: (theme) => theme.palette.border?.main || 'divider',
                     backgroundColor: (theme) => theme.palette.background?.elevated || theme.palette.background.default,
+                    py: 1.5,
+                    px: 2,
                 }}
             >
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Box display="flex" flexDirection="column" gap={0.5}>
-                        <Box display="flex" alignItems="center" gap={2}>
-                            <Typography variant="h6">System Topology</Typography>
-                            <Chip
-                                label={connected ? 'Connected' : 'Disconnected'}
-                                size="small"
-                                color={connected ? 'success' : 'error'}
-                            />
-                        </Box>
+                        <Typography variant="h6">System Topology</Typography>
                         <Typography
                             variant="caption"
                             color="text.secondary"
@@ -113,9 +117,20 @@ const PerformanceMetricsDialog = () => {
                             Real-time visualization of system components and data flow
                         </Typography>
                     </Box>
-                    <IconButton onClick={handleClose} size="small">
-                        <CloseIcon />
-                    </IconButton>
+                    <Box display="flex" alignItems="center" gap={1}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<AutorenewIcon />}
+                            onClick={handleAutoArrange}
+                            disabled={!metrics}
+                        >
+                            Auto Arrange
+                        </Button>
+                        <IconButton onClick={handleClose} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
                 </Box>
             </DialogTitle>
             <DialogContent
@@ -124,7 +139,7 @@ const PerformanceMetricsDialog = () => {
                     backgroundColor: (theme) => theme.palette.background?.default || theme.palette.background.default,
                     borderColor: (theme) => theme.palette.border?.main || 'divider',
                     position: 'relative',
-                    padding: 0,
+                    p: 0,
                     height: 'calc(90vh - 80px)', // Account for title height
                 }}
             >
@@ -135,7 +150,10 @@ const PerformanceMetricsDialog = () => {
                         </Typography>
                     </Box>
                 ) : (
-                    <PerformanceFlow metrics={metrics} />
+                    <PerformanceFlow 
+                        metrics={metrics} 
+                        onAutoArrangeCallback={(handler) => setAutoArrangeHandler(() => handler)}
+                    />
                 )}
             </DialogContent>
         </Dialog>
