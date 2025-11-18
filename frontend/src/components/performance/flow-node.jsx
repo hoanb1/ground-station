@@ -63,12 +63,29 @@ const truncateId = (id, length = 8) => {
 };
 
 const MetricRow = ({ label, value, unit }) => (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 0.25 }}>
-        <Typography variant="caption" color="text.secondary">
-            {label}:
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 0.2, alignItems: 'baseline' }}>
+        <Typography 
+            variant="caption" 
+            sx={{ 
+                color: 'text.secondary',
+                fontSize: '0.7rem',
+                opacity: 0.8,
+            }}
+        >
+            {label}
         </Typography>
-        <Typography variant="caption" fontWeight="medium">
-            {value} {unit && <span style={{ fontSize: '0.85em', opacity: 0.7 }}>{unit}</span>}
+        <Typography 
+            variant="caption" 
+            sx={{ 
+                fontWeight: 500,
+                fontSize: '0.72rem',
+                fontFamily: 'monospace',
+                letterSpacing: '0.02em',
+                minWidth: '60px',
+                textAlign: 'right',
+            }}
+        >
+            {value} {unit && <span style={{ fontSize: '0.85em', opacity: 0.6, fontFamily: 'inherit' }}>{unit}</span>}
         </Typography>
     </Box>
 );
@@ -78,22 +95,22 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
     const cappedMemPercent = Math.min(memoryPercent || 0, 100);
 
     const getCpuColor = (percent) => {
-        if (percent < 50) return '#4caf50'; // Green
-        if (percent < 80) return '#ff9800'; // Orange
-        return '#f44336'; // Red
+        if (percent < 50) return '#66bb6a'; // Softer green
+        if (percent < 80) return '#ffa726'; // Softer orange
+        return '#ef5350'; // Softer red
     };
 
     const getMemColor = (percent) => {
-        if (percent < 50) return '#2196f3'; // Blue
-        if (percent < 80) return '#9c27b0'; // Purple
-        return '#f44336'; // Red
+        if (percent < 50) return '#42a5f5'; // Softer blue
+        if (percent < 80) return '#ab47bc'; // Softer purple
+        return '#ef5350'; // Softer red
     };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', height: '100%', gap: 1.5 }}>
             {/* CPU Bar */}
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, fontSize: '0.65rem' }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
                     CPU
                 </Typography>
                 <Box sx={{
@@ -102,20 +119,23 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-end',
-                    backgroundColor: 'rgba(128, 128, 128, 0.2)',
-                    borderRadius: 0.5,
+                    backgroundColor: (theme) => theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : 'rgba(0, 0, 0, 0.04)',
+                    borderRadius: 1,
                     position: 'relative',
                     minHeight: '50px',
+                    overflow: 'hidden',
                 }}>
                     <Box sx={{
                         width: '100%',
                         height: `${cappedCpuPercent}%`,
                         backgroundColor: getCpuColor(cappedCpuPercent),
-                        borderRadius: 0.5,
+                        borderRadius: '0 0 8px 8px',
                         transition: 'height 0.3s ease, background-color 0.3s ease',
                     }} />
                 </Box>
-                <Typography variant="caption" sx={{ mt: 0.3, fontWeight: 'medium', fontSize: '0.65rem' }}>
+                <Typography variant="caption" sx={{ mt: 0.4, fontWeight: 500, fontSize: '0.68rem', fontFamily: 'monospace', minWidth: '45px', textAlign: 'center' }}>
                     {cappedCpuPercent.toFixed(1)}%
                 </Typography>
             </Box>
@@ -123,7 +143,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
             {/* Memory Bar */}
             {memoryMb !== undefined && memoryPercent !== undefined && (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', mb: 0.5, fontSize: '0.65rem' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
                         MEM
                     </Typography>
                     <Box sx={{
@@ -132,20 +152,23 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'flex-end',
-                        backgroundColor: 'rgba(128, 128, 128, 0.2)',
-                        borderRadius: 0.5,
+                        backgroundColor: (theme) => theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.05)' 
+                            : 'rgba(0, 0, 0, 0.04)',
+                        borderRadius: 1,
                         position: 'relative',
                         minHeight: '50px',
+                        overflow: 'hidden',
                     }}>
                         <Box sx={{
                             width: '100%',
                             height: `${cappedMemPercent}%`,
                             backgroundColor: getMemColor(cappedMemPercent),
-                            borderRadius: 0.5,
+                            borderRadius: '0 0 8px 8px',
                             transition: 'height 0.3s ease, background-color 0.3s ease',
                         }} />
                     </Box>
-                    <Typography variant="caption" sx={{ mt: 0.3, fontWeight: 'medium', fontSize: '0.65rem' }}>
+                    <Typography variant="caption" sx={{ mt: 0.4, fontWeight: 500, fontSize: '0.68rem', fontFamily: 'monospace', minWidth: '45px', textAlign: 'center' }}>
                         {memoryMb.toFixed(0)}MB
                     </Typography>
                 </Box>
@@ -187,31 +210,62 @@ export const ComponentNode = ({ data }) => {
                     type="target"
                     position={Position.Left}
                     style={{
-                        background: '#555',
+                        background: '#757575',
+                        width: '10px',
+                        height: '10px',
+                        border: '2px solid rgba(255, 255, 255, 0.1)',
                         top: `${pos}%`,
                     }}
                 />
             ))}
 
             <Paper
-                elevation={3}
+                elevation={1}
                 sx={{
-                    p: 0.5,
-                    minWidth: 280,
+                    p: 1,
+                    minWidth: (type === 'fft' || type === 'worker' || type === 'tracker') ? 380 : 280,
                     backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
                     border: 1,
-                    borderColor: (theme) => theme.palette.border?.main || 'divider',
+                    borderColor: (theme) => theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.08)' 
+                        : 'rgba(0, 0, 0, 0.08)',
+                    borderRadius: 1.5,
+                    transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                    '&:hover': {
+                        borderColor: (theme) => theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.15)'
+                            : 'rgba(0, 0, 0, 0.15)',
+                        boxShadow: (theme) => theme.palette.mode === 'dark'
+                            ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+                            : '0 2px 8px rgba(0, 0, 0, 0.08)',
+                    },
                 }}
             >
                 {/* Title with status */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 'bold', mr: 2 }}>
+                    <Typography 
+                        variant="subtitle2" 
+                        sx={{ 
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            letterSpacing: '0.01em',
+                            color: 'text.primary',
+                            mr: type === 'decoder' ? 2 : 0,
+                        }}
+                    >
                         {data.label}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {component.stats?.last_activity && (
                             <Tooltip title={`Last activity: ${new Date(component.stats.last_activity * 1000).toLocaleString()}`} arrow>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                <Typography 
+                                    variant="caption" 
+                                    sx={{ 
+                                        fontSize: '0.7rem',
+                                        color: 'text.secondary',
+                                        opacity: 0.7,
+                                    }}
+                                >
                                     {humanizeTimestamp(component.stats.last_activity)}
                                 </Typography>
                             </Tooltip>
@@ -219,31 +273,32 @@ export const ComponentNode = ({ data }) => {
                         {component.is_alive !== undefined && (
                             <Box
                                 sx={{
-                                    width: 10,
-                                    height: 10,
+                                    width: 8,
+                                    height: 8,
                                     borderRadius: '50%',
                                     backgroundColor: component.is_alive
-                                        ? (type === 'recorder' ? '#f44336' : '#4caf50')
-                                        : '#9e9e9e',
+                                        ? (type === 'recorder' ? '#ef5350' : '#66bb6a')
+                                        : 'rgba(158, 158, 158, 0.5)',
                                     boxShadow: component.is_alive
-                                        ? `0 0 8px ${type === 'recorder' ? '#f44336' : '#4caf50'}`
+                                        ? `0 0 6px ${type === 'recorder' ? 'rgba(239, 83, 80, 0.4)' : 'rgba(102, 187, 106, 0.4)'}`
                                         : 'none',
+                                    transition: 'all 0.3s ease',
                                 }}
                             />
                         )}
                     </Box>
                 </Box>
 
-                <Divider sx={{ mb: 1 }} />
+                <Divider sx={{ mb: 1, opacity: 0.6 }} />
 
                 {/* Metrics - Two or Three column layout with dividers */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker') ? '1fr auto 80px auto 1fr' : '1fr auto 1fr', gap: 1 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker') ? 'minmax(90px, 1fr) auto 110px auto minmax(90px, 1fr)' : '1fr auto 1fr', gap: 0.75 }}>
                     {/* Tracker metrics */}
                     {type === 'tracker' && (
                         <>
                             {/* Left column - Processing */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Processing
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -263,7 +318,7 @@ export const ComponentNode = ({ data }) => {
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Middle column - CPU & Memory Bars */}
                             <Box>
                                 <CpuMemoryBars
@@ -273,10 +328,10 @@ export const ComponentNode = ({ data }) => {
                                 />
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Output
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -303,7 +358,7 @@ export const ComponentNode = ({ data }) => {
                         <>
                             {/* Left column - Empty (no input) */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     SDR
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -323,7 +378,7 @@ export const ComponentNode = ({ data }) => {
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Middle column - CPU & Memory Bars */}
                             <Box>
                                 <CpuMemoryBars
@@ -333,10 +388,10 @@ export const ComponentNode = ({ data }) => {
                                 />
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Output
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -363,7 +418,7 @@ export const ComponentNode = ({ data }) => {
                         <>
                             {/* Left column - Input */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -383,10 +438,10 @@ export const ComponentNode = ({ data }) => {
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Output
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -413,7 +468,7 @@ export const ComponentNode = ({ data }) => {
                         <>
                             {/* Left column - Input */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -433,7 +488,7 @@ export const ComponentNode = ({ data }) => {
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Middle column - CPU & Memory Bars */}
                             <Box>
                                 <CpuMemoryBars
@@ -443,10 +498,10 @@ export const ComponentNode = ({ data }) => {
                                 />
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Output
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -473,7 +528,7 @@ export const ComponentNode = ({ data }) => {
                         <>
                             {/* Left column - Input */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -493,10 +548,10 @@ export const ComponentNode = ({ data }) => {
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Output
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -523,7 +578,7 @@ export const ComponentNode = ({ data }) => {
                         <>
                             {/* Left column - Input */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -543,10 +598,10 @@ export const ComponentNode = ({ data }) => {
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Output
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -569,7 +624,7 @@ export const ComponentNode = ({ data }) => {
                         <>
                             {/* Left column - Input */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -589,10 +644,10 @@ export const ComponentNode = ({ data }) => {
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Output
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -621,7 +676,7 @@ export const ComponentNode = ({ data }) => {
                         <>
                             {/* Left column - Input */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Input
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -641,10 +696,10 @@ export const ComponentNode = ({ data }) => {
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
-                            <Divider orientation="vertical" flexItem />
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
-                                <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Output
                                 </Typography>
                                 <Stack spacing={0.25}>
@@ -777,7 +832,10 @@ export const ComponentNode = ({ data }) => {
                     type="source"
                     position={Position.Right}
                     style={{
-                        background: '#555',
+                        background: '#757575',
+                        width: '10px',
+                        height: '10px',
+                        border: '2px solid rgba(255, 255, 255, 0.1)',
                         top: `${pos}%`,
                     }}
                 />

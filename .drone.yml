@@ -196,7 +196,7 @@ steps:
     environment:
       DOCKER_HOST: tcp://192.168.60.51:2375
     depends_on:
-      - build-amd64
+      - ghcr-auth
     when:
       event:
         - tag
