@@ -527,7 +527,7 @@ class GMSKDecoder(threading.Thread):
         except Exception as e:
             logger.error(f"GMSK decoder error: {e}")
             with self.stats_lock:
-                errors = int(self.stats.get("errors", 0))
+                errors = cast(int, self.stats.get("errors", 0))
                 self.stats["errors"] = errors + 1
             import traceback
 
