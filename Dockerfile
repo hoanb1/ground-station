@@ -244,7 +244,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pybind11-dev \
     python3-pybind11 \
     libzmq3-dev \
-    libcppzmq-dev \
     python3-zmq \
     && rm -rf /var/lib/apt/lists/*
 
