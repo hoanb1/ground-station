@@ -820,11 +820,11 @@ const VfoAccordion = ({
                 fullWidth
                 PaperProps={{
                     sx: {
-                        backgroundColor: 'background.default',
+                        backgroundColor: 'background.elevated',
                     }
                 }}
             >
-                <DialogTitle sx={{ backgroundColor: 'background.default', color: 'text.primary' }}>
+                <DialogTitle sx={{ backgroundColor: 'background.elevated', color: 'text.primary' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="h6">
                             {targetSatelliteName} - Transmitters
@@ -834,7 +834,7 @@ const VfoAccordion = ({
                         </IconButton>
                     </Box>
                 </DialogTitle>
-                <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.default' }}>
+                <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.elevated' }}>
                     {targetSatelliteData && (
                         <TransmittersTable satelliteData={targetSatelliteData} inDialog={true} />
                     )}
