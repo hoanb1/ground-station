@@ -301,12 +301,9 @@ class RigHandler:
                 )
                 all_transmitters = all_transmitters_reply.get("data", [])
 
-            # Filter only active transmitters (status == "active")
-            active_transmitters = [t for t in all_transmitters if t.get("status") == "active"]
-
-            # Calculate doppler shift for each active transmitter
+            # Calculate doppler shift for each transmitter
             transmitters_with_doppler = []
-            for transmitter in active_transmitters:
+            for transmitter in all_transmitters:
                 downlink_freq = transmitter.get("downlink_low", 0)
                 uplink_freq = transmitter.get("uplink_low", 0)
 
@@ -365,7 +362,7 @@ class RigHandler:
             self.tracker.rig_data["transmitters"] = transmitters_with_doppler
             logger.debug(
                 f"Calculated doppler shift for {len(transmitters_with_doppler)} "
-                f"active transmitters for satellite #{self.tracker.current_norad_id}"
+                f"transmitters for satellite #{self.tracker.current_norad_id}"
             )
 
         except Exception as e:
