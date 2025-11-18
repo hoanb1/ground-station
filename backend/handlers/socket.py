@@ -6,18 +6,9 @@ from typing import Dict
 from common.logger import logger
 
 # Import all entity modules to register their handlers
-from handlers.entities import (
-    groups,
-    hardware,
-    locations,
-    preferences,
-    satellites,
-    systeminfo,
-    tle_sources,
-    tracking,
-    transmitters,
-    vfo,
-)
+from handlers.entities import groups, hardware, locations, preferences, satellites, systeminfo
+from handlers.entities import tlesources as tle_sources
+from handlers.entities import tracking, transmitters, vfo
 from handlers.entities.filebrowser import filebrowser_request_routing
 from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry

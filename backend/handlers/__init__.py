@@ -36,7 +36,6 @@ from .entities import (
     preferences,
     satellites,
     sdr,
-    tle_sources,
     tracking,
     transmitters,
 )
@@ -54,7 +53,7 @@ __all__ = [
     "dispatch_request",
     # Entity modules
     "satellites",
-    "tle_sources",
+    "tlesources.py",
     "groups",
     "hardware",
     "locations",

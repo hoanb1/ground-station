@@ -15,6 +15,7 @@
 
 """Entity-based handlers for Socket.IO requests."""
 
+from . import tlesources  # noqa: F401
 from . import (
     filebrowser,
     groups,
@@ -23,7 +24,6 @@ from . import (
     preferences,
     satellites,
     sdr,
-    tle_sources,
     tracking,
     transmitters,
     vfo,
@@ -31,7 +31,7 @@ from . import (
 
 __all__ = [
     "satellites",
-    "tle_sources",
+    "tlesources.py",
     "groups",
     "hardware",
     "locations",

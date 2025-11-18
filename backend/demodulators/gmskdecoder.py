@@ -1,5 +1,10 @@
-# Ground Station - GMSK (USP FEC) Decoder using GNU Radio
+# Ground Station - GMSK/FSK Decoder using GNU Radio
 # Developed by Claude (Anthropic AI) for the Ground Station project
+#
+# GMSK/FSK demodulation logic based on gr-satellites by Daniel Estevez
+# https://github.com/daniestevez/gr-satellites
+# Copyright 2019 Daniel Estevez <daniel@destevez.net>
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,19 +19,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-# GMSK decoder with USP FEC using GNU Radio blocks for proper GMSK PHY decoding.
+# GMSK/FSK decoder with GNU Radio blocks for proper demodulation.
 # This decoder receives raw IQ samples directly from the SDR process (via iq_queue).
 
-import base64
 import logging
 import os
 import queue
 import threading
 import time
 from enum import Enum
+from math import ceil, pi
+from typing import Any, Dict, Optional, cast
 
 import numpy as np
-from scipy import signal
+from gnuradio.filter import firdes
 
 from vfos.state import VFOManager
 
@@ -34,36 +40,16 @@ logger = logging.getLogger("gmskdecoder")
 
 # Try to import GNU Radio
 GNURADIO_AVAILABLE = False
-FEC_AVAILABLE = False
-RS_AVAILABLE = False
 
 try:
     from gnuradio import analog, blocks, digital, filter, gr
 
     GNURADIO_AVAILABLE = True
-
-    # Try to import FEC module for USP FEC support
-    try:
-        from gnuradio import fec
-
-        FEC_AVAILABLE = True
-        logger.info("GNU Radio FEC module available - USP FEC decoding enabled")
-    except ImportError:
-        logger.warning("GNU Radio FEC module not available - USP FEC decoding disabled")
+    logger.info("GNU Radio available for GMSK/FSK decoding")
 
 except ImportError as e:
     logger.warning(f"GNU Radio not available: {e}")
     logger.warning("GMSK decoder will not be functional")
-
-# Try to import Reed-Solomon library
-try:
-    import reedsolo
-
-    RS_AVAILABLE = True
-    logger.info("reedsolo library available - Reed-Solomon decoding enabled")
-except ImportError:
-    logger.warning("reedsolo library not available - install with: pip install reedsolo")
-    logger.warning("Reed-Solomon decoding will be disabled")
 
 
 class DecoderStatus(Enum):
@@ -78,120 +64,28 @@ class DecoderStatus(Enum):
 
 
 class GMSKMessageSink(gr.sync_block):
-    """Custom GNU Radio sink block to receive decoded GMSK packets"""
+    """Custom GNU Radio sink block to receive decoded GMSK symbols"""
 
-    def __init__(self, callback, packet_size=256, sync_word=None, use_rs=False):
-        gr.sync_block.__init__(self, name="gmsk_message_sink", in_sig=[np.uint8], out_sig=None)
+    def __init__(self, callback):
+        gr.sync_block.__init__(self, name="gmsk_message_sink", in_sig=[np.float32], out_sig=None)
         self.callback = callback
-        self.packet_size = packet_size
         self.buffer = []
-        self.sync_word = sync_word or b"\xAA\xAA"  # Default sync word (alternating pattern)
-        self.last_packet_time: float = 0.0
-        self.min_packet_interval = (
-            5.0  # Minimum 5 seconds between packets to reduce false positives
-        )
-        self.packets_decoded = 0
-        self.use_rs = use_rs and RS_AVAILABLE
-
-        # Initialize Reed-Solomon decoder if available
-        if self.use_rs:
-            # RS(255, 223) - 32 parity symbols, can correct up to 16 errors
-            self.rs_decoder = reedsolo.RSCodec(32)  # 32 parity bytes
-            logger.info("Reed-Solomon decoder initialized: RS(255,223)")
-        else:
-            self.rs_decoder = None
-
-    def _validate_packet(self, packet):
-        """Strict packet validation to reduce false positives"""
-        # Check for all zeros (noise)
-        if packet == b"\x00" * len(packet):
-            return False
-
-        # Check for all ones (noise)
-        if packet == b"\xff" * len(packet):
-            return False
-
-        # Check for reasonable entropy (not too repetitive)
-        unique_bytes = len(set(packet))
-        if (
-            unique_bytes < 32
-        ):  # Less than 32 unique bytes in 256 is very suspicious (increased from 10)
-            return False
-
-        # Check for excessive repeating patterns (common in noise)
-        # Look for runs of the same byte
-        max_run = 1
-        current_run = 1
-        for i in range(1, len(packet)):
-            if packet[i] == packet[i - 1]:
-                current_run += 1
-                max_run = max(max_run, current_run)
-            else:
-                current_run = 1
-
-        # If more than 20 consecutive identical bytes, likely noise
-        if max_run > 20:
-            return False
-
-        # Check bit transition density (GMSK should have reasonable transitions)
-        transitions = 0
-        for i in range(1, len(packet)):
-            # Count byte-level transitions
-            if packet[i] != packet[i - 1]:
-                transitions += 1
-
-        # Require at least 30% byte transitions
-        if transitions < len(packet) * 0.3:
-            return False
-
-        return True
+        self.max_buffer_size = 10000  # Keep last 10k symbols
 
     def work(self, input_items, output_items):
-        """Process incoming bytes"""
+        """Process incoming symbols"""
         try:
-            current_time = time.time()
+            for symbol in input_items[0]:
+                self.buffer.append(float(symbol))
 
-            for byte_val in input_items[0]:
-                self.buffer.append(int(byte_val))
+                # Limit buffer size
+                if len(self.buffer) > self.max_buffer_size:
+                    self.buffer = self.buffer[-self.max_buffer_size :]
 
-                # Limit buffer size to prevent memory issues
-                if len(self.buffer) > self.packet_size * 2:
-                    self.buffer = self.buffer[-self.packet_size :]
-
-                # Check if we have accumulated a full packet
-                if len(self.buffer) >= self.packet_size:
-                    # Rate limiting: don't process packets too frequently
-                    if current_time - self.last_packet_time < self.min_packet_interval:
-                        # Skip this packet, too soon
-                        self.buffer = self.buffer[1:]  # Remove first byte and continue
-                        continue
-
-                    packet = bytes(self.buffer[: self.packet_size])
-
-                    # Apply Reed-Solomon decoding if enabled
-                    if self.use_rs and self.rs_decoder:
-                        try:
-                            # Attempt RS decoding - this will correct errors and verify CRC
-                            decoded_packet = self.rs_decoder.decode(packet)
-                            # If decode succeeds, we have a valid packet with errors corrected
-                            packet = bytes(decoded_packet)
-                            logger.debug(f"Reed-Solomon decode successful ({len(packet)} bytes)")
-                        except reedsolo.ReedSolomonError as e:
-                            # RS decode failed - too many errors or invalid packet
-                            logger.debug(f"Reed-Solomon decode failed: {e}")
-                            # Skip this packet and slide window
-                            self.buffer = self.buffer[1:]
-                            continue
-
-                    # Validate packet before calling callback
-                    if self._validate_packet(packet):
-                        self.buffer = self.buffer[self.packet_size :]
-                        self.last_packet_time = current_time
-                        if self.callback:
-                            self.callback(packet)
-                    else:
-                        # Invalid packet, slide window by 1 byte
-                        self.buffer = self.buffer[1:]
+            # Callback with symbols for further processing
+            if self.callback and len(self.buffer) > 0:
+                self.callback(np.array(self.buffer, dtype=np.float32))
+                self.buffer = []  # Clear after callback
 
         except Exception as e:
             logger.error(f"Error in GMSK message sink: {e}")
@@ -210,204 +104,166 @@ else:
 
 
 class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
-    """GNU Radio flowgraph for GMSK decoding with USP FEC"""
+    """
+    GNU Radio flowgraph for GMSK/FSK demodulation
+
+    Based on gr-satellites FSK demodulator by Daniel Estevez
+    https://github.com/daniestevez/gr-satellites
+    """
 
     def __init__(
         self,
         sample_rate,
         callback,
-        symbol_rate=9600,
-        bt=0.5,
-        gain_mu=0.175,
-        mu=0.5,
-        omega_relative_limit=0.005,
-        packet_size=256,
+        baudrate=9600,
+        deviation=5000,
+        use_agc=True,
+        dc_block=True,
+        clk_bw=0.06,
+        clk_limit=0.004,
     ):
         """
-        Initialize GMSK decoder flowgraph
+        Initialize GMSK/FSK demodulator flowgraph
 
         Args:
             sample_rate: Input sample rate (Hz)
-            callback: Function to call when packet is decoded
-            symbol_rate: Symbol rate / baud rate (symbols/sec)
-            bt: BT product for GMSK (typically 0.3-0.5)
-            gain_mu: Gain for symbol timing recovery
-            mu: Initial mu value for symbol timing
-            omega_relative_limit: Relative limit for omega adjustment
-            packet_size: Size of packet in bytes
+            callback: Function to call with demodulated symbols
+            baudrate: Baudrate in symbols per second
+            deviation: Deviation in Hz (negative inverts sidebands)
+            use_agc: Use automatic gain control
+            dc_block: Use DC blocker
+            clk_bw: Clock recovery bandwidth (relative to baudrate)
+            clk_limit: Clock recovery limit (relative to baudrate)
         """
         if not GNURADIO_AVAILABLE:
             raise RuntimeError("GNU Radio not available - GMSK decoder cannot be initialized")
 
-        super().__init__("GMSK Decoder")
+        super().__init__("GMSK/FSK Decoder")
 
         self.sample_rate = sample_rate
-        self.symbol_rate = symbol_rate
+        self.baudrate = baudrate
         self.callback = callback
-        self.samples_per_symbol = int(sample_rate / symbol_rate)
 
-        # Ensure minimum samples per symbol
-        if self.samples_per_symbol < 2:
-            raise ValueError(f"Sample rate {sample_rate} too low for symbol rate {symbol_rate}")
+        # Prevent problems due to baudrate too high
+        if baudrate >= sample_rate:
+            logger.error(
+                f"Sample rate {sample_rate} sps insufficient for {baudrate} "
+                f"baud FSK demodulation. Demodulator will not work."
+            )
+            baudrate = sample_rate / 2
 
         logger.info(
-            f"GMSK decoder: sample_rate={sample_rate}, symbol_rate={symbol_rate}, "
-            f"samples_per_symbol={self.samples_per_symbol}"
+            f"GMSK/FSK decoder: sample_rate={sample_rate}, baudrate={baudrate}, "
+            f"deviation={deviation}"
         )
 
-        # Create vector source
+        # Create vector source for input samples (IQ)
         self.vector_source = blocks.vector_source_c([], repeat=False)
 
-        # GMSK receiver chain
-        # 1. Quadrature demod (GMSK is essentially FM modulation with shaped pulses)
-        sensitivity = (np.pi * 0.5) / self.samples_per_symbol
-        self.quad_demod = analog.quadrature_demod_cf(sensitivity)
+        # 1. Quadrature demodulation (FM demodulation)
+        # GMSK is essentially FM modulation with Gaussian-shaped pulses
+        carson_cutoff = abs(deviation) + baudrate / 2
+        self.quad_demod = analog.quadrature_demod_cf(sample_rate / (2 * pi * deviation))
 
-        # 2. Low-pass filter to remove high-frequency components
-        # Cutoff at symbol_rate to preserve baseband signal
-        lpf_taps = filter.firdes.low_pass(
-            1.0,  # gain
-            sample_rate,  # sampling rate
-            symbol_rate * 1.2,  # cutoff frequency
-            symbol_rate * 0.4,  # transition width
+        # 2. Low-pass filter to Carson's bandwidth
+        if carson_cutoff < sample_rate / 2:
+            # Filter before demod if sample rate allows
+            fir_taps = firdes.low_pass(1, sample_rate, carson_cutoff, 0.1 * carson_cutoff)
+            self.demod_filter = filter.fir_filter_ccf(1, fir_taps)
+            has_demod_filter = True
+        else:
+            # Sample rate is already narrower than Carson's bandwidth
+            has_demod_filter = False
+
+        # 3. Calculate samples per symbol and decimation
+        sps = sample_rate / baudrate
+        max_sps = 10
+        if sps > max_sps:
+            decimation = ceil(sps / max_sps)
+        else:
+            decimation = 1
+        sps /= decimation
+
+        logger.info(f"Samples per symbol: {sps:.2f} (after decimation: {decimation})")
+
+        # 4. Square pulse filter (moving average filter)
+        sqfilter_len = int(sample_rate / baudrate)
+        taps = np.ones(sqfilter_len) / sqfilter_len
+        self.lowpass = filter.fir_filter_fff(decimation, taps)
+
+        # 5. DC blocker (optional)
+        if dc_block:
+            self.dcblock = filter.dc_blocker_ff(ceil(sps * 32), True)
+
+        # 6. AGC (optional)
+        if use_agc:
+            # Time constant of 50 symbols
+            agc_constant = 2e-2 / sps
+            self.agc = analog.agc2_ff(agc_constant, agc_constant, 1.0, 1.0)
+
+        # 7. Clock recovery using Gardner TED
+        # "Empiric" formula for TED gain: 1.47 symbol^{-1}
+        ted_gain = 1.47
+        damping = 1.0
+        self.clock_recovery = digital.symbol_sync_ff(
+            digital.TED_GARDNER,
+            sps,
+            clk_bw,
+            damping,
+            ted_gain,
+            clk_limit * sps,
+            1,
+            digital.constellation_bpsk().base(),
+            digital.IR_PFB_NO_MF,
         )
-        self.lpf = filter.fir_filter_fff(1, lpf_taps)
 
-        # 3. Clock recovery (Mueller and Müller symbol timing recovery)
-        # Use more conservative parameters to reduce false triggering
-        omega = self.samples_per_symbol  # Nominal samples per symbol
-        gain_mu_adjusted = gain_mu * 0.5  # Reduce gain to be less aggressive
-        self.clock_recovery = digital.clock_recovery_mm_ff(
-            omega,  # omega (samples per symbol)
-            gain_mu_adjusted * gain_mu_adjusted / 4.0,  # gain_omega
-            mu,  # mu
-            gain_mu_adjusted,  # gain_mu (reduced)
-            omega_relative_limit,  # omega_relative_limit
-        )
+        # 8. Message sink to receive demodulated symbols
+        self.msg_sink = GMSKMessageSink(self._on_symbols_decoded)
 
-        # 4. Binary slicer to convert soft symbols to hard bits
-        self.binary_slicer = digital.binary_slicer_fb()
+        # Connect the flowgraph
+        # Start with vector source
+        if has_demod_filter:
+            self.connect(self.vector_source, self.demod_filter, self.quad_demod)
+        else:
+            self.connect(self.vector_source, self.quad_demod)
 
-        # 5. USP FEC Decoding Chain (if available)
-        self.use_fec = FEC_AVAILABLE
-        if self.use_fec:
-            logger.info("Enabling USP FEC decoding (Viterbi + Reed-Solomon)")
+        # Connect demod → lowpass
+        self.connect(self.quad_demod, self.lowpass)
 
-            # 5a. Correlate Access Code - sync word detection
-            # Common sync word: 0x1ACFFC1D (used by many satellites)
-            # This is the sync marker before the FEC-encoded data
-            access_code = "00011010110011111111110000011101"  # 0x1ACFFC1D in binary
-            threshold = 0  # Allow 0 bit errors in sync word for strict matching
-
-            # Note: correlate_access_code_tag_bb adds a tag when sync word is found
-            # We need this for frame synchronization
-            self.correlate = digital.correlate_access_code_bb(access_code, threshold)
-
-            # 5b. Viterbi Decoder (Inner FEC - Convolutional Code)
-            # Standard USP: rate 1/2, constraint length 7 (K=7)
-            # This is the NASA standard convolutional code
-            try:
-                # Create Viterbi decoder for K=7, rate 1/2 code
-                # Polynomials: G1=0x4F (1001111), G2=0x6D (1101101) - NASA standard
-                self.viterbi_decoder = fec.cc_decoder.make(
-                    frame_size=packet_size * 8 * 2,  # Input is 2x output due to rate 1/2
-                    k=7,  # Constraint length
-                    rate=2,  # Rate 1/2 (outputs 2 bits per input bit)
-                    polys=[0x4F, 0x6D],  # Generator polynomials (NASA standard)
-                    start_state=0,
-                    end_state=-1,  # Don't force end state
-                    mode=fec.CC_TERMINATED,  # Terminated mode
-                    padded=False,
-                )
-
-                # Convert decoder object to async decoder block
-                self.viterbi_block = fec.async_decoder(
-                    self.viterbi_decoder, False, False, packet_size * 8 * 2
-                )
-
-                logger.info("Viterbi decoder (K=7, rate 1/2) initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Viterbi decoder: {e}")
-                self.use_fec = False
-
-            # 5c. De-interleaver
-            # USP typically uses block interleaving (depth varies by protocol)
-            # For now, we'll skip de-interleaving as it's protocol-specific
-            # TODO: Add configurable de-interleaver based on transmitter params
-
-            # 5d. Reed-Solomon Decoder (Outer FEC)
-            # Standard USP: RS(255, 223) over GF(2^8)
-            # This means 255 total symbols, 223 data symbols, 32 parity symbols
-            # Can correct up to 16 symbol errors
-            # RS decoding is done in the message sink using reedsolo library
-            self.has_rs = RS_AVAILABLE
-            if self.has_rs:
-                logger.info("Reed-Solomon RS(255,223) will be applied in message sink")
+        # Connect lowpass → dcblock (if enabled) → agc (if enabled) → clock recovery
+        if dc_block:
+            self.connect(self.lowpass, self.dcblock)
+            if use_agc:
+                self.connect(self.dcblock, self.agc, self.clock_recovery)
             else:
-                logger.info("Reed-Solomon unavailable - install: pip install reedsolo")
-
+                self.connect(self.dcblock, self.clock_recovery)
         else:
-            logger.info("USP FEC disabled - using direct bit decoding")
-            self.has_rs = False
+            if use_agc:
+                self.connect(self.lowpass, self.agc, self.clock_recovery)
+            else:
+                self.connect(self.lowpass, self.clock_recovery)
 
-        # 6. Pack bits into bytes (after FEC decoding if enabled)
-        self.pack_bits = blocks.pack_k_bits_bb(8)
+        # Connect clock recovery → message sink
+        self.connect(self.clock_recovery, self.msg_sink)
 
-        # 7. Message sink to receive decoded packets (with optional RS decoding)
-        self.msg_sink = GMSKMessageSink(
-            self._on_packet_decoded,
-            packet_size,
-            sync_word=None,
-            use_rs=self.has_rs if self.use_fec else False,
-        )
-
-        # Connect the receiver chain
-        self.connect((self.vector_source, 0), (self.quad_demod, 0))
-        self.connect((self.quad_demod, 0), (self.lpf, 0))
-        self.connect((self.lpf, 0), (self.clock_recovery, 0))
-        self.connect((self.clock_recovery, 0), (self.binary_slicer, 0))
-
-        # Connect through FEC chain if enabled
-        if self.use_fec:
-            # Bits → Sync Detection → (Viterbi would go here) → Pack → Sink
-            # Note: Full FEC implementation needs additional work for proper integration
-            self.connect((self.binary_slicer, 0), (self.correlate, 0))
-            self.connect((self.correlate, 0), (self.pack_bits, 0))
-        else:
-            # Direct path: Bits → Pack → Sink
-            self.connect((self.binary_slicer, 0), (self.pack_bits, 0))
-
-        self.connect((self.pack_bits, 0), (self.msg_sink, 0))
-
-        logger.debug(
-            f"GMSK flowgraph initialized: {symbol_rate} baud, BT={bt}, "
-            f"sps={self.samples_per_symbol}"
-        )
+        logger.debug(f"GMSK/FSK flowgraph initialized: {baudrate} baud, deviation={deviation}")
 
     def process_batch(self, samples):
-        """Process a batch of samples (non-blocking)"""
+        """Process a batch of IQ samples"""
         try:
-            # Process in chunks to avoid memory issues
-            chunk_size = 8192 * 100
+            # Set the input samples
+            self.vector_source.set_data(samples.tolist())
 
-            for i in range(0, len(samples), chunk_size):
-                chunk = samples[i : i + chunk_size]
+            # Run the flowgraph
+            self.start()
+            time.sleep(0.01)  # Small delay for processing
 
-                # Set the data for this chunk
-                self.vector_source.set_data(chunk.tolist())
-
-                # Start the flowgraph
-                self.start()
-
-                # Wait for processing
-                time.sleep(0.05)  # 50ms per chunk
-
-                # Stop gracefully
-                try:
-                    self.stop()
-                    self.wait()
-                except Exception:
-                    pass
+            # Stop gracefully
+            try:
+                self.stop()
+                self.wait()
+            except Exception:
+                pass
 
         except Exception as e:
             logger.error(f"Error processing batch: {e}")
@@ -415,14 +271,14 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
 
             traceback.print_exc()
 
-    def _on_packet_decoded(self, payload):
-        """Called when a GMSK packet is successfully decoded"""
+    def _on_symbols_decoded(self, symbols):
+        """Called when symbols are demodulated"""
         if self.callback:
-            self.callback(payload)
+            self.callback(symbols)
 
 
 class GMSKDecoder(threading.Thread):
-    """Real-time GMSK decoder using GNU Radio"""
+    """Real-time GMSK/FSK decoder using GNU Radio"""
 
     def __init__(
         self,
@@ -433,8 +289,7 @@ class GMSKDecoder(threading.Thread):
         vfo=None,
         transmitter=None,  # Complete transmitter dict with all parameters
         symbol_rate=9600,  # Fallback if not in transmitter dict
-        bt=0.5,
-        packet_size=256,
+        deviation=5000,  # FSK deviation in Hz
     ):
         if not GNURADIO_AVAILABLE:
             logger.error("GNU Radio not available - GMSK decoder cannot be initialized")
@@ -444,34 +299,24 @@ class GMSKDecoder(threading.Thread):
         self.iq_queue = iq_queue
         self.data_queue = data_queue
         self.session_id = session_id
-        self.sample_rate = None  # VFO bandwidth sample rate (after decimation)
+        self.sample_rate = None  # Processing sample rate (after initial setup)
         self.sdr_sample_rate = None  # Full SDR sample rate
         self.running = True
         self.output_dir = output_dir
         self.vfo = vfo
         self.vfo_manager = VFOManager()
         self.sdr_center_freq = None  # SDR center frequency
-        self.decimation_filter = None  # Filter for decimation
-        self.packet_count = 0
+        self.symbol_count: int = 0
+        self.last_activity: Optional[float] = None
 
         # Store transmitter dict for future use (framing, protocols, etc.)
         self.transmitter = transmitter or {}
 
-        # DEBUG: Log the full transmitter dict to see what we received
-        logger.info(f"GMSK decoder received transmitter dict: {self.transmitter}")
+        # Extract GMSK/FSK parameters from transmitter dict or use defaults
+        self.baudrate = self.transmitter.get("baud", symbol_rate)
+        self.deviation = self.transmitter.get("deviation", deviation)
 
-        # Extract GMSK parameters from transmitter dict or use defaults
-        # The Transmitters model has a 'baud' field
-        self.symbol_rate = self.transmitter.get("baud", symbol_rate)
-        self.bt = self.transmitter.get("bt", bt)
-        self.packet_size = self.transmitter.get("packet_size", packet_size)
-
-        # DEBUG: Log what values were extracted
-        logger.info(
-            f"Extracted baud rate: {self.symbol_rate} (from transmitter: {self.transmitter.get('baud')}, fallback: {symbol_rate})"
-        )
-
-        # Store additional transmitter info that might be useful
+        # Store additional transmitter info
         self.transmitter_description = self.transmitter.get("description", "Unknown")
         self.transmitter_mode = self.transmitter.get("mode", "GMSK")
 
@@ -480,12 +325,21 @@ class GMSKDecoder(threading.Thread):
         # GNU Radio flowgraph (will be initialized when we know sample rate)
         self.flowgraph = None
 
+        # Stats tracking (thread-safe)
+        self.stats: Dict[str, Any] = {
+            "iq_chunks_in": 0,
+            "samples_in": 0,
+            "data_messages_out": 0,
+            "symbols_decoded": 0,
+            "last_activity": None,
+            "errors": 0,
+        }
+        self.stats_lock = threading.Lock()
+
         logger.info(f"GMSK decoder initialized for session {session_id}, VFO {vfo}")
         if self.transmitter:
             logger.info(f"Transmitter: {self.transmitter_description} ({self.transmitter_mode})")
-        logger.info(
-            f"GMSK parameters: {self.symbol_rate} baud, BT={self.bt}, packet_size={self.packet_size} bytes"
-        )
+        logger.info(f"GMSK parameters: {self.baudrate} baud, deviation={self.deviation} Hz")
 
     def _get_vfo_state(self):
         """Get VFO state for this decoder."""
@@ -493,63 +347,37 @@ class GMSKDecoder(threading.Thread):
             return self.vfo_manager.get_vfo_state(self.session_id, self.vfo)
         return None
 
-    def _frequency_translate(self, samples, offset_freq, sample_rate):
-        """Translate frequency by offset (shift signal in frequency domain)."""
-        if offset_freq == 0:
-            return samples
-
-        # Generate complex exponential for frequency shift
-        t = np.arange(len(samples)) / sample_rate
-        shift = np.exp(-2j * np.pi * offset_freq * t)
-        return samples * shift
-
-    def _design_decimation_filter(self, decimation_factor, bandwidth, sample_rate):
-        """Design low-pass filter for decimation."""
-        # Cutoff at bandwidth/2 (Nyquist for target bandwidth)
-        cutoff = bandwidth / 2
-        # Transition band: 10% of bandwidth
-        transition = bandwidth * 0.1
-        # Design FIR filter
-        numtaps = int(sample_rate / transition) | 1  # Ensure odd
-        if numtaps > 1001:  # Limit filter length
-            numtaps = 1001
-        return signal.firwin(numtaps, cutoff, fs=sample_rate)
-
-    def _decimate_iq(self, samples, decimation_factor):
-        """Decimate IQ samples with filtering."""
-        if decimation_factor == 1:
-            return samples
-
-        # Apply low-pass filter
-        filtered = signal.lfilter(self.decimation_filter, 1, samples)
-        # Decimate
-        return filtered[::decimation_factor]
-
-    def _on_packet_decoded(self, payload):
-        """Callback when GNU Radio decodes a GMSK packet"""
+    def _on_symbols_decoded(self, symbols):
+        """Callback when GNU Radio demodulates GMSK symbols"""
         try:
-            self.packet_count += 1
-            logger.info(f"GMSK packet #{self.packet_count} decoded: {len(payload)} bytes")
+            if symbols is None or len(symbols) == 0:
+                return
 
-            # Save to file
+            self.symbol_count += len(symbols)
+            current_time = time.time()
+            self.last_activity = current_time
+
+            # Update stats
+            with self.stats_lock:
+                symbols_decoded = cast(int, self.stats.get("symbols_decoded", 0))
+                data_messages_out = cast(int, self.stats.get("data_messages_out", 0))
+                self.stats["symbols_decoded"] = symbols_decoded + len(symbols)
+                self.stats["last_activity"] = current_time
+                self.stats["data_messages_out"] = data_messages_out + 1
+
+            # Log periodically
+            if self.symbol_count % 10000 == 0:
+                logger.debug(f"GMSK decoder: {self.symbol_count} symbols decoded")
+
+            # Save symbols to file for inspection
             timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"gmsk_{self.symbol_rate}baud_{timestamp}_{self.packet_count}.bin"
+            filename = f"gmsk_{self.baudrate}baud_symbols_{timestamp}.bin"
             filepath = os.path.join(self.output_dir, filename)
 
-            with open(filepath, "wb") as f:
-                f.write(payload)
-            logger.info(f"Saved: {filepath}")
+            # Save as float32 binary
+            symbols.astype(np.float32).tofile(filepath)
 
-            # Encode as base64 for transmission
-            packet_base64 = base64.b64encode(payload).decode()
-
-            # Try to decode as ASCII for display
-            try:
-                packet_text = payload.decode("ascii", errors="replace")
-            except UnicodeDecodeError:
-                packet_text = payload.hex()
-
-            # Send to UI
+            # Send to UI (for now, just send symbol stats)
             msg = {
                 "type": "decoder-output",
                 "decoder_type": "gmsk",
@@ -557,30 +385,26 @@ class GMSKDecoder(threading.Thread):
                 "vfo": self.vfo,
                 "timestamp": time.time(),
                 "output": {
-                    "format": "application/octet-stream",
-                    "filename": filename,
+                    "format": "symbols",
+                    "symbol_count": len(symbols),
+                    "total_symbols": self.symbol_count,
+                    "baudrate": self.baudrate,
                     "filepath": filepath,
-                    "packet_data": packet_base64,
-                    "packet_text": packet_text,
-                    "packet_length": len(payload),
-                    "packet_number": self.packet_count,
-                    "parameters": f"{self.symbol_rate}baud_BT{self.bt}",
                 },
             }
             try:
                 self.data_queue.put(msg, block=False)
             except queue.Full:
-                logger.warning("Data queue full, dropping packet output")
-
-            # Send status update
-            self._send_status_update(
-                DecoderStatus.COMPLETED,
-                {"packet_number": self.packet_count, "packet_length": len(payload)},
-            )
+                logger.warning("Data queue full, dropping symbol output")
 
         except Exception as e:
-            logger.error(f"Error processing decoded packet: {e}")
-            logger.exception(e)
+            logger.error(f"Error processing decoded symbols: {e}")
+            with self.stats_lock:
+                errors = cast(int, self.stats.get("errors", 0))
+                self.stats["errors"] = errors + 1
+            import traceback
+
+            traceback.print_exc()
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
@@ -606,8 +430,8 @@ class GMSKDecoder(threading.Thread):
         chunks_received = 0
         samples_buffer = np.array([], dtype=np.complex64)
         # Buffer enough samples for GMSK processing
-        buffer_duration = 1.0  # seconds
-        process_interval = 0.5  # Process every 0.5 seconds
+        buffer_duration = 0.5  # Process every 0.5 seconds
+        buffer_samples = 0  # Will be initialized when we know sample rate
 
         try:
             while self.running:
@@ -628,91 +452,57 @@ class GMSKDecoder(threading.Thread):
                     if not vfo_state or not vfo_state.active:
                         continue  # VFO not active, skip
 
-                    vfo_center = vfo_state.center_freq
                     vfo_bandwidth = vfo_state.bandwidth
+
+                    # Update stats
+                    with self.stats_lock:
+                        iq_chunks_in = cast(int, self.stats.get("iq_chunks_in", 0))
+                        samples_in = cast(int, self.stats.get("samples_in", 0))
+                        self.stats["iq_chunks_in"] = iq_chunks_in + 1
+                        self.stats["samples_in"] = samples_in + len(samples)
 
                     # Initialize on first message
                     if self.sdr_sample_rate is None:
                         self.sdr_sample_rate = sdr_rate
                         self.sdr_center_freq = sdr_center
 
-                        # Calculate decimation factor for optimal samples per symbol
-                        # Target 8-10 samples per symbol
-                        target_sps = 8
-                        target_sample_rate = self.symbol_rate * target_sps
-                        decimation = int(self.sdr_sample_rate / target_sample_rate)
-                        if decimation < 1:
-                            decimation = 1
-                        self.sample_rate = self.sdr_sample_rate / decimation
-
-                        logger.info(
-                            f"GMSK symbol rate: {self.symbol_rate} baud, "
-                            f"target rate: {target_sample_rate/1e3:.2f}kS/s ({target_sps} sps)"
-                        )
-
-                        # Design decimation filter
-                        self.decimation_filter = self._design_decimation_filter(
-                            decimation, vfo_bandwidth, self.sdr_sample_rate
-                        )
+                        # Use VFO bandwidth as sample rate for flowgraph
+                        self.sample_rate = vfo_bandwidth
 
                         logger.info(
                             f"GMSK decoder: SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, "
-                            f"VFO BW: {vfo_bandwidth/1e3:.0f} kHz, decimation: {decimation}, "
-                            f"output rate: {self.sample_rate/1e6:.2f} MS/s"
+                            f"VFO BW: {vfo_bandwidth/1e3:.0f} kHz"
                         )
                         logger.info(
-                            f"VFO center: {vfo_center/1e6:.3f} MHz, "
-                            f"SDR center: {sdr_center/1e6:.3f} MHz"
+                            f"Baudrate: {self.baudrate} baud, deviation: {self.deviation} Hz"
                         )
 
-                        # Calculate buffer sizes
+                        # Calculate buffer size
                         buffer_samples = int(self.sample_rate * buffer_duration)
-                        process_samples = int(self.sample_rate * process_interval)
-                        logger.info(
-                            f"Will buffer {buffer_samples} samples ({buffer_duration}s) "
-                            f"and process every {process_samples} samples ({process_interval}s)"
-                        )
+                        logger.info(f"Buffer size: {buffer_samples} samples ({buffer_duration}s)")
 
                         # Initialize flowgraph
                         self.flowgraph = GMSKFlowgraph(
                             sample_rate=self.sample_rate,
-                            callback=self._on_packet_decoded,
-                            symbol_rate=self.symbol_rate,
-                            bt=self.bt,
-                            packet_size=self.packet_size,
+                            callback=self._on_symbols_decoded,
+                            baudrate=self.baudrate,
+                            deviation=self.deviation,
+                            use_agc=True,
+                            dc_block=True,
                         )
 
-                    # Step 1: Frequency translation to VFO center
-                    offset_freq = vfo_center - sdr_center
-                    translated = self._frequency_translate(
-                        samples, offset_freq, self.sdr_sample_rate
-                    )
-
-                    # Step 2: Decimate to VFO bandwidth
-                    decimation = int(self.sdr_sample_rate / vfo_bandwidth)
-                    if decimation < 1:
-                        decimation = 1
-                    decimated = self._decimate_iq(translated, decimation)
-
-                    # Add to buffer
-                    samples_buffer = np.concatenate([samples_buffer, decimated])
+                    # Add to buffer (samples already decimated to VFO bandwidth by IQ broadcaster)
+                    samples_buffer = np.concatenate([samples_buffer, samples])
 
                     # Process when we have enough samples
-                    if len(samples_buffer) >= process_samples:
-                        # Process the buffered samples
-                        if chunks_received % 20 == 0:
-                            logger.debug(
-                                f"Processing {len(samples_buffer)} samples "
-                                f"({self.symbol_rate} baud)"
-                            )
-
+                    if len(samples_buffer) >= buffer_samples:
                         # Send status update
                         if chunks_received % 50 == 0:
                             self._send_status_update(
                                 DecoderStatus.DECODING,
                                 {
                                     "samples_buffered": len(samples_buffer),
-                                    "packets_decoded": self.packet_count,
+                                    "symbols_decoded": self.symbol_count,
                                 },
                             )
 
@@ -720,22 +510,15 @@ class GMSKDecoder(threading.Thread):
                         if self.flowgraph:
                             self.flowgraph.process_batch(samples_buffer)
 
-                        # Keep overlap for packet boundaries
-                        if self.sample_rate:
-                            overlap_samples = int(self.sample_rate * 0.2)
-                        else:
-                            overlap_samples = 0
-                        if len(samples_buffer) > overlap_samples:
-                            samples_buffer = samples_buffer[-overlap_samples:]
-                        else:
-                            samples_buffer = np.array([], dtype=np.complex64)
+                        # Clear buffer after processing
+                        samples_buffer = np.array([], dtype=np.complex64)
 
                     chunks_received += 1
                     if chunks_received % 100 == 0:
                         logger.debug(
                             f"Received {chunks_received} chunks, "
                             f"buffer: {len(samples_buffer)} samples, "
-                            f"packets decoded: {self.packet_count}"
+                            f"symbols decoded: {self.symbol_count}"
                         )
 
                 except queue.Empty:
@@ -743,7 +526,12 @@ class GMSKDecoder(threading.Thread):
 
         except Exception as e:
             logger.error(f"GMSK decoder error: {e}")
-            logger.exception(e)
+            with self.stats_lock:
+                errors = int(self.stats.get("errors", 0))
+                self.stats["errors"] = errors + 1
+            import traceback
+
+            traceback.print_exc()
             self._send_status_update(DecoderStatus.ERROR)
         except KeyboardInterrupt:
             pass
