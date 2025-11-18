@@ -264,6 +264,15 @@ RUN git clone --depth=1 --recursive https://github.com/gnuradio/volk.git && \
     sudo make install -j$(nproc) && \
     sudo ldconfig
 
+# Compile cppzmq (C++ bindings for ZeroMQ) - required by GNU Radio gr-zeromq
+WORKDIR /src
+RUN git clone --depth=1 https://github.com/zeromq/cppzmq.git && \
+    cd cppzmq && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    sudo make install -j$(nproc)
+
 # Compile GNU Radio 3.10
 WORKDIR /src
 RUN git clone --depth=1 --branch=maint-3.10 --recursive https://github.com/gnuradio/gnuradio.git && \
