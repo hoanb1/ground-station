@@ -107,7 +107,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
     };
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', height: '100%', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', height: '100%', gap: 0.25, px: 0.5 }}>
             {/* CPU Bar */}
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
@@ -115,7 +115,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
                 </Typography>
                 <Box sx={{
                     flex: 1,
-                    width: '100%',
+                    width: '24px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-end',
@@ -148,7 +148,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
                     </Typography>
                     <Box sx={{
                         flex: 1,
-                        width: '100%',
+                        width: '24px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'flex-end',
@@ -250,7 +250,7 @@ export const ComponentNode = ({ data }) => {
                             fontSize: '0.8rem',
                             letterSpacing: '0.01em',
                             color: 'text.primary',
-                            mr: type === 'decoder' ? 2 : 0,
+                            mr: (type === 'decoder' || type === 'demodulator') ? 2 : 0,
                         }}
                     >
                         {data.label}
@@ -292,7 +292,7 @@ export const ComponentNode = ({ data }) => {
                 <Divider sx={{ mb: 1, opacity: 0.6 }} />
 
                 {/* Metrics - Two or Three column layout with dividers */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker') ? 'minmax(90px, 1fr) auto 110px auto minmax(90px, 1fr)' : '1fr auto 1fr', gap: 0.75 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker') ? 'minmax(85px, 1fr) auto 90px auto minmax(85px, 1fr)' : '1fr auto 1fr', gap: 0.75 }}>
                     {/* Tracker metrics */}
                     {type === 'tracker' && (
                         <>
