@@ -222,7 +222,7 @@ export const ComponentNode = ({ data }) => {
             <Paper
                 elevation={1}
                 sx={{
-                    p: 1,
+                    p: 0,
                     minWidth: (type === 'fft' || type === 'worker' || type === 'tracker') ? 380 : 280,
                     backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
                     border: 1,
@@ -230,6 +230,7 @@ export const ComponentNode = ({ data }) => {
                         ? 'rgba(255, 255, 255, 0.08)' 
                         : 'rgba(0, 0, 0, 0.08)',
                     borderRadius: 1.5,
+                    overflow: 'hidden',
                     transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
                     '&:hover': {
                         borderColor: (theme) => theme.palette.mode === 'dark'
@@ -242,7 +243,16 @@ export const ComponentNode = ({ data }) => {
                 }}
             >
                 {/* Title with status */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    px: 1,
+                    py: 0.5,
+                    backgroundColor: (theme) => theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.03)'
+                        : 'rgba(0, 0, 0, 0.02)',
+                }}>
                     <Typography 
                         variant="subtitle2" 
                         sx={{ 
@@ -289,10 +299,16 @@ export const ComponentNode = ({ data }) => {
                     </Box>
                 </Box>
 
-                <Divider sx={{ mb: 1, opacity: 0.6 }} />
+                <Divider sx={{ opacity: 0.6 }} />
 
                 {/* Metrics - Two or Three column layout with dividers */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker') ? 'minmax(85px, 1fr) auto 90px auto minmax(85px, 1fr)' : '1fr auto 1fr', gap: 0.75 }}>
+                <Box sx={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker') ? 'minmax(85px, 1fr) auto 90px auto minmax(85px, 1fr)' : '1fr auto 1fr', 
+                    gap: 0.75,
+                    p: 1,
+                    backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
+                }}>
                     {/* Tracker metrics */}
                     {type === 'tracker' && (
                         <>
