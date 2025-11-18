@@ -47,7 +47,8 @@ import {
     getBandwidthConfig,
     canDragLeftEdge,
     canDragRightEdge,
-    isCenterLineOnly
+    isCenterLineOnly,
+    isLockedBandwidth
 } from './vfo-config.js';
 
 const VFOMarkersContainer = ({
@@ -380,8 +381,9 @@ const VFOMarkersContainer = ({
                 canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1);
             }
 
-            // Draw edge handles based on mode configuration (skip for center-only mode)
-            if (!centerOnly) {
+            // Draw edge handles based on mode configuration and bandwidth lock state (skip for center-only mode)
+            const bandwidthLocked = isLockedBandwidth(mode, marker.decoder);
+            if (!centerOnly && !bandwidthLocked) {
                 const edgeHandleYPosition = edgeHandleYOffset;
                 const edgeHandleWidth = isSelected ? 14 : 6;
 
@@ -460,19 +462,22 @@ const VFOMarkersContainer = ({
                 }
             }
 
-            // Check edge handles based on mode configuration
+            // Check edge handles based on mode configuration and bandwidth lock state
             // Use the new position (edgeHandleYPosition) with an appropriate range
             const edgeYMin = edgeHandleYPosition - edgeHandleHeight / 2;
             const edgeYMax = edgeHandleYPosition + edgeHandleHeight / 2;
 
-            if (canDragRightEdge(mode)) {
+            // Only allow edge dragging if bandwidth is not locked
+            const bandwidthLocked = isLockedBandwidth(mode, marker.decoder);
+
+            if (!bandwidthLocked && canDragRightEdge(mode)) {
                 // Check right edge with updated Y position
                 if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - rightEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'rightEdge' };
                 }
             }
 
-            if (canDragLeftEdge(mode)) {
+            if (!bandwidthLocked && canDragLeftEdge(mode)) {
                 // Check left edge with updated Y position
                 if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - leftEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'leftEdge' };

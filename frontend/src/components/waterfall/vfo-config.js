@@ -43,6 +43,7 @@ export const DEMODULATORS = {
         allowRightEdgeDrag: false,
         centerLineOnly: true, // only draw center line, no sidebands
         bandwidthLabel: (bw) => '', // no bandwidth label for center-only
+        lockedBandwidth: true, // bandwidth cannot be changed by user
     },
     FM: {
         internalName: 'FM',
@@ -57,6 +58,7 @@ export const DEMODULATORS = {
         allowRightEdgeDrag: true,
         centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±5kHz
+        lockedBandwidth: false, // bandwidth can be changed by user
     },
     FM_STEREO: {
         internalName: 'FM_STEREO',
@@ -71,6 +73,7 @@ export const DEMODULATORS = {
         allowRightEdgeDrag: true,
         centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
+        lockedBandwidth: false, // bandwidth can be changed by user
     },
     AM: {
         internalName: 'AM',
@@ -85,6 +88,7 @@ export const DEMODULATORS = {
         allowRightEdgeDrag: true,
         centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
+        lockedBandwidth: false, // bandwidth can be changed by user
     },
     USB: {
         internalName: 'USB',
@@ -99,6 +103,7 @@ export const DEMODULATORS = {
         allowRightEdgeDrag: true,
         centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
+        lockedBandwidth: false, // bandwidth can be changed by user
     },
     LSB: {
         internalName: 'LSB',
@@ -113,6 +118,7 @@ export const DEMODULATORS = {
         allowRightEdgeDrag: false,
         centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
+        lockedBandwidth: false, // bandwidth can be changed by user
     },
     CW: {
         internalName: 'CW',
@@ -127,6 +133,7 @@ export const DEMODULATORS = {
         allowRightEdgeDrag: true,
         centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
+        lockedBandwidth: false, // bandwidth can be changed by user
     },
 };
 
@@ -141,10 +148,11 @@ export const DECODERS = {
         description: 'No decoder - audio pass-through',
         requiresDemodulator: null, // can work with any demodulator
         overrideDemodulator: null, // doesn't override demodulator mode
-        centerLineOnly: false, // normal display with sidebands
+        centerLineOnly: false, // doesn't force center-only, respects demodulator setting
         hasStatusDisplay: false,
         hasProgressDisplay: false,
         hasTextOutput: false,
+        lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     sstv: {
         internalName: 'sstv',
@@ -157,6 +165,7 @@ export const DECODERS = {
         hasProgressDisplay: true, // shows percentage progress
         hasTextOutput: false, // no text output, outputs images
         hasModeDisplay: true, // shows SSTV mode (e.g., "Martin M1", "Scottie S1")
+        lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     morse: {
         internalName: 'morse',
@@ -172,6 +181,7 @@ export const DECODERS = {
         textDisplayLength: 30, // how many chars to show in VFO label
         textBufferLength: 300, // how many chars to keep in buffer
         textPlaceholder: 'listening', // what to show when no text yet
+        lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     apt: {
         internalName: 'apt',
@@ -184,6 +194,7 @@ export const DECODERS = {
         hasProgressDisplay: true,
         hasTextOutput: false,
         hasModeDisplay: false,
+        lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     lora: {
         internalName: 'lora',
@@ -196,6 +207,7 @@ export const DECODERS = {
         hasProgressDisplay: false,
         hasTextOutput: false,
         hasModeDisplay: true, // shows LoRa parameters (SF, BW, CR)
+        lockedBandwidth: true, // bandwidth is determined by LoRa parameters, not user-adjustable
     },
     gmsk: {
         internalName: 'gmsk',
@@ -203,12 +215,18 @@ export const DECODERS = {
         description: 'GMSK decoder with USP FEC (processes raw IQ, no demodulator)',
         requiresDemodulator: null, // raw IQ decoder
         overrideDemodulator: 'none', // disable audio demodulator
-        centerLineOnly: true, // only show center line for raw IQ
+        centerLineOnly: false, // show sidebands representing actual bandwidth
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
         hasModeDisplay: false,
         defaultBandwidth: 30000, // 30 kHz default (suitable for ~9600-10000 baud + Doppler)
+        bandwidthType: 'double-sided', // bandwidth is divided equally on both sides of center
+        showBothEdges: true, // show both edges
+        allowLeftEdgeDrag: false, // edges not draggable (bandwidth locked)
+        allowRightEdgeDrag: false, // edges not draggable (bandwidth locked)
+        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±15kHz
+        lockedBandwidth: true, // bandwidth is determined by baud rate, not user-adjustable
         calculateBandwidth: (transmitter) => {
             // Calculate optimal bandwidth based on transmitter baud rate
             // Formula: 3x baud rate (for GMSK spectral width + Doppler margin)
@@ -224,12 +242,18 @@ export const DECODERS = {
         description: 'BPSK decoder with AX.25 support (processes raw IQ, no demodulator)',
         requiresDemodulator: null, // raw IQ decoder
         overrideDemodulator: 'none', // disable audio demodulator
-        centerLineOnly: true, // only show center line for raw IQ
+        centerLineOnly: false, // show sidebands representing actual bandwidth
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
         hasModeDisplay: false,
         defaultBandwidth: 30000, // 30 kHz default (suitable for 9600 baud + Doppler)
+        bandwidthType: 'double-sided', // bandwidth is divided equally on both sides of center
+        showBothEdges: true, // show both edges
+        allowLeftEdgeDrag: false, // edges not draggable (bandwidth locked)
+        allowRightEdgeDrag: false, // edges not draggable (bandwidth locked)
+        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±15kHz
+        lockedBandwidth: true, // bandwidth is determined by baud rate, not user-adjustable
         calculateBandwidth: (transmitter) => {
             // Calculate optimal bandwidth based on transmitter baud rate
             // Formula: 3x baud rate (for BPSK spectral width + Doppler margin)
@@ -368,6 +392,30 @@ export const canDragLeftEdge = (mode) => {
 export const canDragRightEdge = (mode) => {
     const demodConfig = getDemodulatorConfig(mode);
     return demodConfig ? demodConfig.allowRightEdgeDrag : false;
+};
+
+/**
+ * Check if VFO bandwidth is locked (considering both demodulator and decoder)
+ *
+ * @param {string} mode - Demodulator mode
+ * @param {string} decoder - Decoder name
+ * @returns {boolean} True if bandwidth is locked (not user-adjustable)
+ */
+export const isLockedBandwidth = (mode, decoder) => {
+    // Check decoder config first (decoder can override lock state)
+    const decoderConfig = getDecoderConfig(decoder);
+    if (decoderConfig && decoderConfig.lockedBandwidth === true) {
+        return true;
+    }
+
+    // Check demodulator config
+    const demodConfig = getDemodulatorConfig(mode);
+    if (demodConfig && demodConfig.lockedBandwidth === true) {
+        return true;
+    }
+
+    // Default to false (unlocked/resizable) if not explicitly set
+    return false;
 };
 
 /**

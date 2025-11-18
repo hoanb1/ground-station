@@ -38,6 +38,7 @@ import {SquelchIcon} from "../common/dataurl-icons.jsx";
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import TransmittersTable from '../satellites/transmitters-table.jsx';
+import { isLockedBandwidth, getEffectiveMode, getDecoderConfig } from './vfo-config.js';
 
 const BANDWIDTHS = {
     "500": "500 Hz",
@@ -56,6 +57,7 @@ const BANDWIDTHS = {
     "15000": "15 kHz",
     "20000": "20 kHz",
     "25000": "25 kHz",
+    "30000": "30 kHz",
     "50000": "50 kHz",
     "100000": "100 kHz",
     "150000": "150 kHz",
@@ -733,7 +735,16 @@ const VfoAccordion = ({
                             <ToggleButtonGroup
                                 value={BANDWIDTHS.hasOwnProperty(vfoMarkers[vfoIndex]?.bandwidth) ? vfoMarkers[vfoIndex]?.bandwidth.toString() : 'custom'}
                                 exclusive
-                                disabled={!vfoActive[vfoIndex]}
+                                disabled={
+                                    !vfoActive[vfoIndex] ||
+                                    isLockedBandwidth(
+                                        getEffectiveMode(
+                                            vfoMarkers[vfoIndex]?.mode,
+                                            vfoMarkers[vfoIndex]?.decoder
+                                        ),
+                                        vfoMarkers[vfoIndex]?.decoder
+                                    )
+                                }
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
                                         if (newValue === 'custom') {
