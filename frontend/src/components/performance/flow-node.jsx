@@ -107,9 +107,9 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
     };
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', height: '100%', gap: 0.25, px: 0.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'center', height: '100%', gap: 0.25 }}>
             {/* CPU Bar */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
                     CPU
                 </Typography>
@@ -131,7 +131,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
                         width: '100%',
                         height: `${cappedCpuPercent}%`,
                         backgroundColor: getCpuColor(cappedCpuPercent),
-                        borderRadius: '0 0 8px 8px',
+                        borderRadius: '0 0 4px 4px',
                         transition: 'height 0.3s ease, background-color 0.3s ease',
                     }} />
                 </Box>
@@ -142,7 +142,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
 
             {/* Memory Bar */}
             {memoryMb !== undefined && memoryPercent !== undefined && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
                         MEM
                     </Typography>
@@ -164,7 +164,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
                             width: '100%',
                             height: `${cappedMemPercent}%`,
                             backgroundColor: getMemColor(cappedMemPercent),
-                            borderRadius: '0 0 8px 8px',
+                            borderRadius: '0 0 4px 4px',
                             transition: 'height 0.3s ease, background-color 0.3s ease',
                         }} />
                     </Box>
