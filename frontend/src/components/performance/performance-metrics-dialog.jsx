@@ -53,6 +53,23 @@ const PerformanceMetricsDialog = () => {
         };
     }, [open, socket]);
 
+    // Close dialog when socket disconnects
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleDisconnect = () => {
+            if (open) {
+                dispatch(setDialogOpen(false));
+            }
+        };
+
+        socket.on('disconnect', handleDisconnect);
+
+        return () => {
+            socket.off('disconnect', handleDisconnect);
+        };
+    }, [socket, open, dispatch]);
+
     const handleClose = () => {
         dispatch(setDialogOpen(false));
     };

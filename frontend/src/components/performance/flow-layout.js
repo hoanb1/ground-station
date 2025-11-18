@@ -20,14 +20,62 @@
 import dagre from 'dagre';
 
 /**
- * Check if a component has positive output rate (data is flowing)
+ * Truncate long IDs (UUIDs, session IDs) for display
  */
-const hasPositiveOutputRate = (component) => {
-    if (!component || !component.rates) return false;
+const truncateId = (id, length = 8) => {
+    if (!id || typeof id !== 'string') return 'N/A';
+    if (id.length <= length) return id;
+    return id.substring(0, length) + '...';
+};
+
+/**
+ * Truncate session ID in keys like "sessionid_vfoN" while preserving VFO number
+ * Examples:
+ *   "BZmMbeC-3ZDTEhz7AAAB_vfo1" -> "BZmMbeC-..._vfo1"
+ *   "session123_vfo2" -> "session1..._vfo2"
+ */
+const truncateSessionVfoKey = (key, length = 8) => {
+    if (!key || typeof key !== 'string') return 'N/A';
+
+    // Check if key contains "_vfo" pattern
+    const vfoMatch = key.match(/^(.+?)(_vfo\d+)$/);
+    if (vfoMatch) {
+        const sessionId = vfoMatch[1];
+        const vfoPart = vfoMatch[2];
+
+        if (sessionId.length > length) {
+            return `${sessionId.substring(0, length)}...${vfoPart}`;
+        }
+        return key; // Session ID is short enough, return as-is
+    }
+
+    // No VFO pattern, just truncate normally
+    return truncateId(key, length);
+};
+
+/**
+ * Check if a component has recent activity (data is flowing)
+ * For trackers: uses last_activity timestamp to avoid sampling issues
+ * For other components: uses rate values
+ */
+const hasPositiveOutputRate = (component, componentType = null) => {
+    if (!component) return false;
+
+    // Special case for trackers: use last_activity timestamp
+    // This handles the 2s tracker loop properly
+    if (componentType === 'tracker' && component.stats && component.stats.last_activity !== undefined) {
+        const now = Date.now() / 1000; // Convert to seconds (Unix timestamp)
+        const lastActivity = component.stats.last_activity;
+        const timeSinceActivity = now - lastActivity;
+
+        // Consider active if last_activity was within last 5 seconds
+        return timeSinceActivity < 5;
+    }
+
+    // For all other components: use rate checking
+    if (!component.rates) return false;
 
     const rates = component.rates;
-
-    // Check various rate fields depending on component type
     return (rates.messages_in_per_sec > 0) ||
            (rates.messages_broadcast_per_sec > 0) ||
            (rates.messages_received_per_sec > 0) ||
@@ -35,7 +83,8 @@ const hasPositiveOutputRate = (component) => {
            (rates.audio_chunks_out_per_sec > 0) ||
            (rates.fft_results_per_sec > 0) ||
            (rates.messages_emitted_per_sec > 0) ||
-           (rates.data_messages_out_per_sec > 0);
+           (rates.data_messages_out_per_sec > 0) ||
+           (rates.updates_per_sec > 0);
 };
 
 /**
@@ -89,10 +138,10 @@ export const applyDagreLayout = (nodes, edges) => {
     // Configure graph layout
     dagreGraph.setGraph({
         rankdir: 'LR', // Left to right
-        ranksep: 150,  // Horizontal spacing between ranks
-        nodesep: 80,   // Vertical spacing between nodes
+        ranksep: 70,   // Horizontal spacing between ranks (reduced from 150)
+        nodesep: 40,   // Vertical spacing between nodes
         edgesep: 30,   // Spacing between edges
-        ranker: 'network-simplex', // Best for hierarchical layouts
+        ranker: 'tight-tree', // Use tight-tree for better rank constraint handling
     });
 
     // Define rank order for different node types
@@ -100,8 +149,8 @@ export const applyDagreLayout = (nodes, edges) => {
         const type = node.data.type;
         const componentType = node.data.component?.type;
 
-        // Rank 0: SDR Workers (leftmost - source of data)
-        if (type === 'worker') {
+        // Rank 0: SDR Workers and Trackers (leftmost - source of data)
+        if (type === 'worker' || type === 'tracker') {
             return 0;
         }
         // Rank 1: IQ Broadcasters
@@ -128,13 +177,9 @@ export const applyDagreLayout = (nodes, edges) => {
         if (type === 'streamer') {
             return 6;
         }
-        // Rank 7: Trackers
-        if (type === 'tracker') {
-            return 7;
-        }
-        // Rank 8: Browsers (rightmost)
+        // Rank 7: Browsers (rightmost)
         if (type === 'browser') {
-            return 8;
+            return 7;
         }
 
         return 10; // Default rank for unknown types
@@ -145,13 +190,26 @@ export const applyDagreLayout = (nodes, edges) => {
         dagreGraph.setNode(node.id, {
             width: 280,
             height: 200,
-            rank: getRank(node),
         });
     });
 
-    // Add edges to dagre graph
+    // Add edges to dagre graph with minlen to enforce rank separation
     edges.forEach((edge) => {
-        dagreGraph.setEdge(edge.source, edge.target);
+        const sourceNode = nodes.find(n => n.id === edge.source);
+        const targetNode = nodes.find(n => n.id === edge.target);
+
+        if (sourceNode && targetNode) {
+            const sourceRank = getRank(sourceNode);
+            const targetRank = getRank(targetNode);
+            const rankDiff = targetRank - sourceRank;
+
+            // Set minlen based on rank difference to enforce hierarchy
+            dagreGraph.setEdge(edge.source, edge.target, {
+                minlen: Math.max(1, rankDiff)
+            });
+        } else {
+            dagreGraph.setEdge(edge.source, edge.target);
+        }
     });
 
     // Compute layout
@@ -229,7 +287,7 @@ export const createFlowFromMetrics = (metrics) => {
                     type: 'componentNode',
                     position: { x: columnX, y: sdrStartY },
                     data: {
-                        label: `SDR Worker - ${sdrId}`,
+                        label: `SDR Worker - ${truncateId(sdrId)}`,
                         component: sdrData.worker,
                         type: 'worker',
                     },
@@ -249,7 +307,7 @@ export const createFlowFromMetrics = (metrics) => {
                             type: 'componentNode',
                             position: { x: columnX, y: sdrStartY },
                             data: {
-                                label: `IQ Broadcaster - ${sdrId}`,
+                                label: `IQ Broadcaster - ${truncateId(sdrId)}`,
                                 component: broadcaster,
                                 type: 'broadcaster',
                             },
@@ -291,7 +349,7 @@ export const createFlowFromMetrics = (metrics) => {
                     type: 'componentNode',
                     position: { x: columnX, y: sdrStartY },
                     data: {
-                        label: `FFT Processor - ${sdrId}`,
+                        label: `FFT Processor - ${truncateId(sdrId)}`,
                         component: sdrData.fft_processor,
                         type: 'fft',
                     },
@@ -329,7 +387,7 @@ export const createFlowFromMetrics = (metrics) => {
                         type: 'componentNode',
                         position: { x: columnX, y: demodY },
                         data: {
-                            label: `${demod.type} - ${demodKey}`,
+                            label: `${demod.type} - ${truncateSessionVfoKey(demodKey)}`,
                             component: demod,
                             type: 'demodulator',
                         },
@@ -389,7 +447,7 @@ export const createFlowFromMetrics = (metrics) => {
                             type: 'componentNode',
                             position: { x: columnX, y: audioBroadcasterY },
                             data: {
-                                label: `Audio Broadcaster - ${broadcaster.session_id}`,
+                                label: `Audio Broadcaster - ${truncateId(broadcaster.session_id)}`,
                                 component: broadcaster,
                                 type: 'broadcaster',
                             },
@@ -448,7 +506,7 @@ export const createFlowFromMetrics = (metrics) => {
                         type: 'componentNode',
                         position: { x: columnX, y: demodY },
                         data: {
-                            label: `${recorder.type} - ${recKey}`,
+                            label: `${recorder.type} - ${truncateSessionVfoKey(recKey)}`,
                             component: recorder,
                             type: 'recorder',
                         },
@@ -503,7 +561,7 @@ export const createFlowFromMetrics = (metrics) => {
                         type: 'componentNode',
                         position: { x: columnX, y: decoderY },
                         data: {
-                            label: `${decoder.type} - ${decKey}`,
+                            label: `${decoder.type} - ${truncateSessionVfoKey(decKey)}`,
                             component: decoder,
                             type: 'decoder',
                         },
@@ -573,7 +631,7 @@ export const createFlowFromMetrics = (metrics) => {
     // Trackers (satellite trackers, etc.)
     if (metrics.trackers) {
         const trackerY = START_Y + (Object.keys(metrics.sdrs || {}).length * 1000);
-        const trackerX = START_X + HORIZONTAL_SPACING * 2;
+        const trackerX = START_X; // Same position as SDR workers (leftmost)
 
         Object.entries(metrics.trackers).forEach(([trackerId, tracker], index) => {
             const nodeId = `node-${nodeIdCounter++}`;
@@ -725,7 +783,7 @@ export const createFlowFromMetrics = (metrics) => {
             const trackerEdges = nodeMap.get('pending-tracker-to-browser-edges') || [];
             trackerEdges.forEach(({ trackerId, tracker, targetId }) => {
                 if (targetId === sessionId) {
-                    const isAnimated = hasPositiveOutputRate(tracker);
+                    const isAnimated = hasPositiveOutputRate(tracker, 'tracker');
                     edges.push({
                         id: `edge-tracker-${trackerId}-${browserNodeId}`,
                         source: trackerId,

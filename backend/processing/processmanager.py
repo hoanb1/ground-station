@@ -56,7 +56,7 @@ class ProcessManager:
         )
 
         # Initialize performance monitor
-        self.performance_monitor = PerformanceMonitor(self, update_interval=1.0)
+        self.performance_monitor = PerformanceMonitor(self, update_interval=2.0)
         self.performance_monitor.start()
 
         # Start background task to emit performance metrics to UI
@@ -123,8 +123,9 @@ class ProcessManager:
         while True:
             try:
                 # Get latest metrics from monitor (blocking with timeout)
+                # Timeout should be slightly longer than update_interval to avoid timeouts
                 metrics = await asyncio.get_event_loop().run_in_executor(
-                    None, self.performance_monitor.get_latest_metrics, 2.0
+                    None, self.performance_monitor.get_latest_metrics, 3.0
                 )
 
                 if metrics and self.sio:
@@ -135,7 +136,7 @@ class ProcessManager:
                 self.logger.error(f"Error emitting performance metrics: {e}")
                 self.logger.exception(e)
                 # Continue running even if there's an error
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(2.0)
 
     # ==================== Process Lifecycle Methods ====================
 

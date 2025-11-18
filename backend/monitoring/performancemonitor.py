@@ -40,13 +40,13 @@ class PerformanceMonitor(threading.Thread):
     - Thread health indicators
     """
 
-    def __init__(self, process_manager, update_interval=1.0):
+    def __init__(self, process_manager, update_interval=2.0):
         """
         Initialize the performance monitor.
 
         Args:
             process_manager: Reference to ProcessManager instance
-            update_interval: Seconds between metric collection (default: 1.0)
+            update_interval: Seconds between metric collection (default: 2.0)
         """
         super().__init__(daemon=True, name="PerformanceMonitor")
         self.process_manager = process_manager

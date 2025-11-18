@@ -19,7 +19,7 @@
 
 import React from 'react';
 import { Handle, Position } from 'reactflow';
-import { Paper, Box, Typography, Chip, Divider, Stack } from '@mui/material';
+import { Paper, Box, Typography, Chip, Divider, Stack, Tooltip } from '@mui/material';
 
 const formatRate = (rate) => {
     if (rate === null || rate === undefined) return 'N/A';
@@ -34,6 +34,32 @@ const formatNumber = (num) => {
     if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
     return num.toLocaleString();
+};
+
+const humanizeTimestamp = (unixTimestamp) => {
+    if (!unixTimestamp) return 'Never';
+
+    const now = Date.now() / 1000; // Convert to seconds
+    const diffInSeconds = Math.floor(now - unixTimestamp);
+
+    if (diffInSeconds < 0) return 'Just now';
+    if (diffInSeconds < 1) return 'Just now';
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+
+    const minutes = Math.floor(diffInSeconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+
+    const hours = Math.floor(diffInSeconds / 3600);
+    if (hours < 24) return `${hours}h ago`;
+
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days}d ago`;
+};
+
+const truncateId = (id, length = 8) => {
+    if (!id || typeof id !== 'string') return 'N/A';
+    if (id.length <= length) return id;
+    return id.substring(0, length) + '...';
 };
 
 const MetricRow = ({ label, value, unit }) => (
@@ -179,26 +205,33 @@ export const ComponentNode = ({ data }) => {
             >
                 {/* Title with status */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 'bold', mr: 2 }}>
                         {data.label}
                     </Typography>
-                    {component.is_alive !== undefined && (
-                        <Box
-                            sx={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: '50%',
-                                ml: 1,
-                                mr: '5px',
-                                backgroundColor: component.is_alive
-                                    ? (type === 'recorder' ? '#f44336' : '#4caf50')
-                                    : '#9e9e9e',
-                                boxShadow: component.is_alive
-                                    ? `0 0 8px ${type === 'recorder' ? '#f44336' : '#4caf50'}`
-                                    : 'none',
-                            }}
-                        />
-                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {component.stats?.last_activity && (
+                            <Tooltip title={`Last activity: ${new Date(component.stats.last_activity * 1000).toLocaleString()}`} arrow>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                    {humanizeTimestamp(component.stats.last_activity)}
+                                </Typography>
+                            </Tooltip>
+                        )}
+                        {component.is_alive !== undefined && (
+                            <Box
+                                sx={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: '50%',
+                                    backgroundColor: component.is_alive
+                                        ? (type === 'recorder' ? '#f44336' : '#4caf50')
+                                        : '#9e9e9e',
+                                    boxShadow: component.is_alive
+                                        ? `0 0 8px ${type === 'recorder' ? '#f44336' : '#4caf50'}`
+                                        : 'none',
+                                }}
+                            />
+                        )}
+                    </Box>
                 </Box>
 
                 <Divider sx={{ mb: 1 }} />
@@ -658,10 +691,16 @@ export const ComponentNode = ({ data }) => {
                                     Connection Info
                                 </Typography>
                                 <Stack spacing={0.25}>
-                                    <MetricRow
-                                        label="Session"
-                                        value={component.session_id?.substring(0, 12) + '...'}
-                                    />
+                                    <Tooltip title={component.session_id || 'N/A'} arrow>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 0.25 }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Session:
+                                            </Typography>
+                                            <Typography variant="caption" fontWeight="medium">
+                                                {truncateId(component.session_id)}
+                                            </Typography>
+                                        </Box>
+                                    </Tooltip>
                                     <MetricRow
                                         label="IP"
                                         value={component.client_ip || 'unknown'}
