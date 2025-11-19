@@ -84,6 +84,7 @@ import {
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import RecordingDialog from './recording-dialog.jsx';
+import TelemetryViewerDialog from './telemetry-viewer-dialog.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -192,6 +193,9 @@ export default function FileBrowser() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
     const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
+    const [telemetryViewerOpen, setTelemetryViewerOpen] = useState(false);
+    const [telemetryFile, setTelemetryFile] = useState(null);
+    const [telemetryMetadata, setTelemetryMetadata] = useState(null);
 
     // Fetch data when filters change (not pagination/sorting - those are handled in UI)
     useEffect(() => {
@@ -394,6 +398,23 @@ export default function FileBrowser() {
             }, 100);
         } else {
             window.open(item.url, '_blank');
+        }
+    };
+
+    const handleViewTelemetry = async (item) => {
+        if (item.type !== 'decoded') return;
+
+        try {
+            // Fetch metadata JSON file
+            const metadataUrl = item.url.replace('.bin', '.json');
+            const response = await fetch(metadataUrl);
+            const metadata = await response.json();
+
+            setTelemetryFile(item);
+            setTelemetryMetadata(metadata);
+            setTelemetryViewerOpen(true);
+        } catch (error) {
+            toast.error(`Failed to load telemetry metadata: ${error.message}`);
         }
     };
 
@@ -1158,6 +1179,17 @@ export default function FileBrowser() {
                                                 </IconButton>
                                             </Tooltip>
                                         )}
+                                        {item.type === 'decoded' && (
+                                            <Tooltip title="View Telemetry">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleViewTelemetry(item)}
+                                                    color="primary"
+                                                >
+                                                    <DataObjectIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
                                         <Tooltip title={t('actions.download', 'Download')}>
                                             <IconButton
                                                 size="small"
@@ -1329,6 +1361,14 @@ export default function FileBrowser() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Telemetry Viewer Dialog */}
+            <TelemetryViewerDialog
+                open={telemetryViewerOpen}
+                onClose={() => setTelemetryViewerOpen(false)}
+                file={telemetryFile}
+                metadata={telemetryMetadata}
+            />
         </Box>
     );
 }

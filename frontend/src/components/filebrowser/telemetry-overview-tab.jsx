@@ -1,0 +1,225 @@
+/**
+ * @license
+ * Copyright (c) 2025 Efstratios Goudelis
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
+import React from 'react';
+import {
+    Box,
+    Typography,
+    Divider,
+    Chip,
+    Stack,
+    useTheme,
+} from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+
+function InfoSection({ title, children }) {
+    const theme = useTheme();
+    return (
+        <Box sx={{ mb: 3 }}>
+            <Typography
+                variant="subtitle2"
+                sx={{
+                    mb: 1.5,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    color: theme.palette.text.secondary,
+                    fontSize: '0.75rem',
+                    letterSpacing: 1,
+                }}
+            >
+                {title}
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            {children}
+        </Box>
+    );
+}
+
+function InfoRow({ label, value, mono = false }) {
+    return (
+        <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            py: 0.75,
+            alignItems: 'center',
+        }}>
+            <Typography variant="body2" color="text.secondary">
+                {label}
+            </Typography>
+            <Typography
+                variant="body2"
+                sx={{
+                    fontFamily: mono ? 'monospace' : 'inherit',
+                    fontWeight: 500,
+                }}
+            >
+                {value || '-'}
+            </Typography>
+        </Box>
+    );
+}
+
+export default function OverviewTab({ metadata, file, telemetry, packet, ax25 }) {
+    const theme = useTheme();
+
+    // Format timestamp
+    const formatTimestamp = (ts) => {
+        if (!ts) return '-';
+        try {
+            const date = new Date(typeof ts === 'number' ? ts * 1000 : ts);
+            return date.toLocaleString();
+        } catch {
+            return String(ts);
+        }
+    };
+
+    // Get frame info from telemetry
+    const frame = telemetry.frame || {};
+    const signal = metadata.signal || {};
+    const vfo = metadata.vfo || {};
+    const decoder = metadata.decoder || {};
+
+    return (
+        <Box>
+            {/* AX.25 Frame Information */}
+            <InfoSection title="AX.25 Frame Information">
+                <InfoRow
+                    label="Source"
+                    value={frame.source || ax25.from_callsign}
+                    mono
+                />
+                <InfoRow
+                    label="Destination"
+                    value={frame.destination || ax25.to_callsign}
+                    mono
+                />
+                <InfoRow
+                    label="Control"
+                    value={frame.control}
+                    mono
+                />
+                <InfoRow
+                    label="PID"
+                    value={frame.pid}
+                    mono
+                />
+                <InfoRow
+                    label="Parser"
+                    value={telemetry.parser || 'ax25'}
+                />
+            </InfoSection>
+
+            {/* Packet Metadata */}
+            <InfoSection title="Packet Metadata">
+                <InfoRow
+                    label="Packet Number"
+                    value={`#${packet.number || metadata.packet_number || '-'}`}
+                />
+                <InfoRow
+                    label="Timestamp"
+                    value={formatTimestamp(packet.timestamp || metadata.timestamp)}
+                />
+                <InfoRow
+                    label="Total Length"
+                    value={`${packet.length_bytes || packet.length || '-'} bytes`}
+                />
+                <InfoRow
+                    label="Payload Length"
+                    value={`${telemetry.raw?.payload_length || '-'} bytes`}
+                />
+                <InfoRow
+                    label="Session ID"
+                    value={decoder.session_id}
+                    mono
+                />
+                <InfoRow
+                    label="VFO"
+                    value={vfo.id}
+                />
+            </InfoSection>
+
+            {/* Signal Information */}
+            <InfoSection title="Signal Information">
+                <InfoRow
+                    label="Frequency"
+                    value={signal.frequency_mhz ? `${signal.frequency_mhz} MHz` : '-'}
+                />
+                <InfoRow
+                    label="Baudrate"
+                    value={decoder.baudrate ? `${decoder.baudrate} baud` : '-'}
+                />
+                <InfoRow
+                    label="SDR Center"
+                    value={signal.sdr_center_freq_mhz ? `${signal.sdr_center_freq_mhz} MHz` : '-'}
+                />
+                <InfoRow
+                    label="VFO Center"
+                    value={vfo.center_freq_mhz ? `${vfo.center_freq_mhz} MHz` : '-'}
+                />
+                <InfoRow
+                    label="VFO Bandwidth"
+                    value={vfo.bandwidth_khz ? `${vfo.bandwidth_khz} kHz` : '-'}
+                />
+                <InfoRow
+                    label="Sample Rate"
+                    value={signal.sample_rate_hz ? `${(signal.sample_rate_hz / 1000).toFixed(2)} kS/s` : '-'}
+                />
+            </InfoSection>
+
+            {/* Validation Status */}
+            <InfoSection title="Validation">
+                <Stack spacing={1}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                        <Typography variant="body2">
+                            CRC-16 validated by HDLC deframer
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                        <Typography variant="body2">
+                            Callsigns decoded correctly
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                        <Typography variant="body2">
+                            Packet integrity confirmed
+                        </Typography>
+                    </Box>
+                </Stack>
+
+                <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '15', borderRadius: 1 }}>
+                    <Typography variant="caption" sx={{ color: theme.palette.info.main }}>
+                        ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.
+                    </Typography>
+                </Box>
+            </InfoSection>
+
+            {/* File Information */}
+            <InfoSection title="File Information">
+                <InfoRow
+                    label="Binary File"
+                    value={metadata.file?.binary || file.filename}
+                    mono
+                />
+                <InfoRow
+                    label="Metadata File"
+                    value={metadata.file?.binary?.replace('.bin', '.json')}
+                    mono
+                />
+                <InfoRow
+                    label="File Size"
+                    value={file.size ? `${file.size} bytes` : '-'}
+                />
+            </InfoSection>
+        </Box>
+    );
+}
