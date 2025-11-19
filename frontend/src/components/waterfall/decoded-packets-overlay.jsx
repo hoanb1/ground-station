@@ -70,7 +70,8 @@ const DecodedPacketsOverlay = ({
                     packetLength: output.output.packet_length,
                     parameters: output.output.parameters,
                     vfo: output.vfo,
-                    noradId: noradId
+                    noradId: noradId,
+                    telemetry: output.output.telemetry  // Add parsed telemetry
                 };
             });
 
@@ -401,6 +402,44 @@ const DecodedPacketsOverlay = ({
                                         VFO{packet.vfo}
                                     </Typography>
                                 </Box>
+                            )}
+
+                            {packet.telemetry && (
+                                <Tooltip
+                                    title={
+                                        <Box sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
+                                            <div>Parser: {packet.telemetry.parser}</div>
+                                            <div>PID: {packet.telemetry.frame?.pid}</div>
+                                            <div>Format: {packet.telemetry.data?.format || 'parsed'}</div>
+                                            {packet.telemetry.data?.hex && (
+                                                <div>Payload: {packet.telemetry.data.hex.substring(0, 32)}...</div>
+                                            )}
+                                        </Box>
+                                    }
+                                    placement="top"
+                                >
+                                    <Box
+                                        sx={{
+                                            px: 0.5,
+                                            py: 0.125,
+                                            borderRadius: 0.5,
+                                            backgroundColor: alpha(theme.palette.success.main, 0.15),
+                                            border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                                        }}
+                                    >
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                fontFamily: 'monospace',
+                                                fontSize: '0.6rem',
+                                                fontWeight: 600,
+                                                color: theme.palette.success.main,
+                                            }}
+                                        >
+                                            TLM
+                                        </Typography>
+                                    </Box>
+                                </Tooltip>
                             )}
                         </Box>
                     </Box>

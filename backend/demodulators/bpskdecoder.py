@@ -71,6 +71,7 @@ from typing import Any, Dict
 import numpy as np
 from scipy import signal
 
+from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
 logger = logging.getLogger("bpskdecoder")
@@ -448,6 +449,10 @@ class BPSKDecoder(threading.Thread):
         self.decimation_filter = None  # Filter for decimation
         self.packet_count = 0
 
+        # Initialize telemetry parser
+        self.telemetry_parser = TelemetryParser()
+        logger.info("Telemetry parser initialized for BPSK decoder")
+
         # Store transmitter dict for future use
         self.transmitter = transmitter or {}
 
@@ -538,6 +543,17 @@ class BPSKDecoder(threading.Thread):
                 self.stats["packets_decoded"] = self.packet_count
             logger.info(f"BPSK packet #{self.packet_count} decoded: {len(payload)} bytes")
 
+            # Parse telemetry using generic parser
+            # Remove HDLC flags if present (0x7E at start/end)
+            packet_data = payload
+            if len(packet_data) > 0 and packet_data[0] == 0x7E:
+                packet_data = packet_data[1:]
+            if len(packet_data) > 0 and packet_data[-1] == 0x7E:
+                packet_data = packet_data[:-1]
+
+            telemetry_result = self.telemetry_parser.parse(packet_data)
+            logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
+
             # Save to file
             decode_timestamp = time.time()
             timestamp_str = time.strftime("%Y%m%d_%H%M%S")
@@ -613,6 +629,9 @@ class BPSKDecoder(threading.Thread):
                     "to_callsign": callsigns.get("to"),
                 }
 
+            # Add parsed telemetry data
+            metadata["telemetry"] = telemetry_result
+
             # Save metadata JSON
             metadata_filename = filename.replace(".bin", ".json")
             metadata_filepath = os.path.join(self.output_dir, metadata_filename)
@@ -653,6 +672,14 @@ class BPSKDecoder(threading.Thread):
             # Add callsigns if available
             if callsigns:
                 msg["output"]["callsigns"] = callsigns
+
+            # Add parsed telemetry to UI message
+            if telemetry_result.get("success"):
+                msg["output"]["telemetry"] = {
+                    "parser": telemetry_result.get("parser"),
+                    "frame": telemetry_result.get("frame"),
+                    "data": telemetry_result.get("telemetry"),
+                }
             try:
                 self.data_queue.put(msg, block=False)
                 with self.stats_lock:
