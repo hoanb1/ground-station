@@ -31,10 +31,12 @@
 #    - Allows decoding off-center signals in recordings and multiple simultaneous signals
 #
 # 2. BATCHED PROCESSING WITH FRESH FLOWGRAPHS:
-#    - Processes samples in 5-second batches (configurable via min_process_samples)
+#    - Processes samples in configurable batches (default 3 seconds via batch_interval parameter)
 #    - Creates a NEW gr.top_block for each batch to avoid GNU Radio 3.10 reconnection issues
 #    - Hierarchical blocks (bpsk_demodulator, ax25_deframer) cannot be reconnected
 #    - Aggressive cleanup in finally block prevents shared memory exhaustion
+#    - Processing happens outside the lock: samples continue accumulating while batch processes
+#    - UI receives "decoding" status for both accumulation and batch processing phases
 #
 # 3. SIGNAL PROCESSING CHAIN:
 #    - Frequency translation (signal to baseband)
@@ -46,7 +48,7 @@
 #    - Binary slicer, NRZI decode, G3RUH descrambler, HDLC deframing
 #
 # 4. KEY PARAMETERS (tuned for Tevel satellites):
-#    - Batch interval: 5 seconds (balance between latency and signal lock time)
+#    - Batch interval: 3 seconds default (configurable, balance between latency and signal lock time)
 #    - FLL bandwidth: 250 Hz (handles frequency drift and residual offset)
 #    - Costas bandwidth: 100 Hz (carrier phase tracking)
 #    - Sample rate: 78125 Hz (8x oversampling for 9600 baud)
@@ -57,6 +59,7 @@
 #    - Extracts and reports AX.25 callsigns to UI
 
 import base64
+import json
 import logging
 import os
 import queue
@@ -182,6 +185,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         self,
         sample_rate,
         callback,
+        status_callback=None,
         baudrate=9600,
         f_offset=0,
         differential=False,
@@ -191,6 +195,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         clk_limit=0.004,
         costas_bw=50,
         packet_size=256,
+        batch_interval=3.0,
     ):
         """
         Initialize BPSK decoder flowgraph using gr-satellites components
@@ -198,6 +203,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         Args:
             sample_rate: Input sample rate (Hz)
             callback: Function to call when packet is decoded
+            status_callback: Function to call for status updates (status, info)
             baudrate: Symbol rate / baud rate (symbols/sec)
             f_offset: Frequency offset in Hz
             differential: Perform non-coherent DBPSK decoding (bool)
@@ -207,6 +213,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             clk_limit: Clock recovery limit (relative to baudrate)
             costas_bw: Costas loop bandwidth (Hz)
             packet_size: Size of packet in bytes (unused, kept for compatibility)
+            batch_interval: Batch processing interval in seconds (default: 3.0)
         """
         if not GNURADIO_AVAILABLE:
             raise RuntimeError("GNU Radio not available - BPSK decoder cannot be initialized")
@@ -216,15 +223,19 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         self.sample_rate = sample_rate
         self.baudrate = baudrate
         self.callback = callback
+        self.status_callback = status_callback
         self.differential = differential
+        self.batch_interval = batch_interval
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
         self.sample_lock = threading.Lock()
+        self.current_mode = "decoding"  # Track current mode
 
         logger.info(
             f"BPSK flowgraph initialized: "
-            f"{baudrate} baud, {sample_rate} sps, differential={differential}"
+            f"{baudrate} baud, {sample_rate} sps, differential={differential}, "
+            f"batch_interval={batch_interval}s"
         )
 
     def process_samples(self, samples):
@@ -237,22 +248,48 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         Args:
             samples: numpy array of complex64 samples
         """
+        should_process = False
+        buffer_size = 0
         with self.sample_lock:
             self.sample_buffer = np.concatenate([self.sample_buffer, samples])
+            buffer_size = len(self.sample_buffer)
 
-            # Process when we have enough samples (5 seconds worth)
+            # Process when we have enough samples (batch_interval seconds worth)
             # Balance between decode latency and signal lock time
-            min_process_samples = int(self.sample_rate * 5.0)
+            min_process_samples = int(self.sample_rate * self.batch_interval)
 
-            if len(self.sample_buffer) >= min_process_samples:
-                # Process the accumulated samples
-                logger.info(f"Processing batch: {len(self.sample_buffer)} samples (5s)")
-                self._process_buffer()
+            if buffer_size >= min_process_samples:
+                should_process = True
+            elif self.current_mode != "decoding":
+                # Transition back to decoding mode (accumulating samples)
+                self.current_mode = "decoding"
+                if self.status_callback:
+                    self.status_callback(DecoderStatus.DECODING, {"buffer_samples": buffer_size})
+
+        # Process outside the lock so incoming samples don't block
+        if should_process:
+            # Transition to decoding mode (processing batch)
+            with self.sample_lock:
+                self.current_mode = "decoding"
+            if self.status_callback:
+                self.status_callback(DecoderStatus.DECODING, {"buffer_samples": buffer_size})
+
+            logger.info(f"Processing batch: {buffer_size} samples ({self.batch_interval}s)")
+            self._process_buffer()
 
     def _process_buffer(self):
         """Process accumulated samples through the flowgraph"""
-        if len(self.sample_buffer) == 0:
-            return
+        # Copy buffer outside the lock to allow incoming samples to continue
+        with self.sample_lock:
+            if len(self.sample_buffer) == 0:
+                return
+            samples_to_process = self.sample_buffer.copy()
+            # Keep a small tail for continuity while processing
+            tail_samples = int(self.sample_rate * 0.1)  # 100ms tail
+            if len(self.sample_buffer) > tail_samples:
+                self.sample_buffer = self.sample_buffer[-tail_samples:]
+            else:
+                self.sample_buffer = np.array([], dtype=np.complex64)
 
         tb = None
         try:
@@ -267,7 +304,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             tb = gr.top_block("BPSK Batch Processor")
 
             # Create vector source with accumulated samples
-            source = blocks.vector_source_c(self.sample_buffer.tolist(), repeat=False)
+            source = blocks.vector_source_c(samples_to_process.tolist(), repeat=False)
 
             # Create fresh instances of demodulator and deframer
             # Use MUCH wider FLL bandwidth to handle VFO drift/offset
@@ -318,21 +355,14 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             except Exception:
                 pass
 
-            # Keep a small tail of samples for continuity
-            # This helps maintain state across processing runs
-            tail_samples = int(self.sample_rate * 0.1)  # 100ms tail
-            if len(self.sample_buffer) > tail_samples:
-                self.sample_buffer = self.sample_buffer[-tail_samples:]
-            else:
-                self.sample_buffer = np.array([], dtype=np.complex64)
-
         except Exception as e:
             logger.error(f"Error processing buffer: {e}")
             import traceback
 
             traceback.print_exc()
             # Clear buffer on error to avoid repeated failures
-            self.sample_buffer = np.array([], dtype=np.complex64)
+            with self.sample_lock:
+                self.sample_buffer = np.array([], dtype=np.complex64)
         finally:
             # Explicit cleanup to prevent shared memory leaks
             if "tb" in locals() and tb is not None:
@@ -397,6 +427,7 @@ class BPSKDecoder(threading.Thread):
         baudrate=9600,  # Fallback if not in transmitter dict
         differential=False,
         packet_size=256,
+        batch_interval=3.0,  # Batch processing interval in seconds
     ):
         if not GNURADIO_AVAILABLE:
             logger.error("GNU Radio not available - BPSK decoder cannot be initialized")
@@ -423,6 +454,7 @@ class BPSKDecoder(threading.Thread):
         self.baudrate = self.transmitter.get("baud", baudrate)
         self.differential = self.transmitter.get("differential", differential)
         self.packet_size = self.transmitter.get("packet_size", packet_size)
+        self.batch_interval = batch_interval
         # Get expected signal frequency for proper frequency translation
         self.signal_frequency = self.transmitter.get("frequency", 436.400e6)
 
@@ -501,16 +533,91 @@ class BPSKDecoder(threading.Thread):
         """Callback when GNU Radio decodes a BPSK packet"""
         try:
             self.packet_count += 1
+            with self.stats_lock:
+                self.stats["packets_decoded"] = self.packet_count
             logger.info(f"BPSK packet #{self.packet_count} decoded: {len(payload)} bytes")
 
             # Save to file
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"bpsk_{self.baudrate}baud_{timestamp}_{self.packet_count}.bin"
+            decode_timestamp = time.time()
+            timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"bpsk_{self.baudrate}baud_{timestamp_str}_{self.packet_count}.bin"
             filepath = os.path.join(self.output_dir, filename)
 
             with open(filepath, "wb") as f:
                 f.write(payload)
             logger.info(f"Saved: {filepath}")
+
+            # Get current VFO state for metadata
+            vfo_state = self._get_vfo_state()
+
+            # Create comprehensive metadata
+            metadata = {
+                "packet": {
+                    "number": self.packet_count,
+                    "length_bytes": len(payload),
+                    "timestamp": decode_timestamp,
+                    "timestamp_iso": time.strftime(
+                        "%Y-%m-%dT%H:%M:%S%z", time.localtime(decode_timestamp)
+                    ),
+                    "hex": payload.hex(),
+                },
+                "decoder": {
+                    "type": "bpsk",
+                    "session_id": self.session_id,
+                    "baudrate": self.baudrate,
+                    "differential": self.differential,
+                    "packet_size": self.packet_size,
+                    "batch_interval": self.batch_interval,
+                },
+                "signal": {
+                    "frequency_hz": self.signal_frequency,
+                    "frequency_mhz": self.signal_frequency / 1e6,
+                    "sample_rate_hz": self.sample_rate,
+                    "sdr_sample_rate_hz": self.sdr_sample_rate,
+                    "sdr_center_freq_hz": self.sdr_center_freq,
+                    "sdr_center_freq_mhz": (
+                        self.sdr_center_freq / 1e6 if self.sdr_center_freq else None
+                    ),
+                },
+                "vfo": {
+                    "id": self.vfo,
+                    "center_freq_hz": vfo_state.center_freq if vfo_state else None,
+                    "center_freq_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
+                    "bandwidth_hz": vfo_state.bandwidth if vfo_state else None,
+                    "bandwidth_khz": vfo_state.bandwidth / 1e3 if vfo_state else None,
+                    "active": vfo_state.active if vfo_state else None,
+                },
+                "transmitter": {
+                    "description": self.transmitter_description,
+                    "mode": self.transmitter_mode,
+                    "full_config": self.transmitter,
+                },
+                "demodulator_parameters": {
+                    "fll_bandwidth_hz": 250,
+                    "costas_bandwidth_hz": 100,
+                    "rrc_alpha": 0.35,
+                    "clock_recovery_bandwidth": 0.06,
+                    "clock_recovery_limit": 0.004,
+                },
+                "file": {
+                    "binary": filename,
+                    "binary_path": filepath,
+                },
+            }
+
+            # Add callsigns if available
+            if callsigns:
+                metadata["ax25"] = {
+                    "from_callsign": callsigns.get("from"),
+                    "to_callsign": callsigns.get("to"),
+                }
+
+            # Save metadata JSON
+            metadata_filename = filename.replace(".bin", ".json")
+            metadata_filepath = os.path.join(self.output_dir, metadata_filename)
+            with open(metadata_filepath, "w") as f:
+                json.dump(metadata, f, indent=2)
+            logger.info(f"Saved metadata: {metadata_filepath}")
 
             # Encode as base64 for transmission
             packet_base64 = base64.b64encode(payload).decode()
@@ -527,11 +634,13 @@ class BPSKDecoder(threading.Thread):
                 "decoder_type": "bpsk",
                 "session_id": self.session_id,
                 "vfo": self.vfo,
-                "timestamp": time.time(),
+                "timestamp": decode_timestamp,
                 "output": {
                     "format": "application/octet-stream",
                     "filename": filename,
                     "filepath": filepath,
+                    "metadata_filename": metadata_filename,
+                    "metadata_filepath": metadata_filepath,
                     "packet_data": packet_base64,
                     "packet_text": packet_text,
                     "packet_length": len(payload),
@@ -550,17 +659,18 @@ class BPSKDecoder(threading.Thread):
             except queue.Full:
                 logger.warning("Data queue full, dropping packet output")
 
-            # Send status update
-            status_info = {"packet_number": self.packet_count, "packet_length": len(payload)}
-            if callsigns:
-                status_info["callsigns"] = callsigns
-            self._send_status_update(DecoderStatus.COMPLETED, status_info)
+            # Don't send status update for individual packet decodes
+            # The decoder stays in DECODING status continuously
 
         except Exception as e:
             logger.error(f"Error processing decoded packet: {e}")
             logger.exception(e)
             with self.stats_lock:
                 self.stats["errors"] += 1
+
+    def _on_flowgraph_status(self, status, info=None):
+        """Callback when flowgraph status changes"""
+        self._send_status_update(status, info)
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
@@ -681,9 +791,11 @@ class BPSKDecoder(threading.Thread):
                         self.flowgraph = BPSKFlowgraph(
                             sample_rate=self.sample_rate,
                             callback=self._on_packet_decoded,
+                            status_callback=self._on_flowgraph_status,
                             baudrate=self.baudrate,
                             differential=self.differential,
                             packet_size=self.packet_size,
+                            batch_interval=self.batch_interval,
                         )
                         flowgraph_started = True
                         logger.info(

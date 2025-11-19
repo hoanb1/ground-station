@@ -83,7 +83,7 @@ export const canvasDrawingUtils = {
         ctx.fill();
     },
 
-    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false, decoderInfo = null, morseText = null, isStreaming = false) => {
+    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false, decoderInfo = null, morseText = null, isStreaming = false, bpskOutputs = null) => {
         ctx.font = 'bold 12px Monospace';
         const textMetrics = ctx.measureText(labelText);
 
@@ -192,14 +192,12 @@ export const canvasDrawingUtils = {
             const secondaryLabelTop = labelTop + labelHeight + 2; // 2px gap below primary label
             const decoderType = decoderInfo.decoder_type;
 
-            // Check if this decoder has text output (like morse)
-            const textDisplayConfig = getTextDisplayConfig(decoderType);
-
-            if (textDisplayConfig) {
-                // Text-based decoder display (e.g., morse)
-                const staticPart = `${decoderType.toUpperCase()} | `;
-                const displayText = morseText || textDisplayConfig.placeholder;
-                const fullText = staticPart + displayText;
+            // Handle BPSK decoder with output info
+            if (decoderType === 'bpsk') {
+                const status = decoderInfo.status || 'processing';
+                const fromCallsign = bpskOutputs?.fromCallsign || '-';
+                const outputCount = bpskOutputs?.count || 0;
+                const fullText = `${status.toUpperCase()} | ${fromCallsign} | ${outputCount}`;
 
                 ctx.font = '10px Monospace';
                 const fullTextMetrics = ctx.measureText(fullText);
@@ -217,31 +215,21 @@ export const canvasDrawingUtils = {
                 ctx.textAlign = 'center';
                 ctx.fillText(fullText, centerX, secondaryLabelTop + 12);
             } else {
-                // Standard decoder label (status/progress/mode)
-                const parts = [];
-                if (decoderType) parts.push(decoderType.toUpperCase());
+                // Check if this decoder has text output (like morse)
+                const textDisplayConfig = getTextDisplayConfig(decoderType);
 
-                if (shouldShowDecoderStatus(decoderType) && decoderInfo.status) {
-                    parts.push(decoderInfo.status);
-                }
-                if (shouldShowDecoderMode(decoderType) && decoderInfo.mode) {
-                    parts.push(decoderInfo.mode);
-                }
-                if (shouldShowDecoderProgress(decoderType) &&
-                    decoderInfo.progress !== null &&
-                    decoderInfo.progress !== undefined) {
-                    parts.push(`${Math.round(decoderInfo.progress)}%`);
-                }
+                if (textDisplayConfig) {
+                    // Text-based decoder display (e.g., morse)
+                    const staticPart = `${decoderType.toUpperCase()} | `;
+                    const displayText = morseText || textDisplayConfig.placeholder;
+                    const fullText = staticPart + displayText;
 
-                const decoderText = parts.join(' | ');
-
-                if (decoderText) {
                     ctx.font = '10px Monospace';
-                    const decoderTextMetrics = ctx.measureText(decoderText);
-                    const decoderLabelWidth = decoderTextMetrics.width + 8;
+                    const fullTextMetrics = ctx.measureText(fullText);
+                    const decoderLabelWidth = fullTextMetrics.width + 8;
                     const decoderLabelHeight = 16;
 
-                    // Draw background with same color scheme as primary label
+                    // Draw background
                     ctx.fillStyle = `${color}${opacity}`;
                     ctx.beginPath();
                     ctx.roundRect(centerX - decoderLabelWidth / 2, secondaryLabelTop, decoderLabelWidth, decoderLabelHeight, 2);
@@ -250,7 +238,43 @@ export const canvasDrawingUtils = {
                     // Draw text
                     ctx.fillStyle = '#ffffff';
                     ctx.textAlign = 'center';
-                    ctx.fillText(decoderText, centerX, secondaryLabelTop + 12);
+                    ctx.fillText(fullText, centerX, secondaryLabelTop + 12);
+                } else {
+                    // Standard decoder label (status/progress/mode)
+                    const parts = [];
+                    if (decoderType) parts.push(decoderType.toUpperCase());
+
+                    if (shouldShowDecoderStatus(decoderType) && decoderInfo.status) {
+                        parts.push(decoderInfo.status);
+                    }
+                    if (shouldShowDecoderMode(decoderType) && decoderInfo.mode) {
+                        parts.push(decoderInfo.mode);
+                    }
+                    if (shouldShowDecoderProgress(decoderType) &&
+                        decoderInfo.progress !== null &&
+                        decoderInfo.progress !== undefined) {
+                        parts.push(`${Math.round(decoderInfo.progress)}%`);
+                    }
+
+                    const decoderText = parts.join(' | ');
+
+                    if (decoderText) {
+                        ctx.font = '10px Monospace';
+                        const decoderTextMetrics = ctx.measureText(decoderText);
+                        const decoderLabelWidth = decoderTextMetrics.width + 8;
+                        const decoderLabelHeight = 16;
+
+                        // Draw background with same color scheme as primary label
+                        ctx.fillStyle = `${color}${opacity}`;
+                        ctx.beginPath();
+                        ctx.roundRect(centerX - decoderLabelWidth / 2, secondaryLabelTop, decoderLabelWidth, decoderLabelHeight, 2);
+                        ctx.fill();
+
+                        // Draw text
+                        ctx.fillStyle = '#ffffff';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(decoderText, centerX, secondaryLabelTop + 12);
+                    }
                 }
             }
         }

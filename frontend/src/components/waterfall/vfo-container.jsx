@@ -153,6 +153,35 @@ const VFOMarkersContainer = ({
         return null;
     }, [decoderOutputs, getDecoderInfoForVFO]);
 
+    // Helper function to get BPSK decoder outputs for a VFO
+    const getBpskOutputsForVFO = useCallback((vfoNumber) => {
+        // Find decoder info first
+        const decoderInfo = getDecoderInfoForVFO(vfoNumber);
+        if (!decoderInfo || decoderInfo.decoder_type !== 'bpsk') {
+            return null;
+        }
+
+        // Filter all outputs for this VFO and session
+        const outputs = decoderOutputs?.filter(
+            out => out.session_id === decoderInfo.session_id &&
+                   out.decoder_type === 'bpsk' &&
+                   out.vfo === vfoNumber
+        );
+
+        if (!outputs || outputs.length === 0) {
+            return null;
+        }
+
+        // Get the most recent output to extract the "from" callsign
+        const latestOutput = outputs.sort((a, b) => b.timestamp - a.timestamp)[0];
+        const fromCallsign = latestOutput?.output?.callsigns?.from || '-';
+
+        return {
+            count: outputs.length,
+            fromCallsign: fromCallsign
+        };
+    }, [decoderOutputs, getDecoderInfoForVFO]);
+
     // Get or create canvas context with caching
     const getCanvasContext = useCallback(() => {
         const canvas = canvasRef.current;
@@ -403,10 +432,13 @@ const VFOMarkersContainer = ({
             // Get morse output text if this VFO has a morse decoder
             const morseText = getMorseOutputForVFO(parseInt(markerIdx));
 
+            // Get BPSK outputs info if this VFO has a BPSK decoder
+            const bpskOutputs = getBpskOutputsForVFO(parseInt(markerIdx));
+
             // Check if this VFO is currently streaming audio
             const isStreaming = parseInt(markerIdx) === streamingVFO;
 
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText, isStreaming);
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText, isStreaming, bpskOutputs);
         });
     };
 
