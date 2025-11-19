@@ -18,7 +18,27 @@
  * Developed with the assistance of Claude (Anthropic AI Assistant)
  */
 
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+
+// Async thunk to fetch satellite info from backend
+export const fetchDetectedSatellite = createAsyncThunk(
+    'decoders/fetchDetectedSatellite',
+    async ({ socket, noradId }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-satellite', noradId, (response) => {
+                    if (response.success) {
+                        resolve({ noradId, data: response.data });
+                    } else {
+                        reject(new Error('Failed to fetch satellite'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
 
 const initialState = {
     // Active decoder sessions (keyed by session_id)
@@ -29,6 +49,9 @@ const initialState = {
 
     // Recent errors (limited to last 20)
     errors: [],
+
+    // Detected satellites (keyed by NORAD ID)
+    detectedSatellites: {},
 
     // UI state
     ui: {
@@ -186,6 +209,15 @@ export const decodersSlice = createSlice({
             }
         },
 
+        // Clear outputs for a specific satellite (by NORAD ID)
+        clearSatelliteOutputs: (state, action) => {
+            const { noradId, outputIds } = action.payload;
+            // Remove all output IDs that belong to this satellite
+            if (outputIds && outputIds.length > 0) {
+                state.outputs = state.outputs.filter(output => !outputIds.includes(output.id));
+            }
+        },
+
         // UI actions
         selectOutput: (state, action) => {
             state.ui.selectedOutput = action.payload;
@@ -210,6 +242,42 @@ export const decodersSlice = createSlice({
         setShowDecoderPanel: (state, action) => {
             state.ui.showDecoderPanel = action.payload;
         },
+    },
+    extraReducers: (builder) => {
+        builder
+            // fetchDetectedSatellite cases
+            .addCase(fetchDetectedSatellite.pending, (state, action) => {
+                const { noradId } = action.meta.arg;
+                if (!state.detectedSatellites[noradId]) {
+                    state.detectedSatellites[noradId] = {
+                        noradId,
+                        loading: true,
+                        error: null,
+                        data: null,
+                        lastSeen: Date.now(),
+                        fetchedAt: null,
+                    };
+                }
+                state.detectedSatellites[noradId].loading = true;
+            })
+            .addCase(fetchDetectedSatellite.fulfilled, (state, action) => {
+                const { noradId, data } = action.payload;
+                state.detectedSatellites[noradId] = {
+                    noradId,
+                    loading: false,
+                    error: null,
+                    data,
+                    lastSeen: Date.now(),
+                    fetchedAt: Date.now(),
+                };
+            })
+            .addCase(fetchDetectedSatellite.rejected, (state, action) => {
+                const { noradId } = action.meta.arg;
+                if (state.detectedSatellites[noradId]) {
+                    state.detectedSatellites[noradId].loading = false;
+                    state.detectedSatellites[noradId].error = action.payload || 'Failed to fetch satellite';
+                }
+            });
     }
 });
 
@@ -223,6 +291,7 @@ export const {
     clearDecoderOutputs,
     clearDecoderErrors,
     deleteOutput,
+    clearSatelliteOutputs,
     selectOutput,
     setGalleryFilter,
     toggleGallery,
@@ -254,6 +323,10 @@ export const selectSelectedOutput = (state) => {
     const { outputs, ui } = state.decoders;
     if (!ui.selectedOutput) return null;
     return outputs.find(output => output.id === ui.selectedOutput);
+};
+export const selectDetectedSatellites = (state) => state.decoders.detectedSatellites;
+export const selectDetectedSatelliteByNorad = (noradId) => (state) => {
+    return state.decoders.detectedSatellites[noradId] || null;
 };
 
 export default decodersSlice.reducer;

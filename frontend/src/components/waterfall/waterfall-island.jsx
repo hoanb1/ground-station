@@ -98,6 +98,7 @@ import {
     paintLeftMarginFiller
 } from './waterfall-utils.jsx';
 import { useWaterfallEventHandlers, useSnapshotHandlers } from './waterfall-events.jsx';
+import DecodedPacketsOverlay from './decoded-packets-overlay.jsx';
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -790,6 +791,15 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                         </Box>
 
                     </Box>
+
+                    {/* Decoded packets overlay */}
+                    <DecodedPacketsOverlay
+                        containerWidth={dimensions.width}
+                        showLeftSide={showLeftSideWaterFallAccessories}
+                        showRightSide={showRightSideWaterFallAccessories}
+                        leftSideWidth={bandscopeAxisYWidth}
+                        rightSideWidth={50}
+                    />
                 </Box>
             </Box>
 

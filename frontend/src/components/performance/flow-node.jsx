@@ -648,15 +648,32 @@ export const ComponentNode = ({ data }) => {
                                         label="Queue"
                                         value={component.input_queue_size || 0}
                                     />
-                                    <MetricRow
-                                        label="Audio"
-                                        value={formatNumber(component.stats?.audio_chunks_in)}
-                                    />
-                                    <MetricRow
-                                        label="Rate"
-                                        value={formatRate(component.rates?.audio_chunks_in_per_sec)}
-                                        unit="/s"
-                                    />
+                                    {/* BPSK decoders receive IQ, others receive audio */}
+                                    {component.type === 'BPSKDecoder' ? (
+                                        <>
+                                            <MetricRow
+                                                label="IQ"
+                                                value={formatNumber(component.stats?.iq_chunks_in)}
+                                            />
+                                            <MetricRow
+                                                label="Rate"
+                                                value={formatRate(component.rates?.iq_chunks_in_per_sec)}
+                                                unit="/s"
+                                            />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <MetricRow
+                                                label="Audio"
+                                                value={formatNumber(component.stats?.audio_chunks_in)}
+                                            />
+                                            <MetricRow
+                                                label="Rate"
+                                                value={formatRate(component.rates?.audio_chunks_in_per_sec)}
+                                                unit="/s"
+                                            />
+                                        </>
+                                    )}
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
@@ -680,6 +697,12 @@ export const ComponentNode = ({ data }) => {
                                         <MetricRow
                                             label="Images"
                                             value={formatNumber(component.stats.images_decoded)}
+                                        />
+                                    )}
+                                    {component.stats?.packets_decoded !== undefined && (
+                                        <MetricRow
+                                            label="Packets"
+                                            value={formatNumber(component.stats.packets_decoded)}
                                         />
                                     )}
                                 </Stack>
