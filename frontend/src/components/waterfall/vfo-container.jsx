@@ -169,7 +169,11 @@ const VFOMarkersContainer = ({
         );
 
         if (!outputs || outputs.length === 0) {
-            return null;
+            // Return object with NO CALL indicator even when no outputs yet
+            return {
+                count: 0,
+                fromCallsign: 'NO CALL'
+            };
         }
 
         // Get the most recent output to extract the "from" callsign
