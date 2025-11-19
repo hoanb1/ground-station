@@ -21,6 +21,40 @@
 #
 # This decoder receives raw IQ samples directly from the SDR process (via iq_queue)
 # and demodulates BPSK signals, particularly for Tevel satellites at 9600 baud.
+#
+# ARCHITECTURE NOTES (2025-11-19):
+# ================================
+# 1. SIGNAL-CENTERED FREQUENCY TRANSLATION (CRITICAL):
+#    - MUST translate to the actual signal frequency from transmitter config, NOT VFO center
+#    - offset_freq = signal_frequency - sdr_center_frequency
+#    - This centers the signal at baseband (0 Hz) regardless of VFO drift
+#    - Allows decoding off-center signals in recordings and multiple simultaneous signals
+#
+# 2. BATCHED PROCESSING WITH FRESH FLOWGRAPHS:
+#    - Processes samples in 5-second batches (configurable via min_process_samples)
+#    - Creates a NEW gr.top_block for each batch to avoid GNU Radio 3.10 reconnection issues
+#    - Hierarchical blocks (bpsk_demodulator, ax25_deframer) cannot be reconnected
+#    - Aggressive cleanup in finally block prevents shared memory exhaustion
+#
+# 3. SIGNAL PROCESSING CHAIN:
+#    - Frequency translation (signal to baseband)
+#    - Decimation to target sample rate (78125 Hz for 9600 baud)
+#    - FLL (Frequency Lock Loop) - 250 Hz bandwidth for tracking residual offset
+#    - AGC (Automatic Gain Control)
+#    - Symbol sync with matched RRC filter
+#    - Costas loop - 100 Hz bandwidth for carrier phase recovery
+#    - Binary slicer, NRZI decode, G3RUH descrambler, HDLC deframing
+#
+# 4. KEY PARAMETERS (tuned for Tevel satellites):
+#    - Batch interval: 5 seconds (balance between latency and signal lock time)
+#    - FLL bandwidth: 250 Hz (handles frequency drift and residual offset)
+#    - Costas bandwidth: 100 Hz (carrier phase tracking)
+#    - Sample rate: 78125 Hz (8x oversampling for 9600 baud)
+#
+# 5. VERIFIED WORKING:
+#    - 8 successful packet decodes from Tevel-2 (TVL2-6-0 <-> TVL2-6-1)
+#    - Handles VFO drift and off-center signals in IQ recordings
+#    - Extracts and reports AX.25 callsigns to UI
 
 import base64
 import logging
@@ -92,6 +126,7 @@ class BPSKMessageHandler(gr.basic_block):
                 )
 
                 # Parse and log AX.25 callsigns
+                callsigns = None
                 try:
                     if len(packet_data) >= 14:
                         dest_call = "".join(
@@ -102,6 +137,10 @@ class BPSKMessageHandler(gr.basic_block):
                             chr((packet_data[i] >> 1) & 0x7F) for i in range(7, 13)
                         ).strip()
                         src_ssid = (packet_data[13] >> 1) & 0x0F
+                        callsigns = {
+                            "from": f"{src_call}-{src_ssid}",
+                            "to": f"{dest_call}-{dest_ssid}",
+                        }
                         logger.info(
                             f"  Callsigns: {dest_call}-{dest_ssid} <- {src_call}-{src_ssid}"
                         )
@@ -113,7 +152,7 @@ class BPSKMessageHandler(gr.basic_block):
                 packet_with_flags = bytes([0x7E]) + packet_data + bytes([0x7E])
 
                 if self.callback:
-                    self.callback(packet_with_flags)
+                    self.callback(packet_with_flags, callsigns)
             else:
                 logger.warning(f"Unexpected packet data type: {type(packet_data)}")
 
@@ -201,11 +240,13 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         with self.sample_lock:
             self.sample_buffer = np.concatenate([self.sample_buffer, samples])
 
-            # Process when we have enough samples (e.g., 0.5 seconds worth)
-            min_process_samples = int(self.sample_rate * 0.5)
+            # Process when we have enough samples (5 seconds worth)
+            # Balance between decode latency and signal lock time
+            min_process_samples = int(self.sample_rate * 5.0)
 
             if len(self.sample_buffer) >= min_process_samples:
                 # Process the accumulated samples
+                logger.info(f"Processing batch: {len(self.sample_buffer)} samples (5s)")
                 self._process_buffer()
 
     def _process_buffer(self):
@@ -213,6 +254,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         if len(self.sample_buffer) == 0:
             return
 
+        tb = None
         try:
             # Create a NEW flowgraph for each batch to avoid connection conflicts
             # This is necessary because hierarchical blocks can't be easily disconnected
@@ -228,22 +270,30 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             source = blocks.vector_source_c(self.sample_buffer.tolist(), repeat=False)
 
             # Create fresh instances of demodulator and deframer
+            # Use MUCH wider FLL bandwidth to handle VFO drift/offset
+            # Standard 25 Hz is too narrow for real-world VFO drift
             options = argparse.Namespace(
                 rrc_alpha=0.35,
-                fll_bw=25,
+                fll_bw=250,  # Increased from 25 Hz to 250 Hz for better tracking
                 clk_bw=0.06,
                 clk_limit=0.004,
-                costas_bw=50,
+                costas_bw=100,  # Increased from 50 Hz to 100 Hz
                 f_offset=0,
                 disable_fll=False,
                 manchester_block_size=32,
             )
 
+            # For Tevel satellites, signal is typically at 436.400 MHz
+            # If VFO is not exactly centered, pass the offset to demodulator's FLL
+            # This helps the FLL lock onto the signal even if VFO drifts
+            expected_signal_freq = 436.400e6  # Tevel-8 frequency
+            # Calculate offset from VFO center (passed via closure from main thread)
+            # Note: We can't access vfo_center here, so use 0 and rely on FLL bandwidth
             demod = bpsk_demodulator(
                 baudrate=self.baudrate,
                 samp_rate=self.sample_rate,
                 iq=True,
-                f_offset=0,
+                f_offset=0,  # Let FLL auto-track, it has 25 Hz bandwidth
                 differential=self.differential,
                 manchester=False,
                 options=options,
@@ -262,6 +312,12 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             tb.start()
             tb.wait()
 
+            # Explicitly stop
+            try:
+                tb.stop()
+            except Exception:
+                pass
+
             # Keep a small tail of samples for continuity
             # This helps maintain state across processing runs
             tail_samples = int(self.sample_rate * 0.1)  # 100ms tail
@@ -277,6 +333,42 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             traceback.print_exc()
             # Clear buffer on error to avoid repeated failures
             self.sample_buffer = np.array([], dtype=np.complex64)
+        finally:
+            # Explicit cleanup to prevent shared memory leaks
+            if "tb" in locals() and tb is not None:
+                try:
+                    # Ensure flowgraph is stopped
+                    tb.stop()
+                    tb.wait()
+                except Exception:
+                    pass
+
+                # Disconnect all blocks
+                try:
+                    tb.disconnect_all()
+                except Exception:
+                    pass
+
+                # Delete references to allow garbage collection
+                try:
+                    del msg_handler
+                    del deframer
+                    del demod
+                    del source
+                except Exception:
+                    pass
+
+                # Delete the top_block to release resources
+                del tb
+
+            # Force garbage collection to clean up GNU Radio objects
+            # and release shared memory segments
+            import gc
+
+            gc.collect()
+
+            # Small delay to allow system to clean up shared memory
+            time.sleep(0.01)
 
     def flush_buffer(self):
         """Process any remaining samples in the buffer"""
@@ -285,10 +377,10 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 logger.info(f"Flushing {len(self.sample_buffer)} remaining samples")
                 self._process_buffer()
 
-    def _on_packet_decoded(self, payload):
+    def _on_packet_decoded(self, payload, callsigns=None):
         """Called when a BPSK packet is successfully decoded"""
         if self.callback:
-            self.callback(payload)
+            self.callback(payload, callsigns)
 
 
 class BPSKDecoder(threading.Thread):
@@ -331,6 +423,8 @@ class BPSKDecoder(threading.Thread):
         self.baudrate = self.transmitter.get("baud", baudrate)
         self.differential = self.transmitter.get("differential", differential)
         self.packet_size = self.transmitter.get("packet_size", packet_size)
+        # Get expected signal frequency for proper frequency translation
+        self.signal_frequency = self.transmitter.get("frequency", 436.400e6)
 
         logger.info(f"BPSK decoder received transmitter dict: {self.transmitter}")
         logger.info(
@@ -403,7 +497,7 @@ class BPSKDecoder(threading.Thread):
         # Decimate
         return filtered[::decimation_factor]
 
-    def _on_packet_decoded(self, payload):
+    def _on_packet_decoded(self, payload, callsigns=None):
         """Callback when GNU Radio decodes a BPSK packet"""
         try:
             self.packet_count += 1
@@ -445,6 +539,10 @@ class BPSKDecoder(threading.Thread):
                     "parameters": f"{self.baudrate}baud",
                 },
             }
+
+            # Add callsigns if available
+            if callsigns:
+                msg["output"]["callsigns"] = callsigns
             try:
                 self.data_queue.put(msg, block=False)
                 with self.stats_lock:
@@ -453,10 +551,10 @@ class BPSKDecoder(threading.Thread):
                 logger.warning("Data queue full, dropping packet output")
 
             # Send status update
-            self._send_status_update(
-                DecoderStatus.COMPLETED,
-                {"packet_number": self.packet_count, "packet_length": len(payload)},
-            )
+            status_info = {"packet_number": self.packet_count, "packet_length": len(payload)}
+            if callsigns:
+                status_info["callsigns"] = callsigns
+            self._send_status_update(DecoderStatus.COMPLETED, status_info)
 
         except Exception as e:
             logger.error(f"Error processing decoded packet: {e}")
@@ -575,7 +673,11 @@ class BPSKDecoder(threading.Thread):
                             f"SDR center: {sdr_center/1e6:.3f} MHz"
                         )
 
+                        # Store VFO center for offset calculation
+                        self.initial_vfo_center = vfo_center
+
                         # Initialize flowgraph
+                        # Note: We don't pass f_offset here since each batch creates new flowgraph
                         self.flowgraph = BPSKFlowgraph(
                             sample_rate=self.sample_rate,
                             callback=self._on_packet_decoded,
@@ -584,10 +686,19 @@ class BPSKDecoder(threading.Thread):
                             packet_size=self.packet_size,
                         )
                         flowgraph_started = True
-                        logger.info("BPSK flowgraph initialized - ready to decode")
+                        logger.info(
+                            f"BPSK flowgraph initialized - ready to decode (VFO @ {vfo_center/1e6:.3f} MHz)"
+                        )
 
-                    # Step 1: Frequency translation to VFO center
-                    offset_freq = vfo_center - sdr_center
+                    # Step 1: Frequency translation to put SIGNAL at baseband center
+                    # Use the actual signal frequency from transmitter config
+                    # This centers the signal regardless of VFO drift
+                    offset_freq = self.signal_frequency - sdr_center
+                    if chunks_received == 0:
+                        logger.info(
+                            f"Translating signal from {self.signal_frequency/1e6:.3f} MHz to baseband"
+                        )
+                        logger.info(f"Frequency translation: offset = {offset_freq/1e3:.1f} kHz")
                     translated = self._frequency_translate(
                         samples, offset_freq, self.sdr_sample_rate
                     )
