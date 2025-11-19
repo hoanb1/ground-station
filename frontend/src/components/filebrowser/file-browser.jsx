@@ -355,9 +355,14 @@ export default function FileBrowser() {
         dispatch(setPage(value));
     };
 
-    const handleShowDetails = (item) => {
-        setSelectedItem(item);
-        setDetailsOpen(true);
+    const handleShowDetails = async (item) => {
+        // For decoded files, open telemetry viewer instead of simple preview
+        if (item.type === 'decoded') {
+            await handleViewTelemetry(item);
+        } else {
+            setSelectedItem(item);
+            setDetailsOpen(true);
+        }
     };
 
     const handleDelete = (item) => {
@@ -1163,6 +1168,16 @@ export default function FileBrowser() {
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
+                                            {item.type === 'decoded' && item.satellite_name && (
+                                                <Chip
+                                                    label={item.satellite_name}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="secondary"
+                                                    icon={<SatelliteAltIcon />}
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
+                                                />
+                                            )}
                                         </Box>
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                                             {formatDate(item.modified)}
@@ -1176,17 +1191,6 @@ export default function FileBrowser() {
                                                     onClick={() => handleShowDetails(item)}
                                                 >
                                                     <InfoIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        )}
-                                        {item.type === 'decoded' && (
-                                            <Tooltip title="View Telemetry">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleViewTelemetry(item)}
-                                                    color="primary"
-                                                >
-                                                    <DataObjectIcon fontSize="small" />
                                                 </IconButton>
                                             </Tooltip>
                                         )}
@@ -1242,7 +1246,7 @@ export default function FileBrowser() {
             )}
 
             {/* Snapshot Preview Dialog */}
-            {(selectedItem?.type === 'snapshot' || selectedItem?.type === 'decoded') && (
+            {selectedItem?.type === 'snapshot' && (
                 <Dialog
                     open={detailsOpen}
                     onClose={() => setDetailsOpen(false)}
@@ -1253,14 +1257,6 @@ export default function FileBrowser() {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="h6">{selectedItem?.name}</Typography>
                             <Box>
-                                {selectedItem?.type === 'decoded' && selectedItem?.decoder_type && (
-                                    <Chip
-                                        label={selectedItem.decoder_type}
-                                        size="small"
-                                        color="success"
-                                        sx={{ mr: 1, height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
-                                    />
-                                )}
                                 {selectedItem?.width && selectedItem?.height && (
                                     <Chip
                                         label={`${selectedItem.width}×${selectedItem.height}`}
@@ -1275,17 +1271,11 @@ export default function FileBrowser() {
                     <DialogContent>
                         {selectedItem && (
                             <Box sx={{ textAlign: 'center' }}>
-                                {selectedItem.type === 'snapshot' || (selectedItem.file_type && ['.png', '.jpg', '.jpeg'].includes(selectedItem.file_type)) ? (
-                                    <img
-                                        src={selectedItem.url}
-                                        alt={selectedItem.name}
-                                        style={{ maxWidth: '100%', height: 'auto' }}
-                                    />
-                                ) : (
-                                    <Typography variant="body2" color="text.secondary">
-                                        Preview not available for this file type.
-                                    </Typography>
-                                )}
+                                <img
+                                    src={selectedItem.url}
+                                    alt={selectedItem.name}
+                                    style={{ maxWidth: '100%', height: 'auto' }}
+                                />
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                                     Created: {formatDate(selectedItem.created)}
                                 </Typography>

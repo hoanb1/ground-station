@@ -352,9 +352,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
             # Gather and process decoded files if filter enabled
             if show_decoded and decoded_dir.exists():
-                # Support multiple file types in decoded directory
+                # Support multiple file types in decoded directory (exclude .json metadata files)
                 decoded_files = []
-                for pattern in ["*.png", "*.jpg", "*.jpeg", "*.json", "*.txt", "*.bin"]:
+                for pattern in ["*.png", "*.jpg", "*.jpeg", "*.txt", "*.bin"]:
                     decoded_files.extend(list(decoded_dir.glob(pattern)))
 
                 for decoded_file in decoded_files:
@@ -365,11 +365,38 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     if decoded_file.suffix.lower() in [".png", ".jpg", ".jpeg"]:
                         width, height = get_image_dimensions(str(decoded_file))
 
-                    # Determine decoder type from filename
+                    # Determine decoder type and satellite name from metadata
                     decoder_type = None
-                    if decoded_file.name.startswith("sstv_"):
+                    satellite_name = None
+
+                    # Check if there's a corresponding .json metadata file
+                    metadata_file = decoded_dir / f"{decoded_file.stem}.json"
+                    if metadata_file.exists():
+                        try:
+                            with open(metadata_file, "r") as f:
+                                metadata = json.load(f)
+                                # Extract decoder type
+                                decoder_info = metadata.get("decoder", {})
+                                decoder_type = decoder_info.get("type", "").upper()
+
+                                # Extract satellite name from AX.25 source callsign
+                                ax25_info = metadata.get("ax25", {})
+                                source_callsign = ax25_info.get("from_callsign", "")
+                                if source_callsign:
+                                    # Extract base satellite name (e.g., "TVL2-6-1" -> "TEVEL-2-6")
+                                    if source_callsign.startswith("TVL2-"):
+                                        parts = source_callsign.split("-")
+                                        if len(parts) >= 2:
+                                            satellite_name = f"TEVEL-2-{parts[1]}"
+                                    else:
+                                        # For other satellites, use callsign as-is
+                                        satellite_name = source_callsign
+                        except Exception as e:
+                            logger.warning(f"Failed to parse metadata for {decoded_file.name}: {e}")
+
+                    # Legacy: Determine decoder type from filename if not in metadata
+                    if not decoder_type and decoded_file.name.startswith("sstv_"):
                         decoder_type = "SSTV"
-                    # Add more decoder types as they are implemented
 
                     processed_items.append(
                         {
@@ -388,6 +415,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "url": f"/decoded/{decoded_file.name}",
                             "file_type": decoded_file.suffix.lower(),
                             "decoder_type": decoder_type,
+                            "satellite_name": satellite_name,
                         }
                     )
 

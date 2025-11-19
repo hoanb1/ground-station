@@ -23,6 +23,7 @@ import {
     useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import DownloadIcon from '@mui/icons-material/Download';
 import OverviewTab from './telemetry-overview-tab';
 import HexAsciiTab from './telemetry-hex-ascii-tab';
 import Float32Tab from './telemetry-float32-tab';
@@ -182,6 +183,23 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                 px: 3,
                 py: 2,
             }}>
+                <Button
+                    startIcon={<DownloadIcon />}
+                    href={file.url}
+                    download={file.filename}
+                    component="a"
+                >
+                    Download Binary
+                </Button>
+                <Button
+                    startIcon={<DownloadIcon />}
+                    href={file.url.replace('.bin', '.json')}
+                    download={file.filename?.replace('.bin', '.json')}
+                    component="a"
+                >
+                    Download Metadata
+                </Button>
+                <Box sx={{ flex: 1 }} />
                 <Button onClick={onClose}>
                     Close
                 </Button>
