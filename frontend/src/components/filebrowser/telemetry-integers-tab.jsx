@@ -145,7 +145,7 @@ export default function IntegersTab({ packet, telemetry }) {
                     <TableContainer
                         component={Paper}
                         variant="outlined"
-                        sx={{ maxHeight: '60vh', overflow: 'auto' }}
+                        sx={{ maxHeight: 'calc(60vh - 60px)', overflow: 'auto' }}
                     >
                         <Table size="small" stickyHeader>
                             <TableHead>
@@ -197,7 +197,7 @@ export default function IntegersTab({ packet, telemetry }) {
                     <TableContainer
                         component={Paper}
                         variant="outlined"
-                        sx={{ maxHeight: '60vh', overflow: 'auto' }}
+                        sx={{ maxHeight: 'calc(60vh - 60px)', overflow: 'auto' }}
                     >
                         <Table size="small" stickyHeader>
                             <TableHead>
@@ -244,8 +244,8 @@ export default function IntegersTab({ packet, telemetry }) {
             </Grid>
 
             {/* Info box */}
-            <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '15', borderRadius: 1 }}>
-                <Typography variant="caption" sx={{ color: theme.palette.info.main }}>
+            <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
+                <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
                     💡 Interpreting payload as little-endian unsigned integers.
                     Uint16 range: 0-65,535 (ADC values typically 0-4095).
                     Uint32 range: 0-4,294,967,295 (timestamps, large counters).

@@ -343,27 +343,6 @@ export default function AnalysisTab({ packet, telemetry }) {
                     </Stack>
                 )}
             </AnalysisSection>
-
-            {/* Recommendations */}
-            <Box sx={{ p: 2, bgcolor: theme.palette.success.main + '15', borderRadius: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: theme.palette.success.main }}>
-                    💡 Recommendations for Reverse Engineering
-                </Typography>
-                <Stack spacing={0.5} component="ol" sx={{ pl: 2, m: 0 }}>
-                    <Typography variant="body2" component="li">
-                        Compare multiple packets to identify counters and changing vs static fields
-                    </Typography>
-                    <Typography variant="body2" component="li">
-                        Float values likely represent telemetry (EPS voltages, temperatures, currents)
-                    </Typography>
-                    <Typography variant="body2" component="li">
-                        Contact TEVEL team (TAU/Herzliya Science Center) for official format specification
-                    </Typography>
-                    <Typography variant="body2" component="li">
-                        Check SatNOGS database for community-contributed decoders
-                    </Typography>
-                </Stack>
-            </Box>
         </Box>
     );
 }

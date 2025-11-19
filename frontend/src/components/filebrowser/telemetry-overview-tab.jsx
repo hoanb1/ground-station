@@ -196,8 +196,8 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                     </Box>
                 </Stack>
 
-                <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '15', borderRadius: 1 }}>
-                    <Typography variant="caption" sx={{ color: theme.palette.info.main }}>
+                <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
+                    <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
                         ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.
                     </Typography>
                 </Box>

@@ -274,8 +274,8 @@ export default function HexAsciiTab({ packet, telemetry }) {
             </Paper>
 
             {/* Legend */}
-            <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '15', borderRadius: 1 }}>
-                <Typography variant="caption" sx={{ color: theme.palette.info.main }}>
+            <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
+                <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
                     💡 Tip: Hover over bytes to see detailed information. Click to select. ASCII column shows printable characters (·  for non-printable).
                 </Typography>
             </Box>

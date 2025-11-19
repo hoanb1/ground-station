@@ -196,8 +196,8 @@ export default function Float32Tab({ packet, telemetry }) {
             </TableContainer>
 
             {/* Info box */}
-            <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '15', borderRadius: 1 }}>
-                <Typography variant="caption" sx={{ color: theme.palette.info.main }}>
+            <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
+                <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
                     💡 Interpreting payload as little-endian Float32 (IEEE 754) values.
                     Realistic ranges: voltages (0-10V), temperatures (-50 to +100°C), currents (0-5A).
                     Hover over types to understand the heuristics used for classification.
