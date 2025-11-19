@@ -153,18 +153,18 @@ const VFOMarkersContainer = ({
         return null;
     }, [decoderOutputs, getDecoderInfoForVFO]);
 
-    // Helper function to get BPSK decoder outputs for a VFO
+    // Helper function to get BPSK/GMSK/GFSK decoder outputs for a VFO
     const getBpskOutputsForVFO = useCallback((vfoNumber) => {
         // Find decoder info first
         const decoderInfo = getDecoderInfoForVFO(vfoNumber);
-        if (!decoderInfo || decoderInfo.decoder_type !== 'bpsk') {
+        if (!decoderInfo || !['bpsk', 'gmsk', 'gfsk'].includes(decoderInfo.decoder_type)) {
             return null;
         }
 
         // Filter all outputs for this VFO and session
         const outputs = decoderOutputs?.filter(
             out => out.session_id === decoderInfo.session_id &&
-                   out.decoder_type === 'bpsk' &&
+                   out.decoder_type === decoderInfo.decoder_type &&
                    out.vfo === vfoNumber
         );
 
@@ -174,7 +174,7 @@ const VFOMarkersContainer = ({
 
         // Get the most recent output to extract the "from" callsign
         const latestOutput = outputs.sort((a, b) => b.timestamp - a.timestamp)[0];
-        const fromCallsign = latestOutput?.output?.callsigns?.from || '-';
+        const fromCallsign = latestOutput?.output?.callsigns?.from || 'NO CALL';
 
         return {
             count: outputs.length,

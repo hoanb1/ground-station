@@ -192,8 +192,8 @@ export const canvasDrawingUtils = {
             const secondaryLabelTop = labelTop + labelHeight + 2; // 2px gap below primary label
             const decoderType = decoderInfo.decoder_type;
 
-            // Handle BPSK decoder with output info
-            if (decoderType === 'bpsk') {
+            // Handle BPSK, GMSK, and GFSK decoders with output info
+            if (decoderType === 'bpsk' || decoderType === 'gmsk' || decoderType === 'gfsk') {
                 const status = decoderInfo.status || 'processing';
                 const fromCallsign = bpskOutputs?.fromCallsign || '-';
                 const outputCount = bpskOutputs?.count || 0;
