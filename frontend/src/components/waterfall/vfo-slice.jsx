@@ -145,11 +145,24 @@ export const vfoSlice = createSlice({
             state.vfoActive[vfoNumber] = true;
 
             // Set bandwidth to defaultBandwidth for the current mode when activating VFO
+            // Consider decoder config first (e.g., BPSK, GMSK), then demodulator config
             const vfo = state.vfoMarkers[vfoNumber];
-            if (vfo && vfo.mode) {
-                const demodConfig = getDemodulatorConfig(vfo.mode);
-                if (demodConfig && demodConfig.defaultBandwidth) {
-                    vfo.bandwidth = demodConfig.defaultBandwidth;
+            if (vfo) {
+                // Check if decoder has its own default bandwidth (e.g., GMSK, BPSK)
+                if (vfo.decoder && vfo.decoder !== 'none') {
+                    const decoderConfig = getDecoderConfig(vfo.decoder);
+                    if (decoderConfig && decoderConfig.defaultBandwidth) {
+                        vfo.bandwidth = decoderConfig.defaultBandwidth;
+                        return; // Use decoder bandwidth, skip demodulator check
+                    }
+                }
+
+                // Otherwise, use demodulator default bandwidth
+                if (vfo.mode) {
+                    const demodConfig = getDemodulatorConfig(vfo.mode);
+                    if (demodConfig && demodConfig.defaultBandwidth) {
+                        vfo.bandwidth = demodConfig.defaultBandwidth;
+                    }
                 }
             }
         },

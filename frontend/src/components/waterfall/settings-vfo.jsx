@@ -642,6 +642,8 @@ const VfoAccordion = ({
                                             // Set bandwidth based on decoder type (using vfo-config.js defaults)
                                             if (newValue === 'sstv') {
                                                 updates.bandwidth = 3300; // 3.3 kHz for SSTV (audio content ~1200-2300 Hz)
+                                            } else if (newValue === 'apt') {
+                                                updates.bandwidth = 40000; // 40 kHz for APT (NOAA APT signal bandwidth)
                                             } else if (newValue === 'lora') {
                                                 updates.bandwidth = 500000; // 500 kHz for LoRa (auto-detects 125/250/500 kHz signals)
                                             } else if (newValue === 'morse') {

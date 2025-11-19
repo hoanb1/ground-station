@@ -165,6 +165,7 @@ export const DECODERS = {
         hasProgressDisplay: true, // shows percentage progress
         hasTextOutput: false, // no text output, outputs images
         hasModeDisplay: true, // shows SSTV mode (e.g., "Martin M1", "Scottie S1")
+        defaultBandwidth: 3300, // 3.3 kHz for SSTV (audio content ~1200-2300 Hz)
         lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     morse: {
@@ -181,6 +182,7 @@ export const DECODERS = {
         textDisplayLength: 30, // how many chars to show in VFO label
         textBufferLength: 300, // how many chars to keep in buffer
         textPlaceholder: 'listening', // what to show when no text yet
+        defaultBandwidth: 2500, // 2.5 kHz for Morse decoder (narrowband)
         lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     apt: {
@@ -194,6 +196,7 @@ export const DECODERS = {
         hasProgressDisplay: true,
         hasTextOutput: false,
         hasModeDisplay: false,
+        defaultBandwidth: 40000, // 40 kHz for APT (NOAA APT signal bandwidth)
         lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     lora: {
@@ -207,6 +210,7 @@ export const DECODERS = {
         hasProgressDisplay: false,
         hasTextOutput: false,
         hasModeDisplay: true, // shows LoRa parameters (SF, BW, CR)
+        defaultBandwidth: 500000, // 500 kHz for LoRa (auto-detects 125/250/500 kHz signals)
         lockedBandwidth: true, // bandwidth is determined by LoRa parameters, not user-adjustable
     },
     gmsk: {
