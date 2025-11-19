@@ -1,4 +1,4 @@
-[![Tests](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml/badge.svg)](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)[![Docker Build](https://github.com/sgoudelis/ground-station/actions/workflows/docker-release.yml/badge.svg?event=push)](https://github.com/sgoudelis/ground-station/actions/workflows/docker-release.yml)
+[![Tests](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml/badge.svg)](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Docker Build](https://github.com/sgoudelis/ground-station/actions/workflows/docker-release.yml/badge.svg?event=push)](https://github.com/sgoudelis/ground-station/actions/workflows/docker-release.yml)
 <div align="center">
   <img src="frontend/public/gs-logo-green-blue.png" alt="Ground Station Logo" width="200"/>
 </div>
