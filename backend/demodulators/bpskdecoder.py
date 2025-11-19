@@ -195,7 +195,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         clk_limit=0.004,
         costas_bw=50,
         packet_size=256,
-        batch_interval=3.0,
+        batch_interval=5.0,
     ):
         """
         Initialize BPSK decoder flowgraph using gr-satellites components
@@ -397,8 +397,9 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
 
             gc.collect()
 
-            # Small delay to allow system to clean up shared memory
-            time.sleep(0.01)
+            # Longer delay to allow system to clean up shared memory
+            # GNU Radio 3.10+ has issues with rapid flowgraph creation/destruction
+            time.sleep(0.1)
 
     def flush_buffer(self):
         """Process any remaining samples in the buffer"""
@@ -427,7 +428,7 @@ class BPSKDecoder(threading.Thread):
         baudrate=9600,  # Fallback if not in transmitter dict
         differential=False,
         packet_size=256,
-        batch_interval=3.0,  # Batch processing interval in seconds
+        batch_interval=5.0,  # Batch processing interval in seconds (increased to reduce mem usage)
     ):
         if not GNURADIO_AVAILABLE:
             logger.error("GNU Radio not available - BPSK decoder cannot be initialized")
