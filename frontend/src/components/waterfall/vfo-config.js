@@ -216,7 +216,7 @@ export const DECODERS = {
     gmsk: {
         internalName: 'gmsk',
         displayName: 'GMSK',
-        description: 'GMSK decoder with USP FEC (processes raw IQ, no demodulator)',
+        description: 'GMSK decoder (Gaussian MSK, processes raw IQ, no demodulator)',
         requiresDemodulator: null, // raw IQ decoder
         overrideDemodulator: 'none', // disable audio demodulator
         centerLineOnly: false, // show sidebands representing actual bandwidth
@@ -234,6 +234,33 @@ export const DECODERS = {
         calculateBandwidth: (transmitter) => {
             // Calculate optimal bandwidth based on transmitter baud rate
             // Formula: 3x baud rate (for GMSK spectral width + Doppler margin)
+            if (transmitter && transmitter.baud) {
+                return transmitter.baud * 3;
+            }
+            return 30000; // fallback to default
+        },
+    },
+    gfsk: {
+        internalName: 'gfsk',
+        displayName: 'GFSK',
+        description: 'GFSK decoder (Gaussian FSK, processes raw IQ, no demodulator)',
+        requiresDemodulator: null, // raw IQ decoder
+        overrideDemodulator: 'none', // disable audio demodulator
+        centerLineOnly: false, // show sidebands representing actual bandwidth
+        hasStatusDisplay: true,
+        hasProgressDisplay: false,
+        hasTextOutput: false,
+        hasModeDisplay: false,
+        defaultBandwidth: 30000, // 30 kHz default (suitable for ~9600-10000 baud + Doppler)
+        bandwidthType: 'double-sided', // bandwidth is divided equally on both sides of center
+        showBothEdges: true, // show both edges
+        allowLeftEdgeDrag: false, // edges not draggable (bandwidth locked)
+        allowRightEdgeDrag: false, // edges not draggable (bandwidth locked)
+        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±15kHz
+        lockedBandwidth: true, // bandwidth is determined by baud rate, not user-adjustable
+        calculateBandwidth: (transmitter) => {
+            // Calculate optimal bandwidth based on transmitter baud rate
+            // Formula: 3x baud rate (for GFSK spectral width + Doppler margin)
             if (transmitter && transmitter.baud) {
                 return transmitter.baud * 3;
             }
@@ -543,8 +570,8 @@ export const normalizeTransmitterMode = (mode) => {
 
     const modeNormalized = mode.toLowerCase();
 
-    // Digital modes (FSK/AFSK/PSK/BPSK/QPSK/GMSK) are transmitted over FM carriers
-    if (['fsk', 'afsk', 'psk', 'bpsk', 'qpsk', 'gmsk', 'gmsk usp', 'fmn'].includes(modeNormalized)) {
+    // Digital modes (FSK/AFSK/PSK/BPSK/QPSK/GMSK/GFSK) are transmitted over FM carriers
+    if (['fsk', 'afsk', 'psk', 'bpsk', 'qpsk', 'gmsk', 'gfsk', 'gmsk usp', 'fmn'].includes(modeNormalized)) {
         return 'FM';
     }
 

@@ -22,7 +22,7 @@ class VFOState:
     transcription_enabled: bool = False  # Enable/disable transcription for this VFO
     transcription_model: str = "small.en"  # Whisper model to use
     transcription_language: str = "en"  # Language code for transcription
-    decoder: str = "none"  # Decoder type: none, sstv, afsk, rtty, psk31, gmsk, lora
+    decoder: str = "none"  # Decoder type: none, sstv, afsk, rtty, psk31, gmsk, gfsk, bpsk, lora
     locked_transmitter_id: Optional[str] = (
         None  # Transmitter ID locked to this VFO (source of truth for baud, freq, etc.)
     )

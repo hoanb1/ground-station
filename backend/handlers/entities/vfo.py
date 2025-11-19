@@ -23,6 +23,7 @@ from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
 from db.models import Transmitters
 from demodulators.bpskdecoder import BPSKDecoder
+from demodulators.gfskdecoder import GFSKDecoder
 from demodulators.gmskdecoder import GMSKDecoder
 from demodulators.loradecoder import LoRaDecoder
 from demodulators.morsedecoder import MorseDecoder
@@ -95,8 +96,8 @@ async def update_vfo_parameters(
         # However, skip demodulator management if the VFO is using a raw IQ decoder (GMSK, LoRa)
         # as these decoders handle demodulation internally
         if "active" in data or "mode" in data:
-            # Check if decoder needs raw IQ (GMSK, BPSK, LoRa don't need audio demodulator)
-            raw_iq_decoders = {"gmsk", "bpsk", "lora"}
+            # Check if decoder needs raw IQ (GMSK, GFSK, BPSK, LoRa don't need audio demodulator)
+            raw_iq_decoders = {"gmsk", "gfsk", "bpsk", "lora"}
             if vfo_state.decoder not in raw_iq_decoders:
                 handle_vfo_demodulator_state(vfo_state, sid, logger)
             else:
@@ -227,7 +228,8 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger):
         "sstv": SSTVDecoder,
         "lora": LoRaDecoder,
         "morse": MorseDecoder,  # Morse code decoder (uses internal SSB/CW demodulator)
-        "gmsk": GMSKDecoder,  # GMSK decoder with USP FEC
+        "gmsk": GMSKDecoder,  # GMSK decoder (Gaussian MSK with BT <= 0.5)
+        "gfsk": GFSKDecoder,  # GFSK decoder (Gaussian FSK with BT >= 0.5)
         "bpsk": BPSKDecoder,  # BPSK decoder with AX.25 support (for Tevel satellites)
         # Add more decoders as they're implemented:
         # "afsk": AFSKDecoder,
@@ -292,8 +294,8 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger):
             "vfo": vfo_state.vfo_number,  # Pass VFO number for status updates
         }
 
-        # For GMSK/BPSK decoders, pass transmitter dict if available
-        if decoder_class in (GMSKDecoder, BPSKDecoder):
+        # For GMSK/GFSK/BPSK decoders, pass transmitter dict if available
+        if decoder_class in (GMSKDecoder, GFSKDecoder, BPSKDecoder):
             transmitter_info = None
 
             # If VFO is locked to a transmitter, query it from the database
