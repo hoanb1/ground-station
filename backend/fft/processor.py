@@ -96,11 +96,12 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                 # Get IQ data from queue with timeout
                 # Message format: {'samples': ndarray, 'center_freq': float,
                 #                  'sample_rate': float, 'timestamp': float, 'config': dict}
-                if iq_queue.empty():
-                    time.sleep(0.001)
+                # Using a short timeout allows checking stop_event frequently
+                try:
+                    iq_message = iq_queue.get(timeout=0.1)
+                except Exception:
+                    # Timeout or queue closed - check stop_event and continue
                     continue
-
-                iq_message = iq_queue.get(timeout=0.1)
 
                 # Update stats
                 stats["iq_chunks_in"] += 1
@@ -207,30 +208,41 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                     stats["fft_results_out"] += 1
 
                     # Send the averaged result back to the main process
-                    data_queue.put(
-                        {
-                            "type": "fft_data",
-                            "client_id": client_id,
-                            "data": averaged_fft.tobytes(),
-                            "timestamp": time.time(),
-                        }
-                    )
+                    # Use non-blocking put with timeout to avoid hanging if main process stops
+                    try:
+                        data_queue.put(
+                            {
+                                "type": "fft_data",
+                                "client_id": client_id,
+                                "data": averaged_fft.tobytes(),
+                                "timestamp": time.time(),
+                            },
+                            timeout=0.5,
+                        )
+                    except Exception as e:
+                        # Queue full or closed - log and continue
+                        # This prevents FFT processor from hanging if main process stops reading
+                        logger.debug(f"Failed to send FFT data to queue: {e}")
+                        stats["queue_timeouts"] += 1
 
                 # Periodically send stats to main process
                 current_time = time.time()
                 if current_time - last_stats_send >= stats_send_interval:
-                    data_queue.put(
-                        {
-                            "type": "stats",
-                            "client_id": client_id,
-                            "stats": stats.copy(),
-                            "timestamp": current_time,
-                        }
-                    )
-                    last_stats_send = current_time
-
-                # Brief sleep to prevent CPU spinning
-                time.sleep(0.001)
+                    try:
+                        data_queue.put(
+                            {
+                                "type": "stats",
+                                "client_id": client_id,
+                                "stats": stats.copy(),
+                                "timestamp": current_time,
+                            },
+                            timeout=0.5,
+                        )
+                        last_stats_send = current_time
+                    except Exception as e:
+                        # Queue full or closed - log and continue
+                        logger.debug(f"Failed to send stats to queue: {e}")
+                        stats["queue_timeouts"] += 1
 
             except Exception as e:
                 if not stop_event.is_set():

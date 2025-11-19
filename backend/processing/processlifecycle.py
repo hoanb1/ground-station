@@ -394,10 +394,43 @@ class ProcessLifecycleManager:
             broadcaster.join(timeout=2.0)
             self.logger.info(f"Stopped IQ broadcaster for device {sdr_id}")
 
-        # Stop the process
+        # Set stop event to signal both SDR worker and FFT processor to stop
+        self.logger.info(f"Stopping SDR process and FFT processor for device {sdr_id}")
+        process_info["stop_event"].set()
+
+        # Stop the FFT processor
+        if "fft_process" in process_info and process_info["fft_process"].is_alive():
+            self.logger.info(f"Stopping FFT processor for device {sdr_id}")
+
+            # Wait briefly for the FFT process to terminate gracefully
+            for _ in range(20):  # Wait up to 2 seconds
+                if not process_info["fft_process"].is_alive():
+                    break
+                await asyncio.sleep(0.1)
+
+            # Force terminate if still running
+            if process_info["fft_process"].is_alive():
+                self.logger.warning(f"Forcing termination of FFT processor for device {sdr_id}")
+                process_info["fft_process"].terminate()
+
+            # Wait briefly for termination
+            for _ in range(10):  # Wait up to 1 second
+                if not process_info["fft_process"].is_alive():
+                    break
+                await asyncio.sleep(0.1)
+
+            # If still alive, send SIGKILL
+            if process_info["fft_process"].is_alive():
+                self.logger.warning(
+                    f"FFT processor {sdr_id} still alive after terminate, sending SIGKILL"
+                )
+                process_info["fft_process"].kill()
+
+            self.logger.info(f"FFT processor for device {sdr_id} stopped")
+
+        # Stop the SDR worker process
         if process_info["process"].is_alive():
-            self.logger.info(f"Stopping SDR process for device {sdr_id}")
-            process_info["stop_event"].set()
+            self.logger.info(f"Stopping SDR worker process for device {sdr_id}")
 
             # Wait briefly for the process to terminate
             for _ in range(50):  # Wait up to 5 seconds
@@ -407,7 +440,7 @@ class ProcessLifecycleManager:
 
             # Force terminate if still running
             if process_info["process"].is_alive():
-                self.logger.warning(f"Forcing termination of SDR process for device {sdr_id}")
+                self.logger.warning(f"Forcing termination of SDR worker for device {sdr_id}")
                 process_info["process"].terminate()
 
             # Wait briefly for termination
@@ -419,9 +452,11 @@ class ProcessLifecycleManager:
             # If still alive, send SIGKILL
             if process_info["process"].is_alive():
                 self.logger.warning(
-                    f"Process {sdr_id} still alive after terminate, sending SIGKILL"
+                    f"SDR worker {sdr_id} still alive after terminate, sending SIGKILL"
                 )
                 process_info["process"].kill()
+
+            self.logger.info(f"SDR worker for device {sdr_id} stopped")
 
         # Clean up
         if sdr_id in self.processes:
