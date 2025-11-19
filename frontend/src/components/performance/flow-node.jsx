@@ -648,8 +648,8 @@ export const ComponentNode = ({ data }) => {
                                         label="Queue"
                                         value={component.input_queue_size || 0}
                                     />
-                                    {/* BPSK decoders receive IQ, others receive audio */}
-                                    {component.type === 'BPSKDecoder' ? (
+                                    {/* BPSK and GMSK decoders receive IQ, others receive audio */}
+                                    {(component.type === 'BPSKDecoder' || component.type === 'GMSKDecoder') ? (
                                         <>
                                             <MetricRow
                                                 label="IQ"

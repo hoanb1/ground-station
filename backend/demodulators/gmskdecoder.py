@@ -1,10 +1,5 @@
-# Ground Station - GMSK/FSK Decoder using GNU Radio
+# Ground Station - GMSK Decoder using GNU Radio
 # Developed by Claude (Anthropic AI) for the Ground Station project
-#
-# GMSK/FSK demodulation logic based on gr-satellites by Daniel Estevez
-# https://github.com/daniestevez/gr-satellites
-# Copyright 2019 Daniel Estevez <daniel@destevez.net>
-# SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,21 +14,60 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-# GMSK/FSK decoder with GNU Radio blocks for proper demodulation.
-# This decoder receives raw IQ samples directly from the SDR process (via iq_queue).
+# GMSK decoder implementation based on gr-satellites by Daniel Estevez
+# https://github.com/daniestevez/gr-satellites
+# Copyright 2019 Daniel Estevez <daniel@destevez.net>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This decoder receives raw IQ samples directly from the SDR process (via iq_queue)
+# and demodulates GMSK signals using gr-satellites FSK demodulator components.
+#
+# ARCHITECTURE NOTES:
+# ==================
+# 1. SIGNAL-CENTERED FREQUENCY TRANSLATION (same as BPSK decoder):
+#    - MUST translate to the actual signal frequency from transmitter config, NOT VFO center
+#    - offset_freq = signal_frequency - sdr_center_frequency
+#    - This centers the signal at baseband (0 Hz) regardless of VFO drift
+#
+# 2. BATCHED PROCESSING WITH FRESH FLOWGRAPHS (same as BPSK decoder):
+#    - Processes samples in configurable batches (default 5.0 seconds via batch_interval parameter)
+#    - Creates a NEW gr.top_block for each batch to avoid GNU Radio 3.10 reconnection issues
+#    - Aggressive cleanup in finally block prevents shared memory exhaustion
+#
+# 3. SIGNAL PROCESSING CHAIN (based on gr-satellites FSK demodulator):
+#    - Frequency translation (signal to baseband)
+#    - Decimation to target sample rate
+#    - FM demodulation (quadrature demod) for IQ input
+#    - Low-pass filter to Carson's bandwidth
+#    - Square pulse filter (moving average)
+#    - DC blocker
+#    - AGC (Automatic Gain Control)
+#    - Clock recovery using Gardner TED
+#    - Binary slicer, NRZI decode, G3RUH descrambler, HDLC deframing
+#
+# 4. KEY PARAMETERS:
+#    - Batch interval: 5 seconds default (configurable)
+#    - Clock recovery bandwidth: 0.06 (relative to baudrate)
+#    - Clock recovery limit: 0.004 (relative to baudrate)
+#    - Deviation: 5000 Hz default (negative inverts sidebands)
+#    - Sample rate: Matches VFO bandwidth
 
+import argparse
+import base64
+import gc
+import json
 import logging
 import os
 import queue
 import threading
 import time
 from enum import Enum
-from math import ceil, pi
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict
 
 import numpy as np
-from gnuradio.filter import firdes
+from scipy import signal
 
+from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
 logger = logging.getLogger("gmskdecoder")
@@ -42,11 +76,10 @@ logger = logging.getLogger("gmskdecoder")
 GNURADIO_AVAILABLE = False
 
 try:
-    from gnuradio import analog, blocks, digital, filter, gr
+    from gnuradio import blocks, gr
 
     GNURADIO_AVAILABLE = True
-    logger.info("GNU Radio available for GMSK/FSK decoding")
-
+    logger.info("GNU Radio available - GMSK decoder enabled")
 except ImportError as e:
     logger.warning(f"GNU Radio not available: {e}")
     logger.warning("GMSK decoder will not be functional")
@@ -63,37 +96,71 @@ class DecoderStatus(Enum):
     ERROR = "error"
 
 
-class GMSKMessageSink(gr.sync_block):
-    """Custom GNU Radio sink block to receive decoded GMSK symbols"""
+class GMSKMessageHandler(gr.basic_block):
+    """Message handler to receive PDU messages from HDLC deframer"""
 
     def __init__(self, callback):
-        gr.sync_block.__init__(self, name="gmsk_message_sink", in_sig=[np.float32], out_sig=None)
+        gr.basic_block.__init__(self, name="gmsk_message_handler", in_sig=None, out_sig=None)
         self.callback = callback
-        self.buffer = []
-        self.max_buffer_size = 10000  # Keep last 10k symbols
+        self.message_port_register_in(gr.pmt.intern("in"))
+        self.set_msg_handler(gr.pmt.intern("in"), self.handle_msg)
+        self.packets_decoded = 0
 
-    def work(self, input_items, output_items):
-        """Process incoming symbols"""
+    def handle_msg(self, msg):
+        """Handle incoming PDU messages from HDLC deframer"""
         try:
-            for symbol in input_items[0]:
-                self.buffer.append(float(symbol))
+            # Extract packet data from PDU
+            if gr.pmt.is_pair(msg):
+                packet_data = gr.pmt.to_python(gr.pmt.cdr(msg))
+            else:
+                packet_data = gr.pmt.to_python(msg)
 
-                # Limit buffer size
-                if len(self.buffer) > self.max_buffer_size:
-                    self.buffer = self.buffer[-self.max_buffer_size :]
+            # Convert numpy array to bytes
+            if isinstance(packet_data, np.ndarray):
+                packet_data = bytes(packet_data)
 
-            # Callback with symbols for further processing
-            if self.callback and len(self.buffer) > 0:
-                self.callback(np.array(self.buffer, dtype=np.float32))
-                self.buffer = []  # Clear after callback
+            if isinstance(packet_data, bytes):
+                self.packets_decoded += 1
+                logger.info(
+                    f"GMSK decoded packet #{self.packets_decoded}: {len(packet_data)} bytes"
+                )
+
+                # Parse and log AX.25 callsigns
+                callsigns = None
+                try:
+                    if len(packet_data) >= 14:
+                        dest_call = "".join(
+                            chr((packet_data[i] >> 1) & 0x7F) for i in range(6)
+                        ).strip()
+                        dest_ssid = (packet_data[6] >> 1) & 0x0F
+                        src_call = "".join(
+                            chr((packet_data[i] >> 1) & 0x7F) for i in range(7, 13)
+                        ).strip()
+                        src_ssid = (packet_data[13] >> 1) & 0x0F
+                        callsigns = {
+                            "from": f"{src_call}-{src_ssid}",
+                            "to": f"{dest_call}-{dest_ssid}",
+                        }
+                        logger.info(
+                            f"  Callsigns: {dest_call}-{dest_ssid} <- {src_call}-{src_ssid}"
+                        )
+                        logger.info(f"  First 20 bytes: {packet_data[:20].hex()}")
+                except Exception as parse_err:
+                    logger.debug(f"Could not parse callsigns: {parse_err}")
+
+                # Add HDLC flags for compatibility
+                packet_with_flags = bytes([0x7E]) + packet_data + bytes([0x7E])
+
+                if self.callback:
+                    self.callback(packet_with_flags, callsigns)
+            else:
+                logger.warning(f"Unexpected packet data type: {type(packet_data)}")
 
         except Exception as e:
-            logger.error(f"Error in GMSK message sink: {e}")
+            logger.error(f"Error handling message: {e}")
             import traceback
 
             traceback.print_exc()
-
-        return len(input_items[0])
 
 
 # Define base class conditionally
@@ -105,180 +172,235 @@ else:
 
 class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
     """
-    GNU Radio flowgraph for GMSK/FSK demodulation
+    GMSK flowgraph using gr-satellites FSK demodulator components
 
-    Based on gr-satellites FSK demodulator by Daniel Estevez
-    https://github.com/daniestevez/gr-satellites
+    Based on gr-satellites fsk_demodulator and ax25_deframer.
+    Uses tested components for FSK/GMSK demodulation and AX.25 deframing.
     """
 
     def __init__(
         self,
         sample_rate,
         callback,
+        status_callback=None,
         baudrate=9600,
         deviation=5000,
         use_agc=True,
         dc_block=True,
         clk_bw=0.06,
         clk_limit=0.004,
+        batch_interval=5.0,
     ):
         """
-        Initialize GMSK/FSK demodulator flowgraph
+        Initialize GMSK decoder flowgraph using gr-satellites FSK demodulator
 
         Args:
             sample_rate: Input sample rate (Hz)
-            callback: Function to call with demodulated symbols
-            baudrate: Baudrate in symbols per second
+            callback: Function to call when packet is decoded
+            status_callback: Function to call for status updates (status, info)
+            baudrate: Symbol rate / baud rate (symbols/sec)
             deviation: Deviation in Hz (negative inverts sidebands)
             use_agc: Use automatic gain control
             dc_block: Use DC blocker
             clk_bw: Clock recovery bandwidth (relative to baudrate)
             clk_limit: Clock recovery limit (relative to baudrate)
+            batch_interval: Batch processing interval in seconds (default: 5.0)
         """
         if not GNURADIO_AVAILABLE:
             raise RuntimeError("GNU Radio not available - GMSK decoder cannot be initialized")
 
-        super().__init__("GMSK/FSK Decoder")
+        super().__init__("GMSK Decoder")
 
         self.sample_rate = sample_rate
         self.baudrate = baudrate
         self.callback = callback
+        self.status_callback = status_callback
+        self.deviation = deviation
+        self.batch_interval = batch_interval
+        self.use_agc = use_agc
+        self.dc_block = dc_block
+        self.clk_bw = clk_bw
+        self.clk_limit = clk_limit
 
-        # Prevent problems due to baudrate too high
-        if baudrate >= sample_rate:
-            logger.error(
-                f"Sample rate {sample_rate} sps insufficient for {baudrate} "
-                f"baud FSK demodulation. Demodulator will not work."
-            )
-            baudrate = sample_rate / 2
+        # Accumulate samples in a buffer
+        self.sample_buffer = np.array([], dtype=np.complex64)
+        self.sample_lock = threading.Lock()
+        self.current_mode = "decoding"  # Track current mode
 
         logger.info(
-            f"GMSK/FSK decoder: sample_rate={sample_rate}, baudrate={baudrate}, "
-            f"deviation={deviation}"
+            f"GMSK flowgraph initialized: "
+            f"{baudrate} baud, {sample_rate} sps, deviation={deviation} Hz, "
+            f"batch_interval={batch_interval}s"
         )
 
-        # Create vector source for input samples (IQ)
-        self.vector_source = blocks.vector_source_c([], repeat=False)
+    def process_samples(self, samples):
+        """
+        Process IQ samples through the flowgraph
 
-        # 1. Quadrature demodulation (FM demodulation)
-        # GMSK is essentially FM modulation with Gaussian-shaped pulses
-        carson_cutoff = abs(deviation) + baudrate / 2
-        self.quad_demod = analog.quadrature_demod_cf(sample_rate / (2 * pi * deviation))
+        Accumulates samples in a buffer and processes them periodically
+        to maintain state continuity while avoiding repeated start/stop cycles.
 
-        # 2. Low-pass filter to Carson's bandwidth
-        if carson_cutoff < sample_rate / 2:
-            # Filter before demod if sample rate allows
-            fir_taps = firdes.low_pass(1, sample_rate, carson_cutoff, 0.1 * carson_cutoff)
-            self.demod_filter = filter.fir_filter_ccf(1, fir_taps)
-            has_demod_filter = True
-        else:
-            # Sample rate is already narrower than Carson's bandwidth
-            has_demod_filter = False
+        Args:
+            samples: numpy array of complex64 samples
+        """
+        should_process = False
+        buffer_size = 0
+        with self.sample_lock:
+            self.sample_buffer = np.concatenate([self.sample_buffer, samples])
+            buffer_size = len(self.sample_buffer)
 
-        # 3. Calculate samples per symbol and decimation
-        sps = sample_rate / baudrate
-        max_sps = 10
-        if sps > max_sps:
-            decimation = ceil(sps / max_sps)
-        else:
-            decimation = 1
-        sps /= decimation
+            # Process when we have enough samples (batch_interval seconds worth)
+            min_process_samples = int(self.sample_rate * self.batch_interval)
 
-        logger.info(f"Samples per symbol: {sps:.2f} (after decimation: {decimation})")
+            if buffer_size >= min_process_samples:
+                should_process = True
+            elif self.current_mode != "decoding":
+                # Transition back to decoding mode (accumulating samples)
+                self.current_mode = "decoding"
+                if self.status_callback:
+                    self.status_callback(DecoderStatus.DECODING, {"buffer_samples": buffer_size})
 
-        # 4. Square pulse filter (moving average filter)
-        sqfilter_len = int(sample_rate / baudrate)
-        taps = np.ones(sqfilter_len) / sqfilter_len
-        self.lowpass = filter.fir_filter_fff(decimation, taps)
+        # Process outside the lock so incoming samples don't block
+        if should_process:
+            # Transition to decoding mode (processing batch)
+            with self.sample_lock:
+                self.current_mode = "decoding"
+            if self.status_callback:
+                self.status_callback(DecoderStatus.DECODING, {"buffer_samples": buffer_size})
 
-        # 5. DC blocker (optional)
-        if dc_block:
-            self.dcblock = filter.dc_blocker_ff(ceil(sps * 32), True)
+            logger.info(f"Processing batch: {buffer_size} samples ({self.batch_interval}s)")
+            self._process_buffer()
 
-        # 6. AGC (optional)
-        if use_agc:
-            # Time constant of 50 symbols
-            agc_constant = 2e-2 / sps
-            self.agc = analog.agc2_ff(agc_constant, agc_constant, 1.0, 1.0)
-
-        # 7. Clock recovery using Gardner TED
-        # "Empiric" formula for TED gain: 1.47 symbol^{-1}
-        ted_gain = 1.47
-        damping = 1.0
-        self.clock_recovery = digital.symbol_sync_ff(
-            digital.TED_GARDNER,
-            sps,
-            clk_bw,
-            damping,
-            ted_gain,
-            clk_limit * sps,
-            1,
-            digital.constellation_bpsk().base(),
-            digital.IR_PFB_NO_MF,
-        )
-
-        # 8. Message sink to receive demodulated symbols
-        self.msg_sink = GMSKMessageSink(self._on_symbols_decoded)
-
-        # Connect the flowgraph
-        # Start with vector source
-        if has_demod_filter:
-            self.connect(self.vector_source, self.demod_filter, self.quad_demod)
-        else:
-            self.connect(self.vector_source, self.quad_demod)
-
-        # Connect demod → lowpass
-        self.connect(self.quad_demod, self.lowpass)
-
-        # Connect lowpass → dcblock (if enabled) → agc (if enabled) → clock recovery
-        if dc_block:
-            self.connect(self.lowpass, self.dcblock)
-            if use_agc:
-                self.connect(self.dcblock, self.agc, self.clock_recovery)
+    def _process_buffer(self):
+        """Process accumulated samples through the flowgraph"""
+        # Copy buffer outside the lock to allow incoming samples to continue
+        with self.sample_lock:
+            if len(self.sample_buffer) == 0:
+                return
+            samples_to_process = self.sample_buffer.copy()
+            # Keep a small tail for continuity while processing
+            tail_samples = int(self.sample_rate * 0.1)  # 100ms tail
+            if len(self.sample_buffer) > tail_samples:
+                self.sample_buffer = self.sample_buffer[-tail_samples:]
             else:
-                self.connect(self.dcblock, self.clock_recovery)
-        else:
-            if use_agc:
-                self.connect(self.lowpass, self.agc, self.clock_recovery)
-            else:
-                self.connect(self.lowpass, self.clock_recovery)
+                self.sample_buffer = np.array([], dtype=np.complex64)
 
-        # Connect clock recovery → message sink
-        self.connect(self.clock_recovery, self.msg_sink)
-
-        logger.debug(f"GMSK/FSK flowgraph initialized: {baudrate} baud, deviation={deviation}")
-
-    def process_batch(self, samples):
-        """Process a batch of IQ samples"""
+        tb = None
         try:
-            # Set the input samples
-            self.vector_source.set_data(samples.tolist())
+            # Create a NEW flowgraph for each batch to avoid connection conflicts
+            # This is necessary because hierarchical blocks can't be easily disconnected
+
+            # Import gr-satellites components
+            from satellites.components.deframers.ax25_deframer import ax25_deframer
+            from satellites.components.demodulators.fsk_demodulator import fsk_demodulator
+
+            # Create a temporary top_block
+            tb = gr.top_block("GMSK Batch Processor")
+
+            # Create vector source with accumulated samples
+            source = blocks.vector_source_c(samples_to_process.tolist(), repeat=False)
+
+            # Create options namespace for gr-satellites components
+            options = argparse.Namespace(
+                clk_bw=self.clk_bw,
+                clk_limit=self.clk_limit,
+                deviation=self.deviation,
+                use_agc=self.use_agc,
+                disable_dc_block=not self.dc_block,
+            )
+
+            # Create FSK demodulator (GMSK is a type of FSK with Gaussian pulse shaping)
+            # iq=True because we're feeding complex IQ samples
+            demod = fsk_demodulator(
+                baudrate=self.baudrate,
+                samp_rate=self.sample_rate,
+                iq=True,
+                deviation=self.deviation,
+                subaudio=False,
+                dc_block=self.dc_block,
+                dump_path=None,
+                options=options,
+            )
+
+            # Create AX.25 deframer with G3RUH descrambling
+            deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
+
+            # Create message handler for this batch
+            msg_handler = GMSKMessageHandler(self.callback)
+
+            # Build flowgraph
+            tb.connect(source, demod, deframer)
+            tb.msg_connect((deframer, "out"), (msg_handler, "in"))
 
             # Run the flowgraph
-            self.start()
-            time.sleep(0.01)  # Small delay for processing
+            tb.start()
+            tb.wait()
 
-            # Stop gracefully
+            # Explicitly stop
             try:
-                self.stop()
-                self.wait()
+                tb.stop()
             except Exception:
                 pass
 
         except Exception as e:
-            logger.error(f"Error processing batch: {e}")
+            logger.error(f"Error processing buffer: {e}")
             import traceback
 
             traceback.print_exc()
+            # Clear buffer on error to avoid repeated failures
+            with self.sample_lock:
+                self.sample_buffer = np.array([], dtype=np.complex64)
+        finally:
+            # Explicit cleanup to prevent shared memory leaks
+            if "tb" in locals() and tb is not None:
+                try:
+                    # Ensure flowgraph is stopped
+                    tb.stop()
+                    tb.wait()
+                except Exception:
+                    pass
 
-    def _on_symbols_decoded(self, symbols):
-        """Called when symbols are demodulated"""
+                # Disconnect all blocks
+                try:
+                    tb.disconnect_all()
+                except Exception:
+                    pass
+
+                # Delete references to allow garbage collection
+                try:
+                    del msg_handler
+                    del deframer
+                    del demod
+                    del source
+                except Exception:
+                    pass
+
+                # Delete the top_block to release resources
+                del tb
+
+            # Force garbage collection to clean up GNU Radio objects
+            # and release shared memory segments
+            gc.collect()
+
+            # Longer delay to allow system to clean up shared memory
+            # GNU Radio 3.10+ has issues with rapid flowgraph creation/destruction
+            time.sleep(0.1)
+
+    def flush_buffer(self):
+        """Process any remaining samples in the buffer"""
+        with self.sample_lock:
+            if len(self.sample_buffer) > 0:
+                logger.info(f"Flushing {len(self.sample_buffer)} remaining samples")
+                self._process_buffer()
+
+    def _on_packet_decoded(self, payload, callsigns=None):
+        """Called when a GMSK packet is successfully decoded"""
         if self.callback:
-            self.callback(symbols)
+            self.callback(payload, callsigns)
 
 
 class GMSKDecoder(threading.Thread):
-    """Real-time GMSK/FSK decoder using GNU Radio"""
+    """Real-time GMSK decoder using GNU Radio"""
 
     def __init__(
         self,
@@ -288,8 +410,9 @@ class GMSKDecoder(threading.Thread):
         output_dir="data/decoded",
         vfo=None,
         transmitter=None,  # Complete transmitter dict with all parameters
-        symbol_rate=9600,  # Fallback if not in transmitter dict
+        baudrate=9600,  # Fallback if not in transmitter dict
         deviation=5000,  # FSK deviation in Hz
+        batch_interval=5.0,  # Batch processing interval in seconds
     ):
         if not GNURADIO_AVAILABLE:
             logger.error("GNU Radio not available - GMSK decoder cannot be initialized")
@@ -299,22 +422,34 @@ class GMSKDecoder(threading.Thread):
         self.iq_queue = iq_queue
         self.data_queue = data_queue
         self.session_id = session_id
-        self.sample_rate = None  # Processing sample rate (after initial setup)
+        self.sample_rate = None  # VFO bandwidth sample rate (after decimation)
         self.sdr_sample_rate = None  # Full SDR sample rate
         self.running = True
         self.output_dir = output_dir
         self.vfo = vfo
         self.vfo_manager = VFOManager()
         self.sdr_center_freq = None  # SDR center frequency
-        self.symbol_count: int = 0
-        self.last_activity: Optional[float] = None
+        self.decimation_filter = None  # Filter for decimation
+        self.packet_count = 0
 
-        # Store transmitter dict for future use (framing, protocols, etc.)
+        # Initialize telemetry parser
+        self.telemetry_parser = TelemetryParser()
+        logger.info("Telemetry parser initialized for GMSK decoder")
+
+        # Store transmitter dict for future use
         self.transmitter = transmitter or {}
 
-        # Extract GMSK/FSK parameters from transmitter dict or use defaults
-        self.baudrate = self.transmitter.get("baud", symbol_rate)
+        # Extract GMSK parameters from transmitter dict or use defaults
+        self.baudrate = self.transmitter.get("baud", baudrate)
         self.deviation = self.transmitter.get("deviation", deviation)
+        self.batch_interval = batch_interval
+        # Get expected signal frequency for proper frequency translation
+        self.signal_frequency = self.transmitter.get("frequency", 436.400e6)
+
+        logger.info(f"GMSK decoder received transmitter dict: {self.transmitter}")
+        logger.info(
+            f"Extracted baud rate: {self.baudrate} (from transmitter: {self.transmitter.get('baud')}, fallback: {baudrate})"
+        )
 
         # Store additional transmitter info
         self.transmitter_description = self.transmitter.get("description", "Unknown")
@@ -325,12 +460,13 @@ class GMSKDecoder(threading.Thread):
         # GNU Radio flowgraph (will be initialized when we know sample rate)
         self.flowgraph = None
 
-        # Stats tracking (thread-safe)
+        # Performance monitoring stats
         self.stats: Dict[str, Any] = {
             "iq_chunks_in": 0,
             "samples_in": 0,
             "data_messages_out": 0,
-            "symbols_decoded": 0,
+            "queue_timeouts": 0,
+            "packets_decoded": 0,
             "last_activity": None,
             "errors": 0,
         }
@@ -347,71 +483,200 @@ class GMSKDecoder(threading.Thread):
             return self.vfo_manager.get_vfo_state(self.session_id, self.vfo)
         return None
 
-    def _on_symbols_decoded(self, symbols):
-        """Callback when GNU Radio demodulates GMSK symbols"""
+    def _frequency_translate(self, samples, offset_freq, sample_rate):
+        """Translate frequency by offset (shift signal in frequency domain)."""
+        if offset_freq == 0:
+            return samples
+
+        # Generate complex exponential for frequency shift
+        t = np.arange(len(samples)) / sample_rate
+        shift = np.exp(-2j * np.pi * offset_freq * t)
+        return samples * shift
+
+    def _design_decimation_filter(self, decimation_factor, bandwidth, sample_rate):
+        """Design low-pass filter for decimation."""
+        # Cutoff at bandwidth/2 (Nyquist for target bandwidth)
+        cutoff = bandwidth / 2
+        # Transition band: 10% of bandwidth
+        transition = bandwidth * 0.1
+        # Design FIR filter
+        numtaps = int(sample_rate / transition) | 1  # Ensure odd
+        if numtaps > 1001:  # Limit filter length
+            numtaps = 1001
+        return signal.firwin(numtaps, cutoff, fs=sample_rate)
+
+    def _decimate_iq(self, samples, decimation_factor):
+        """Decimate IQ samples with filtering."""
+        if decimation_factor == 1:
+            return samples
+
+        # Apply low-pass filter
+        filtered = signal.lfilter(self.decimation_filter, 1, samples)
+        # Decimate
+        return filtered[::decimation_factor]
+
+    def _on_packet_decoded(self, payload, callsigns=None):
+        """Callback when GNU Radio decodes a GMSK packet"""
         try:
-            if symbols is None or len(symbols) == 0:
-                return
-
-            self.symbol_count += len(symbols)
-            current_time = time.time()
-            self.last_activity = current_time
-
-            # Update stats
+            self.packet_count += 1
             with self.stats_lock:
-                symbols_decoded = cast(int, self.stats.get("symbols_decoded", 0))
-                data_messages_out = cast(int, self.stats.get("data_messages_out", 0))
-                self.stats["symbols_decoded"] = symbols_decoded + len(symbols)
-                self.stats["last_activity"] = current_time
-                self.stats["data_messages_out"] = data_messages_out + 1
+                self.stats["packets_decoded"] = self.packet_count
+            logger.info(f"GMSK packet #{self.packet_count} decoded: {len(payload)} bytes")
 
-            # Log periodically
-            if self.symbol_count % 10000 == 0:
-                logger.debug(f"GMSK decoder: {self.symbol_count} symbols decoded")
+            # Parse telemetry using generic parser
+            # Remove HDLC flags if present (0x7E at start/end)
+            packet_data = payload
+            if len(packet_data) > 0 and packet_data[0] == 0x7E:
+                packet_data = packet_data[1:]
+            if len(packet_data) > 0 and packet_data[-1] == 0x7E:
+                packet_data = packet_data[:-1]
 
-                # Send status update to show we're still decoding
-                self._send_status_update(
-                    DecoderStatus.DECODING, {"symbols_decoded": self.symbol_count}
-                )
+            telemetry_result = self.telemetry_parser.parse(packet_data)
+            if telemetry_result.get("success"):
+                logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
 
-            # Save symbols to file periodically (every 50k symbols to avoid too many files)
-            if self.symbol_count % 50000 < len(symbols):
-                timestamp = time.strftime("%Y%m%d_%H%M%S")
-                filename = f"gmsk_{self.baudrate}baud_symbols_{timestamp}.bin"
-                filepath = os.path.join(self.output_dir, filename)
+            # Save to file
+            decode_timestamp = time.time()
+            timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"gmsk_{self.baudrate}baud_{timestamp_str}_{self.packet_count}.bin"
+            filepath = os.path.join(self.output_dir, filename)
 
-                # Save as float32 binary
-                symbols.astype(np.float32).tofile(filepath)
-                logger.info(f"Saved {self.symbol_count} symbols to {filepath}")
+            with open(filepath, "wb") as f:
+                f.write(payload)
+            logger.info(f"Saved: {filepath}")
 
-                # Send to UI
-                msg = {
-                    "type": "decoder-output",
-                    "decoder_type": "gmsk",
+            # Get current VFO state for metadata
+            vfo_state = self._get_vfo_state()
+
+            # Create comprehensive metadata
+            metadata = {
+                "packet": {
+                    "number": self.packet_count,
+                    "length_bytes": len(payload),
+                    "timestamp": decode_timestamp,
+                    "timestamp_iso": time.strftime(
+                        "%Y-%m-%dT%H:%M:%S%z", time.localtime(decode_timestamp)
+                    ),
+                    "hex": payload.hex(),
+                },
+                "decoder": {
+                    "type": "gmsk",
                     "session_id": self.session_id,
-                    "vfo": self.vfo,
-                    "timestamp": time.time(),
-                    "output": {
-                        "format": "symbols",
-                        "symbol_count": len(symbols),
-                        "total_symbols": self.symbol_count,
-                        "baudrate": self.baudrate,
-                        "filepath": filepath,
-                    },
+                    "baudrate": self.baudrate,
+                    "deviation": self.deviation,
+                    "batch_interval": self.batch_interval,
+                },
+                "signal": {
+                    "frequency_hz": self.signal_frequency,
+                    "frequency_mhz": self.signal_frequency / 1e6,
+                    "sample_rate_hz": self.sample_rate,
+                    "sdr_sample_rate_hz": self.sdr_sample_rate,
+                    "sdr_center_freq_hz": self.sdr_center_freq,
+                    "sdr_center_freq_mhz": (
+                        self.sdr_center_freq / 1e6 if self.sdr_center_freq else None
+                    ),
+                },
+                "vfo": {
+                    "id": self.vfo,
+                    "center_freq_hz": vfo_state.center_freq if vfo_state else None,
+                    "center_freq_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
+                    "bandwidth_hz": vfo_state.bandwidth if vfo_state else None,
+                    "bandwidth_khz": vfo_state.bandwidth / 1e3 if vfo_state else None,
+                    "active": vfo_state.active if vfo_state else None,
+                },
+                "transmitter": {
+                    "description": self.transmitter_description,
+                    "mode": self.transmitter_mode,
+                    "full_config": self.transmitter,
+                },
+                "demodulator_parameters": {
+                    "deviation_hz": self.deviation,
+                    "clock_recovery_bandwidth": 0.06,
+                    "clock_recovery_limit": 0.004,
+                },
+                "file": {
+                    "binary": filename,
+                    "binary_path": filepath,
+                },
+            }
+
+            # Add callsigns if available
+            if callsigns:
+                metadata["ax25"] = {
+                    "from_callsign": callsigns.get("from"),
+                    "to_callsign": callsigns.get("to"),
                 }
-                try:
-                    self.data_queue.put(msg, block=False)
-                except queue.Full:
-                    logger.warning("Data queue full, dropping symbol output")
+
+            # Add parsed telemetry data
+            metadata["telemetry"] = telemetry_result
+
+            # Save metadata JSON
+            metadata_filename = filename.replace(".bin", ".json")
+            metadata_filepath = os.path.join(self.output_dir, metadata_filename)
+            with open(metadata_filepath, "w") as f:
+                json.dump(metadata, f, indent=2)
+            logger.info(f"Saved metadata: {metadata_filepath}")
+
+            # Encode as base64 for transmission
+            packet_base64 = base64.b64encode(payload).decode()
+
+            # Try to decode as ASCII for display
+            try:
+                packet_text = payload.decode("ascii", errors="replace")
+            except UnicodeDecodeError:
+                packet_text = payload.hex()
+
+            # Send to UI
+            msg = {
+                "type": "decoder-output",
+                "decoder_type": "gmsk",
+                "session_id": self.session_id,
+                "vfo": self.vfo,
+                "timestamp": decode_timestamp,
+                "output": {
+                    "format": "application/octet-stream",
+                    "filename": filename,
+                    "filepath": filepath,
+                    "metadata_filename": metadata_filename,
+                    "metadata_filepath": metadata_filepath,
+                    "packet_data": packet_base64,
+                    "packet_text": packet_text,
+                    "packet_length": len(payload),
+                    "packet_number": self.packet_count,
+                    "parameters": f"{self.baudrate}baud, {self.deviation}Hz dev",
+                },
+            }
+
+            # Add callsigns if available
+            if callsigns:
+                msg["output"]["callsigns"] = callsigns
+
+            # Add parsed telemetry to UI message
+            if telemetry_result.get("success"):
+                msg["output"]["telemetry"] = {
+                    "parser": telemetry_result.get("parser"),
+                    "frame": telemetry_result.get("frame"),
+                    "data": telemetry_result.get("telemetry"),
+                }
+            try:
+                self.data_queue.put(msg, block=False)
+                with self.stats_lock:
+                    self.stats["data_messages_out"] += 1
+            except queue.Full:
+                logger.warning("Data queue full, dropping packet output")
+
+            # Don't send status update for individual packet decodes
+            # The decoder stays in DECODING status continuously
 
         except Exception as e:
-            logger.error(f"Error processing decoded symbols: {e}")
+            logger.error(f"Error processing decoded packet: {e}")
+            logger.exception(e)
             with self.stats_lock:
-                errors = cast(int, self.stats.get("errors", 0))
-                self.stats["errors"] = errors + 1
-            import traceback
+                self.stats["errors"] += 1
 
-            traceback.print_exc()
+    def _on_flowgraph_status(self, status, info=None):
+        """Callback when flowgraph status changes"""
+        self._send_status_update(status, info)
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
@@ -426,25 +691,50 @@ class GMSKDecoder(threading.Thread):
         }
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping status update")
 
+    def _send_stats_update(self):
+        """Send statistics update to UI"""
+        msg = {
+            "type": "decoder-stats",
+            "decoder_type": "gmsk",
+            "session_id": self.session_id,
+            "vfo": self.vfo,
+            "timestamp": time.time(),
+            "stats": {
+                "packets_decoded": self.packet_count,
+                "baudrate": self.baudrate,
+                "deviation": self.deviation,
+            },
+        }
+        try:
+            self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
+        except queue.Full:
+            pass
+
     def run(self):
-        """Main thread loop"""
+        """Main thread loop - processes IQ samples continuously"""
         logger.info(f"GMSK decoder started for {self.session_id}")
         self._send_status_update(DecoderStatus.LISTENING)
 
         chunks_received = 0
-        samples_buffer = np.array([], dtype=np.complex64)
-        # Buffer enough samples for GMSK processing
-        buffer_duration = 0.5  # Process every 0.5 seconds
-        buffer_samples = 0  # Will be initialized when we know sample rate
+        flowgraph_started = False
 
         try:
             while self.running:
                 # Read IQ samples from iq_queue
                 try:
                     iq_message = self.iq_queue.get(timeout=0.1)
+
+                    # Update stats
+                    with self.stats_lock:
+                        self.stats["iq_chunks_in"] += 1
+                        self.stats["last_activity"] = time.time()
 
                     # Extract IQ samples and metadata from message
                     samples = iq_message.get("samples")
@@ -454,94 +744,133 @@ class GMSKDecoder(threading.Thread):
                     if samples is None or len(samples) == 0:
                         continue
 
+                    # Update sample count
+                    with self.stats_lock:
+                        self.stats["samples_in"] += len(samples)
+
                     # Get VFO parameters
                     vfo_state = self._get_vfo_state()
                     if not vfo_state or not vfo_state.active:
                         continue  # VFO not active, skip
 
+                    vfo_center = vfo_state.center_freq
                     vfo_bandwidth = vfo_state.bandwidth
-
-                    # Update stats
-                    with self.stats_lock:
-                        iq_chunks_in = cast(int, self.stats.get("iq_chunks_in", 0))
-                        samples_in = cast(int, self.stats.get("samples_in", 0))
-                        self.stats["iq_chunks_in"] = iq_chunks_in + 1
-                        self.stats["samples_in"] = samples_in + len(samples)
 
                     # Initialize on first message
                     if self.sdr_sample_rate is None:
                         self.sdr_sample_rate = sdr_rate
                         self.sdr_center_freq = sdr_center
 
-                        # Use VFO bandwidth as sample rate for flowgraph
-                        self.sample_rate = vfo_bandwidth
+                        # Calculate decimation factor for optimal samples per symbol
+                        # Target 8-10 samples per symbol
+                        target_sps = 8
+                        target_sample_rate = self.baudrate * target_sps
+                        decimation = int(self.sdr_sample_rate / target_sample_rate)
+                        if decimation < 1:
+                            decimation = 1
+                        self.sample_rate = self.sdr_sample_rate / decimation
+
+                        logger.info(
+                            f"GMSK baudrate: {self.baudrate} baud, "
+                            f"target rate: {target_sample_rate/1e3:.2f}kS/s ({target_sps} sps)"
+                        )
+
+                        # Design decimation filter
+                        self.decimation_filter = self._design_decimation_filter(
+                            decimation, vfo_bandwidth, self.sdr_sample_rate
+                        )
 
                         logger.info(
                             f"GMSK decoder: SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, "
-                            f"VFO BW: {vfo_bandwidth/1e3:.0f} kHz"
+                            f"VFO BW: {vfo_bandwidth/1e3:.0f} kHz, decimation: {decimation}, "
+                            f"output rate: {self.sample_rate/1e6:.2f} MS/s"
                         )
                         logger.info(
-                            f"Baudrate: {self.baudrate} baud, deviation: {self.deviation} Hz"
+                            f"VFO center: {vfo_center/1e6:.3f} MHz, "
+                            f"SDR center: {sdr_center/1e6:.3f} MHz"
                         )
 
-                        # Calculate buffer size
-                        buffer_samples = int(self.sample_rate * buffer_duration)
-                        logger.info(f"Buffer size: {buffer_samples} samples ({buffer_duration}s)")
+                        # Store VFO center for offset calculation
+                        self.initial_vfo_center = vfo_center
 
                         # Initialize flowgraph
                         self.flowgraph = GMSKFlowgraph(
                             sample_rate=self.sample_rate,
-                            callback=self._on_symbols_decoded,
+                            callback=self._on_packet_decoded,
+                            status_callback=self._on_flowgraph_status,
                             baudrate=self.baudrate,
                             deviation=self.deviation,
                             use_agc=True,
                             dc_block=True,
+                            batch_interval=self.batch_interval,
+                        )
+                        flowgraph_started = True
+                        logger.info(
+                            f"GMSK flowgraph initialized - ready to decode (VFO @ {vfo_center/1e6:.3f} MHz)"
                         )
 
-                    # Add to buffer (samples already decimated to VFO bandwidth by IQ broadcaster)
-                    samples_buffer = np.concatenate([samples_buffer, samples])
+                    # Step 1: Frequency translation to put SIGNAL at baseband center
+                    # Use the actual signal frequency from transmitter config
+                    # This centers the signal regardless of VFO drift
+                    offset_freq = self.signal_frequency - sdr_center
+                    if chunks_received == 0:
+                        logger.info(
+                            f"Translating signal from {self.signal_frequency/1e6:.3f} MHz to baseband"
+                        )
+                        logger.info(f"Frequency translation: offset = {offset_freq/1e3:.1f} kHz")
+                    translated = self._frequency_translate(
+                        samples, offset_freq, self.sdr_sample_rate
+                    )
 
-                    # Process when we have enough samples
-                    if len(samples_buffer) >= buffer_samples:
-                        # Send status update
-                        if chunks_received % 50 == 0:
-                            self._send_status_update(
-                                DecoderStatus.DECODING,
-                                {
-                                    "samples_buffered": len(samples_buffer),
-                                    "symbols_decoded": self.symbol_count,
-                                },
-                            )
+                    # Step 2: Decimate to target sample rate
+                    decimation = int(self.sdr_sample_rate / self.sample_rate)
+                    if decimation < 1:
+                        decimation = 1
+                    decimated = self._decimate_iq(translated, decimation)
 
-                        # Process batch
-                        if self.flowgraph:
-                            self.flowgraph.process_batch(samples_buffer)
+                    # Process samples through flowgraph
+                    if flowgraph_started and self.flowgraph is not None:
+                        self.flowgraph.process_samples(decimated)
 
-                        # Clear buffer after processing
-                        samples_buffer = np.array([], dtype=np.complex64)
+                    # Send periodic status updates
+                    if chunks_received % 50 == 0:
+                        self._send_status_update(
+                            DecoderStatus.DECODING,
+                            {
+                                "packets_decoded": self.packet_count,
+                            },
+                        )
 
                     chunks_received += 1
                     if chunks_received % 100 == 0:
                         logger.debug(
                             f"Received {chunks_received} chunks, "
-                            f"buffer: {len(samples_buffer)} samples, "
-                            f"symbols decoded: {self.symbol_count}"
+                            f"packets decoded: {self.packet_count}"
                         )
+                        # Send periodic stats update
+                        self._send_stats_update()
 
                 except queue.Empty:
+                    with self.stats_lock:
+                        self.stats["queue_timeouts"] += 1
                     pass
 
         except Exception as e:
             logger.error(f"GMSK decoder error: {e}")
+            logger.exception(e)
             with self.stats_lock:
-                errors = cast(int, self.stats.get("errors", 0))
-                self.stats["errors"] = errors + 1
-            import traceback
-
-            traceback.print_exc()
+                self.stats["errors"] += 1
             self._send_status_update(DecoderStatus.ERROR)
         except KeyboardInterrupt:
             pass
+        finally:
+            # Flush any remaining samples
+            if flowgraph_started and self.flowgraph:
+                logger.info("Flushing remaining samples from GMSK flowgraph")
+                try:
+                    self.flowgraph.flush_buffer()
+                except Exception as e:
+                    logger.error(f"Error flushing buffer: {e}")
 
         logger.info(f"GMSK decoder stopped for {self.session_id}")
 
@@ -560,5 +889,7 @@ class GMSKDecoder(threading.Thread):
         }
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             pass
