@@ -164,6 +164,10 @@ def uhd_worker_process(
 
         UHD.set_rx_gain(gain, channel)
 
+        # Enable automatic DC offset correction to mitigate center spike
+        UHD.set_rx_dc_offset(True, channel)
+        logger.info("Enabled automatic DC offset correction")
+
         # Allow time for the UHD to settle
         time.sleep(0.01)
 

@@ -194,6 +194,14 @@ def soapysdr_remote_worker_process(
             selected_antenna = sdr.getAntenna(SOAPY_SDR_RX, channel)
             logger.info(f"Antenna set to {selected_antenna}")
 
+        # Enable DC offset correction for devices that support it (e.g., USRP B200/B210)
+        try:
+            if sdr.hasDCOffsetMode(SOAPY_SDR_RX, channel):
+                sdr.setDCOffsetMode(SOAPY_SDR_RX, channel, True)
+                logger.info("Enabled automatic DC offset correction")
+        except Exception as e:
+            logger.debug(f"DC offset correction not available or failed: {e}")
+
         # Set up the streaming
         rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
 
