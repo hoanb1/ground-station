@@ -88,122 +88,131 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
 
     return (
         <Box>
-            {/* AX.25 Frame Information */}
-            <InfoSection title="AX.25 Frame Information">
-                <InfoRow
-                    label="Source"
-                    value={frame.source || ax25.from_callsign}
-                    mono
-                />
-                <InfoRow
-                    label="Destination"
-                    value={frame.destination || ax25.to_callsign}
-                    mono
-                />
-                <InfoRow
-                    label="Control"
-                    value={frame.control}
-                    mono
-                />
-                <InfoRow
-                    label="PID"
-                    value={frame.pid}
-                    mono
-                />
-                <InfoRow
-                    label="Parser"
-                    value={telemetry.parser || 'ax25'}
-                />
-            </InfoSection>
+            {/* Two Column Layout for remaining sections */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                {/* Left Column */}
+                <Box>
+                    {/* AX.25 Frame Information */}
+                    <InfoSection title="AX.25 Frame Information">
+                        <InfoRow
+                            label="Source"
+                            value={frame.source || ax25.from_callsign}
+                            mono
+                        />
+                        <InfoRow
+                            label="Destination"
+                            value={frame.destination || ax25.to_callsign}
+                            mono
+                        />
+                        <InfoRow
+                            label="Control"
+                            value={frame.control}
+                            mono
+                        />
+                        <InfoRow
+                            label="PID"
+                            value={frame.pid}
+                            mono
+                        />
+                        <InfoRow
+                            label="Parser"
+                            value={telemetry.parser || 'ax25'}
+                        />
+                    </InfoSection>
 
-            {/* Packet Metadata */}
-            <InfoSection title="Packet Metadata">
-                <InfoRow
-                    label="Packet Number"
-                    value={`#${packet.number || metadata.packet_number || '-'}`}
-                />
-                <InfoRow
-                    label="Timestamp"
-                    value={formatTimestamp(packet.timestamp || metadata.timestamp)}
-                />
-                <InfoRow
-                    label="Total Length"
-                    value={`${packet.length_bytes || packet.length || '-'} bytes`}
-                />
-                <InfoRow
-                    label="Payload Length"
-                    value={`${telemetry.raw?.payload_length || '-'} bytes`}
-                />
-                <InfoRow
-                    label="Session ID"
-                    value={decoder.session_id}
-                    mono
-                />
-                <InfoRow
-                    label="VFO"
-                    value={vfo.id}
-                />
-            </InfoSection>
-
-            {/* Signal Information */}
-            <InfoSection title="Signal Information">
-                <InfoRow
-                    label="Frequency"
-                    value={signal.frequency_mhz ? `${signal.frequency_mhz} MHz` : '-'}
-                />
-                <InfoRow
-                    label="Baudrate"
-                    value={decoder.baudrate ? `${decoder.baudrate} baud` : '-'}
-                />
-                <InfoRow
-                    label="SDR Center"
-                    value={signal.sdr_center_freq_mhz ? `${signal.sdr_center_freq_mhz} MHz` : '-'}
-                />
-                <InfoRow
-                    label="VFO Center"
-                    value={vfo.center_freq_mhz ? `${vfo.center_freq_mhz} MHz` : '-'}
-                />
-                <InfoRow
-                    label="VFO Bandwidth"
-                    value={vfo.bandwidth_khz ? `${vfo.bandwidth_khz} kHz` : '-'}
-                />
-                <InfoRow
-                    label="Sample Rate"
-                    value={signal.sample_rate_hz ? `${(signal.sample_rate_hz / 1000).toFixed(2)} kS/s` : '-'}
-                />
-            </InfoSection>
-
-            {/* Validation Status */}
-            <InfoSection title="Validation">
-                <Stack spacing={1}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                        <Typography variant="body2">
-                            CRC-16 validated by HDLC deframer
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                        <Typography variant="body2">
-                            Callsigns decoded correctly
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                        <Typography variant="body2">
-                            Packet integrity confirmed
-                        </Typography>
-                    </Box>
-                </Stack>
-
-                <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
-                    <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                        ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.
-                    </Typography>
+                    {/* Packet Metadata */}
+                    <InfoSection title="Packet Metadata">
+                        <InfoRow
+                            label="Packet Number"
+                            value={`#${packet.number || metadata.packet_number || '-'}`}
+                        />
+                        <InfoRow
+                            label="Timestamp"
+                            value={formatTimestamp(packet.timestamp || metadata.timestamp)}
+                        />
+                        <InfoRow
+                            label="Total Length"
+                            value={`${packet.length_bytes || packet.length || '-'} bytes`}
+                        />
+                        <InfoRow
+                            label="Payload Length"
+                            value={`${telemetry.raw?.payload_length || '-'} bytes`}
+                        />
+                        <InfoRow
+                            label="Session ID"
+                            value={decoder.session_id}
+                            mono
+                        />
+                        <InfoRow
+                            label="VFO"
+                            value={vfo.id}
+                        />
+                    </InfoSection>
                 </Box>
-            </InfoSection>
 
-            {/* File Information */}
+                {/* Right Column */}
+                <Box>
+                    {/* Signal Information */}
+                    <InfoSection title="Signal Information">
+                        <InfoRow
+                            label="Frequency"
+                            value={signal.frequency_mhz ? `${signal.frequency_mhz} MHz` : '-'}
+                        />
+                        <InfoRow
+                            label="Baudrate"
+                            value={decoder.baudrate ? `${decoder.baudrate} baud` : '-'}
+                        />
+                        <InfoRow
+                            label="SDR Center"
+                            value={signal.sdr_center_freq_mhz ? `${signal.sdr_center_freq_mhz} MHz` : '-'}
+                        />
+                        <InfoRow
+                            label="VFO Center"
+                            value={vfo.center_freq_mhz ? `${vfo.center_freq_mhz} MHz` : '-'}
+                        />
+                        <InfoRow
+                            label="VFO Bandwidth"
+                            value={vfo.bandwidth_khz ? `${vfo.bandwidth_khz} kHz` : '-'}
+                        />
+                        <InfoRow
+                            label="Sample Rate"
+                            value={signal.sample_rate_hz ? `${(signal.sample_rate_hz / 1000).toFixed(2)} kS/s` : '-'}
+                        />
+                    </InfoSection>
+
+                    {/* Validation Status */}
+                    <InfoSection title="Validation">
+                        <Stack spacing={1}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    CRC-16 validated by HDLC deframer
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    Callsigns decoded correctly
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    Packet integrity confirmed
+                                </Typography>
+                            </Box>
+                        </Stack>
+
+                        <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
+                            <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
+                                ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.
+                            </Typography>
+                        </Box>
+                    </InfoSection>
+                </Box>
+            </Box>
+
+            {/* File Information - Full Width */}
             <InfoSection title="File Information">
                 <InfoRow
                     label="Binary File"
