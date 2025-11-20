@@ -345,67 +345,61 @@ class MorseDecoder(threading.Thread):
             )
             self.last_threshold_log = current_time
 
-        # Check if tone is present
-        tone_present = current_level > threshold
-
-        if tone_present:
-            # Tone is currently present
+        # Check if tone is present (matches pqcd line 60)
+        if current_level > threshold:
+            # Tone detected - increment counter (pqcd line 61-64)
             if self.state_counter < 0:
-                # Was in silence, now transitioning to tone
-                logger.info(
-                    f"Tone START after silence (counter was: {self.state_counter}, symbol: '{self.current_symbol}')"
-                )
-
-                # Check for character break (long enough silence before this tone)
-                if self.state_counter <= self.break_threshold and self.current_symbol:
-                    char = self.MORSE_CODE.get(self.current_symbol)
-                    if char:
-                        logger.info(f"Decoded '{self.current_symbol}' -> '{char}'")
-                        self._add_character(char)
-                    else:
-                        logger.info(f"Unknown morse: '{self.current_symbol}'")
-                        self._add_character("?")
-                    self.current_symbol = ""
-
-                # Check for word space
-                if self.state_counter <= -self.space_threshold:
-                    logger.info("WORD SPACE detected")
-                    self._add_character(" ")
-
                 self.state_counter = 0
-
-                # Track dit timing for WPM calculation
-                if self.dit_start_time is None:
-                    self.dit_start_time = time.time()
-
             self.state_counter += 1
 
-        else:
-            # Tone is absent (silence)
-            if self.state_counter > 0:
-                # Tone just ended - classify it as dit or dash
-                duration = self.state_counter
+            # Track dit timing for WPM calculation
+            if self.dit_start_time is None:
+                self.dit_start_time = time.time()
 
-                if duration > self.dat_threshold:
-                    self.current_symbol += "-"
-                    logger.info(f"DASH detected (counter: {duration})")
-                elif duration > self.dit_threshold:
-                    self.current_symbol += "."
-                    logger.info(f"DIT detected (counter: {duration})")
+        elif self.state_counter > self.dat_threshold:
+            # Counter high enough for DASH (pqcd line 65-71)
+            duration = self.state_counter
+            self.state_counter = 0
+            self.current_symbol += "-"
+            logger.info(f"DASH detected (counter: {duration})")
 
-                    # Update WPM estimate from dit duration
-                    if self.dit_start_time:
-                        dit_duration = time.time() - self.dit_start_time
-                        self.last_dit_duration = dit_duration
-                        # Standard: dit length = 1.2 / WPM
-                        self.wpm = int(max(5, min(50, 1.2 / dit_duration)))
-                        self.dit_start_time = None
+        elif self.state_counter > self.dit_threshold:
+            # Counter high enough for DIT (pqcd line 72-78)
+            duration = self.state_counter
+            self.state_counter = 0
+            self.current_symbol += "."
+            logger.info(f"DIT detected (counter: {duration})")
 
-                # Reset counter to start counting silence
-                self.state_counter = 0
+            # Update WPM estimate from dit duration
+            if self.dit_start_time:
+                dit_duration = time.time() - self.dit_start_time
+                self.last_dit_duration = dit_duration
+                # Standard: dit length = 1.2 / WPM
+                self.wpm = int(max(5, min(50, 1.2 / dit_duration)))
+                self.dit_start_time = None
 
-            # Continue counting silence (decrement)
+        elif self.state_counter == self.break_threshold:
+            # Character break detected (pqcd line 79-91)
             self.state_counter -= 1
+
+            if self.current_symbol:
+                char = self.MORSE_CODE.get(self.current_symbol)
+                if char:
+                    logger.info(f"Decoded '{self.current_symbol}' -> '{char}'")
+                    self._add_character(char)
+                else:
+                    logger.info(f"Unknown morse: '{self.current_symbol}'")
+                    self._add_character("?")
+                self.current_symbol = ""
+
+        else:
+            # Silence continues - decrement (pqcd line 93-99)
+            self.state_counter -= 1
+
+            # Check for word space
+            if self.state_counter == -self.space_threshold:
+                logger.info("WORD SPACE detected")
+                self._add_character(" ")
 
     def _add_character(self, char):
         """Add a character to decoded text"""
