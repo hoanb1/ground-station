@@ -138,7 +138,7 @@ export const applyDagreLayout = (nodes, edges) => {
     // Configure graph layout
     dagreGraph.setGraph({
         rankdir: 'LR', // Left to right
-        ranksep: 70,   // Horizontal spacing between ranks (reduced from 150)
+        ranksep: 150,  // Horizontal spacing between ranks (nodes are 280px wide)
         nodesep: 40,   // Vertical spacing between nodes
         edgesep: 30,   // Spacing between edges
         ranker: 'tight-tree', // Use tight-tree for better rank constraint handling
@@ -153,16 +153,16 @@ export const applyDagreLayout = (nodes, edges) => {
         if (type === 'worker' || type === 'tracker') {
             return 0;
         }
-        // Rank 1: IQ Broadcasters
-        if (type === 'broadcaster' && node.data.component?.broadcaster_type === 'iq') {
+        // Rank 1: IQ Recorders and IQ Broadcasters
+        if (type === 'recorder' || (type === 'broadcaster' && node.data.component?.broadcaster_type === 'iq')) {
             return 1;
         }
         // Rank 2: FFT Processors
         if (type === 'fft') {
             return 2;
         }
-        // Rank 3: Demodulators and Recorders
-        if (type === 'demodulator' || type === 'recorder') {
+        // Rank 3: Demodulators
+        if (type === 'demodulator') {
             return 3;
         }
         // Rank 4: Audio Broadcasters
@@ -779,19 +779,19 @@ export const createFlowFromMetrics = (metrics) => {
                 type: 'smoothstep',
             });
 
-            // Edge from Trackers to Browser
+            // Implicit edge: Tracker -> Browser (trackers broadcast to all connected browsers)
             const trackerEdges = nodeMap.get('pending-tracker-to-browser-edges') || [];
             trackerEdges.forEach(({ trackerId, tracker, targetId }) => {
                 if (targetId === sessionId) {
                     const isAnimated = hasPositiveOutputRate(tracker, 'tracker');
                     edges.push({
-                        id: `edge-tracker-${trackerId}-${browserNodeId}`,
+                        id: `edge-implicit-tracker-${trackerId}-${browserNodeId}`,
                         source: trackerId,
                         target: browserNodeId,
                         sourceHandle: getNextOutputHandle(trackerId),
                         targetHandle: getNextInputHandle(browserNodeId),
                         animated: isAnimated,
-                        style: { stroke: getEdgeColor('decoded', 0, isAnimated), strokeWidth: 2 },
+                        style: { stroke: getEdgeColor('decoded', 0, isAnimated), strokeWidth: 1.5 },
                         type: 'smoothstep',
                     });
                 }
@@ -894,7 +894,7 @@ export const createFlowFromMetrics = (metrics) => {
         initNodeConnections(targetId);
 
         // Check if this is an implicit broadcast edge
-        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-');
+        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-') || edge.id.includes('edge-implicit-tracker-');
 
         if (isImplicitBroadcast) {
             // Only count implicit broadcast once per source (they all share one handle)
@@ -929,8 +929,8 @@ export const createFlowFromMetrics = (metrics) => {
     const implicitHandles = new Map(); // nodeId -> handleId for FFT and decoder broadcasts
 
     edges.forEach(edge => {
-        // Check if this is an implicit broadcast edge (FFT→Browser or Decoder→Browser)
-        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-');
+        // Check if this is an implicit broadcast edge (FFT→Browser, Decoder→Browser, or Tracker→Browser)
+        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-') || edge.id.includes('edge-implicit-tracker-');
 
         if (isImplicitBroadcast) {
             // All implicit edges from same source share the same output handle
