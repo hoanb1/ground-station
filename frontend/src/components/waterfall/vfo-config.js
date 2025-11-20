@@ -224,12 +224,12 @@ export const DECODERS = {
         hasProgressDisplay: false,
         hasTextOutput: false,
         hasModeDisplay: false,
-        defaultBandwidth: 30000, // 30 kHz default (suitable for ~9600-10000 baud + Doppler)
+        defaultBandwidth: 25000, // 25 kHz default (suitable for 2400-4800 baud + Doppler)
         bandwidthType: 'double-sided', // bandwidth is divided equally on both sides of center
         showBothEdges: true, // show both edges
         allowLeftEdgeDrag: false, // edges not draggable (bandwidth locked)
         allowRightEdgeDrag: false, // edges not draggable (bandwidth locked)
-        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±15kHz
+        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±12.5kHz
         lockedBandwidth: true, // bandwidth is determined by baud rate, not user-adjustable
         calculateBandwidth: (transmitter) => {
             // Calculate optimal bandwidth based on transmitter baud rate
@@ -237,7 +237,7 @@ export const DECODERS = {
             if (transmitter && transmitter.baud) {
                 return transmitter.baud * 3;
             }
-            return 30000; // fallback to default
+            return 25000; // fallback to default
         },
     },
     gfsk: {

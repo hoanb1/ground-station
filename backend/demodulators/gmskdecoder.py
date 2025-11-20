@@ -190,6 +190,7 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
         clk_bw=0.06,
         clk_limit=0.004,
         batch_interval=5.0,
+        framing="ax25",  # 'ax25' or 'usp'
     ):
         """
         Initialize GMSK decoder flowgraph using gr-satellites FSK demodulator
@@ -205,6 +206,7 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
             clk_bw: Clock recovery bandwidth (relative to baudrate)
             clk_limit: Clock recovery limit (relative to baudrate)
             batch_interval: Batch processing interval in seconds (default: 5.0)
+            framing: Framing protocol - 'ax25' (G3RUH) or 'usp' (USP FEC)
         """
         if not GNURADIO_AVAILABLE:
             raise RuntimeError("GNU Radio not available - GMSK decoder cannot be initialized")
@@ -221,6 +223,7 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
         self.dc_block = dc_block
         self.clk_bw = clk_bw
         self.clk_limit = clk_limit
+        self.framing = framing
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
@@ -230,7 +233,7 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
         logger.info(
             f"GMSK flowgraph initialized: "
             f"{baudrate} baud, {sample_rate} sps, deviation={deviation} Hz, "
-            f"batch_interval={batch_interval}s"
+            f"framing={framing}, batch_interval={batch_interval}s"
         )
 
     def process_samples(self, samples):
@@ -291,7 +294,6 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
             # This is necessary because hierarchical blocks can't be easily disconnected
 
             # Import gr-satellites components
-            from satellites.components.deframers.ax25_deframer import ax25_deframer
             from satellites.components.demodulators.fsk_demodulator import fsk_demodulator
 
             # Create a temporary top_block
@@ -307,10 +309,15 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 deviation=self.deviation,
                 use_agc=self.use_agc,
                 disable_dc_block=not self.dc_block,
+                syncword_threshold=13,  # For USP deframer
             )
 
             # Create FSK demodulator (GMSK is a type of FSK with Gaussian pulse shaping)
             # iq=True because we're feeding complex IQ samples
+            logger.info(
+                f"Creating FSK demodulator: baudrate={self.baudrate}, "
+                f"samp_rate={self.sample_rate}, deviation={self.deviation}"
+            )
             demod = fsk_demodulator(
                 baudrate=self.baudrate,
                 samp_rate=self.sample_rate,
@@ -322,8 +329,17 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 options=options,
             )
 
-            # Create AX.25 deframer with G3RUH descrambling
-            deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
+            # Create appropriate deframer based on framing protocol
+            if self.framing == "usp":
+                from satellites.components.deframers.usp_deframer import usp_deframer
+
+                deframer = usp_deframer(syncword_threshold=13, options=options)
+                logger.info("Using USP deframer (syncword_threshold=13, Viterbi + RS FEC)")
+            else:  # default to ax25
+                from satellites.components.deframers.ax25_deframer import ax25_deframer
+
+                deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
+                logger.info("Using AX.25 deframer (G3RUH descrambler)")
 
             # Create message handler for this batch
             msg_handler = GMSKMessageHandler(self.callback)
@@ -441,15 +457,43 @@ class GMSKDecoder(threading.Thread):
 
         # Extract GMSK parameters from transmitter dict or use defaults
         self.baudrate = self.transmitter.get("baud", baudrate)
+        # Allow deviation override from transmitter, with fallback to parameter
+        # Negative deviation inverts sidebands (try both polarities if decoding fails)
+        # For Monitor-4 and similar USP satellites, try -5000 if +5000 doesn't work
         self.deviation = self.transmitter.get("deviation", deviation)
+
+        # TEMPORARY: Force negative deviation to test polarity inversion
+        # USP satellites often need inverted polarity
+        # Remove this after determining correct polarity
+        if "USP" in self.transmitter.get("mode", "").upper():
+            logger.warning(
+                f"Testing negative deviation for USP: changing {self.deviation} to {-abs(self.deviation)}"
+            )
+            self.deviation = -abs(self.deviation)
         self.batch_interval = batch_interval
         # Get expected signal frequency for proper frequency translation
-        self.signal_frequency = self.transmitter.get("frequency", 436.400e6)
+        # Try multiple field names: frequency, downlink_low, or center_frequency
+        self.signal_frequency = (
+            self.transmitter.get("frequency")
+            or self.transmitter.get("downlink_low")
+            or self.transmitter.get("center_frequency")
+            or 436.400e6  # fallback
+        )
+
+        # Detect framing protocol from transmitter mode
+        # USP FEC modes: "GMSK USP FEC", "GMSK USP", etc.
+        # Default to ax25 for standard GMSK
+        transmitter_mode = self.transmitter.get("mode", "GMSK").upper()
+        if "USP" in transmitter_mode:
+            self.framing = "usp"
+        else:
+            self.framing = "ax25"
 
         logger.info(f"GMSK decoder received transmitter dict: {self.transmitter}")
         logger.info(
             f"Extracted baud rate: {self.baudrate} (from transmitter: {self.transmitter.get('baud')}, fallback: {baudrate})"
         )
+        logger.info(f"Detected framing protocol: {self.framing}")
 
         # Store additional transmitter info
         self.transmitter_description = self.transmitter.get("description", "Unknown")
@@ -803,6 +847,7 @@ class GMSKDecoder(threading.Thread):
                             use_agc=True,
                             dc_block=True,
                             batch_interval=self.batch_interval,
+                            framing=self.framing,
                         )
                         flowgraph_started = True
                         logger.info(
