@@ -13,19 +13,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+# Morse decoding logic based on pqcd by jvestman
+# https://github.com/jvestman/pqcd
+# Copyright (c) jvestman
+# SPDX-License-Identifier: GPL-3.0
 
 import logging
 import os
 import queue
 import threading
 import time
-import warnings
 from collections import deque
 from enum import Enum
 from typing import Any, Dict, Optional
 
 import numpy as np
-import sklearn.cluster
 from scipy.signal import butter, sosfilt
 
 from vfos.state import VFOManager
@@ -43,7 +46,7 @@ class DecoderStatus(Enum):
 
 
 class MorseDecoder(threading.Thread):
-    """Real-time Morse code decoder thread"""
+    """Real-time Morse code decoder thread using simplified pqcd-style state machine"""
 
     # International Morse Code table
     MORSE_CODE = {
@@ -110,8 +113,8 @@ class MorseDecoder(threading.Thread):
         sample_rate=44100,
         output_dir="data/decoded",
         vfo=None,
-        target_freq=800,  # Default CW tone frequency (Hz) - common for HF transceivers
-        bandwidth=500,  # Bandwidth for tone detection (Hz) - wider for better HF capture
+        target_freq=800,  # Default CW tone frequency (Hz)
+        bandwidth=500,  # Bandwidth for tone detection (Hz)
     ):
         super().__init__(daemon=True, name=f"MorseDecoder-{session_id}")
         self.audio_queue = audio_queue
@@ -121,55 +124,47 @@ class MorseDecoder(threading.Thread):
         self.running = True
         self.output_dir = output_dir
         self.vfo = vfo
-        self.vfo_manager = VFOManager()  # Access VFO state for squelch/volume
+        self.vfo_manager = VFOManager()
         self.target_freq = target_freq
         self.bandwidth = bandwidth
-        self.auto_tune = True  # Automatically detect tone frequency
+        self.auto_tune = (
+            False  # Disabled: auto-tune chases noise, use fixed frequency from SSB demod
+        )
 
         # Signal processing parameters
         self.audio_buffer: deque = deque(maxlen=int(sample_rate * 0.1))  # 100ms buffer
         self.envelope_buffer: deque = deque(maxlen=int(sample_rate * 0.5))  # 500ms envelope buffer
-        self.last_auto_tune: float = 0.0  # Last time we auto-tuned
+        self.last_auto_tune: float = 0.0
 
-        # Timing state
-        self.tone_state = False  # Current tone on/off state
-        self.last_state_change = time.time()
-        self.tone_start: Optional[float] = None
-        self.silence_start: Optional[float] = None
-        self.initial_state_detected = False  # Track if we've detected the initial signal state
-
-        # Debouncing for noise rejection (require N consecutive detections)
-        self.tone_confirm_count = 0  # Consecutive tone detections
-        self.silence_confirm_count = 0  # Consecutive silence detections
-        self.debounce_threshold = 2  # Require 2 consecutive detections to change state (was 3)
-
-        # Morse decoding state
-        self.current_symbol = []  # Current morse sequence (dots/dashes)
-        self.decoded_text = ""  # Accumulated decoded text (limited to last N chars)
+        # Morse state machine (pqcd-style counter approach)
+        self.state_counter = 0  # Positive = tone on, negative = tone off
+        self.current_symbol = ""  # Current morse sequence (dots/dashes)
+        self.decoded_text = ""  # Accumulated decoded text
         self.character_count = 0
-        self.max_decoded_length = 300  # Keep only last 300 characters (UI displays last 30)
-        self.last_output_time: float = 0  # Last time we sent an output update
-        self.output_update_interval = 0.5  # Send updates every 0.5 seconds max
+        self.max_decoded_length = 300  # Keep only last 300 characters
 
-        # Adaptive timing parameters (auto WPM detection)
-        self.dot_length: Optional[float] = None  # Will be auto-detected
-        self.wpm: Optional[int] = None  # Words per minute
-        self.dot_history: deque = deque(maxlen=20)  # Recent dot lengths for averaging
-        self.dash_history: deque = deque(maxlen=20)  # Recent dash lengths for averaging
-        self.tone_durations: deque = deque(maxlen=100)  # All tone durations for better analysis
-        self.silence_durations: deque = deque(
-            maxlen=100
-        )  # All silence durations for space classification
+        # Adaptive thresholds (pqcd-style)
+        # Based on observed values:
+        # - Dit counters: 5-10
+        # - Silence gaps: -1 to -6
+        self.value_threshold = 0.0  # Will be calculated adaptively
+        self.dit_threshold = 4  # Minimum counter for dit (observed: 5-10)
+        self.dat_threshold = 15  # Minimum counter for dash (must be > typical dit)
+        self.break_threshold = -5  # Negative counter for character break (observed: -1 to -6)
+        self.space_threshold = 15  # Negative counter for word space (3x break)
 
-        # K-Means clustering cache (updated periodically, not every sample)
-        self.kmeans_threshold: Optional[float] = None  # Cached threshold from K-Means
-        self.last_kmeans_update: float = 0.0  # Last time we ran K-Means
-        self.kmeans_update_interval: float = 2.0  # Re-run K-Means every 2 seconds
+        # WPM tracking
+        self.wpm: Optional[int] = None
+        self.last_dit_duration: Optional[float] = None
+        self.dit_start_time: Optional[float] = None
 
-        # Status
+        # Status and output
         self.status = DecoderStatus.IDLE
         self.last_update_time = time.time()
         self.signal_strength: float = 0.0
+        self.last_output_time: float = 0
+        self.output_update_interval = 0.5  # Send updates every 0.5 seconds
+        self.last_threshold_log: float = 0  # Last time we logged threshold info
 
         # Create output directory
         os.makedirs(self.output_dir, exist_ok=True)
@@ -185,18 +180,21 @@ class MorseDecoder(threading.Thread):
         }
         self.stats_lock = threading.Lock()
 
-        # Design bandpass filter for CW tone extraction
+        # Design bandpass filter
         self._design_bandpass_filter()
 
         logger.info(
-            f"Morse decoder initialized for session {session_id}, VFO {vfo}, "
+            f"Morse decoder initialized: session {session_id}, VFO {vfo}, "
             f"target freq: {target_freq}Hz, bandwidth: {bandwidth}Hz, "
-            f"filter range: {target_freq - bandwidth/2:.0f}-{target_freq + bandwidth/2:.0f}Hz"
+            f"sample_rate: {sample_rate}Hz, auto_tune: {self.auto_tune}"
+        )
+        logger.info(
+            f"Thresholds: dit={self.dit_threshold}, dat={self.dat_threshold}, "
+            f"break={self.break_threshold}, space={self.space_threshold}"
         )
 
     def _design_bandpass_filter(self):
         """Design a bandpass filter for CW tone extraction"""
-        # Bandpass filter around target frequency
         low = (self.target_freq - self.bandwidth / 2) / (self.sample_rate / 2)
         high = (self.target_freq + self.bandwidth / 2) / (self.sample_rate / 2)
 
@@ -205,7 +203,6 @@ class MorseDecoder(threading.Thread):
         high = max(0.001, min(0.999, high))
 
         if low >= high:
-            # Fallback to safe values if invalid
             low = 0.1
             high = 0.3
 
@@ -215,14 +212,18 @@ class MorseDecoder(threading.Thread):
         )
 
     def _auto_detect_tone_frequency(self, signal):
-        """Automatically detect the CW tone frequency using FFT"""
-        # Only update every 5 seconds to avoid constant retuning
+        """Automatically detect the CW tone frequency using FFT (disabled by default)"""
+        # DISABLED: Auto-tune causes instability by chasing noise/harmonics
+        # The tone should be set correctly by the SSB demodulator's center frequency
+        # If needed, user can manually adjust the target_freq parameter
+        return
+
+        # Original auto-tune code kept for reference but unreachable:
         current_time = time.time()
-        if current_time - self.last_auto_tune < 5.0:
+        if current_time - self.last_auto_tune < 30.0:  # Increased from 5s to 30s
             return
 
-        # Perform FFT to find peak frequency
-        if len(signal) < 2048:
+        if len(signal) < 4096:  # Increased from 2048 for better frequency resolution
             return
 
         # Use a window to reduce spectral leakage
@@ -234,7 +235,7 @@ class MorseDecoder(threading.Thread):
         freqs = np.fft.rfftfreq(len(windowed), 1.0 / self.sample_rate)
         magnitudes = np.abs(fft)
 
-        # Look for peak in reasonable CW range (300Hz - 3000Hz)
+        # Look for peak in CW range (300Hz - 3000Hz)
         cw_range_mask = (freqs >= 300) & (freqs <= 3000)
         cw_freqs = freqs[cw_range_mask]
         cw_mags = magnitudes[cw_range_mask]
@@ -242,22 +243,23 @@ class MorseDecoder(threading.Thread):
         if len(cw_mags) == 0:
             return
 
-        # Find peak
+        # Find peak with much stricter threshold
         peak_idx = np.argmax(cw_mags)
         detected_freq = cw_freqs[peak_idx]
         peak_strength = cw_mags[peak_idx]
 
-        # Only retune if peak is strong and different enough
-        if peak_strength > np.mean(cw_mags) * 3:  # Peak is 3x average
+        # Only retune if peak is VERY strong (10x average, not 3x)
+        # and significantly different (200Hz, not 50Hz)
+        if peak_strength > np.mean(cw_mags) * 10:
             freq_diff = abs(detected_freq - self.target_freq)
-            if freq_diff > 50:  # More than 50Hz off
+            if freq_diff > 200:
                 logger.info(
-                    f">>> AUTO-TUNE: Detected CW tone at {detected_freq:.0f}Hz (was {self.target_freq:.0f}Hz), retuning filter"
+                    f"Auto-tune: Detected CW tone at {detected_freq:.0f}Hz (was {self.target_freq:.0f}Hz), "
+                    f"peak strength: {peak_strength:.2f}, avg: {np.mean(cw_mags):.2f}"
                 )
                 self.target_freq = detected_freq
                 self._design_bandpass_filter()
                 self.last_auto_tune = current_time
-                # Send params update to UI with new frequency
                 self._send_params_update()
 
     def _process_audio(self, audio_chunk):
@@ -270,7 +272,7 @@ class MorseDecoder(threading.Thread):
 
         # Need enough samples to process
         if len(self.audio_buffer) < 512:
-            return
+            return None
 
         # Convert to numpy array
         signal = np.array(list(self.audio_buffer), dtype=np.float32)
@@ -282,23 +284,20 @@ class MorseDecoder(threading.Thread):
         # Apply bandpass filter
         filtered = sosfilt(self.sos, signal)
 
-        # Envelope detection using RMS with Hann window (better frequency response)
-        # Square the signal for power calculation
+        # Envelope detection using RMS
         squared = np.power(filtered, 2)
-
-        # Create Hann window with integral=1 for weighted average
         window_size = int(self.sample_rate * 0.005)  # 5ms window
+
         if len(squared) >= window_size:
             window = np.hanning(window_size)
             window = window / np.sum(window)
-            # Convolve and take square root for RMS
             envelope = np.sqrt(np.convolve(squared, window, mode="valid"))
             current_level = np.mean(envelope[-window_size:])
         else:
             envelope = np.sqrt(squared)
             current_level = np.mean(envelope)
 
-        # Update signal strength (for UI)
+        # Update signal strength
         self.signal_strength = float(current_level)
 
         # Store envelope for threshold calculation
@@ -306,304 +305,119 @@ class MorseDecoder(threading.Thread):
 
         return current_level
 
-    def _detect_tone(self, current_level):
-        """Detect if CW tone is present using adaptive threshold with hysteresis"""
+    def _calculate_adaptive_threshold(self):
+        """Calculate adaptive threshold using simple percentile method"""
         if len(self.envelope_buffer) < 100:
-            return False
-
-        # Calculate adaptive threshold using percentile method
-        envelope_array = np.array(list(self.envelope_buffer))
-
-        # Use median absolute deviation for more robust threshold
-        median = np.median(envelope_array)
-        mad = np.median(np.abs(envelope_array - median))
-
-        # Threshold is median + MAD multiplier
-        # The debouncing logic handles noise rejection, so we can use moderate threshold
-        if mad > 0:
-            threshold = median + 3 * mad  # Moderate sensitivity
-        else:
-            # Fallback if MAD is zero
-            threshold = np.percentile(envelope_array, 75)
-
-        # Add hysteresis: higher threshold to turn on, lower to turn off
-        if self.tone_state:
-            # Already in tone state - use lower threshold to turn off
-            return current_level > (threshold * 0.6)
-        else:
-            # Not in tone state - use threshold to turn on
-            return current_level > threshold
-
-    def _update_timing_kmeans(self):
-        """Update K-Means clustering threshold (called periodically, not every sample)"""
-        if len(self.tone_durations) < 5:
-            return
-
-        durations = np.array(list(self.tone_durations))
-        # Log the range of durations we're clustering
-        logger.info(
-            f">>> K-Means input: {len(durations)} tones, range {durations.min()*1000:.0f}-{durations.max()*1000:.0f}ms, unique values: {len(set(durations))}"
-        )
-
-        n_clusters = min(2, len(set(durations)))
-        column_vec = durations.reshape(-1, 1)
-
-        # Suppress ConvergenceWarning
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            clustering = sklearn.cluster.KMeans(n_clusters=n_clusters, random_state=0).fit(
-                column_vec
-            )
-
-        distinct_clusters = len(set(clustering.labels_))
-
-        if distinct_clusters == 1:
-            # Single cluster - check if we have a reliable dot_length
-            if self.dot_length and len(self.dot_history) >= 3:
-                # Use 2x dot length as threshold (between dot and dash)
-                self.kmeans_threshold = 2.0 * self.dot_length
-                threshold_ms = self.kmeans_threshold * 1000 if self.kmeans_threshold else 0
-                logger.info(
-                    f">>> K-Means: Single cluster, using 2x dot_length: {threshold_ms:.0f}ms"
-                )
-            else:
-                # Use 20 WPM fallback (90ms threshold)
-                self.kmeans_threshold = 0.09
-                logger.info(">>> K-Means: Single cluster, using 20 WPM fallback: 90ms")
-        else:
-            # Two clusters - calculate threshold as midpoint between centers
-            centers = np.sort(clustering.cluster_centers_.flatten())
-            self.kmeans_threshold = (centers[0] + centers[1]) / 2
-            threshold_ms = self.kmeans_threshold * 1000 if self.kmeans_threshold else 0
-            logger.info(
-                f">>> K-Means: Two clusters found - dots: {centers[0]*1000:.0f}ms, dashes: {centers[1]*1000:.0f}ms, threshold: {threshold_ms:.0f}ms"
-            )
-
-    def _update_timing(self, duration, is_tone):
-        """Update timing estimates based on observed durations"""
-        if is_tone:
-            # Store all tone durations
-            self.tone_durations.append(duration)
-
-            # Need at least 5 samples for classification
-            if len(self.tone_durations) < 5:
-                if self.dot_length is None:
-                    self.dot_length = duration
-                    self._calculate_wpm()
-                return
-
-            # Update K-Means threshold periodically (not every sample)
-            current_time = time.time()
-            if (
-                self.kmeans_threshold is None
-                or current_time - self.last_kmeans_update > self.kmeans_update_interval
-            ):
-                self._update_timing_kmeans()
-                self.last_kmeans_update = current_time
-
-            # Classify using cached threshold
-            if self.kmeans_threshold:
-                is_dot = duration < self.kmeans_threshold
-            else:
-                # Fallback if no threshold yet
-                is_dot = duration < 0.09
-
-            # Update history and timing
-            if is_dot:
-                self.dot_history.append(duration)
-                if len(self.dot_history) > 0:
-                    self.dot_length = np.mean(list(self.dot_history))
-                    self._calculate_wpm()
-            else:
-                self.dash_history.append(duration)
-
-    def _calculate_wpm(self):
-        """Calculate WPM from dot length"""
-        if self.dot_length and self.dot_length > 0:
-            # Standard: dot length in seconds = 1.2 / WPM
-            self.wpm = int(1.2 / self.dot_length)
-            # Clamp to reasonable range
-            self.wpm = max(5, min(50, self.wpm))
-
-    def _classify_silence(self, silence_duration):
-        """Classify silence duration using K-Means clustering into intra-char, char, or word gaps
-
-        Returns:
-            str: 'intra' for intra-character space, 'char' for character space, 'word' for word space
-        """
-        # Store silence duration
-        self.silence_durations.append(silence_duration)
-
-        # Always use threshold-based classification for real-time performance
-        # K-Means is too slow for real-time processing
-        if self.dot_length:
-            # Use thresholds based on standard morse timing
-            if silence_duration > 5.5 * self.dot_length:
-                return "word"
-            elif silence_duration > 2.5 * self.dot_length:
-                return "char"
-        return "intra"
-
-    def _decode_symbol(self):
-        """Decode current morse symbol to character"""
-        if not self.current_symbol:
-            logger.info(">>> Decode called with empty symbol buffer")
             return None
 
-        morse_str = "".join(self.current_symbol)
-        char = self.MORSE_CODE.get(morse_str)
+        envelope_array = np.array(list(self.envelope_buffer))
 
-        if not char:
-            dot_len_str = f"{self.dot_length:.3f}s" if self.dot_length else "N/A"
+        # Use simple percentile-based threshold
+        # 50th percentile (median) works well for CW: half signal is tone, half is silence
+        # This is much simpler and more reliable than MAD for on/off signals
+        threshold = np.percentile(envelope_array, 50)  # Use median as threshold
+
+        return threshold
+
+    def _decode_morse_symbol(self, state_counter, current_level):
+        """
+        Process morse state machine using pqcd-style counter approach
+
+        Based on morse.py from pqcd by jvestman
+        Counter-based state tracking:
+        - Positive counter: tone is ON, increment each sample
+        - Negative counter: tone is OFF, decrement (silence)
+        - Thresholds determine dit/dash and character/word breaks
+        """
+        threshold = self._calculate_adaptive_threshold()
+        if threshold is None:
+            return
+
+        # Update value threshold for params reporting
+        self.value_threshold = threshold
+
+        # Periodic logging of threshold and signal level for debugging
+        current_time = time.time()
+        if current_time - self.last_threshold_log > 5.0:
             logger.info(
-                f">>> UNKNOWN morse sequence: '{morse_str}' (WPM: {self.wpm}, dot_len: {dot_len_str})"
+                f"Signal level: {current_level:.6f}, Threshold: {threshold:.6f}, "
+                f"Ratio: {current_level/threshold:.2f}x, Tone: {current_level > threshold}"
             )
-            char = "?"  # Unknown character
-        else:
-            logger.info(f">>> DECODED '{morse_str}' → '{char}' ✓")
+            self.last_threshold_log = current_time
 
-        return char
+        # Check if tone is present
+        tone_present = current_level > threshold
 
-    def _process_tone_change(self, tone_present, current_time):
-        """Process state changes in CW tone with edge case handling"""
-        # Handle edge case: signal starts with tone ON
-        if not self.initial_state_detected:
-            self.initial_state_detected = True
-            if tone_present:
-                # Signal started with tone ON - mark the start
-                self.tone_state = True
-                self.tone_start = current_time
-                logger.info(f">>> Initial state: Tone ON at {current_time:.3f}s")
-                return
-            else:
-                # Signal started with tone OFF (normal case)
-                self.tone_state = False
-                self.silence_start = current_time
-                logger.info(f">>> Initial state: Tone OFF at {current_time:.3f}s")
-                return
-
-        if tone_present and not self.tone_state:
-            # Tone started
-            self.tone_state = True
-            self.tone_start = current_time
-            self.tone_confirm_count = 0  # Reset counters after state change
-            self.silence_confirm_count = 0
-            logger.info(f">>> Tone ON at {current_time:.3f}s")
-
-            # If we were in silence, classify the gap using K-Means
-            if self.silence_start:
-                silence_duration = current_time - self.silence_start
-                dot_len_ms = f"{self.dot_length*1000:.0f}ms" if self.dot_length else "N/A"
+        if tone_present:
+            # Tone is currently present
+            if self.state_counter < 0:
+                # Was in silence, now transitioning to tone
                 logger.info(
-                    f">>> Gap detected: {silence_duration*1000:.0f}ms (dot_len: {dot_len_ms})"
-                )
-                logger.info(
-                    f">>> Current symbol buffer: {self.current_symbol} ({''.join(self.current_symbol)})"
+                    f"Tone START after silence (counter was: {self.state_counter}, symbol: '{self.current_symbol}')"
                 )
 
-                # Classify silence using K-Means clustering
-                gap_type = self._classify_silence(silence_duration)
+                # Check for character break (long enough silence before this tone)
+                if self.state_counter <= self.break_threshold and self.current_symbol:
+                    char = self.MORSE_CODE.get(self.current_symbol)
+                    if char:
+                        logger.info(f"Decoded '{self.current_symbol}' -> '{char}'")
+                        self._add_character(char)
+                    else:
+                        logger.info(f"Unknown morse: '{self.current_symbol}'")
+                        self._add_character("?")
+                    self.current_symbol = ""
 
-                if gap_type == "word":
-                    # Word gap - decode current symbol and add space
-                    logger.info(f">>> WORD GAP detected ({silence_duration*1000:.0f}ms)")
-                    if self.current_symbol:
-                        char = self._decode_symbol()
-                        if char:
-                            self._add_character(char)
-                        self.current_symbol = []
+                # Check for word space
+                if self.state_counter <= -self.space_threshold:
+                    logger.info("WORD SPACE detected")
                     self._add_character(" ")
 
-                elif gap_type == "char":
-                    # Character gap - decode current symbol
-                    logger.info(f">>> CHAR GAP detected ({silence_duration*1000:.0f}ms)")
-                    if self.current_symbol:
-                        char = self._decode_symbol()
-                        if char:
-                            self._add_character(char)
-                        self.current_symbol = []
-                else:
-                    logger.info(
-                        f">>> ELEMENT GAP detected ({silence_duration*1000:.0f}ms) - within character"
-                    )
+                self.state_counter = 0
 
-                self.silence_start = None
+                # Track dit timing for WPM calculation
+                if self.dit_start_time is None:
+                    self.dit_start_time = time.time()
 
-        elif not tone_present and self.tone_state:
-            # Tone ended
-            self.tone_state = False
-            self.silence_start = current_time
-            self.tone_confirm_count = 0  # Reset counters after state change
-            self.silence_confirm_count = 0
-            logger.info(f">>> Tone OFF at {current_time:.3f}s")
+            self.state_counter += 1
 
-            # Measure tone duration
-            if self.tone_start:
-                tone_duration = current_time - self.tone_start
-                logger.info(f">>> Tone duration: {tone_duration*1000:.0f}ms")
+        else:
+            # Tone is absent (silence)
+            if self.state_counter > 0:
+                # Tone just ended - classify it as dit or dash
+                duration = self.state_counter
 
-                # Ignore very short tones (< 80ms) - likely glitches/noise/switching artifacts
-                # At 15 WPM, a dot is ~80ms, at 20 WPM a dot is ~60ms
-                # Increased threshold for better HF noise rejection
-                if tone_duration < 0.080:
-                    logger.info(
-                        f">>> GLITCH FILTERED: {tone_duration*1000:.0f}ms (< 80ms threshold)"
-                    )
-                    # Don't process this tone at all - just reset to start of tone
-                    self.tone_state = True
-                    self.tone_start = current_time  # Reset tone start to now
-                    self.silence_start = None
-                    return
+                if duration > self.dat_threshold:
+                    self.current_symbol += "-"
+                    logger.info(f"DASH detected (counter: {duration})")
+                elif duration > self.dit_threshold:
+                    self.current_symbol += "."
+                    logger.info(f"DIT detected (counter: {duration})")
 
-                # Update timing estimates (uses cached K-Means threshold)
-                self._update_timing(tone_duration, is_tone=True)
+                    # Update WPM estimate from dit duration
+                    if self.dit_start_time:
+                        dit_duration = time.time() - self.dit_start_time
+                        self.last_dit_duration = dit_duration
+                        # Standard: dit length = 1.2 / WPM
+                        self.wpm = int(max(5, min(50, 1.2 / dit_duration)))
+                        self.dit_start_time = None
 
-                # Validate timing consistency - reject if tone duration is too long
-                # Maximum valid dash at 5 WPM is ~720ms (3x 240ms dot)
-                # Anything longer is likely noise or carrier, not morse
-                if tone_duration > 0.720:
-                    logger.info(
-                        f">>> INVALID TIMING: {tone_duration*1000:.0f}ms (> 720ms max) - likely carrier/noise, not morse"
-                    )
-                    # Don't add to symbol buffer - this is not valid morse
-                    self.tone_start = None
-                    return
+                # Reset counter to start counting silence
+                self.state_counter = 0
 
-                # Classify as dot or dash using cached K-Means threshold
-                if self.kmeans_threshold:
-                    # Use K-Means threshold (updated periodically)
-                    if tone_duration < self.kmeans_threshold:
-                        self.current_symbol.append(".")
-                        logger.info(
-                            f">>> DOT detected: {tone_duration*1000:.0f}ms (K-Means threshold: {self.kmeans_threshold*1000:.0f}ms)"
-                        )
-                    else:
-                        self.current_symbol.append("-")
-                        logger.info(
-                            f">>> DASH detected: {tone_duration*1000:.0f}ms (K-Means threshold: {self.kmeans_threshold*1000:.0f}ms)"
-                        )
-                elif self.dot_length:
-                    # Fallback to simple threshold
-                    threshold = 1.8 * self.dot_length
-                    if tone_duration > threshold:
-                        self.current_symbol.append("-")
-                        logger.info(
-                            f">>> DASH detected: {tone_duration*1000:.0f}ms (threshold: {threshold*1000:.0f}ms)"
-                        )
-                    else:
-                        self.current_symbol.append(".")
-                        logger.info(
-                            f">>> DOT detected: {tone_duration*1000:.0f}ms (threshold: {threshold*1000:.0f}ms)"
-                        )
-                else:
-                    # No timing reference yet, assume dot
-                    self.current_symbol.append(".")
-                    logger.info(f">>> DOT (initial, no reference): {tone_duration*1000:.0f}ms")
+            # Continue counting silence (decrement)
+            self.state_counter -= 1
 
-                logger.info(
-                    f">>> Symbol buffer now: {self.current_symbol} ({''.join(self.current_symbol)})"
-                )
-                self.tone_start = None
+    def _add_character(self, char):
+        """Add a character to decoded text"""
+        logger.info(f"Adding character: '{char}'")
+        self.decoded_text += char
+
+        # Trim if too long
+        if len(self.decoded_text) > self.max_decoded_length:
+            self.decoded_text = self.decoded_text[-self.max_decoded_length :]
+
+        if char != " ":
+            self.character_count += 1
 
     def _send_status_update(self, status):
         """Send status update to UI"""
@@ -615,7 +429,6 @@ class MorseDecoder(threading.Thread):
             "vfo": self.vfo,
             "timestamp": time.time(),
         }
-        logger.info(f"Sending status update: {status.value}")
         try:
             self.data_queue.put(msg, block=False)
             with self.stats_lock:
@@ -635,7 +448,7 @@ class MorseDecoder(threading.Thread):
                 "wpm": self.wpm,
                 "tone_frequency": self.target_freq,
                 "signal_strength": self.signal_strength,
-                "dot_length_ms": int(self.dot_length * 1000) if self.dot_length else None,
+                "threshold": self.value_threshold,
             },
         }
         try:
@@ -643,32 +456,12 @@ class MorseDecoder(threading.Thread):
             with self.stats_lock:
                 self.stats["data_messages_out"] += 1
         except queue.Full:
-            logger.warning("Data queue full, dropping params update")
-
-    def _add_character(self, char):
-        """Add a character to decoded text and trim if needed"""
-        logger.info(f">>> ADDING CHARACTER: '{char}' (repr: {repr(char)})")
-        self.decoded_text += char
-        logger.info(
-            f">>> Decoded text now: '{self.decoded_text}' (length: {len(self.decoded_text)})"
-        )
-
-        # Trim to last N characters if exceeded
-        if len(self.decoded_text) > self.max_decoded_length:
-            old_text = self.decoded_text
-            self.decoded_text = self.decoded_text[-self.max_decoded_length :]
-            logger.info(
-                f">>> Trimmed decoded text from {len(old_text)} to {len(self.decoded_text)} chars"
-            )
-
-        if char != " ":
-            self.character_count += 1
+            pass
 
     def _send_decoded_output(self):
         """Send decoded text output to UI (rate-limited)"""
         current_time = time.time()
 
-        # Rate limit: only send updates every N seconds
         if current_time - self.last_output_time < self.output_update_interval:
             return
 
@@ -721,7 +514,6 @@ class MorseDecoder(threading.Thread):
 
         try:
             while self.running:
-
                 # Get audio from queue
                 try:
                     audio_chunk = self.audio_queue.get(timeout=0.1)
@@ -738,7 +530,7 @@ class MorseDecoder(threading.Thread):
                         else:
                             continue
 
-                    # Ensure audio_chunk is a proper array
+                    # Ensure audio_chunk is proper array
                     if isinstance(audio_chunk, (int, float)):
                         audio_chunk = np.array([audio_chunk], dtype=np.float32)
                     elif not isinstance(audio_chunk, np.ndarray):
@@ -754,76 +546,32 @@ class MorseDecoder(threading.Thread):
                     current_level = self._process_audio(audio_chunk)
 
                     if current_level is not None:
-                        # Detect tone presence
-                        tone_present_raw = self._detect_tone(current_level)
-                        current_time = time.time()
-
-                        # Debounce: require multiple consecutive detections before changing state
-                        if tone_present_raw:
-                            self.tone_confirm_count += 1
-                            self.silence_confirm_count = 0
-                        else:
-                            self.silence_confirm_count += 1
-                            self.tone_confirm_count = 0
-
-                        # Determine actual tone state after debouncing
-                        if (
-                            not self.tone_state
-                            and self.tone_confirm_count >= self.debounce_threshold
-                        ):
-                            tone_present = True  # Confirmed tone
-                        elif (
-                            self.tone_state
-                            and self.silence_confirm_count >= self.debounce_threshold
-                        ):
-                            tone_present = False  # Confirmed silence
-                        else:
-                            tone_present = self.tone_state  # Keep current state
-
-                        # Process state changes (only if state actually changed)
-                        if tone_present != self.tone_state or not self.initial_state_detected:
-                            self._process_tone_change(tone_present, current_time)
+                        # Run morse state machine
+                        self._decode_morse_symbol(self.state_counter, current_level)
 
                         # Update status
+                        current_time = time.time()
+                        tone_present = current_level > (self.value_threshold or 0)
+
                         if self.status == DecoderStatus.LISTENING and tone_present:
                             self.status = DecoderStatus.DECODING
                             self._send_status_update(DecoderStatus.DECODING)
                         elif self.status == DecoderStatus.DECODING and not tone_present:
-                            # Check if we've been silent for a while
-                            if self.silence_start and (current_time - self.silence_start) > 2.0:
-                                # Back to listening after 2 seconds of silence
-                                if self.current_symbol:
-                                    # Decode any pending symbol
-                                    char = self._decode_symbol()
-                                    if char:
-                                        self._add_character(char)
-                                    self.current_symbol = []
+                            if self.state_counter < -100:  # Long silence
                                 self.status = DecoderStatus.LISTENING
                                 self._send_status_update(DecoderStatus.LISTENING)
 
-                        # Send periodic updates (every 1 second)
+                        # Send periodic updates
                         if current_time - self.last_update_time > 1.0:
                             if self.wpm:
                                 self._send_params_update()
                             self._send_stats_update()
-                            self._send_decoded_output()  # Send decoded text update
+                            self._send_decoded_output()
                             self.last_update_time = current_time
 
                 except queue.Empty:
                     with self.stats_lock:
                         self.stats["queue_timeouts"] += 1
-                    # Check for long silence timeout
-                    current_time = time.time()
-                    if (
-                        self.silence_start
-                        and (current_time - self.silence_start) > 5.0
-                        and self.current_symbol
-                    ):
-                        # Decode pending symbol after long silence
-                        char = self._decode_symbol()
-                        if char:
-                            self._add_character(char)
-                        self.current_symbol = []
                     continue
 
         except Exception as e:
@@ -857,10 +605,9 @@ class MorseDecoder(threading.Thread):
             "vfo": self.vfo,
             "timestamp": time.time(),
         }
-        logger.info("Sending final status update: closed")
         try:
             self.data_queue.put(msg, block=False)
             with self.stats_lock:
                 self.stats["data_messages_out"] += 1
         except queue.Full:
-            logger.warning("Data queue full, dropping final status update")
+            pass
