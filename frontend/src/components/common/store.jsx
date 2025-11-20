@@ -44,6 +44,7 @@ import decodersReducer from '../decoders/decoders-slice.jsx';
 import libraryVersionsReducer from '../settings/library-versions-slice.jsx';
 import performanceReducer from '../performance/performance-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
+import passesCleanupMiddleware from '../overview/passes-cleanup-middleware.jsx';
 
 
 // Persist configuration for waterfall slice
@@ -276,7 +277,7 @@ export const store = configureStore({
                 warnAfter: 256,
                 ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
             },
-        }).concat(backendSyncMiddleware),
+        }).concat(backendSyncMiddleware, passesCleanupMiddleware),
 });
 
 //export default store;

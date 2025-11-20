@@ -231,38 +231,6 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         };
     }, []);
 
-    // Remove expired passes after 1 minute
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            const now = new Date();
-            const rowIds = apiRef.current.getAllRowIds();
-            const rowsToRemove = [];
-
-            rowIds.forEach((rowId) => {
-                const row = apiRef.current.getRow(rowId);
-                if (!row) return;
-
-                // Skip geostationary/geosynchronous satellites
-                if (row.is_geostationary || row.is_geosynchronous) return;
-
-                const eventEnd = new Date(row.event_end);
-                const timeSinceEnd = now - eventEnd;
-
-                // Remove if pass ended more than 1 minute ago (60000ms)
-                if (timeSinceEnd > 60000) {
-                    rowsToRemove.push(rowId);
-                }
-            });
-
-            if (rowsToRemove.length > 0) {
-                // Use internal API method to remove rows without re-render
-                apiRef.current.updateRows(rowsToRemove.map(id => ({ id, _action: 'delete' })));
-            }
-        }, 10000); // Check every 10 seconds
-
-        return () => clearInterval(intervalId);
-    }, [apiRef]);
-
     const columns = [
         {
             field: 'name',
