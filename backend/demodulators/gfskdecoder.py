@@ -108,6 +108,20 @@ class GFSKDecoder(GMSKDecoder):
         import queue
         import time
 
+        # Build decoder configuration info (GFSK uses same params as GMSK)
+        config_info = {
+            "baudrate": self.baudrate,
+            "deviation_hz": self.deviation,
+            "framing": self.framing,  # "ax25" or "usp"
+            "transmitter": self.transmitter_description,
+            "transmitter_mode": self.transmitter_mode,
+            "signal_frequency_mhz": round(self.signal_frequency / 1e6, 3),
+        }
+
+        # Merge with any additional info passed in
+        if info:
+            config_info.update(info)
+
         msg = {
             "type": "decoder-status",
             "status": status.value,
@@ -115,7 +129,7 @@ class GFSKDecoder(GMSKDecoder):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
-            "info": info or {},
+            "info": config_info,
         }
         try:
             self.data_queue.put(msg, block=False)

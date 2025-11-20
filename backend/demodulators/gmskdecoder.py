@@ -333,8 +333,13 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
             if self.framing == "usp":
                 from satellites.components.deframers.usp_deframer import usp_deframer
 
-                deframer = usp_deframer(syncword_threshold=13, options=options)
-                logger.info("Using USP deframer (syncword_threshold=13, Viterbi + RS FEC)")
+                # Increase syncword threshold for low SNR (allow more bit errors)
+                # Default is 13, trying 20 for weak signals
+                syncword_thresh = 20
+                deframer = usp_deframer(syncword_threshold=syncword_thresh, options=options)
+                logger.info(
+                    f"Using USP deframer (syncword_threshold={syncword_thresh}, Viterbi + RS FEC)"
+                )
             else:  # default to ax25
                 from satellites.components.deframers.ax25_deframer import ax25_deframer
 
@@ -468,14 +473,18 @@ class GMSKDecoder(threading.Thread):
         # For Monitor-4 and similar USP satellites, try -5000 if +5000 doesn't work
         self.deviation = self.transmitter.get("deviation", deviation)
 
-        # TEMPORARY: Force negative deviation to test polarity inversion
-        # USP satellites often need inverted polarity
-        # Remove this after determining correct polarity
+        # TEMPORARY: Override deviation for Monitor-4 USP testing
+        # Monitor-4 9k6 uses 2400 Hz deviation, so 2k4/4k8 likely use ~1200 Hz
+        # Try NEGATIVE polarity to invert sidebands
+        # Remove this after determining correct deviation
         if "USP" in self.transmitter.get("mode", "").upper():
+            # Try baudrate/2 as deviation (typical for narrow FSK)
+            # NEGATIVE to test inverted polarity
+            test_deviation = -(self.baudrate / 2)
             logger.warning(
-                f"Testing negative deviation for USP: changing {self.deviation} to {-abs(self.deviation)}"
+                f"Testing USP with NEGATIVE deviation (inverted polarity): {test_deviation} Hz (was {self.deviation} Hz)"
             )
-            self.deviation = -abs(self.deviation)
+            self.deviation = test_deviation
         self.batch_interval = batch_interval
         # Get expected signal frequency for proper frequency translation
         # Try multiple field names: frequency, downlink_low, or center_frequency
@@ -730,6 +739,20 @@ class GMSKDecoder(threading.Thread):
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
+        # Build decoder configuration info
+        config_info = {
+            "baudrate": self.baudrate,
+            "deviation_hz": self.deviation,
+            "framing": self.framing,  # "ax25" or "usp"
+            "transmitter": self.transmitter_description,
+            "transmitter_mode": self.transmitter_mode,
+            "signal_frequency_mhz": round(self.signal_frequency / 1e6, 3),
+        }
+
+        # Merge with any additional info passed in
+        if info:
+            config_info.update(info)
+
         msg = {
             "type": "decoder-status",
             "status": status.value,
@@ -737,7 +760,7 @@ class GMSKDecoder(threading.Thread):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
-            "info": info or {},
+            "info": config_info,
         }
         try:
             self.data_queue.put(msg, block=False)

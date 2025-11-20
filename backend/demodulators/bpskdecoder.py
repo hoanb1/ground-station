@@ -708,6 +708,20 @@ class BPSKDecoder(threading.Thread):
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
+        # Build decoder configuration info
+        config_info = {
+            "baudrate": self.baudrate,
+            "differential": self.differential,
+            "framing": "ax25",  # BPSK uses AX.25 with G3RUH descrambler
+            "transmitter": self.transmitter_description,
+            "transmitter_mode": self.transmitter_mode,
+            "signal_frequency_mhz": round(self.signal_frequency / 1e6, 3),
+        }
+
+        # Merge with any additional info passed in
+        if info:
+            config_info.update(info)
+
         msg = {
             "type": "decoder-status",
             "status": status.value,
@@ -715,7 +729,7 @@ class BPSKDecoder(threading.Thread):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
-            "info": info or {},
+            "info": config_info,
         }
         try:
             self.data_queue.put(msg, block=False)

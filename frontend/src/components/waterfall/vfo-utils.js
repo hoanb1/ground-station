@@ -195,9 +195,12 @@ export const canvasDrawingUtils = {
             // Handle BPSK, GMSK, and GFSK decoders with output info
             if (decoderType === 'bpsk' || decoderType === 'gmsk' || decoderType === 'gfsk') {
                 const status = decoderInfo.status || 'processing';
-                const fromCallsign = bpskOutputs?.fromCallsign || '-';
+                const fromCallsign = bpskOutputs?.fromCallsign || 'NO CALL';
                 const outputCount = bpskOutputs?.count || 0;
-                const fullText = `${status.toUpperCase()} | ${fromCallsign} | ${outputCount}`;
+                const baudrate = decoderInfo.info?.baudrate || 0;
+
+                // Template-based label: STATUS | CALLSIGN | COUNT | BAUDRATE
+                const fullText = `${status.toUpperCase()} | ${fromCallsign} | ${outputCount} | ${baudrate}bd`;
 
                 ctx.font = '10px Monospace';
                 const fullTextMetrics = ctx.measureText(fullText);

@@ -469,7 +469,8 @@ export const useSocketEventHandlers = (socket) => {
                         decoder_type: data.decoder_type,
                         vfo: data.vfo,
                         timestamp: data.timestamp,
-                        progress: data.progress
+                        progress: data.progress,
+                        info: data.info  // Include decoder configuration info (baudrate, framing, etc.)
                     }));
                     break;
 

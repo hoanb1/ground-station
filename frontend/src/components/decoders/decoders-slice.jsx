@@ -68,7 +68,7 @@ export const decodersSlice = createSlice({
     reducers: {
         // Decoder status changed
         decoderStatusChanged: (state, action) => {
-            const { session_id, status, mode, decoder_type, vfo, timestamp, progress } = action.payload;
+            const { session_id, status, mode, decoder_type, vfo, timestamp, progress, info } = action.payload;
 
             // Create unique key combining session_id and VFO number
             const decoderKey = vfo ? `${session_id}_vfo${vfo}` : session_id;
@@ -87,6 +87,7 @@ export const decodersSlice = createSlice({
                         vfo,
                         started_at: timestamp,
                         progress: null,
+                        info: null,  // Initialize info field
                     };
                 }
 
@@ -98,6 +99,11 @@ export const decodersSlice = createSlice({
                 // Update progress if provided in the payload (including null to reset)
                 if (progress !== undefined) {
                     state.active[decoderKey].progress = progress;
+                }
+
+                // Update info if provided (decoder configuration: baudrate, framing, etc.)
+                if (info !== undefined) {
+                    state.active[decoderKey].info = info;
                 }
             }
         },
