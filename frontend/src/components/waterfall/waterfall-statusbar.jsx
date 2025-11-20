@@ -11,9 +11,9 @@ const WaterfallStatusBar = ({isStreaming, eventMetrics, centerFrequency, sampleR
             {isStreaming ? (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.5, fontSize: '0.75rem', fontFamily: 'monospace', color: 'text.secondary' }}>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Box component="span">FPS: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '3ch', textAlign: 'right' }}>{eventMetrics.current.renderWaterfallPerSecond}</Box></Box>
+                        <Box component="span">FPS: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '2ch', textAlign: 'right' }}>{eventMetrics.current.renderWaterfallPerSecond}</Box></Box>
                         <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                        <Box component="span">FFTs/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.fftUpdatesPerSecond)}</Box></Box>
+                        <Box component="span">FFTs/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '2ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.fftUpdatesPerSecond)}</Box></Box>
                         <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
                         <Box component="span">bins/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.binsPerSecond)}</Box></Box>
                     </Box>
