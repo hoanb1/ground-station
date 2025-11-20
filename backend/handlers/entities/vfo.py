@@ -119,7 +119,7 @@ async def update_vfo_parameters(
                     f"Locked transmitter changed for VFO {vfo_id} (from {old_locked_transmitter_id} to {new_locked_transmitter_id}) "
                     f"with active decoder {vfo_state.decoder} - restarting decoder"
                 )
-                await handle_vfo_decoder_state(vfo_state, sid, logger)
+                await handle_vfo_decoder_state(vfo_state, sid, logger, force_restart=True)
 
     return {"success": True, "data": {}}
 
@@ -199,7 +199,7 @@ async def toggle_transcription(
     }
 
 
-async def handle_vfo_decoder_state(vfo_state, session_id, logger):
+async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=False):
     """
     Start or stop decoder for a specific VFO based on its decoder setting.
 
@@ -210,6 +210,8 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger):
         vfo_state: VFO state object
         session_id: Session identifier
         logger: Logger instance
+        force_restart: If True, restart decoder even if same type is already running
+                      (used when transmitter configuration changes)
     """
     if not vfo_state:
         return
@@ -260,11 +262,20 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger):
 
     # Check if the same decoder is already running for this VFO
     if current_decoder and isinstance(current_decoder, decoder_class):
-        # Same decoder already running for this VFO, do nothing
-        logger.debug(
-            f"Decoder {requested_decoder} already running for session {session_id} VFO {vfo_number}"
-        )
-        return
+        if not force_restart:
+            # Same decoder already running for this VFO, do nothing
+            logger.debug(
+                f"Decoder {requested_decoder} already running for session {session_id} VFO {vfo_number}"
+            )
+            return
+        else:
+            # Force restart requested (e.g., transmitter changed)
+            logger.info(
+                f"Force restarting {requested_decoder} decoder for session {session_id} VFO {vfo_number} "
+                f"(transmitter configuration changed)"
+            )
+            process_manager.stop_decoder(sdr_id, session_id, vfo_number)
+            # Fall through to start new decoder with updated config
 
     # Stop this VFO's current decoder if it's a different type
     if current_decoder:

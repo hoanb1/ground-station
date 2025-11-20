@@ -404,10 +404,16 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
 
     def flush_buffer(self):
         """Process any remaining samples in the buffer"""
+        should_process = False
         with self.sample_lock:
             if len(self.sample_buffer) > 0:
                 logger.info(f"Flushing {len(self.sample_buffer)} remaining samples")
-                self._process_buffer()
+                should_process = True
+        # CRITICAL: Call _process_buffer() OUTSIDE the lock to avoid blocking the entire app.
+        # _process_buffer() runs GNU Radio flowgraph synchronously (tb.wait()) and sleeps 100ms,
+        # which would freeze all threads trying to acquire sample_lock if called inside the lock.
+        if should_process:
+            self._process_buffer()
 
     def _on_packet_decoded(self, payload, callsigns=None):
         """Called when a GMSK packet is successfully decoded"""

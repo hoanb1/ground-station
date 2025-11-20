@@ -354,7 +354,7 @@ export const createFlowFromMetrics = (metrics) => {
                         sourceHandle: getNextOutputHandle(workerId),
                         targetHandle: getNextInputHandle(nodeId),
                         animated: isAnimated,
-                        style: { stroke: getEdgeColor('fft', 0, isAnimated), strokeWidth: 2 },
+                        style: { stroke: getEdgeColor('iq', 0, isAnimated), strokeWidth: 2 },
                         type: 'smoothstep',
                     });
                 }
