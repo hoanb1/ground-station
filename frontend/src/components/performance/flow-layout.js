@@ -153,33 +153,21 @@ export const applyDagreLayout = (nodes, edges) => {
         if (type === 'worker' || type === 'tracker') {
             return 0;
         }
-        // Rank 1: IQ Recorders and IQ Broadcasters
-        if (type === 'recorder' || (type === 'broadcaster' && node.data.component?.broadcaster_type === 'iq')) {
+        // Rank 1: IQ Recorders, IQ Broadcasters, and FFT Processors
+        if (type === 'recorder' || (type === 'broadcaster' && node.data.component?.broadcaster_type === 'iq') || type === 'fft') {
             return 1;
         }
-        // Rank 2: FFT Processors
-        if (type === 'fft') {
+        // Rank 2: Demodulators, Decoders, and Audio Broadcasters
+        if (type === 'demodulator' || type === 'decoder' || (type === 'broadcaster' && node.data.component?.broadcaster_type === 'audio')) {
             return 2;
         }
-        // Rank 3: Demodulators
-        if (type === 'demodulator') {
+        // Rank 3: WebAudioStreamer
+        if (type === 'streamer') {
             return 3;
         }
-        // Rank 4: Audio Broadcasters
-        if (type === 'broadcaster' && node.data.component?.broadcaster_type === 'audio') {
-            return 4;
-        }
-        // Rank 5: Decoders
-        if (type === 'decoder') {
-            return 5;
-        }
-        // Rank 6: WebAudioStreamer
-        if (type === 'streamer') {
-            return 6;
-        }
-        // Rank 7: Browsers (rightmost)
+        // Rank 4: Browsers (rightmost)
         if (type === 'browser') {
-            return 7;
+            return 4;
         }
 
         return 10; // Default rank for unknown types
