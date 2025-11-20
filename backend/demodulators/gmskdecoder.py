@@ -330,7 +330,21 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
             )
 
             # Create appropriate deframer based on framing protocol
-            if self.framing == "usp":
+            if self.framing == "geoscan":
+                from satellites.components.deframers.geoscan_deframer import geoscan_deframer
+
+                # GEOSCAN uses 66 or 74 byte frames (varies by satellite)
+                # Default to 66 (most common), will need satellite-specific config for others
+                frame_size = 66
+                deframer = geoscan_deframer(
+                    frame_size=frame_size,
+                    syncword_threshold=4,  # Standard GEOSCAN default
+                    options=options,
+                )
+                logger.info(
+                    f"Using GEOSCAN deframer (frame_size={frame_size}, PN9 scrambler, CC11xx CRC)"
+                )
+            elif self.framing == "usp":
                 from satellites.components.deframers.usp_deframer import usp_deframer
 
                 # Increase syncword threshold for low SNR (allow more bit errors)
@@ -345,7 +359,6 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
 
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
                 logger.info("Using AX.25 deframer (G3RUH descrambler)")
-
             # Create message handler for this batch
             msg_handler = GMSKMessageHandler(self.callback)
 
@@ -495,11 +508,14 @@ class GMSKDecoder(threading.Thread):
             or 436.400e6  # fallback
         )
 
-        # Detect framing protocol from transmitter mode
-        # USP FEC modes: "GMSK USP FEC", "GMSK USP", etc.
-        # Default to ax25 for standard GMSK
+        # Detect framing protocol from transmitter metadata
+        # Priority order: GEOSCAN > USP > AX.25 (default)
         transmitter_mode = self.transmitter.get("mode", "GMSK").upper()
-        if "USP" in transmitter_mode:
+        transmitter_desc = self.transmitter.get("description", "").upper()
+
+        if "GEOSCAN" in transmitter_desc:
+            self.framing = "geoscan"
+        elif "USP" in transmitter_mode:
             self.framing = "usp"
         else:
             self.framing = "ax25"
