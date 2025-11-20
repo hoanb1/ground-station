@@ -285,12 +285,17 @@ const OverviewSatelliteInfoCard = () => {
                                     />
                                 </Grid>
                                 <Grid size={6}>
-                                    <DataPoint
-                                        icon={HeightIcon}
-                                        label={t('satellite_info.elevation')}
-                                        value={satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
-                                        color="error.light"
-                                    />
+                                    <Box sx={{ mb: 0 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <HeightIcon sx={{ fontSize: 14, mr: 0.5, color: 'error.light' }} />
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
+                                                {t('satellite_info.elevation')}
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'error.light' }}>
+                                            {satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
+                                        </Typography>
+                                    </Box>
                                 </Grid>
                             </Grid>
                         </Section>
@@ -301,22 +306,32 @@ const OverviewSatelliteInfoCard = () => {
                         <Section title={t('satellite_info.orbital_data')} icon={SpeedIcon}>
                             <Grid container spacing={1}>
                                 <Grid size={6}>
-                                    <DataPoint
-                                        icon={HeightIcon}
-                                        label={t('satellite_info.altitude')}
-                                        value={satelliteData && satelliteData['position'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : 'N/A'}
-                                        color="secondary.light"
-                                        unit="km"
-                                    />
+                                    <Box sx={{ mb: 0 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <HeightIcon sx={{ fontSize: 14, mr: 0.5, color: 'secondary.light' }} />
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
+                                                {t('satellite_info.altitude')}
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'secondary.light' }}>
+                                            {satelliteData && satelliteData['position'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : 'N/A'}
+                                            {satelliteData && satelliteData['position'] && <Typography component="span" sx={{ ml: 0.5, fontSize: '0.8em', color: 'text.secondary' }}>km</Typography>}
+                                        </Typography>
+                                    </Box>
                                 </Grid>
                                 <Grid size={6}>
-                                    <DataPoint
-                                        icon={SpeedIcon}
-                                        label={t('satellite_info.velocity')}
-                                        value={satelliteData && satelliteData['position'] ? humanizeVelocity(satelliteData['position']['vel']) : 'N/A'}
-                                        color="primary.light"
-                                        unit="km/s"
-                                    />
+                                    <Box sx={{ mb: 0 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <SpeedIcon sx={{ fontSize: 14, mr: 0.5, color: 'primary.light' }} />
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
+                                                {t('satellite_info.velocity')}
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'primary.light' }}>
+                                            {satelliteData && satelliteData['position'] ? humanizeVelocity(satelliteData['position']['vel']) : 'N/A'}
+                                            {satelliteData && satelliteData['position'] && <Typography component="span" sx={{ ml: 0.5, fontSize: '0.8em', color: 'text.secondary' }}>km/s</Typography>}
+                                        </Typography>
+                                    </Box>
                                 </Grid>
                             </Grid>
                         </Section>

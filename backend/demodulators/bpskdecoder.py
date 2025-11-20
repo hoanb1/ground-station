@@ -197,6 +197,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         costas_bw=50,
         packet_size=256,
         batch_interval=5.0,
+        transmitter=None,
     ):
         """
         Initialize BPSK decoder flowgraph using gr-satellites components
@@ -215,6 +216,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             costas_bw: Costas loop bandwidth (Hz)
             packet_size: Size of packet in bytes (unused, kept for compatibility)
             batch_interval: Batch processing interval in seconds (default: 3.0)
+            transmitter: Transmitter metadata dict for detecting DOKA signals
         """
         if not GNURADIO_AVAILABLE:
             raise RuntimeError("GNU Radio not available - BPSK decoder cannot be initialized")
@@ -227,6 +229,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         self.status_callback = status_callback
         self.differential = differential
         self.batch_interval = batch_interval
+        self.transmitter = transmitter or {}  # Store for DOKA detection
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
@@ -319,6 +322,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 f_offset=0,
                 disable_fll=False,
                 manchester_block_size=32,
+                syncword_threshold=4,  # Allow 4 bit errors in syncword (CCSDS default)
             )
 
             # For Tevel satellites, signal is typically at 436.400 MHz
@@ -337,7 +341,31 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 options=options,
             )
 
-            deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
+            # Dynamically select deframer based on transmitter mode
+            # Check if this is a DOKA signal (mode='DOKA' or 'DOKA' in description)
+            is_doka = self._is_doka_signal()
+
+            if is_doka:
+                # DOKA uses CCSDS-style framing with Reed-Solomon FEC
+                logger.info("Using CCSDS RS deframer for DOKA signal")
+                from satellites.components.deframers.ccsds_rs_deframer import ccsds_rs_deframer
+
+                # DOKA uses standard CCSDS frame parameters
+                # 223 bytes data + 32 bytes RS parity = 255 byte total frame (standard CCSDS)
+                deframer = ccsds_rs_deframer(
+                    frame_size=223,  # Standard CCSDS Reed-Solomon frame size
+                    precoding=None,
+                    rs_en=True,
+                    rs_basis="dual",
+                    rs_interleaving=1,
+                    scrambler="CCSDS",
+                    syncword_threshold=None,
+                    options=options,
+                )
+            else:
+                # Standard AX.25 with G3RUH scrambler (for Tevel, etc.)
+                logger.info("Using AX.25 deframer with G3RUH scrambler")
+                deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
 
             # Create message handler for this batch
             msg_handler = BPSKMessageHandler(self.callback)
@@ -415,6 +443,33 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         if should_process:
             self._process_buffer()
 
+    def _is_doka_signal(self):
+        """
+        Detect if this is a DOKA signal based on transmitter metadata.
+
+        DOKA signals can be identified by:
+        - mode field = 'DOKA'
+        - mode field = 'BPSK' with 'DOKA' in description
+
+        Returns:
+            bool: True if this is a DOKA signal
+        """
+        if not self.transmitter:
+            return False
+
+        mode = self.transmitter.get("mode", "").upper()
+        description = self.transmitter.get("description", "").upper()
+
+        # Check if mode is explicitly DOKA
+        if mode == "DOKA":
+            return True
+
+        # Check if BPSK with DOKA in description
+        if mode == "BPSK" and "DOKA" in description:
+            return True
+
+        return False
+
     def _on_packet_decoded(self, payload, callsigns=None):
         """Called when a BPSK packet is successfully decoded"""
         if self.callback:
@@ -479,6 +534,12 @@ class BPSKDecoder(threading.Thread):
         self.transmitter_description = self.transmitter.get("description", "Unknown")
         self.transmitter_mode = self.transmitter.get("mode", "BPSK")
 
+        # Log detected framing type
+        if self._is_doka_signal():
+            logger.info("🔷 DOKA signal detected - will use CCSDS RS deframer")
+        else:
+            logger.info("📡 Standard BPSK signal - will use AX.25 deframer with G3RUH")
+
         os.makedirs(self.output_dir, exist_ok=True)
 
         # GNU Radio flowgraph (will be initialized when we know sample rate)
@@ -540,6 +601,33 @@ class BPSKDecoder(threading.Thread):
         filtered = signal.lfilter(self.decimation_filter, 1, samples)
         # Decimate
         return filtered[::decimation_factor]
+
+    def _is_doka_signal(self):
+        """
+        Detect if this is a DOKA signal based on transmitter metadata.
+
+        DOKA signals can be identified by:
+        - mode field = 'DOKA'
+        - mode field = 'BPSK' with 'DOKA' in description
+
+        Returns:
+            bool: True if this is a DOKA signal
+        """
+        if not self.transmitter:
+            return False
+
+        mode = self.transmitter.get("mode", "").upper()
+        description = self.transmitter.get("description", "").upper()
+
+        # Check if mode is explicitly DOKA
+        if mode == "DOKA":
+            return True
+
+        # Check if BPSK with DOKA in description
+        if mode == "BPSK" and "DOKA" in description:
+            return True
+
+        return False
 
     def _on_packet_decoded(self, payload, callsigns=None):
         """Callback when GNU Radio decodes a BPSK packet"""
@@ -708,11 +796,14 @@ class BPSKDecoder(threading.Thread):
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
+        # Determine framing type
+        framing_type = "doka_ccsds_rs" if self._is_doka_signal() else "ax25_g3ruh"
+
         # Build decoder configuration info
         config_info = {
             "baudrate": self.baudrate,
             "differential": self.differential,
-            "framing": "ax25",  # BPSK uses AX.25 with G3RUH descrambler
+            "framing": framing_type,  # Dynamic based on signal type
             "transmitter": self.transmitter_description,
             "transmitter_mode": self.transmitter_mode,
             "signal_frequency_mhz": round(self.signal_frequency / 1e6, 3),
@@ -844,6 +935,7 @@ class BPSKDecoder(threading.Thread):
                             differential=self.differential,
                             packet_size=self.packet_size,
                             batch_interval=self.batch_interval,
+                            transmitter=self.transmitter,  # Pass transmitter for DOKA detection
                         )
                         flowgraph_started = True
                         logger.info(
