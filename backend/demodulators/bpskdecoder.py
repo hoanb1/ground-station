@@ -522,8 +522,13 @@ class BPSKDecoder(threading.Thread):
         self.differential = self.transmitter.get("differential", differential)
         self.packet_size = self.transmitter.get("packet_size", packet_size)
         self.batch_interval = batch_interval
-        # Get expected signal frequency for proper frequency translation
-        self.signal_frequency = self.transmitter.get("frequency", 436.400e6)
+
+        # Store transmitter downlink frequency for reference/fallback only
+        # The actual signal frequency will be determined from VFO state during decoding
+        # to track Doppler shifts in real-time
+        self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
+        if not self.transmitter_downlink_freq:
+            logger.warning("Transmitter downlink_low not available in transmitter dict")
 
         logger.info(f"BPSK decoder received transmitter dict: {self.transmitter}")
         logger.info(
@@ -536,9 +541,9 @@ class BPSKDecoder(threading.Thread):
 
         # Log detected framing type
         if self._is_doka_signal():
-            logger.info("🔷 DOKA signal detected - will use CCSDS RS deframer")
+            logger.info("DOKA signal detected - will use CCSDS RS deframer")
         else:
-            logger.info("📡 Standard BPSK signal - will use AX.25 deframer with G3RUH")
+            logger.info("Standard BPSK signal - will use AX.25 deframer with G3RUH")
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -681,8 +686,8 @@ class BPSKDecoder(threading.Thread):
                     "batch_interval": self.batch_interval,
                 },
                 "signal": {
-                    "frequency_hz": self.signal_frequency,
-                    "frequency_mhz": self.signal_frequency / 1e6,
+                    "frequency_hz": vfo_state.center_freq if vfo_state else None,
+                    "frequency_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
                     "sample_rate_hz": self.sample_rate,
                     "sdr_sample_rate_hz": self.sdr_sample_rate,
                     "sdr_center_freq_hz": self.sdr_center_freq,
@@ -806,7 +811,11 @@ class BPSKDecoder(threading.Thread):
             "framing": framing_type,  # Dynamic based on signal type
             "transmitter": self.transmitter_description,
             "transmitter_mode": self.transmitter_mode,
-            "signal_frequency_mhz": round(self.signal_frequency / 1e6, 3),
+            "transmitter_downlink_mhz": (
+                round(self.transmitter_downlink_freq / 1e6, 3)
+                if self.transmitter_downlink_freq
+                else None
+            ),
         }
 
         # Merge with any additional info passed in
@@ -922,9 +931,6 @@ class BPSKDecoder(threading.Thread):
                             f"SDR center: {sdr_center/1e6:.3f} MHz"
                         )
 
-                        # Store VFO center for offset calculation
-                        self.initial_vfo_center = vfo_center
-
                         # Initialize flowgraph
                         # Note: We don't pass f_offset here since each batch creates new flowgraph
                         self.flowgraph = BPSKFlowgraph(
@@ -943,14 +949,19 @@ class BPSKDecoder(threading.Thread):
                         )
 
                     # Step 1: Frequency translation to put SIGNAL at baseband center
-                    # Use the actual signal frequency from transmitter config
-                    # This centers the signal regardless of VFO drift
-                    offset_freq = self.signal_frequency - sdr_center
+                    # CRITICAL: Use current VFO center frequency (where user/Doppler correction has tuned)
+                    # This tracks Doppler shifts in real-time during satellite passes
+                    # VFO state is read on every IQ chunk (~100ms), providing continuous Doppler tracking
+                    offset_freq = vfo_center - sdr_center
                     if chunks_received == 0:
                         logger.info(
-                            f"Translating signal from {self.signal_frequency/1e6:.3f} MHz to baseband"
+                            f"Translating signal from VFO center {vfo_center/1e6:.3f} MHz to baseband"
                         )
                         logger.info(f"Frequency translation: offset = {offset_freq/1e3:.1f} kHz")
+                        if self.transmitter_downlink_freq:
+                            logger.info(
+                                f"Transmitter downlink freq (reference): {self.transmitter_downlink_freq/1e6:.3f} MHz"
+                            )
                     translated = self._frequency_translate(
                         samples, offset_freq, self.sdr_sample_rate
                     )

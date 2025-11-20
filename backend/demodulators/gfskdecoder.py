@@ -115,7 +115,11 @@ class GFSKDecoder(GMSKDecoder):
             "framing": self.framing,  # "ax25" or "usp"
             "transmitter": self.transmitter_description,
             "transmitter_mode": self.transmitter_mode,
-            "signal_frequency_mhz": round(self.signal_frequency / 1e6, 3),
+            "transmitter_downlink_mhz": (
+                round(self.transmitter_downlink_freq / 1e6, 3)
+                if self.transmitter_downlink_freq
+                else None
+            ),
         }
 
         # Merge with any additional info passed in
