@@ -31,6 +31,7 @@ import {
     TextField,
     Chip,
     Stack,
+    LinearProgress,
 } from "@mui/material";
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import StopIcon from '@mui/icons-material/Stop';
@@ -56,6 +57,9 @@ const RecordingAccordion = ({
 
     // Get target satellite name from Redux
     const targetSatelliteName = useSelector((state) => state.targetSatTrack?.satelliteData?.details?.name || '');
+
+    // Get disk usage from Redux
+    const diskUsage = useSelector((state) => state.filebrowser?.diskUsage || { total: 0, used: 0, available: 0 });
 
     useEffect(() => {
         setLocalRecordingName(recordingName);
@@ -134,6 +138,16 @@ const RecordingAccordion = ({
 
     const canStartRecording = isStreaming && !isRecording && selectedSDRId !== "none" && selectedSDRId !== "sigmf-playback";
 
+    const formatBytes = (bytes) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+    };
+
+    const usagePercent = diskUsage.total > 0 ? ((diskUsage.used / diskUsage.total) * 100) : 0;
+
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
             <AccordionSummary
@@ -183,7 +197,32 @@ const RecordingAccordion = ({
                         placeholder="unknown_recording"
                     />
 
-
+                    {/* Disk Space Progress Bar */}
+                    {diskUsage.total > 0 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                <Typography variant="caption" color="text.secondary">
+                                    {t('recording.diskSpace', 'Disk Space')}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {formatBytes(diskUsage.available)} {t('recording.available', 'available')} / {formatBytes(diskUsage.total)}
+                                </Typography>
+                            </Stack>
+                            <LinearProgress
+                                variant="determinate"
+                                value={usagePercent}
+                                sx={{
+                                    height: 8,
+                                    borderRadius: 1,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    '& .MuiLinearProgress-bar': {
+                                        borderRadius: 1,
+                                        backgroundColor: usagePercent > 90 ? 'error.main' : usagePercent > 75 ? 'warning.main' : 'success.main',
+                                    },
+                                }}
+                            />
+                        </Box>
+                    )}
 
                     <Stack direction="row" spacing={1}>
                         <Button
