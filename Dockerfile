@@ -330,7 +330,7 @@ RUN git clone --depth=1 https://github.com/daniestevez/gr-satellites.git && \
     sudo ldconfig
 
 # Verify gr-satellites Python module installation (including satyaml)
-RUN /app/venv/bin/python3 -c "from satellites.satyaml import SatYAML; print('✓ gr-satellites satyaml module available')" || \
+RUN /app/venv/bin/python3 -c "from satellites.satyaml.satyaml import SatYAML; print('✓ gr-satellites satyaml module available')" || \
     (echo "ERROR: satyaml not properly installed!" && exit 1)
 
 # Configure library paths and copy Python bindings

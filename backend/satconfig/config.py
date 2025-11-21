@@ -18,7 +18,7 @@ logger = logging.getLogger("satellite-config")
 
 # Import gr-satellites YAML parser
 try:
-    from satyaml.satyaml import SatYAML
+    from satellites.satyaml.satyaml import SatYAML
 
     SATYAML_AVAILABLE = True
     logger.info("gr-satellites SatYAML loaded successfully")
