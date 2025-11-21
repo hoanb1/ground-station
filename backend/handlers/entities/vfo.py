@@ -22,12 +22,6 @@ from sqlalchemy import select
 from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
 from db.models import Satellites, Transmitters
-from demodulators.bpskdecoder import BPSKDecoder
-from demodulators.gfskdecoder import GFSKDecoder
-from demodulators.gmskdecoder import GMSKDecoder
-from demodulators.loradecoder import LoRaDecoder
-from demodulators.morsedecoder import MorseDecoder
-from demodulators.sstvdecoder import SSTVDecoder
 from handlers.entities.sdr import handle_vfo_demodulator_state
 from processing.processmanager import process_manager
 from server.startup import audio_queue
@@ -96,14 +90,33 @@ async def update_vfo_parameters(
         # However, skip demodulator management if the VFO is using a raw IQ decoder (GMSK, LoRa)
         # as these decoders handle demodulation internally
         if "active" in data or "mode" in data:
-            # Check if decoder needs raw IQ (GMSK, GFSK, BPSK, LoRa don't need audio demodulator)
-            raw_iq_decoders = {"gmsk", "gfsk", "bpsk", "lora"}
-            if vfo_state.decoder not in raw_iq_decoders:
-                handle_vfo_demodulator_state(vfo_state, sid, logger)
-            else:
+            # Check if decoder needs raw IQ using decoder registry
+            from processing.decoderregistry import decoder_registry
+
+            # If switching to a raw IQ decoder, stop any existing audio demodulator
+            if decoder_registry.is_raw_iq_decoder(vfo_state.decoder):
+                # Get SDR ID from SessionTracker
+                sdr_id = session_tracker.get_session_sdr(sid)
+                if sdr_id:
+                    # Check if there's an active demodulator for this VFO
+                    # and stop it since raw IQ decoders don't need audio demodulators
+                    from processing.processmanager import process_manager
+
+                    process_info = process_manager.processes.get(sdr_id)
+                    if process_info:
+                        demod_entry = process_info.get("demodulators", {}).get(sid, {})
+                        if isinstance(demod_entry, dict) and vfo_id in demod_entry:
+                            logger.info(
+                                f"Stopping audio demodulator for VFO {vfo_id} - switching to raw IQ decoder {vfo_state.decoder}"
+                            )
+                            process_manager.stop_demodulator(sdr_id, sid, vfo_id)
+
                 logger.debug(
                     f"Skipping demodulator for VFO {vfo_id} - decoder {vfo_state.decoder} works on raw IQ"
                 )
+            else:
+                # Normal audio mode (FM/AM/SSB) or audio-based decoder - manage demodulator state
+                handle_vfo_demodulator_state(vfo_state, sid, logger)
 
         # Handle decoder state changes if decoder field was provided OR if active state changed
         # When VFO becomes inactive, we need to stop the decoder as well
@@ -225,19 +238,10 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
     vfo_number = vfo_state.vfo_number
     requested_decoder = vfo_state.decoder
 
-    # Map decoder names to classes
-    decoder_map = {
-        "sstv": SSTVDecoder,
-        "lora": LoRaDecoder,
-        "morse": MorseDecoder,  # Morse code decoder (uses internal SSB/CW demodulator)
-        "gmsk": GMSKDecoder,  # GMSK decoder (Gaussian MSK with BT <= 0.5)
-        "gfsk": GFSKDecoder,  # GFSK decoder (Gaussian FSK with BT >= 0.5)
-        "bpsk": BPSKDecoder,  # BPSK decoder with AX.25 support (for Tevel satellites)
-        # Add more decoders as they're implemented:
-        # "afsk": AFSKDecoder,
-        # "rtty": RTTYDecoder,
-        # "psk31": PSK31Decoder,
-    }
+    # Use decoder registry to get decoder class
+    from processing.decoderregistry import decoder_registry
+
+    decoder_class = decoder_registry.get_decoder_class(requested_decoder)
 
     # Get current decoder state for this specific VFO
     current_decoder = process_manager.get_active_decoder(sdr_id, session_id, vfo_number)
@@ -250,15 +254,14 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
             logger.info(f"Stopped decoder for session {session_id} VFO {vfo_number} (VFO inactive)")
         return
 
-    # If decoder is "none" or not in map, stop this VFO's decoder if it exists
-    if requested_decoder == "none" or requested_decoder not in decoder_map:
+    # If decoder is "none" or not registered, stop this VFO's decoder if it exists
+    if requested_decoder == "none" or not decoder_class:
         if current_decoder:
             process_manager.stop_decoder(sdr_id, session_id, vfo_number)
             logger.info(f"Stopped decoder for session {session_id} VFO {vfo_number}")
         return
 
-    # This VFO wants a decoder
-    decoder_class = decoder_map[requested_decoder]
+    # This VFO wants a decoder (decoder_class is already set from registry)
 
     # Check if the same decoder is already running for this VFO
     if current_decoder and isinstance(current_decoder, decoder_class):
@@ -305,8 +308,8 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
             "vfo": vfo_state.vfo_number,  # Pass VFO number for status updates
         }
 
-        # For GMSK/GFSK/BPSK decoders, pass transmitter dict if available
-        if decoder_class in (GMSKDecoder, GFSKDecoder, BPSKDecoder):
+        # For decoders that support transmitter configuration, pass transmitter dict if available
+        if decoder_registry.supports_transmitter_config(requested_decoder):
             transmitter_info = None
             satellite_info = None
 
@@ -333,9 +336,8 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
                             "bandwidth": vfo_state.bandwidth,
                             "norad_cat_id": transmitter_record.norad_cat_id,
                         }
-                        decoder_name = "GMSK" if decoder_class == GMSKDecoder else "BPSK"
                         logger.info(
-                            f"{decoder_name} decoder using locked transmitter: {transmitter_record.description} "
+                            f"{requested_decoder.upper()} decoder using locked transmitter: {transmitter_record.description} "
                             f"(baud: {transmitter_record.baud}, NORAD: {transmitter_record.norad_cat_id})"
                         )
 
@@ -365,15 +367,14 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
 
             # If no transmitter locked or not found, create a default placeholder
             if not transmitter_info:
-                decoder_name = "GMSK" if decoder_class == GMSKDecoder else "BPSK"
                 transmitter_info = {
                     "description": f"VFO {vfo_number} Signal",
-                    "mode": decoder_name,
+                    "mode": requested_decoder.upper(),
                     "center_frequency": vfo_state.center_freq,
                     "bandwidth": vfo_state.bandwidth,
                 }
                 logger.warning(
-                    f"No locked transmitter for {decoder_name} decoder on VFO {vfo_number} - using default settings. "
+                    f"No locked transmitter for {requested_decoder.upper()} decoder on VFO {vfo_number} - using default settings. "
                     f"Lock a transmitter to use its baud rate."
                 )
 

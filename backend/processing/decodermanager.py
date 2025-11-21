@@ -96,119 +96,134 @@ class DecoderManager:
                 self.stop_decoder(sdr_id, session_id, vfo_number)
 
         try:
-            # Import decoder classes to determine demodulator requirements
-            from demodulators.bpskdecoder import BPSKDecoder
-            from demodulators.gfskdecoder import GFSKDecoder
-            from demodulators.gmskdecoder import GMSKDecoder
-            from demodulators.loradecoder import LoRaDecoder
-            from demodulators.morsedecoder import MorseDecoder
+            # Use decoder registry to get capabilities
+            from processing.decoderregistry import decoder_registry
+            from processing.demodulatorregistry import demodulator_registry
 
-            # Determine if this decoder needs raw IQ (no demodulator) or audio (internal demod)
-            needs_raw_iq = decoder_class in (LoRaDecoder, GMSKDecoder, GFSKDecoder, BPSKDecoder)
-            needs_ssb_demod = decoder_class == MorseDecoder  # Morse needs SSB (CW mode), not FM
+            # Find decoder name by reverse lookup on class
+            decoder_name = None
+            for name in decoder_registry.list_decoders():
+                if decoder_registry.get_decoder_class(name) == decoder_class:
+                    decoder_name = name
+                    break
+
+            if not decoder_name:
+                self.logger.error(f"Unknown decoder class: {decoder_class.__name__}")
+                return False
+
+            # Get decoder capabilities from registry
+            caps = decoder_registry.get_capabilities(decoder_name)
+            needs_raw_iq = caps.needs_raw_iq
+            needs_internal_demod = caps.needs_internal_demod
+            required_demodulator = caps.required_demodulator
+            demodulator_mode = caps.demodulator_mode
 
             # Check if there's an active demodulator for this session
-            # If not, or if it's not in internal mode, create an internal FM demodulator specifically for the decoder
+            # If not, or if it's not in internal mode, create an internal demodulator specifically for the decoder
             demod_entry = process_info.get("demodulators", {}).get(session_id)
             internal_demod_created = False
 
-            # Check if we need to create/recreate the internal FM demodulator
-            need_internal_demod = False
-
+            # Check if we need to create/recreate the internal demodulator
+            # For raw IQ decoders, we NEVER need a demodulator
             if needs_raw_iq:
-                # Raw IQ decoder (like LoRa) - no demodulator needed
+                # Raw IQ decoder (like LoRa, GMSK, GFSK, BPSK) - no demodulator needed
                 self.logger.info(
                     f"{decoder_class.__name__} receives raw IQ samples directly from SDR"
                 )
-            elif not demod_entry:
-                need_internal_demod = True
-                self.logger.info(
-                    f"No active demodulator found for session {session_id}. "
-                    f"Creating internal FM demodulator for decoder."
-                )
-            else:
-                # demod_entry is a nested dict {vfo_number: {instance, subscription_key}}
-                if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
-                    # Check specific VFO's demodulator
-                    vfo_entry = demod_entry[vfo_number]
-                    demodulator = vfo_entry.get("instance")
-                    if not getattr(demodulator, "internal_mode", False):
-                        need_internal_demod = True
-                        self.logger.info(
-                            f"Existing demodulator for session {session_id} VFO {vfo_number} is not in internal mode. "
-                            f"Stopping it and creating internal FM demodulator for decoder."
-                        )
-                        # Stop only the specific VFO's demodulator
-                        self.demodulator_manager.stop_demodulator(sdr_id, session_id, vfo_number)
-                elif isinstance(demod_entry, dict) and vfo_number:
-                    # This VFO doesn't have a demodulator yet
-                    need_internal_demod = True
+                # Skip all demodulator creation logic
+            elif needs_internal_demod:
+                # Audio decoder - needs an internal demodulator
+                need_to_create_demod = False
+
+                if not demod_entry:
+                    need_to_create_demod = True
                     self.logger.info(
-                        f"No demodulator for VFO {vfo_number} in session {session_id}. "
-                        f"Creating internal FM demodulator for decoder."
-                    )
-
-            if need_internal_demod:
-                # Import demodulators here to avoid circular imports
-                from demodulators.fmdemodulator import FMDemodulator
-                from demodulators.ssbdemodulator import SSBDemodulator
-
-                # Create AudioBroadcaster for distributing demodulated audio to multiple consumers
-                # This allows the decoder and UI to both receive audio without modifying demodulator code
-                broadcaster_input_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
-                audio_broadcaster = AudioBroadcaster(broadcaster_input_queue)
-                audio_broadcaster.start()
-
-                # Get VFO center frequency from kwargs if provided
-                vfo_center_freq = kwargs.get("vfo_center_freq", None)
-
-                # Select appropriate demodulator based on decoder type
-                if needs_ssb_demod:
-                    demod_class = SSBDemodulator
-                    demod_mode = "cw"
-                    demod_bandwidth = 2500  # 2.5 kHz bandwidth for Morse/CW
-                    self.logger.info(
-                        "Creating internal SSB demodulator (CW mode) for Morse decoder with AudioBroadcaster"
+                        f"No active demodulator found for session {session_id}. "
+                        f"Creating internal {required_demodulator.upper()} demodulator for decoder."
                     )
                 else:
-                    demod_class = FMDemodulator
-                    demod_mode = None  # FM doesn't use mode parameter
-                    demod_bandwidth = 12500  # 12.5 kHz bandwidth for SSTV
+                    # demod_entry is a nested dict {vfo_number: {instance, subscription_key}}
+                    if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
+                        # Check specific VFO's demodulator
+                        vfo_entry = demod_entry[vfo_number]
+                        demodulator = vfo_entry.get("instance")
+                        if not getattr(demodulator, "internal_mode", False):
+                            need_to_create_demod = True
+                            self.logger.info(
+                                f"Existing demodulator for session {session_id} VFO {vfo_number} is not in internal mode. "
+                                f"Stopping it and creating internal {required_demodulator.upper()} demodulator for decoder."
+                            )
+                            # Stop only the specific VFO's demodulator
+                            self.demodulator_manager.stop_demodulator(
+                                sdr_id, session_id, vfo_number
+                            )
+                    elif isinstance(demod_entry, dict) and vfo_number:
+                        # This VFO doesn't have a demodulator yet
+                        need_to_create_demod = True
+                        self.logger.info(
+                            f"No demodulator for VFO {vfo_number} in session {session_id}. "
+                            f"Creating internal {required_demodulator.upper()} demodulator for decoder."
+                        )
+
+                if need_to_create_demod:
+                    # Get the demodulator class from registry
+                    demod_class = demodulator_registry.get_demodulator_class(required_demodulator)
+                    if not demod_class:
+                        self.logger.error(f"Unknown demodulator type: {required_demodulator}")
+                        return False
+
+                    # Create AudioBroadcaster for distributing demodulated audio to multiple consumers
+                    # This allows the decoder and UI to both receive audio without modifying demodulator code
+                    broadcaster_input_queue: multiprocessing.Queue = multiprocessing.Queue(
+                        maxsize=10
+                    )
+                    audio_broadcaster = AudioBroadcaster(broadcaster_input_queue)
+                    audio_broadcaster.start()
+
+                    # Get VFO center frequency from kwargs if provided
+                    vfo_center_freq = kwargs.get("vfo_center_freq", None)
+
+                    # Get default bandwidth from registry
+                    demod_bandwidth = demodulator_registry.get_default_bandwidth(
+                        required_demodulator
+                    )
+
                     self.logger.info(
-                        "Creating internal FM demodulator for decoder with AudioBroadcaster"
+                        f"Creating internal {required_demodulator.upper()} demodulator "
+                        f"{'('+demodulator_mode.upper()+' mode) ' if demodulator_mode else ''}"
+                        f"for {decoder_class.__name__} with AudioBroadcaster"
                     )
 
-                # Start internal demodulator with internal_mode enabled
-                # Demodulator writes to broadcaster input queue (single output)
-                # Pass vfo_number if provided to maintain multi-VFO structure
-                demod_kwargs = {
-                    "sdr_id": sdr_id,
-                    "session_id": session_id,
-                    "demodulator_class": demod_class,
-                    "audio_queue": broadcaster_input_queue,  # Demodulator feeds broadcaster
-                    "vfo_number": vfo_number,  # Pass VFO number for multi-VFO mode
-                    "internal_mode": True,  # Enable internal mode to bypass VFO checks
-                    "center_freq": vfo_center_freq,  # Pass VFO frequency
-                    "bandwidth": demod_bandwidth,
-                }
+                    # Start internal demodulator with internal_mode enabled
+                    # Demodulator writes to broadcaster input queue (single output)
+                    # Pass vfo_number if provided to maintain multi-VFO structure
+                    demod_kwargs = {
+                        "sdr_id": sdr_id,
+                        "session_id": session_id,
+                        "demodulator_class": demod_class,
+                        "audio_queue": broadcaster_input_queue,  # Demodulator feeds broadcaster
+                        "vfo_number": vfo_number,  # Pass VFO number for multi-VFO mode
+                        "internal_mode": True,  # Enable internal mode to bypass VFO checks
+                        "center_freq": vfo_center_freq,  # Pass VFO frequency
+                        "bandwidth": demod_bandwidth,
+                    }
 
-                # Add mode parameter only for SSB
-                if demod_mode:
-                    demod_kwargs["mode"] = demod_mode
+                    # Add mode parameter if specified (e.g., "cw" for Morse)
+                    if demodulator_mode:
+                        demod_kwargs["mode"] = demodulator_mode
 
-                success = self.demodulator_manager.start_demodulator(**demod_kwargs)
+                    success = self.demodulator_manager.start_demodulator(**demod_kwargs)
 
-                if not success:
-                    demod_type = "SSB" if needs_ssb_demod else "FM"
-                    self.logger.error(
-                        f"Failed to start internal {demod_type} demodulator for session {session_id}"
-                    )
-                    # Clean up broadcaster if demodulator failed to start
-                    audio_broadcaster.stop()
-                    return False
+                    if not success:
+                        self.logger.error(
+                            f"Failed to start internal {required_demodulator.upper()} demodulator for session {session_id}"
+                        )
+                        # Clean up broadcaster if demodulator failed to start
+                        audio_broadcaster.stop()
+                        return False
 
-                internal_demod_created = True
-                demod_entry = process_info.get("demodulators", {}).get(session_id)
+                    internal_demod_created = True
+                    demod_entry = process_info.get("demodulators", {}).get(session_id)
 
             # Get the appropriate queue for the decoder
             if needs_raw_iq:
@@ -428,10 +443,18 @@ class DecoderManager:
                         should_stop_demod = getattr(vfo_demod, "internal_mode", False)
 
                 if should_stop_demod:
-                    # Determine demodulator type from the decoder type for better logging
-                    from demodulators.morsedecoder import MorseDecoder
+                    # Get demodulator type name from the instance class
+                    from processing.demodulatorregistry import demodulator_registry
 
-                    demod_type = "SSB" if isinstance(decoder, MorseDecoder) else "FM"
+                    demod_class_name = type(vfo_demod).__name__
+                    demod_type = "UNKNOWN"
+                    for demod_name in demodulator_registry.list_demodulators():
+                        if (
+                            demodulator_registry.get_demodulator_class(demod_name).__name__
+                            == demod_class_name
+                        ):
+                            demod_type = demod_name.upper()
+                            break
 
                     self.logger.info(
                         f"Stopping internal {demod_type} demodulator for session {session_id} VFO {vfo_number}"
