@@ -322,16 +322,16 @@ RUN git clone --depth=1 https://github.com/daniestevez/gr-satellites.git && \
     cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
           -DPYTHON_EXECUTABLE=/app/venv/bin/python3 \
+          -DGR_PYTHON_DIR=/app/venv/lib/python3.12/site-packages \
           -DPYTHON_INCLUDE_DIR=/usr/include/python3.12 \
           -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.12.so .. && \
     make -j$(nproc) && \
     sudo make install -j$(nproc) && \
     sudo ldconfig
 
-# Copy gr-satellites Python bindings to virtual environment
-RUN cp -r /usr/local/lib/python3/dist-packages/satellites* /app/venv/lib/python3.12/site-packages/ 2>/dev/null || \
-    cp -r /usr/local/lib/python3.12/site-packages/satellites* /app/venv/lib/python3.12/site-packages/ 2>/dev/null || \
-    echo "Warning: Could not find gr-satellites Python bindings"
+# Verify gr-satellites Python module installation (including satyaml)
+RUN /app/venv/bin/python3 -c "from satellites.satyaml import SatYAML; print('✓ gr-satellites satyaml module available')" || \
+    (echo "ERROR: satyaml not properly installed!" && exit 1)
 
 # Configure library paths and copy Python bindings
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
