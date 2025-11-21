@@ -37,8 +37,6 @@ const DecodedPacketsDrawer = () => {
     const { outputs } = useSelector((state) => state.decoders);
     const { packetsDrawerOpen, packetsDrawerHeight } = useSelector((state) => state.waterfall);
 
-    console.log('[DecodedPacketsDrawer] Rendering - open:', packetsDrawerOpen, 'height:', packetsDrawerHeight, 'outputs:', outputs?.length);
-
     const [isDragging, setIsDragging] = useState(false);
     const [dragStartY, setDragStartY] = useState(0);
     const [dragStartHeight, setDragStartHeight] = useState(packetsDrawerHeight);
@@ -98,19 +96,14 @@ const DecodedPacketsDrawer = () => {
             const fileUrl = `/decoded/${filename}`;
             const metadataUrl = `/decoded/${metadataFilename}`;
 
-            console.log('[DecodedPacketsDrawer] Opening telemetry for:', row);
-            console.log('[DecodedPacketsDrawer] Fetching metadata from:', metadataUrl);
-
             // Fetch metadata from the metadata URL
             const response = await fetch(metadataUrl);
-            console.log('[DecodedPacketsDrawer] Fetch response:', response.status, response.statusText);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
             }
 
             const metadata = await response.json();
-            console.log('[DecodedPacketsDrawer] Metadata loaded:', metadata);
 
             // Set state to open dialog
             setTelemetryFile({
@@ -122,7 +115,6 @@ const DecodedPacketsDrawer = () => {
             setTelemetryDialogOpen(true);
         } catch (error) {
             toast.error(`Failed to load telemetry: ${error.message}`);
-            console.error('[DecodedPacketsDrawer] Error loading telemetry:', error, 'Row:', row);
         }
     };
 
