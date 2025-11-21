@@ -52,13 +52,14 @@ const DecodedPacketsDrawer = () => {
     const minHeight = 150;
     const maxHeight = 600;
 
-    // Convert outputs to table rows
+    // Convert outputs to table rows (limit to 100 most recent)
     const rows = useMemo(() => {
         return outputs
             .filter(output =>
                 output.output?.callsigns?.from &&
                 output.output?.callsigns?.to
             )
+            .slice(-100) // Take last 100 entries
             .map(output => {
                 const fromCallsign = output.output.callsigns.from;
                 const noradId = getNoradFromCallsign(fromCallsign);
@@ -429,13 +430,12 @@ const DecodedPacketsDrawer = () => {
                         columns={columns}
                         density="compact"
                         disableRowSelectionOnClick
+                        hideFooter
                         initialState={{
-                            pagination: { paginationModel: { pageSize: 10 } },
                             sorting: {
                                 sortModel: [{ field: 'timestamp', sort: 'desc' }],
                             },
                         }}
-                        pageSizeOptions={[5, 10, 25, 50]}
                         localeText={{
                             noRowsLabel: 'No decoded packets yet',
                         }}

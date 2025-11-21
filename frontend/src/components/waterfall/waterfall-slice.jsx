@@ -190,7 +190,7 @@ const initialState = {
     playbackStartTime: null, // ISO timestamp when playback started
     // Packets drawer state
     packetsDrawerOpen: false,
-    packetsDrawerHeight: 300,
+    packetsDrawerHeight: 250,
 };
 
 // Add these new reducers to your createSlice
