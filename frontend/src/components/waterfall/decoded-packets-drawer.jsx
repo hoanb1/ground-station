@@ -18,15 +18,18 @@
  */
 
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Box, Typography, Chip, Tooltip, useTheme } from '@mui/material';
+import { Box, Typography, Chip, Tooltip, useTheme, IconButton } from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import { getNoradFromCallsign } from '../../utils/satellite-lookup';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { alpha } from '@mui/material/styles';
 import { setPacketsDrawerOpen, setPacketsDrawerHeight } from './waterfall-slice';
+import TelemetryViewerDialog from '../filebrowser/telemetry-viewer-dialog.jsx';
+import { toast } from 'react-toastify';
 
 const DecodedPacketsDrawer = () => {
     const theme = useTheme();
@@ -40,6 +43,11 @@ const DecodedPacketsDrawer = () => {
     const [dragStartY, setDragStartY] = useState(0);
     const [dragStartHeight, setDragStartHeight] = useState(packetsDrawerHeight);
     const drawerRef = useRef(null);
+
+    // Telemetry viewer state
+    const [telemetryDialogOpen, setTelemetryDialogOpen] = useState(false);
+    const [telemetryFile, setTelemetryFile] = useState(null);
+    const [telemetryMetadata, setTelemetryMetadata] = useState(null);
 
     const minHeight = 150;
     const maxHeight = 600;
@@ -69,10 +77,52 @@ const DecodedPacketsDrawer = () => {
                     hasTelemetry: !!output.output.telemetry,
                     telemetry: output.output.telemetry,
                     parameters: output.output.parameters,
+                    // File paths for telemetry viewer
+                    filename: output.output.filename,
+                    filepath: output.output.filepath,
+                    metadataFilepath: output.output.metadata_filepath,
+                    output: output.output, // Keep full output for handler
                 };
             })
             .reverse(); // Most recent first
     }, [outputs]);
+
+    // Handler to open telemetry viewer
+    const handleOpenTelemetry = async (row) => {
+        try {
+            // Convert filepath from 'data/decoded/file.bin' to '/decoded/file.bin' (same as backend)
+            const filename = row.filename;
+            const metadataFilename = filename.replace('.bin', '.json');
+            const fileUrl = `/decoded/${filename}`;
+            const metadataUrl = `/decoded/${metadataFilename}`;
+
+            console.log('[DecodedPacketsDrawer] Opening telemetry for:', row);
+            console.log('[DecodedPacketsDrawer] Fetching metadata from:', metadataUrl);
+
+            // Fetch metadata from the metadata URL
+            const response = await fetch(metadataUrl);
+            console.log('[DecodedPacketsDrawer] Fetch response:', response.status, response.statusText);
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
+            }
+
+            const metadata = await response.json();
+            console.log('[DecodedPacketsDrawer] Metadata loaded:', metadata);
+
+            // Set state to open dialog
+            setTelemetryFile({
+                filename: filename,
+                url: fileUrl,
+                type: 'decoded'
+            });
+            setTelemetryMetadata(metadata);
+            setTelemetryDialogOpen(true);
+        } catch (error) {
+            toast.error(`Failed to load telemetry: ${error.message}`);
+            console.error('[DecodedPacketsDrawer] Error loading telemetry:', error, 'Row:', row);
+        }
+    };
 
     const columns = [
         {
@@ -252,6 +302,30 @@ const DecodedPacketsDrawer = () => {
                 </Typography>
             )
         },
+        {
+            field: 'actions',
+            headerName: 'Actions',
+            width: 80,
+            sortable: false,
+            align: 'center',
+            headerAlign: 'center',
+            renderCell: (params) => (
+                <Tooltip title="View telemetry data">
+                    <IconButton
+                        size="small"
+                        onClick={() => handleOpenTelemetry(params.row)}
+                        sx={{
+                            padding: '4px',
+                            '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                            }
+                        }}
+                    >
+                        <FolderOpenIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                </Tooltip>
+            )
+        },
     ];
 
     const handleToggle = () => {
@@ -386,6 +460,14 @@ const DecodedPacketsDrawer = () => {
                     />
                 </Box>
             </Box>
+
+            {/* Telemetry Viewer Dialog */}
+            <TelemetryViewerDialog
+                open={telemetryDialogOpen}
+                onClose={() => setTelemetryDialogOpen(false)}
+                file={telemetryFile}
+                metadata={telemetryMetadata}
+            />
         </Box>
     );
 };
