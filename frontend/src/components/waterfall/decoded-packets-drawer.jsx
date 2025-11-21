@@ -42,6 +42,7 @@ const DecodedPacketsDrawer = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [dragStartY, setDragStartY] = useState(0);
     const [dragStartHeight, setDragStartHeight] = useState(packetsDrawerHeight);
+    const [hasDragged, setHasDragged] = useState(false); // Track if user actually dragged
     const drawerRef = useRef(null);
 
     // Telemetry viewer state
@@ -330,13 +331,17 @@ const DecodedPacketsDrawer = () => {
     ];
 
     const handleToggle = () => {
-        dispatch(setPacketsDrawerOpen(!packetsDrawerOpen));
+        // Only toggle if user didn't drag
+        if (!hasDragged) {
+            dispatch(setPacketsDrawerOpen(!packetsDrawerOpen));
+        }
     };
 
     // Mouse down on handle to start dragging
     const handleMouseDown = (e) => {
         if (packetsDrawerOpen) {
             setIsDragging(true);
+            setHasDragged(false); // Reset drag flag
             setDragStartY(e.clientY);
             setDragStartHeight(packetsDrawerHeight);
             e.preventDefault();
@@ -349,12 +354,20 @@ const DecodedPacketsDrawer = () => {
             if (isDragging) {
                 const deltaY = dragStartY - e.clientY; // Inverted because drawer grows upward
                 const newHeight = Math.min(maxHeight, Math.max(minHeight, dragStartHeight + deltaY));
+
+                // If moved more than 5px, consider it a drag
+                if (Math.abs(deltaY) > 5) {
+                    setHasDragged(true);
+                }
+
                 dispatch(setPacketsDrawerHeight(newHeight));
             }
         };
 
         const handleMouseUp = () => {
             setIsDragging(false);
+            // Reset hasDragged after a short delay to allow onClick to check it
+            setTimeout(() => setHasDragged(false), 100);
         };
 
         if (isDragging) {
