@@ -21,7 +21,7 @@ from sqlalchemy import select
 
 from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
-from db.models import Transmitters
+from db.models import Satellites, Transmitters
 from demodulators.bpskdecoder import BPSKDecoder
 from demodulators.gfskdecoder import GFSKDecoder
 from demodulators.gmskdecoder import GMSKDecoder
@@ -308,6 +308,7 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
         # For GMSK/GFSK/BPSK decoders, pass transmitter dict if available
         if decoder_class in (GMSKDecoder, GFSKDecoder, BPSKDecoder):
             transmitter_info = None
+            satellite_info = None
 
             # If VFO is locked to a transmitter, query it from the database
             if vfo_state.locked_transmitter_id:
@@ -330,12 +331,33 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
                             "downlink_high": transmitter_record.downlink_high,
                             "center_frequency": vfo_state.center_freq,
                             "bandwidth": vfo_state.bandwidth,
+                            "norad_cat_id": transmitter_record.norad_cat_id,
                         }
                         decoder_name = "GMSK" if decoder_class == GMSKDecoder else "BPSK"
                         logger.info(
                             f"{decoder_name} decoder using locked transmitter: {transmitter_record.description} "
-                            f"(baud: {transmitter_record.baud})"
+                            f"(baud: {transmitter_record.baud}, NORAD: {transmitter_record.norad_cat_id})"
                         )
+
+                        # Fetch satellite info for this transmitter
+                        sat_result = await db_session.execute(
+                            select(Satellites).where(
+                                Satellites.norad_id == transmitter_record.norad_cat_id
+                            )
+                        )
+                        satellite_record = sat_result.scalar_one_or_none()
+
+                        if satellite_record:
+                            satellite_info = {
+                                "norad_id": satellite_record.norad_id,
+                                "name": satellite_record.name,
+                                "alternative_name": satellite_record.alternative_name,
+                                "status": satellite_record.status,
+                                "image": satellite_record.image,
+                            }
+                            logger.info(
+                                f"Loaded satellite info: {satellite_record.name} (NORAD {satellite_record.norad_id})"
+                            )
                     else:
                         logger.warning(
                             f"Locked transmitter ID {vfo_state.locked_transmitter_id} not found in database"
@@ -355,6 +377,7 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
                     f"Lock a transmitter to use its baud rate."
                 )
 
+            decoder_kwargs["satellite"] = satellite_info
             decoder_kwargs["transmitter"] = transmitter_info
 
         success = process_manager.start_decoder(**decoder_kwargs)

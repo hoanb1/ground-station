@@ -70,6 +70,14 @@ from scipy import signal
 from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
+# Try to import satellite config service
+try:
+    from satconfig.config import SatelliteConfigService
+
+    SATCONFIG_AVAILABLE = True
+except ImportError:
+    SATCONFIG_AVAILABLE = False
+
 logger = logging.getLogger("gmskdecoder")
 
 # Try to import GNU Radio
@@ -120,12 +128,7 @@ class GMSKMessageHandler(gr.basic_block):
                 packet_data = bytes(packet_data)
 
             if isinstance(packet_data, bytes):
-                self.packets_decoded += 1
-                logger.info(
-                    f"GMSK decoded packet #{self.packets_decoded}: {len(packet_data)} bytes"
-                )
-
-                # Parse and log AX.25 callsigns
+                # Parse AX.25 callsigns
                 callsigns = None
                 try:
                     if len(packet_data) >= 14:
@@ -141,10 +144,6 @@ class GMSKMessageHandler(gr.basic_block):
                             "from": f"{src_call}-{src_ssid}",
                             "to": f"{dest_call}-{dest_ssid}",
                         }
-                        logger.info(
-                            f"  Callsigns: {dest_call}-{dest_ssid} <- {src_call}-{src_ssid}"
-                        )
-                        logger.info(f"  First 20 bytes: {packet_data[:20].hex()}")
                 except Exception as parse_err:
                     logger.debug(f"Could not parse callsigns: {parse_err}")
 
@@ -281,12 +280,8 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
             if len(self.sample_buffer) == 0:
                 return
             samples_to_process = self.sample_buffer.copy()
-            # Keep a small tail for continuity while processing
-            tail_samples = int(self.sample_rate * 0.1)  # 100ms tail
-            if len(self.sample_buffer) > tail_samples:
-                self.sample_buffer = self.sample_buffer[-tail_samples:]
-            else:
-                self.sample_buffer = np.array([], dtype=np.complex64)
+            # Clear the buffer completely - no tail overlap to avoid duplicate decodes
+            self.sample_buffer = np.array([], dtype=np.complex64)
 
         tb = None
         try:
@@ -433,11 +428,6 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
         if should_process:
             self._process_buffer()
 
-    def _on_packet_decoded(self, payload, callsigns=None):
-        """Called when a GMSK packet is successfully decoded"""
-        if self.callback:
-            self.callback(payload, callsigns)
-
 
 class GMSKDecoder(threading.Thread):
     """Real-time GMSK decoder using GNU Radio"""
@@ -449,6 +439,7 @@ class GMSKDecoder(threading.Thread):
         session_id,
         output_dir="data/decoded",
         vfo=None,
+        satellite=None,  # Satellite dict from database (contains norad_id, name, etc.)
         transmitter=None,  # Complete transmitter dict with all parameters
         baudrate=9600,  # Fallback if not in transmitter dict
         deviation=5000,  # FSK deviation in Hz
@@ -471,34 +462,52 @@ class GMSKDecoder(threading.Thread):
         self.sdr_center_freq = None  # SDR center frequency
         self.decimation_filter = None  # Filter for decimation
         self.packet_count = 0
+        logger.info("GMSKDecoder initialized: packet_count set to 0")
 
         # Initialize telemetry parser
         self.telemetry_parser = TelemetryParser()
         logger.info("Telemetry parser initialized for GMSK decoder")
 
-        # Store transmitter dict for future use
+        # Store satellite and transmitter dicts
+        self.satellite = satellite or {}
         self.transmitter = transmitter or {}
+
+        # Extract satellite info
+        self.norad_id = self.satellite.get("norad_id")
+        self.satellite_name = self.satellite.get("name", "Unknown")
 
         # Extract GMSK parameters from transmitter dict or use defaults
         self.baudrate = self.transmitter.get("baud", baudrate)
-        # Allow deviation override from transmitter, with fallback to parameter
-        # Negative deviation inverts sidebands (try both polarities if decoding fails)
-        # For Monitor-4 and similar USP satellites, try -5000 if +5000 doesn't work
         self.deviation = self.transmitter.get("deviation", deviation)
-
-        # TEMPORARY: Override deviation for Monitor-4 USP testing
-        # Monitor-4 9k6 uses 2400 Hz deviation, so 2k4/4k8 likely use ~1200 Hz
-        # Try NEGATIVE polarity to invert sidebands
-        # Remove this after determining correct deviation
-        if "USP" in self.transmitter.get("mode", "").upper():
-            # Try baudrate/2 as deviation (typical for narrow FSK)
-            # NEGATIVE to test inverted polarity
-            test_deviation = -(self.baudrate / 2)
-            logger.warning(
-                f"Testing USP with NEGATIVE deviation (inverted polarity): {test_deviation} Hz (was {self.deviation} Hz)"
-            )
-            self.deviation = test_deviation
         self.batch_interval = batch_interval
+
+        # Load satellite-specific configuration if satellite dict provided
+        self.config_source = "manual"  # Track where config came from
+        if self.norad_id and SATCONFIG_AVAILABLE:
+            try:
+                config_service = SatelliteConfigService()
+                sat_params = config_service.get_decoder_parameters(
+                    norad_id=self.norad_id,
+                    baudrate=self.baudrate,
+                    frequency=self.transmitter.get("downlink_low"),
+                )
+
+                # Apply satellite-specific configuration
+                self.deviation = sat_params["deviation"]
+                self.framing = sat_params["framing"]
+                self.config_source = sat_params["source"]
+
+                logger.info(f"Loaded config for {self.satellite_name} (NORAD {self.norad_id}):")
+                logger.info(f"  Baudrate: {self.baudrate}")
+                logger.info(f"  Deviation: {self.deviation} Hz")
+                logger.info(f"  Framing: {self.framing}")
+                logger.info(f"  Source: {self.config_source}")
+
+            except Exception as e:
+                logger.error(f"Failed to load satellite config for NORAD {self.norad_id}: {e}")
+                logger.info("Falling back to manual configuration")
+                # Fall through to manual config below
+                self.norad_id = None  # Mark as manual config
 
         # Store transmitter downlink frequency for reference/fallback only
         # The actual signal frequency will be determined from VFO state during decoding
@@ -507,23 +516,27 @@ class GMSKDecoder(threading.Thread):
         if not self.transmitter_downlink_freq:
             logger.warning("Transmitter downlink_low not available in transmitter dict")
 
-        # Detect framing protocol from transmitter metadata
+        # Detect framing protocol if not already set by config service
         # Priority order: GEOSCAN > USP > AX.25 (default)
-        transmitter_mode = self.transmitter.get("mode", "GMSK").upper()
-        transmitter_desc = self.transmitter.get("description", "").upper()
+        if not hasattr(self, "framing") or self.framing is None:
+            transmitter_mode = self.transmitter.get("mode", "GMSK").upper()
+            transmitter_desc = self.transmitter.get("description", "").upper()
 
-        if "GEOSCAN" in transmitter_desc:
-            self.framing = "geoscan"
-        elif "USP" in transmitter_mode:
-            self.framing = "usp"
-        else:
-            self.framing = "ax25"
+            if "GEOSCAN" in transmitter_desc:
+                self.framing = "geoscan"
+            elif "USP" in transmitter_mode:
+                self.framing = "usp"
+            else:
+                self.framing = "ax25"
 
-        logger.info(f"GMSK decoder received transmitter dict: {self.transmitter}")
-        logger.info(
-            f"Extracted baud rate: {self.baudrate} (from transmitter: {self.transmitter.get('baud')}, fallback: {baudrate})"
-        )
-        logger.info(f"Detected framing protocol: {self.framing}")
+            logger.info(f"Detected framing from transmitter metadata: {self.framing}")
+
+        logger.info("GMSK decoder configuration:")
+        logger.info(f"  NORAD ID: {self.norad_id or 'N/A (manual config)'}")
+        logger.info(f"  Baudrate: {self.baudrate}")
+        logger.info(f"  Deviation: {self.deviation} Hz")
+        logger.info(f"  Framing: {self.framing}")
+        logger.info(f"  Config source: {self.config_source}")
 
         # Store additional transmitter info
         self.transmitter_description = self.transmitter.get("description", "Unknown")
@@ -592,19 +605,33 @@ class GMSKDecoder(threading.Thread):
     def _on_packet_decoded(self, payload, callsigns=None):
         """Callback when GNU Radio decodes a GMSK packet"""
         try:
+            logger.info(
+                f"_on_packet_decoded CALLED: payload_len={len(payload)}, callsigns={callsigns}, "
+                f"current_count={self.packet_count}"
+            )
+
+            # Only count packets with valid callsigns
+            if not callsigns or not callsigns.get("from") or not callsigns.get("to"):
+                logger.debug("Packet rejected: no valid callsigns found")
+                return
+
             self.packet_count += 1
+            logger.info(f"_on_packet_decoded: INCREMENTING counter to {self.packet_count}")
             with self.stats_lock:
                 self.stats["packets_decoded"] = self.packet_count
-            logger.info(f"GMSK packet #{self.packet_count} decoded: {len(payload)} bytes")
 
-            # Parse telemetry using generic parser
-            # Remove HDLC flags if present (0x7E at start/end)
+            logger.info(f"GMSK transmission decoded: {len(payload)} bytes")
+            logger.info(f"  Callsigns: {callsigns.get('to')} <- {callsigns.get('from')}")
+
+            # Remove HDLC flags for hex display (if present)
             packet_data = payload
             if len(packet_data) > 0 and packet_data[0] == 0x7E:
                 packet_data = packet_data[1:]
             if len(packet_data) > 0 and packet_data[-1] == 0x7E:
                 packet_data = packet_data[:-1]
+            logger.info(f"  First 20 bytes: {packet_data[:20].hex()}")
 
+            # Parse telemetry using generic parser
             telemetry_result = self.telemetry_parser.parse(packet_data)
             if telemetry_result.get("success"):
                 logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
@@ -612,7 +639,9 @@ class GMSKDecoder(threading.Thread):
             # Save to file
             decode_timestamp = time.time()
             timestamp_str = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"gmsk_{self.baudrate}baud_{timestamp_str}_{self.packet_count}.bin"
+            # Use microseconds to ensure unique filenames for rapid consecutive decodes
+            timestamp_us = int((decode_timestamp % 1) * 1000000)
+            filename = f"gmsk_{self.baudrate}baud_{timestamp_str}_{timestamp_us:06d}.bin"
             filepath = os.path.join(self.output_dir, filename)
 
             with open(filepath, "wb") as f:
@@ -658,10 +687,23 @@ class GMSKDecoder(threading.Thread):
                     "bandwidth_khz": vfo_state.bandwidth / 1e3 if vfo_state else None,
                     "active": vfo_state.active if vfo_state else None,
                 },
+                "satellite": (
+                    {
+                        "norad_id": self.norad_id,
+                        "name": self.satellite_name,
+                        "full_info": self.satellite,
+                    }
+                    if self.norad_id
+                    else None
+                ),
                 "transmitter": {
                     "description": self.transmitter_description,
                     "mode": self.transmitter_mode,
                     "full_config": self.transmitter,
+                },
+                "decoder_config": {
+                    "source": self.config_source,
+                    "framing": self.framing,
                 },
                 "demodulator_parameters": {
                     "deviation_hz": self.deviation,
@@ -717,13 +759,20 @@ class GMSKDecoder(threading.Thread):
                     "packet_text": packet_text,
                     "packet_length": len(payload),
                     "packet_number": self.packet_count,
-                    "parameters": f"{self.baudrate}baud, {self.deviation}Hz dev",
+                    "parameters": f"{self.baudrate}baud, {abs(self.deviation)}Hz dev",
                 },
             }
 
             # Add callsigns if available
             if callsigns:
                 msg["output"]["callsigns"] = callsigns
+
+            # Add satellite info to UI message
+            if self.norad_id:
+                msg["output"]["satellite"] = {
+                    "norad_id": self.norad_id,
+                    "name": self.satellite_name,
+                }
 
             # Add parsed telemetry to UI message
             if telemetry_result.get("success"):

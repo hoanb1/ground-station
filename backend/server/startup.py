@@ -195,6 +195,7 @@ async def init_db():
         os.path.join(
             backend_dir, "data", "decoded"
         ),  # For SSTV images, AFSK packets, RTTY text, etc.
+        os.path.join(backend_dir, "data", "configs"),  # For satellite decoder configurations
         os.path.join(backend_dir, "data", "uhd_images"),  # For UHD FPGA images
         os.path.join(backend_dir, "data", "uhd_config"),  # For UHD configuration files
     ]

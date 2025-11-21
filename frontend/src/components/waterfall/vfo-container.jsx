@@ -162,9 +162,10 @@ const VFOMarkersContainer = ({
         }
 
         // Filter all outputs for this VFO and session
+        // Note: Match any of bpsk/gmsk/gfsk since they're related protocols
         const outputs = decoderOutputs?.filter(
             out => out.session_id === decoderInfo.session_id &&
-                   out.decoder_type === decoderInfo.decoder_type &&
+                   ['bpsk', 'gmsk', 'gfsk'].includes(out.decoder_type) &&
                    out.vfo === vfoNumber
         );
 

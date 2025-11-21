@@ -74,6 +74,14 @@ from scipy import signal
 from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
+# Try to import satellite config service
+try:
+    from satconfig.config import SatelliteConfigService
+
+    SATCONFIG_AVAILABLE = True
+except ImportError:
+    SATCONFIG_AVAILABLE = False
+
 logger = logging.getLogger("bpskdecoder")
 
 # Try to import GNU Radio
@@ -486,6 +494,7 @@ class BPSKDecoder(threading.Thread):
         session_id,
         output_dir="data/decoded",
         vfo=None,
+        satellite=None,  # Satellite dict from database (contains norad_id, name, etc.)
         transmitter=None,  # Complete transmitter dict with all parameters
         baudrate=9600,  # Fallback if not in transmitter dict
         differential=False,
@@ -514,14 +523,44 @@ class BPSKDecoder(threading.Thread):
         self.telemetry_parser = TelemetryParser()
         logger.info("Telemetry parser initialized for BPSK decoder")
 
-        # Store transmitter dict for future use
+        # Store satellite and transmitter dicts
+        self.satellite = satellite or {}
         self.transmitter = transmitter or {}
+
+        # Extract satellite info
+        self.norad_id = self.satellite.get("norad_id")
+        self.satellite_name = self.satellite.get("name", "Unknown")
 
         # Extract BPSK parameters from transmitter dict or use defaults
         self.baudrate = self.transmitter.get("baud", baudrate)
         self.differential = self.transmitter.get("differential", differential)
         self.packet_size = self.transmitter.get("packet_size", packet_size)
         self.batch_interval = batch_interval
+
+        # Load satellite-specific configuration if satellite dict provided
+        self.config_source = "manual"  # Track where config came from
+        if self.norad_id and SATCONFIG_AVAILABLE:
+            try:
+                config_service = SatelliteConfigService()
+                sat_params = config_service.get_decoder_parameters(
+                    norad_id=self.norad_id,
+                    baudrate=self.baudrate,
+                    frequency=self.transmitter.get("downlink_low"),
+                )
+
+                # BPSK typically uses framing info, less common to have deviation
+                # But we can still track config source
+                self.config_source = sat_params["source"]
+
+                logger.info(f"Loaded config for {self.satellite_name} (NORAD {self.norad_id}):")
+                logger.info(f"  Baudrate: {self.baudrate}")
+                logger.info(f"  Framing: {sat_params.get('framing', 'ax25')}")
+                logger.info(f"  Source: {self.config_source}")
+
+            except Exception as e:
+                logger.error(f"Failed to load satellite config for NORAD {self.norad_id}: {e}")
+                logger.info("Falling back to manual configuration")
+                self.norad_id = None
 
         # Store transmitter downlink frequency for reference/fallback only
         # The actual signal frequency will be determined from VFO state during decoding
@@ -703,10 +742,22 @@ class BPSKDecoder(threading.Thread):
                     "bandwidth_khz": vfo_state.bandwidth / 1e3 if vfo_state else None,
                     "active": vfo_state.active if vfo_state else None,
                 },
+                "satellite": (
+                    {
+                        "norad_id": self.norad_id,
+                        "name": self.satellite_name,
+                        "full_info": self.satellite,
+                    }
+                    if self.norad_id
+                    else None
+                ),
                 "transmitter": {
                     "description": self.transmitter_description,
                     "mode": self.transmitter_mode,
                     "full_config": self.transmitter,
+                },
+                "decoder_config": {
+                    "source": self.config_source,
                 },
                 "demodulator_parameters": {
                     "fll_bandwidth_hz": 250,
@@ -771,6 +822,13 @@ class BPSKDecoder(threading.Thread):
             # Add callsigns if available
             if callsigns:
                 msg["output"]["callsigns"] = callsigns
+
+            # Add satellite info to UI message
+            if self.norad_id:
+                msg["output"]["satellite"] = {
+                    "norad_id": self.norad_id,
+                    "name": self.satellite_name,
+                }
 
             # Add parsed telemetry to UI message
             if telemetry_result.get("success"):

@@ -92,3 +92,4 @@ venv.bak/
 /backend/recordings/
 /backend/snapshots/
 /backend/data/decoded/
+backend/data/

@@ -17,13 +17,10 @@
  *
  */
 
-import React, { useMemo, useEffect } from 'react';
-import { Box, Typography, useTheme, alpha, CircularProgress, IconButton, Tooltip } from '@mui/material';
-import ClearIcon from '@mui/icons-material/Clear';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useMemo } from 'react';
+import { Box, Typography, useTheme, alpha, Tooltip } from '@mui/material';
+import { useSelector } from 'react-redux';
 import { getNoradFromCallsign } from '../../utils/satellite-lookup';
-import { fetchDetectedSatellite, selectDetectedSatelliteByNorad, clearSatelliteOutputs } from '../decoders/decoders-slice';
-import { useSocket } from '../common/socket';
 
 const DecodedPacketsOverlay = ({
     containerWidth = 0,
@@ -33,8 +30,6 @@ const DecodedPacketsOverlay = ({
     rightSideWidth = 50
 }) => {
     const theme = useTheme();
-    const dispatch = useDispatch();
-    const { socket } = useSocket();
     const { outputs } = useSelector((state) => state.decoders);
 
     // Calculate overlay width based on parent container and visible sidebars
@@ -44,17 +39,15 @@ const DecodedPacketsOverlay = ({
         return containerWidth - leftWidth - rightWidth;
     }, [containerWidth, showLeftSide, showRightSide, leftSideWidth, rightSideWidth]);
 
-    // Get the most recent 5 BPSK packets with callsigns
+    // Get all packets with callsigns
     const recentPackets = useMemo(() => {
         console.log('[DecodedPacketsOverlay] Total outputs:', outputs.length);
 
         const packets = outputs
             .filter(output =>
-                output.decoder_type === 'bpsk' &&
                 output.output?.callsigns?.from &&
                 output.output?.callsigns?.to
             )
-            .slice(0, 5)
             .map(output => {
                 const fromCallsign = output.output.callsigns.from;
                 const noradId = getNoradFromCallsign(fromCallsign);
@@ -70,8 +63,11 @@ const DecodedPacketsOverlay = ({
                     packetLength: output.output.packet_length,
                     parameters: output.output.parameters,
                     vfo: output.vfo,
-                    noradId: noradId,
-                    telemetry: output.output.telemetry  // Add parsed telemetry
+                    noradId: output.output.satellite?.norad_id || noradId,
+                    satelliteName: output.output.satellite?.name,
+                    telemetry: output.output.telemetry,  // Add parsed telemetry
+                    decoderType: output.decoder_type,
+                    parser: output.output.telemetry?.parser,
                 };
             });
 
@@ -81,36 +77,6 @@ const DecodedPacketsOverlay = ({
 
     const hasPackets = recentPackets.length > 0;
 
-    // Get the most recent packet's NORAD ID
-    const latestNoradId = hasPackets ? recentPackets[0].noradId : null;
-
-    console.log('[DecodedPacketsOverlay] Has packets:', hasPackets, 'Latest NORAD:', latestNoradId);
-
-    // Get satellite info from Redux store
-    const satelliteInfo = useSelector(latestNoradId ? selectDetectedSatelliteByNorad(latestNoradId) : () => null);
-
-    console.log('[DecodedPacketsOverlay] Satellite info from store:', satelliteInfo);
-
-    // Effect to fetch satellite info when a new NORAD ID is detected
-    useEffect(() => {
-        console.log('[DecodedPacketsOverlay] Latest NORAD ID:', latestNoradId);
-        console.log('[DecodedPacketsOverlay] Socket available:', !!socket);
-        console.log('[DecodedPacketsOverlay] Satellite info:', satelliteInfo);
-
-        if (latestNoradId && socket) {
-            // Check if we need to fetch (don't have it or it's been a while)
-            const shouldFetch = !satelliteInfo ||
-                               (satelliteInfo && !satelliteInfo.data && !satelliteInfo.loading && !satelliteInfo.error);
-
-            console.log('[DecodedPacketsOverlay] Should fetch:', shouldFetch);
-
-            if (shouldFetch) {
-                console.log('[DecodedPacketsOverlay] Fetching satellite data for NORAD:', latestNoradId);
-                dispatch(fetchDetectedSatellite({ socket, noradId: latestNoradId }));
-            }
-        }
-    }, [latestNoradId, socket, satelliteInfo, dispatch]);
-
     // Only show when there are packets
     if (!hasPackets) {
         console.log('[DecodedPacketsOverlay] Not rendering - no packets');
@@ -118,27 +84,6 @@ const DecodedPacketsOverlay = ({
     }
 
     console.log('[DecodedPacketsOverlay] RENDERING OVERLAY');
-    console.log('[DecodedPacketsOverlay] Satellite data.name:', satelliteInfo?.data?.name);
-    console.log('[DecodedPacketsOverlay] Satellite data full:', satelliteInfo?.data);
-
-    // Handle clear button click
-    const handleClearSatellite = () => {
-        if (!latestNoradId) return;
-
-        // Find all output IDs that match this NORAD ID
-        const outputIdsToRemove = outputs
-            .filter(output => {
-                if (output.decoder_type !== 'bpsk' || !output.output?.callsigns?.from) {
-                    return false;
-                }
-                const outputNoradId = getNoradFromCallsign(output.output.callsigns.from);
-                return outputNoradId === latestNoradId;
-            })
-            .map(output => output.id);
-
-        // Dispatch the clear action with the IDs to remove
-        dispatch(clearSatelliteOutputs({ noradId: latestNoradId, outputIds: outputIdsToRemove }));
-    };
 
     // Calculate left offset based on sidebar visibility
     const leftOffset = showLeftSide ? leftSideWidth : 0;
@@ -150,6 +95,7 @@ const DecodedPacketsOverlay = ({
                 bottom: 50,
                 left: leftOffset,
                 width: overlayWidth,
+                maxHeight: 250,
                 zIndex: 9999,
                 pointerEvents: 'none',
                 px: 2.5, // 20px horizontal padding
@@ -163,107 +109,11 @@ const DecodedPacketsOverlay = ({
                     borderRadius: 1,
                     p: 1,
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                    maxHeight: '100%',
+                    overflowY: 'auto',
+                    pointerEvents: 'auto', // Enable scrolling
                 }}
             >
-                {/* Satellite Info Section */}
-                {latestNoradId && (
-                    <Box
-                        sx={{
-                            mb: 1,
-                            pb: 1,
-                            borderBottom: `1px solid ${alpha(theme.palette.border.main, 0.2)}`,
-                        }}
-                    >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {satelliteInfo?.data?.details?.image && (
-                                <Box
-                                    component="img"
-                                    src={satelliteInfo.data.details.image}
-                                    alt={satelliteInfo.data.details.name}
-                                    sx={{
-                                        width: 32,
-                                        height: 32,
-                                        borderRadius: 1,
-                                        objectFit: 'cover',
-                                    }}
-                                    onError={(e) => { e.target.style.display = 'none'; }}
-                                />
-                            )}
-                            <Box sx={{ flex: 1 }}>
-                                <Typography
-                                    variant="body2"
-                                    sx={{
-                                        fontWeight: 700,
-                                        fontSize: '0.85rem',
-                                        color: theme.palette.text.primary,
-                                    }}
-                                >
-                                    {satelliteInfo?.data?.details?.name || (satelliteInfo?.error ? 'Unknown Satellite' : '-')}
-                                    {satelliteInfo?.loading && (
-                                        <CircularProgress size={12} sx={{ ml: 1 }} />
-                                    )}
-                                </Typography>
-                                <Typography
-                                    variant="caption"
-                                    sx={{
-                                        fontFamily: 'monospace',
-                                        fontSize: '0.65rem',
-                                        color: satelliteInfo?.error ? theme.palette.warning.main : theme.palette.text.secondary,
-                                    }}
-                                >
-                                    NORAD {latestNoradId}
-                                    {satelliteInfo?.data?.details?.sat_id && ` • ${satelliteInfo.data.details.sat_id}`}
-                                    {satelliteInfo?.error && ' • Not in database'}
-                                </Typography>
-                            </Box>
-                            <Tooltip title="Clear packets for this satellite" placement="top">
-                                <IconButton
-                                    size="small"
-                                    onClick={handleClearSatellite}
-                                    sx={{
-                                        pointerEvents: 'auto',
-                                        width: 24,
-                                        height: 24,
-                                        opacity: 0.5,
-                                        transition: 'opacity 0.2s',
-                                        '&:hover': {
-                                            opacity: 1,
-                                            backgroundColor: alpha(theme.palette.error.main, 0.1),
-                                        },
-                                    }}
-                                >
-                                    <ClearIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                                </IconButton>
-                            </Tooltip>
-                        </Box>
-                    </Box>
-                )}
-
-                {/* Packets Header */}
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            fontWeight: 600,
-                            color: theme.palette.text.secondary,
-                            textTransform: 'uppercase',
-                            letterSpacing: 0.5,
-                            fontSize: '0.65rem',
-                        }}
-                    >
-                        Recent Packets
-                    </Typography>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.6rem',
-                            color: theme.palette.text.disabled,
-                        }}
-                    >
-                        {recentPackets.length} packet{recentPackets.length !== 1 ? 's' : ''}
-                    </Typography>
-                </Box>
 
                 {recentPackets.map((packet, index) => (
                     <Box
@@ -281,19 +131,6 @@ const DecodedPacketsOverlay = ({
                             sx={{
                                 fontFamily: 'monospace',
                                 fontSize: '0.7rem',
-                                color: theme.palette.text.disabled,
-                                fontWeight: 600,
-                                minWidth: 20,
-                            }}
-                        >
-                            #{packet.packetNumber}
-                        </Typography>
-
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                fontFamily: 'monospace',
-                                fontSize: '0.7rem',
                                 color: theme.palette.text.secondary,
                                 minWidth: 45,
                             }}
@@ -305,6 +142,39 @@ const DecodedPacketsOverlay = ({
                                 second: '2-digit'
                             })}
                         </Typography>
+
+                        {packet.satelliteName && (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                }}
+                            >
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.7rem',
+                                        color: theme.palette.text.secondary,
+                                    }}
+                                >
+                                    {packet.satelliteName}
+                                </Typography>
+                                {packet.noradId && (
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontFamily: 'monospace',
+                                            fontSize: '0.65rem',
+                                            color: theme.palette.text.disabled,
+                                        }}
+                                    >
+                                        ({packet.noradId})
+                                    </Typography>
+                                )}
+                            </Box>
+                        )}
 
                         <Box
                             sx={{
@@ -356,6 +226,52 @@ const DecodedPacketsOverlay = ({
                                 gap: 1,
                             }}
                         >
+                            <Box
+                                sx={{
+                                    px: 0.5,
+                                    py: 0.125,
+                                    borderRadius: 0.5,
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                                    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                                }}
+                            >
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.6rem',
+                                        fontWeight: 600,
+                                        color: theme.palette.primary.main,
+                                        textTransform: 'uppercase',
+                                    }}
+                                >
+                                    {packet.decoderType}
+                                </Typography>
+                            </Box>
+
+                            <Box
+                                sx={{
+                                    px: 0.5,
+                                    py: 0.125,
+                                    borderRadius: 0.5,
+                                    backgroundColor: alpha(theme.palette.secondary.main, 0.15),
+                                    border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                                }}
+                            >
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.6rem',
+                                        fontWeight: 600,
+                                        color: theme.palette.secondary.main,
+                                        textTransform: 'uppercase',
+                                    }}
+                                >
+                                    {packet.parser}
+                                </Typography>
+                            </Box>
+
                             <Typography
                                 variant="caption"
                                 sx={{

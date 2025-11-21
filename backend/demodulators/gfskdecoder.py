@@ -58,6 +58,7 @@ class GFSKDecoder(GMSKDecoder):
         session_id,
         output_dir="data/decoded",
         vfo=None,
+        satellite=None,  # Satellite dict from database (contains norad_id, name, etc.)
         transmitter=None,
         baudrate=9600,
         deviation=5000,
@@ -70,6 +71,7 @@ class GFSKDecoder(GMSKDecoder):
             session_id=session_id,
             output_dir=output_dir,
             vfo=vfo,
+            satellite=satellite,  # Pass satellite to parent
             transmitter=transmitter,
             baudrate=baudrate,
             deviation=deviation,
