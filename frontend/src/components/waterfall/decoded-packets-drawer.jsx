@@ -96,13 +96,11 @@ const DecodedPacketsDrawer = () => {
             flex: 1.5,
             renderCell: (params) => (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                        {params.value}
-                    </Typography>
+                    <span>{params.value}</span>
                     {params.row.noradId && (
-                        <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.disabled' }}>
+                        <span style={{ color: 'text.disabled' }}>
                             ({params.row.noradId})
-                        </Typography>
+                        </span>
                     )}
                 </Box>
             )
@@ -113,9 +111,9 @@ const DecodedPacketsDrawer = () => {
             minWidth: 100,
             flex: 1,
             renderCell: (params) => (
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: 'primary.main' }}>
+                <span style={{ color: theme.palette.primary.main }}>
                     {params.value}
-                </Typography>
+                </span>
             )
         },
         {
@@ -124,9 +122,9 @@ const DecodedPacketsDrawer = () => {
             minWidth: 100,
             flex: 1,
             renderCell: (params) => (
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: 'secondary.main' }}>
+                <span style={{ color: theme.palette.secondary.main }}>
                     {params.value}
-                </Typography>
+                </span>
             )
         },
         {
@@ -348,7 +346,7 @@ const DecodedPacketsDrawer = () => {
                 sx={{
                     height: packetsDrawerOpen ? `${packetsDrawerHeight}px` : '0px',
                     overflow: 'hidden',
-                    backgroundColor: theme.palette.background.default,
+                    backgroundColor: theme.palette.background.paper,
                 }}
             >
                 <Box sx={{ height: '100%', width: '100%' }}>
@@ -369,11 +367,15 @@ const DecodedPacketsDrawer = () => {
                         }}
                         sx={{
                             border: 0,
+                            backgroundColor: theme.palette.background.paper,
                             [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                                 outline: 'none',
                             },
-                            [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]: {
-                                outline: 'none',
+                            [`& .${gridClasses.columnHeader}`]: {
+                                backgroundColor: theme.palette.background.default,
+                                '&:focus, &:focus-within': {
+                                    outline: 'none',
+                                },
                             },
                             '& .MuiDataGrid-overlay': {
                                 fontSize: '0.875rem',
