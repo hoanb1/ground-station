@@ -140,11 +140,9 @@ export const WaterfallStatusBarPaper = styled(Paper)(({ theme }) => ({
     height: '30px',
     padding: '4px 8px',
     ...theme.typography.body2,
-    position: 'absolute',
+    position: 'relative',
     borderRadius: '0px 0px 0px 0px',
     borderTop: `1px solid ${theme.palette.border.light}`,
-    zIndex: 450,
-    bottom: -2,
     textAlign: 'left',
     fontWeight: 'normal',
 }));

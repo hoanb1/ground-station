@@ -31,6 +31,7 @@ const DecodedPacketsOverlay = ({
 }) => {
     const theme = useTheme();
     const { outputs } = useSelector((state) => state.decoders);
+    const { packetsDrawerOpen } = useSelector((state) => state.waterfall);
 
     // Calculate overlay width based on parent container and visible sidebars
     const overlayWidth = useMemo(() => {
@@ -77,9 +78,9 @@ const DecodedPacketsOverlay = ({
 
     const hasPackets = recentPackets.length > 0;
 
-    // Only show when there are packets
-    if (!hasPackets) {
-        console.log('[DecodedPacketsOverlay] Not rendering - no packets');
+    // Hide overlay when drawer is open, or when there are no packets
+    if (!hasPackets || packetsDrawerOpen) {
+        console.log('[DecodedPacketsOverlay] Not rendering - no packets or drawer is open');
         return null;
     }
 

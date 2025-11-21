@@ -188,6 +188,9 @@ const initialState = {
     selectedPlaybackRecording: null, // Selected recording for playback
     playbackRecordingPath: '', // Path to the selected recording file
     playbackStartTime: null, // ISO timestamp when playback started
+    // Packets drawer state
+    packetsDrawerOpen: false,
+    packetsDrawerHeight: 300,
 };
 
 // Add these new reducers to your createSlice
@@ -364,6 +367,12 @@ export const waterfallSlice = createSlice({
         resetPlaybackStartTime: (state) => {
             state.playbackStartTime = null;
         },
+        setPacketsDrawerOpen: (state, action) => {
+            state.packetsDrawerOpen = action.payload;
+        },
+        setPacketsDrawerHeight: (state, action) => {
+            state.packetsDrawerHeight = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -467,6 +476,8 @@ export const {
     clearPlaybackRecording,
     setPlaybackStartTime,
     resetPlaybackStartTime,
+    setPacketsDrawerOpen,
+    setPacketsDrawerHeight,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

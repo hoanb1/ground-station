@@ -89,6 +89,8 @@ import WaterfallErrorDialog from "./waterfall-error-dialog.jsx";
 import useWaterfallStream from "./waterfall-stream.jsx";
 import { useTranslation } from 'react-i18next';
 import { useWaterfallSnapshot } from "./waterfall-snapshot.js";
+import DecodedPacketsDrawer from "./decoded-packets-drawer.jsx";
+import WaterfallRightSidebar from "./waterfall-right-sidebar.jsx";
 import {
     generateSnapshotName,
     toggleFullscreen as toggleFullscreenUtil,
@@ -406,13 +408,35 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         }
         const resizeObserver = new ResizeObserver(entries => {
             const {contentRect} = entries[0];
-            setDimensions({width: contentRect.width, height: contentRect.height});
+            // In fullscreen, use window dimensions; otherwise use observed dimensions
+            if (document.fullscreenElement === mainWaterFallContainer.current) {
+                setDimensions({width: window.innerWidth, height: window.innerHeight});
+            } else {
+                setDimensions({width: contentRect.width, height: contentRect.height});
+            }
         });
 
-        resizeObserver.observe(mainWaterFallContainer.current?.parentElement);
+        // Observe parent element for normal mode sizing
+        const targetElement = mainWaterFallContainer.current.parentElement;
+        if (targetElement) {
+            resizeObserver.observe(targetElement);
+        }
+
+        // Also listen for fullscreen changes
+        const handleFullscreenChange = () => {
+            if (document.fullscreenElement === mainWaterFallContainer.current) {
+                setDimensions({width: window.innerWidth, height: window.innerHeight});
+            } else if (mainWaterFallContainer.current?.parentElement) {
+                const rect = mainWaterFallContainer.current.parentElement.getBoundingClientRect();
+                setDimensions({width: rect.width, height: rect.height});
+            }
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
 
         return () => {
             resizeObserver.disconnect();
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
         };
     }, []);
 
@@ -683,123 +707,21 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                         waterFallWindowHeight={dimensions['height']}
                         frequencyBands={frequencyBands}
                     />
-                    <Box
-                        className={'right-vertical-bar'}
-                        sx={{
-                            width: '50px',
-                            minWidth: '50px',
-                            maxWidth: '50px',
-                            height: `calc(${dimensions['height']}px - 98px)`,
-                            position: 'relative',
-                            borderLeft: `1px solid ${theme.palette.border.main}`,
-                            backgroundColor: theme.palette.background.paper,
-                            display: showRightSideWaterFallAccessories ? 'flex' : 'none',
-                            flexDirection: 'column',
-                            flexShrink: 0,
-                        }}
-                    >
-                        <Stack spacing={0}>
-                            <Button
-                                startIcon={<AutoScaleOnceIcon/>}
-                                variant="filled"
-                                disabled={!isStreaming}
-                                color={autoDBRange? "success": "info"}
-                                onClick={() => {
-                                    workerRef.current.postMessage({ cmd: 'autoScaleDbRange' });
-                                }}
-                                title="Auto range dB scale once"
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                            >
-                            </Button>
-                            <Button
-                                startIcon={<AutoDBIcon/>}
-                                variant={autoDBRange ? "contained" : "filled"}
-                                disabled={!isStreaming}
-                                color={autoDBRange ? "success" : "info"}
-                                onClick={() => dispatch(setAutoDBRange(!autoDBRange))}
-                                title="Toggle automatic dB scale"
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                            >
-                            </Button>
-                        </Stack>
-                        <Box sx={{
-                            borderTop: `1px solid ${theme.palette.border.main}`,
-                            p: 0,
-                            m: 0
-                        }}>
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    mt: 0.5,
-                                    width: '100%',
-                                    textAlign: 'center',
-                                    fontFamily: 'Monospace'
-                            }}>
-                                {dbRange[1]}
-                            </Typography>
-                        </Box>
-                        <Slider
-                            disabled={!isStreaming}
-                            orientation="vertical"
-                            value={dbRange}
-                            onChange={(e, newValue) => {
-                                dispatch(setDbRange(newValue));
-                            }}
-                            min={-120}
-                            max={30}
-                            step={1}
-                            valueLabelDisplay="auto"
-                            sx={{
-                                width: '22px',
-                                margin: '0 auto',
-                                '& .MuiSlider-thumb': {
-                                    width: 25,
-                                    height: 25,
-                                },
-                                '& .MuiSlider-track': {
-                                    width: 10
-                                },
-                                '& .MuiSlider-rail': {
-                                    width: 10
-                                },
-                                '& .MuiSlider-valueLabel': {
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold',
-                                    fontFamily: 'Monospace',
-                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                }
-                            }}
-                        />
 
-                        <Box sx={{
-                            p: 0,
-                            m: 0
-                        }}>
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    width: '100%',
-                                    textAlign: 'center',
-                                    fontFamily: 'Monospace'
-                            }}>
-                                {dbRange[0]}
-                            </Typography>
-                        </Box>
+                    <WaterfallRightSidebar
+                        workerRef={workerRef}
+                        dimensions={dimensions}
+                        isFullscreen={isFullscreen}
+                    />
 
-                    </Box>
-
-                    {/* Decoded packets overlay */}
-                    <DecodedPacketsOverlay
+                    {/* Decoded packets overlay - DISABLED */}
+                    {/* <DecodedPacketsOverlay
                         containerWidth={dimensions.width}
                         showLeftSide={showLeftSideWaterFallAccessories}
                         showRightSide={showRightSideWaterFallAccessories}
                         leftSideWidth={bandscopeAxisYWidth}
                         rightSideWidth={50}
-                    />
+                    /> */}
                 </Box>
             </Box>
 
@@ -808,7 +730,22 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                 message={errorMessage}
                 onClose={() => dispatch(setErrorDialogOpen(false))}
             />
-            <WaterfallStatusBar isStreaming={isStreaming} eventMetrics={eventMetrics} centerFrequency={centerFrequency} sampleRate={sampleRate} gain={gain} />
+
+            {/* Bottom container for status bar and drawer */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    zIndex: 450,
+                }}
+            >
+                <WaterfallStatusBar isStreaming={isStreaming} eventMetrics={eventMetrics} centerFrequency={centerFrequency} sampleRate={sampleRate} gain={gain} />
+                <DecodedPacketsDrawer />
+            </Box>
         </div>
     );
 });
