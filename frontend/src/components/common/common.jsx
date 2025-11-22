@@ -145,6 +145,8 @@ export const WaterfallStatusBarPaper = styled(Paper)(({ theme }) => ({
     borderTop: `1px solid ${theme.palette.border.light}`,
     textAlign: 'left',
     fontWeight: 'normal',
+    display: 'flex',
+    alignItems: 'center',
 }));
 
 export const TitleBar = styled(Paper)(({ theme }) => ({

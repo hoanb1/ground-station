@@ -17,7 +17,8 @@ const WaterfallStatusBar = ({isStreaming, eventMetrics, centerFrequency, sampleR
                         <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
                         <Box component="span">bins/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.binsPerSecond)}</Box></Box>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Box component="span" sx={{ opacity: 0.6, display: { xs: 'none', md: 'inline' } }}>•</Box>
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5 }}>
                         <Box component="span">f: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(centerFrequency)}</Box></Box>
                         <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
                         <Box component="span">sr: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(sampleRate)}</Box></Box>

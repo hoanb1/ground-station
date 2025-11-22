@@ -215,12 +215,14 @@ export const useSocketEventHandlers = (socket) => {
 
                 case 'delete-recording':
                 case 'delete-snapshot':
+                case 'delete-decoded':
                     toast.success(state.message || t('notifications.file_browser.item_deleted'));
                     break;
 
                 case 'recording-started':
                 case 'recording-stopped':
                 case 'snapshot-saved':
+                case 'decoded-saved':
                     // These events trigger refetch in components
                     break;
 

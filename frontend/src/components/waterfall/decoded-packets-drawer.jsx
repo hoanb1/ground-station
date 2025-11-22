@@ -18,7 +18,7 @@
  */
 
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Box, Typography, Chip, Tooltip, useTheme, IconButton } from '@mui/material';
+import { Box, Typography, Chip, Tooltip, useTheme, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, Alert } from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import { getNoradFromCallsign } from '../../utils/satellite-lookup';
@@ -26,14 +26,19 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { alpha } from '@mui/material/styles';
 import { setPacketsDrawerOpen, setPacketsDrawerHeight } from './waterfall-slice';
 import TelemetryViewerDialog from '../filebrowser/telemetry-viewer-dialog.jsx';
+import { deleteDecoded } from '../filebrowser/filebrowser-slice';
+import { deleteOutputByFilename } from '../decoders/decoders-slice';
+import { useSocket } from '../common/socket.jsx';
 import { toast } from 'react-toastify';
 
 const DecodedPacketsDrawer = () => {
     const theme = useTheme();
     const dispatch = useDispatch();
+    const { socket } = useSocket();
     const { outputs } = useSelector((state) => state.decoders);
     const { packetsDrawerOpen, packetsDrawerHeight } = useSelector((state) => state.waterfall);
 
@@ -47,6 +52,10 @@ const DecodedPacketsDrawer = () => {
     const [telemetryDialogOpen, setTelemetryDialogOpen] = useState(false);
     const [telemetryFile, setTelemetryFile] = useState(null);
     const [telemetryMetadata, setTelemetryMetadata] = useState(null);
+
+    // Delete confirmation state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [packetToDelete, setPacketToDelete] = useState(null);
 
     const minHeight = 150;
     const maxHeight = 600;
@@ -119,6 +128,26 @@ const DecodedPacketsDrawer = () => {
             setTelemetryDialogOpen(true);
         } catch (error) {
             toast.error(`Failed to load telemetry: ${error.message}`);
+        }
+    };
+
+    // Handler to delete packet file
+    const handleDeletePacket = (row) => {
+        setPacketToDelete(row);
+        setDeleteDialogOpen(true);
+    };
+
+    // Confirm delete and dispatch socket event
+    const confirmDeletePacket = async () => {
+        if (!packetToDelete || !socket) return;
+
+        try {
+            await dispatch(deleteDecoded({ socket, filename: packetToDelete.filename })).unwrap();
+            // Success toast will be shown by socket event listener
+            setDeleteDialogOpen(false);
+            setPacketToDelete(null);
+        } catch (error) {
+            toast.error(`Failed to delete file: ${error.message}`);
         }
     };
 
@@ -351,25 +380,41 @@ const DecodedPacketsDrawer = () => {
         {
             field: 'actions',
             headerName: 'Actions',
-            width: 80,
+            width: 120,
             sortable: false,
-            align: 'center',
-            headerAlign: 'center',
+            align: 'right',
+            headerAlign: 'right',
             renderCell: (params) => (
-                <Tooltip title="View telemetry data">
-                    <IconButton
-                        size="small"
-                        onClick={() => handleOpenTelemetry(params.row)}
-                        sx={{
-                            padding: '4px',
-                            '&:hover': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                            }
-                        }}
-                    >
-                        <FolderOpenIcon sx={{ fontSize: '1rem' }} />
-                    </IconButton>
-                </Tooltip>
+                <>
+                    <Tooltip title="View telemetry data">
+                        <IconButton
+                            size={"large"}
+                            onClick={() => handleOpenTelemetry(params.row)}
+                            sx={{
+                                padding: 0,
+                                '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                }
+                            }}
+                        >
+                            <FolderOpenIcon sx={{ fontSize: '1.3rem' }} />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete file">
+                        <IconButton
+                            size={"large"}
+                            onClick={() => handleDeletePacket(params.row)}
+                            sx={{
+                                padding: 0,
+                                '&:hover': {
+                                    backgroundColor: alpha(theme.palette.error.main, 0.1),
+                                }
+                            }}
+                        >
+                            <DeleteIcon sx={{ fontSize: '1.3rem', color: 'error.main' }} />
+                        </IconButton>
+                    </Tooltip>
+                </>
             )
         },
     ];
@@ -424,6 +469,28 @@ const DecodedPacketsDrawer = () => {
             document.removeEventListener('mouseup', handleMouseUp);
         };
     }, [isDragging, dragStartY, dragStartHeight, dispatch]);
+
+    // Listen for file deletion events to clean up outputs from decoders slice
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleFileBrowserState = (state) => {
+            // When a decoded file is successfully deleted, remove from outputs
+            if (state.action === 'delete-decoded') {
+                const deletedFilename = state.filename;
+
+                if (deletedFilename) {
+                    dispatch(deleteOutputByFilename({ filename: deletedFilename }));
+                }
+            }
+        };
+
+        socket.on('file_browser_state', handleFileBrowserState);
+
+        return () => {
+            socket.off('file_browser_state', handleFileBrowserState);
+        };
+    }, [socket, dispatch]);
 
     return (
         <Box
@@ -530,6 +597,31 @@ const DecodedPacketsDrawer = () => {
                 file={telemetryFile}
                 metadata={telemetryMetadata}
             />
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+            >
+                <DialogTitle>Delete Decoded File</DialogTitle>
+                <DialogContent>
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                        This action cannot be undone!
+                    </Alert>
+                    <Typography>
+                        Are you sure you want to delete <strong>{packetToDelete?.filename}</strong>?
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        This will permanently delete the decoded packet file from the filesystem.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={confirmDeletePacket} color="error" variant="contained">
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

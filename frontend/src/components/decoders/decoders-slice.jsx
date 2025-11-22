@@ -215,6 +215,26 @@ export const decodersSlice = createSlice({
             }
         },
 
+        // Delete output by filename (for file deletion sync)
+        deleteOutputByFilename: (state, action) => {
+            const { filename } = action.payload;
+
+            // Find the output with matching filename before deletion
+            const outputToDelete = state.outputs.find(
+                output => output.output?.filename === filename
+            );
+
+            // Remove from outputs array
+            state.outputs = state.outputs.filter(
+                output => output.output?.filename !== filename
+            );
+
+            // Deselect if currently selected output was deleted
+            if (outputToDelete && state.ui.selectedOutput === outputToDelete.id) {
+                state.ui.selectedOutput = null;
+            }
+        },
+
         // Clear outputs for a specific satellite (by NORAD ID)
         clearSatelliteOutputs: (state, action) => {
             const { noradId, outputIds } = action.payload;
@@ -297,6 +317,7 @@ export const {
     clearDecoderOutputs,
     clearDecoderErrors,
     deleteOutput,
+    deleteOutputByFilename,
     clearSatelliteOutputs,
     selectOutput,
     setGalleryFilter,
