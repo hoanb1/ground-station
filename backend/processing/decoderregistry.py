@@ -61,6 +61,7 @@ class DecoderRegistry:
             return
 
         # Import decoder classes
+        from demodulators.afskdecoder import AFSKDecoder
         from demodulators.bpskdecoder import BPSKDecoder
         from demodulators.gfskdecoder import GFSKDecoder
         from demodulators.gmskdecoder import GMSKDecoder
@@ -70,6 +71,16 @@ class DecoderRegistry:
 
         # Define capabilities for each decoder
         self._decoders = {
+            "afsk": DecoderCapabilities(
+                name="afsk",
+                decoder_class=AFSKDecoder,
+                needs_raw_iq=False,
+                required_demodulator="fm",  # Needs internal FM demodulator
+                demodulator_mode=None,
+                default_bandwidth=12500,  # 12.5 kHz for AFSK
+                supports_transmitter_config=True,
+                description="Audio Frequency Shift Keying decoder (APRS, packet radio)",
+            ),
             "sstv": DecoderCapabilities(
                 name="sstv",
                 decoder_class=SSTVDecoder,

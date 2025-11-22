@@ -294,6 +294,20 @@ export const DECODERS = {
             return 30000; // fallback to default
         },
     },
+    afsk: {
+        internalName: 'afsk',
+        displayName: 'AFSK',
+        description: 'Audio FSK decoder (APRS, packet radio - requires FM demodulator)',
+        requiresDemodulator: 'FM', // requires FM demodulation
+        overrideDemodulator: 'FM', // force FM mode when active
+        centerLineOnly: false,
+        hasStatusDisplay: true,
+        hasProgressDisplay: false,
+        hasTextOutput: false,
+        hasModeDisplay: false,
+        defaultBandwidth: 12500, // 12.5 kHz for AFSK (typical FM channel bandwidth)
+        lockedBandwidth: false, // allows user adjustment (FM carrier bandwidth)
+    },
 };
 
 /**
