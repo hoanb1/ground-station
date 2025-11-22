@@ -684,12 +684,6 @@ class AFSKDecoder(threading.Thread):
             # Encode as base64 for transmission
             packet_base64 = base64.b64encode(payload).decode()
 
-            # Try to decode as ASCII for display
-            try:
-                packet_text = payload.decode("ascii", errors="replace")
-            except UnicodeDecodeError:
-                packet_text = payload.hex()
-
             # Send to UI
             msg = {
                 "type": "decoder-output",
@@ -704,7 +698,6 @@ class AFSKDecoder(threading.Thread):
                     "metadata_filename": metadata_filename,
                     "metadata_filepath": metadata_filepath,
                     "packet_data": packet_base64,
-                    "packet_text": packet_text,
                     "packet_length": len(payload),
                     "packet_number": self.packet_count,
                     "parameters": f"{self.baudrate}baud, {self.af_carrier}Hz carrier, {abs(self.deviation)}Hz dev",
