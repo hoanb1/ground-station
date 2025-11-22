@@ -53,9 +53,7 @@
 #    - Sample rate: Matches VFO bandwidth
 
 import argparse
-import base64
 import gc
-import json
 import logging
 import os
 import queue
@@ -67,16 +65,9 @@ from typing import Any, Dict
 import numpy as np
 from scipy import signal
 
+from demodulators.basedecoder import BaseDecoder
 from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
-
-# Try to import satellite config service
-try:
-    from satconfig.config import SatelliteConfigService
-
-    SATCONFIG_AVAILABLE = True
-except ImportError:
-    SATCONFIG_AVAILABLE = False
 
 logger = logging.getLogger("gmskdecoder")
 
@@ -432,7 +423,7 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
             self._process_buffer()
 
 
-class GMSKDecoder(threading.Thread):
+class GMSKDecoder(BaseDecoder, threading.Thread):
     """Real-time GMSK decoder using GNU Radio"""
 
     def __init__(
@@ -440,12 +431,9 @@ class GMSKDecoder(threading.Thread):
         iq_queue,
         data_queue,
         session_id,
+        config,  # Pre-resolved DecoderConfig from DecoderConfigService (contains all params + metadata)
         output_dir="data/decoded",
         vfo=None,
-        satellite=None,  # Satellite dict from database (contains norad_id, name, etc.)
-        transmitter=None,  # Complete transmitter dict with all parameters
-        baudrate=9600,  # Fallback if not in transmitter dict
-        deviation=5000,  # FSK deviation in Hz
         batch_interval=5.0,  # Batch processing interval in seconds
     ):
         if not GNURADIO_AVAILABLE:
@@ -471,101 +459,34 @@ class GMSKDecoder(threading.Thread):
         self.telemetry_parser = TelemetryParser()
         logger.info("Telemetry parser initialized for GMSK decoder")
 
-        # Store satellite and transmitter dicts
-        self.satellite = satellite or {}
-        self.transmitter = transmitter or {}
-
-        # Extract satellite info
-        self.norad_id = self.satellite.get("norad_id")
-        self.satellite_name = self.satellite.get("name", "Unknown")
-
-        # Extract GMSK parameters from transmitter dict or use defaults
-        self.baudrate = self.transmitter.get("baud", baudrate)
-        self.deviation = self.transmitter.get("deviation", deviation)
+        # Extract all parameters from resolved config (including metadata)
+        self.baudrate = config.baudrate
+        self.deviation = config.deviation
+        self.framing = config.framing
+        self.config_source = config.config_source
         self.batch_interval = batch_interval
 
-        # Load satellite-specific configuration if satellite dict provided
-        self.config_source = "manual"  # Track where config came from
-        if self.norad_id and SATCONFIG_AVAILABLE:
-            try:
-                config_service = SatelliteConfigService()
-                sat_params = config_service.get_decoder_parameters(
-                    norad_id=self.norad_id,
-                    baudrate=self.baudrate,
-                    frequency=self.transmitter.get("downlink_low"),
-                )
+        # Extract satellite metadata from config
+        self.norad_id = config.satellite_norad_id
+        self.satellite_name = config.satellite_name or "Unknown"
 
-                # Apply satellite-specific configuration
-                self.deviation = sat_params["deviation"]
-                self.framing = sat_params["framing"]
-                self.config_source = sat_params["source"]
-                # Note: Config logging moved to after framing detection to avoid duplicates
+        # Extract transmitter metadata from config
+        self.transmitter_description = config.transmitter_description or "Unknown"
+        self.transmitter_mode = config.transmitter_mode or "GMSK"
+        self.transmitter_downlink_freq = config.transmitter_downlink_freq
 
-            except Exception as e:
-                logger.error(f"Failed to load satellite config for NORAD {self.norad_id}: {e}")
-                logger.info("Falling back to manual configuration")
-                # Fall through to manual config below
-                self.norad_id = None  # Mark as manual config
-
-        # Store transmitter downlink frequency for reference/fallback only
-        # The actual signal frequency will be determined from VFO state during decoding
-        # to track Doppler shifts in real-time
-        self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
+        # Log warning if downlink frequency not available
         if not self.transmitter_downlink_freq:
-            logger.warning("Transmitter downlink_low not available in transmitter dict")
-
-        # Detect framing protocol from transmitter metadata
-        # This overrides smart defaults but respects explicit satellite configs from gr-satellites
-        # Priority: Check description first, then mode field, default to AX.25
-        if not hasattr(self, "config_source") or self.config_source in ["manual", "smart_default"]:
-            transmitter_mode = self.transmitter.get("mode", "GMSK").upper()
-            transmitter_desc = self.transmitter.get("description", "").upper()
-
-            detected_framing = None
-
-            # Check description first for all framing types
-            if "GEOSCAN" in transmitter_desc:
-                detected_framing = "geoscan"
-            elif "USP" in transmitter_desc:
-                detected_framing = "usp"
-            elif "G3RUH" in transmitter_desc:
-                # G3RUH scrambler implies AX.25 framing
-                detected_framing = "ax25"
-            elif "AX.25" in transmitter_desc or "AX25" in transmitter_desc:
-                detected_framing = "ax25"
-            # If nothing in description, check mode field
-            elif "GEOSCAN" in transmitter_mode:
-                detected_framing = "geoscan"
-            elif "USP" in transmitter_mode:
-                detected_framing = "usp"
-            elif "AX.25" in transmitter_mode or "AX25" in transmitter_mode:
-                detected_framing = "ax25"
-            else:
-                # Default to AX.25 if nothing found
-                detected_framing = "ax25"
-
-            # Apply detected framing if we found something
-            if detected_framing:
-                # If we had a smart default that differs, override it
-                if hasattr(self, "framing") and self.framing != detected_framing:
-                    logger.info(
-                        f"Overriding {self.config_source} framing '{self.framing}' "
-                        f"with transmitter metadata framing '{detected_framing}'"
-                    )
-                self.framing = detected_framing
-                # Note: Framing detection logged in final config summary below
-        # Note: No separate logging here - all config logged together below
+            logger.warning("Transmitter downlink frequency not available in config")
+            logger.debug(f"Config metadata: {config.to_dict()}")
 
         logger.info("GMSK decoder configuration:")
-        logger.info(f"  NORAD ID: {self.norad_id or 'N/A (manual config)'}")
+        logger.info(f"  Satellite: {self.satellite_name} (NORAD {self.norad_id or 'N/A'})")
+        logger.info(f"  Transmitter: {self.transmitter_description} ({self.transmitter_mode})")
         logger.info(f"  Baudrate: {self.baudrate}")
         logger.info(f"  Deviation: {self.deviation} Hz")
         logger.info(f"  Framing: {self.framing}")
         logger.info(f"  Config source: {self.config_source}")
-
-        # Store additional transmitter info
-        self.transmitter_description = self.transmitter.get("description", "Unknown")
-        self.transmitter_mode = self.transmitter.get("mode", "GMSK")
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -584,10 +505,9 @@ class GMSKDecoder(threading.Thread):
         }
         self.stats_lock = threading.Lock()
 
-        logger.info(f"GMSK decoder initialized for session {session_id}, VFO {vfo}")
-        if self.transmitter:
-            logger.info(f"Transmitter: {self.transmitter_description} ({self.transmitter_mode})")
-        logger.info(f"GMSK parameters: {self.baudrate} baud, deviation={self.deviation} Hz")
+        logger.info(
+            f"GMSK decoder initialized for session {session_id}, VFO {vfo}: {self.baudrate} baud, deviation={self.deviation} Hz"
+        )
 
     def _get_vfo_state(self):
         """Get VFO state for this decoder."""
@@ -627,204 +547,45 @@ class GMSKDecoder(threading.Thread):
         # Decimate
         return filtered[::decimation_factor]
 
-    def _on_packet_decoded(self, payload, callsigns=None):
-        """Callback when GNU Radio decodes a GMSK packet"""
-        try:
-            logger.info(
-                f"_on_packet_decoded CALLED: payload_len={len(payload)}, callsigns={callsigns}, "
-                f"current_count={self.packet_count}"
-            )
+    def _should_accept_packet(self, payload, callsigns):
+        """GMSK requires valid callsigns"""
+        if not callsigns or not callsigns.get("from") or not callsigns.get("to"):
+            logger.debug("Packet rejected: no valid callsigns found")
+            return False
+        return True
 
-            # Only count packets with valid callsigns
-            if not callsigns or not callsigns.get("from") or not callsigns.get("to"):
-                logger.debug("Packet rejected: no valid callsigns found")
-                return
+    def _get_decoder_type(self):
+        """Return decoder type string"""
+        return "gmsk"
 
-            self.packet_count += 1
-            logger.info(f"_on_packet_decoded: INCREMENTING counter to {self.packet_count}")
-            with self.stats_lock:
-                self.stats["packets_decoded"] = self.packet_count
+    def _get_decoder_specific_metadata(self):
+        """Return GMSK-specific metadata"""
+        return {
+            "deviation": self.deviation,
+            "batch_interval": self.batch_interval,
+        }
 
-            logger.info(f"GMSK transmission decoded: {len(payload)} bytes")
-            logger.info(f"  Callsigns: {callsigns.get('to')} <- {callsigns.get('from')}")
+    def _get_filename_params(self):
+        """Return filename parameters"""
+        return f"{self.baudrate}baud"
 
-            # Remove HDLC flags for hex display (if present)
-            packet_data = payload
-            if len(packet_data) > 0 and packet_data[0] == 0x7E:
-                packet_data = packet_data[1:]
-            if len(packet_data) > 0 and packet_data[-1] == 0x7E:
-                packet_data = packet_data[:-1]
-            logger.info(f"  First 20 bytes: {packet_data[:20].hex()}")
+    def _get_parameters_string(self):
+        """Return human-readable parameters string"""
+        return f"{self.baudrate}baud, {abs(self.deviation)}Hz dev"
 
-            # Parse telemetry using generic parser
-            telemetry_result = self.telemetry_parser.parse(packet_data)
-            if telemetry_result.get("success"):
-                logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
+    def _get_demodulator_params_metadata(self):
+        """Return GMSK demodulator parameters"""
+        return {
+            "deviation_hz": self.deviation,
+            "clock_recovery_bandwidth": 0.06,
+            "clock_recovery_limit": 0.004,
+        }
 
-            # Save to file
-            decode_timestamp = time.time()
-            timestamp_str = time.strftime("%Y%m%d_%H%M%S")
-            # Use microseconds to ensure unique filenames for rapid consecutive decodes
-            timestamp_us = int((decode_timestamp % 1) * 1000000)
-            filename = f"gmsk_{self.baudrate}baud_{timestamp_str}_{timestamp_us:06d}.bin"
-            filepath = os.path.join(self.output_dir, filename)
-
-            with open(filepath, "wb") as f:
-                f.write(payload)
-            logger.info(f"Saved: {filepath}")
-
-            # Get current VFO state for metadata
-            vfo_state = self._get_vfo_state()
-
-            # Create comprehensive metadata
-            metadata = {
-                "packet": {
-                    "number": self.packet_count,
-                    "length_bytes": len(payload),
-                    "timestamp": decode_timestamp,
-                    "timestamp_iso": time.strftime(
-                        "%Y-%m-%dT%H:%M:%S%z", time.localtime(decode_timestamp)
-                    ),
-                    "hex": payload.hex(),
-                },
-                "decoder": {
-                    "type": "gmsk",
-                    "session_id": self.session_id,
-                    "baudrate": self.baudrate,
-                    "deviation": self.deviation,
-                    "batch_interval": self.batch_interval,
-                },
-                "signal": {
-                    "frequency_hz": vfo_state.center_freq if vfo_state else None,
-                    "frequency_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
-                    "sample_rate_hz": self.sample_rate,
-                    "sdr_sample_rate_hz": self.sdr_sample_rate,
-                    "sdr_center_freq_hz": self.sdr_center_freq,
-                    "sdr_center_freq_mhz": (
-                        self.sdr_center_freq / 1e6 if self.sdr_center_freq else None
-                    ),
-                },
-                "vfo": {
-                    "id": self.vfo,
-                    "center_freq_hz": vfo_state.center_freq if vfo_state else None,
-                    "center_freq_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
-                    "bandwidth_hz": vfo_state.bandwidth if vfo_state else None,
-                    "bandwidth_khz": vfo_state.bandwidth / 1e3 if vfo_state else None,
-                    "active": vfo_state.active if vfo_state else None,
-                },
-                "satellite": (
-                    {
-                        "norad_id": self.norad_id,
-                        "name": self.satellite_name,
-                        "full_info": self.satellite,
-                    }
-                    if self.norad_id
-                    else None
-                ),
-                "transmitter": {
-                    "description": self.transmitter_description,
-                    "mode": self.transmitter_mode,
-                    "full_config": self.transmitter,
-                },
-                "decoder_config": {
-                    "source": self.config_source,
-                    "framing": self.framing,
-                    "payload_protocol": (
-                        "ax25" if self.framing in ["ax25", "usp"] else "proprietary"
-                    ),
-                },
-                "demodulator_parameters": {
-                    "deviation_hz": self.deviation,
-                    "clock_recovery_bandwidth": 0.06,
-                    "clock_recovery_limit": 0.004,
-                },
-                "file": {
-                    "binary": filename,
-                    "binary_path": filepath,
-                },
-            }
-
-            # Add callsigns if available
-            if callsigns:
-                metadata["ax25"] = {
-                    "from_callsign": callsigns.get("from"),
-                    "to_callsign": callsigns.get("to"),
-                }
-
-            # Add parsed telemetry data
-            metadata["telemetry"] = telemetry_result
-
-            # Save metadata JSON
-            metadata_filename = filename.replace(".bin", ".json")
-            metadata_filepath = os.path.join(self.output_dir, metadata_filename)
-            with open(metadata_filepath, "w") as f:
-                json.dump(metadata, f, indent=2)
-            logger.info(f"Saved metadata: {metadata_filepath}")
-
-            # Encode as base64 for transmission
-            packet_base64 = base64.b64encode(payload).decode()
-
-            # Send to UI
-            msg = {
-                "type": "decoder-output",
-                "decoder_type": "gmsk",
-                "session_id": self.session_id,
-                "vfo": self.vfo,
-                "timestamp": decode_timestamp,
-                "output": {
-                    "format": "application/octet-stream",
-                    "filename": filename,
-                    "filepath": filepath,
-                    "metadata_filename": metadata_filename,
-                    "metadata_filepath": metadata_filepath,
-                    "packet_data": packet_base64,
-                    "packet_length": len(payload),
-                    "packet_number": self.packet_count,
-                    "parameters": f"{self.baudrate}baud, {abs(self.deviation)}Hz dev",
-                },
-            }
-
-            # Add callsigns if available
-            if callsigns:
-                msg["output"]["callsigns"] = callsigns
-
-            # Add satellite info to UI message
-            if self.norad_id:
-                msg["output"]["satellite"] = {
-                    "norad_id": self.norad_id,
-                    "name": self.satellite_name,
-                }
-
-            # Add parsed telemetry to UI message
-            if telemetry_result.get("success"):
-                msg["output"]["telemetry"] = {
-                    "parser": telemetry_result.get("parser"),
-                    "frame": telemetry_result.get("frame"),
-                    "data": telemetry_result.get("telemetry"),
-                }
-
-            # Add decoder configuration to UI message
-            msg["output"]["decoder_config"] = {
-                "source": self.config_source,
-                "framing": self.framing,
-                "payload_protocol": "ax25" if self.framing in ["ax25", "usp"] else "proprietary",
-            }
-
-            try:
-                self.data_queue.put(msg, block=False)
-                with self.stats_lock:
-                    self.stats["data_messages_out"] += 1
-            except queue.Full:
-                logger.warning("Data queue full, dropping packet output")
-
-            # Don't send status update for individual packet decodes
-            # The decoder stays in DECODING status continuously
-
-        except Exception as e:
-            logger.error(f"Error processing decoded packet: {e}")
-            logger.exception(e)
-            with self.stats_lock:
-                self.stats["errors"] += 1
+    def _get_payload_protocol(self):
+        """GMSK uses AX.25 for ax25/usp framing, proprietary otherwise"""
+        if self.framing in ["ax25", "usp"]:
+            return "ax25"
+        return "proprietary"
 
     def _on_flowgraph_status(self, status, info=None):
         """Callback when flowgraph status changes"""

@@ -18,6 +18,9 @@ import logging
 import multiprocessing
 
 from audio.audiobroadcaster import AudioBroadcaster
+from processing.decoderconfigservice import decoder_config_service
+from processing.decoderregistry import decoder_registry
+from processing.demodulatorregistry import demodulator_registry
 
 
 class DecoderManager:
@@ -96,9 +99,6 @@ class DecoderManager:
                 self.stop_decoder(sdr_id, session_id, vfo_number)
 
         try:
-            # Use decoder registry to get capabilities
-            from processing.decoderregistry import decoder_registry
-            from processing.demodulatorregistry import demodulator_registry
 
             # Find decoder name by reverse lookup on class
             decoder_name = None
@@ -241,8 +241,25 @@ class DecoderManager:
                 # Subscribe to the broadcaster to get a dedicated IQ queue
                 iq_queue = iq_broadcaster.subscribe(subscription_key, maxsize=3)
 
+                # Resolve decoder configuration using DecoderConfigService
+                # This centralizes all parameter resolution logic
+                satellite = kwargs.get("satellite", {})
+                transmitter = kwargs.get("transmitter", {})
+                decoder_config = decoder_config_service.get_config(
+                    decoder_type=decoder_name,
+                    satellite=satellite,
+                    transmitter=transmitter,
+                )
+
                 # Filter out internal parameters before passing to decoder
-                decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
+                decoder_kwargs = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k not in ["vfo_center_freq", "satellite", "transmitter"]
+                }
+
+                # Add resolved config parameters
+                decoder_kwargs["config"] = decoder_config
 
                 # Create and start the decoder with the IQ queue
                 decoder = decoder_class(iq_queue, data_queue, session_id, **decoder_kwargs)
@@ -291,8 +308,25 @@ class DecoderManager:
                     # Note: Thread reference stored in decoder entry but not explicitly joined
                     # Daemon thread will exit automatically when broadcaster stops
 
+                # Resolve decoder configuration using DecoderConfigService
+                # This centralizes all parameter resolution logic
+                satellite = kwargs.get("satellite", {})
+                transmitter = kwargs.get("transmitter", {})
+                decoder_config = decoder_config_service.get_config(
+                    decoder_type=decoder_name,
+                    satellite=satellite,
+                    transmitter=transmitter,
+                )
+
                 # Filter out internal parameters before passing to decoder
-                decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
+                decoder_kwargs = {
+                    k: v
+                    for k, v in kwargs.items()
+                    if k not in ["vfo_center_freq", "satellite", "transmitter"]
+                }
+
+                # Add resolved config parameters
+                decoder_kwargs["config"] = decoder_config
 
                 # Create and start the decoder with the audio queue from broadcaster
                 decoder = decoder_class(
@@ -320,6 +354,9 @@ class DecoderManager:
                 "ui_forwarder_thread": (
                     ui_forwarder_thread if not needs_raw_iq else None
                 ),  # UI forwarder thread reference
+                "config": (
+                    decoder_config if needs_raw_iq or not internal_demod_created else decoder_config
+                ),  # Store config for comparison
             }
 
             # Store under VFO number (multi-VFO mode only)

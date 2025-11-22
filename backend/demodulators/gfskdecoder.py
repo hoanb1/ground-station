@@ -56,12 +56,9 @@ class GFSKDecoder(GMSKDecoder):
         iq_queue,
         data_queue,
         session_id,
+        config,  # Pre-resolved DecoderConfig from DecoderConfigService
         output_dir="data/decoded",
         vfo=None,
-        satellite=None,  # Satellite dict from database (contains norad_id, name, etc.)
-        transmitter=None,
-        baudrate=9600,
-        deviation=5000,
         batch_interval=5.0,
     ):
         # Initialize parent GMSK decoder
@@ -69,41 +66,22 @@ class GFSKDecoder(GMSKDecoder):
             iq_queue=iq_queue,
             data_queue=data_queue,
             session_id=session_id,
+            config=config,
             output_dir=output_dir,
             vfo=vfo,
-            satellite=satellite,  # Pass satellite to parent
-            transmitter=transmitter,
-            baudrate=baudrate,
-            deviation=deviation,
             batch_interval=batch_interval,
         )
 
         # Update thread name for GFSK
         self.name = f"GFSKDecoder-{session_id}"
 
-        # Override transmitter mode if not already set
+        # Override transmitter mode if not already set or if it was set to GMSK
         if not self.transmitter_mode or self.transmitter_mode == "GMSK":
-            self.transmitter_mode = self.transmitter.get("mode", "GFSK")
+            self.transmitter_mode = config.transmitter_mode or "GFSK"
 
-    def _on_packet_decoded(self, payload, callsigns=None):
-        """Override to use GFSK in log messages and file names"""
-        try:
-            self.packet_count += 1
-            with self.stats_lock:
-                self.stats["packets_decoded"] = self.packet_count
-
-            # Use parent implementation but will use GFSK in filenames
-            # due to transmitter_mode being set to GFSK
-            super()._on_packet_decoded(payload, callsigns)
-
-        except Exception as e:
-            import logging
-
-            logger = logging.getLogger("gfskdecoder")
-            logger.error(f"Error processing decoded packet: {e}")
-            logger.exception(e)
-            with self.stats_lock:
-                self.stats["errors"] += 1
+    def _get_decoder_type(self):
+        """GFSK decoder type"""
+        return "gfsk"
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI with GFSK decoder type"""

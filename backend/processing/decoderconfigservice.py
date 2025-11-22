@@ -1,0 +1,282 @@
+# Copyright (c) 2025 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
+import logging
+from typing import Dict, Optional
+
+from processing.decoderconfig import DecoderConfig
+from satconfig.config import SatelliteConfigService
+
+logger = logging.getLogger("decoderconfigservice")
+
+
+class DecoderConfigService:
+    """
+    Centralized service for resolving decoder configurations.
+
+    Consolidates parameter resolution logic that was previously duplicated
+    across GMSK, BPSK, AFSK, and GFSK decoders.
+
+    Resolution priority (highest to lowest):
+    1. Manual overrides (passed via overrides parameter)
+    2. Satellite-specific configuration (gr-satellites database via SatelliteConfigService)
+    3. Transmitter metadata detection (SatNOGS DB description/mode fields)
+    4. Smart defaults (based on decoder type and baudrate)
+    5. Fallback defaults (conservative values that work for most cases)
+
+    Usage:
+        config_service = DecoderConfigService()
+        config = config_service.get_config(
+            decoder_type='gmsk',
+            satellite={'norad_id': 12345, 'name': 'MySat-1'},
+            transmitter={'baud': 9600, 'deviation': 5000, 'description': 'GMSK G3RUH'},
+            overrides={'framing': 'ax25'}  # Optional manual overrides
+        )
+        # Pass config to decoder
+        decoder = GMSKDecoder(..., config=config)
+    """
+
+    def __init__(self):
+        self.logger = logging.getLogger("decoderconfigservice")
+        self.satconfig_service = SatelliteConfigService()
+
+    def get_config(
+        self,
+        decoder_type: str,
+        satellite: Optional[Dict] = None,
+        transmitter: Optional[Dict] = None,
+        overrides: Optional[Dict] = None,
+    ) -> DecoderConfig:
+        """
+        Resolve decoder configuration from multiple sources.
+
+        Args:
+            decoder_type: Decoder type ('gmsk', 'bpsk', 'afsk', 'gfsk')
+            satellite: Satellite dict with 'norad_id', 'name', etc.
+            transmitter: Transmitter dict with 'baud', 'deviation', 'mode', 'description', etc.
+            overrides: Manual parameter overrides (highest priority)
+
+        Returns:
+            DecoderConfig: Resolved configuration with all parameters determined
+
+        Examples:
+            # Satellite with gr-satellites config
+            config = service.get_config('gmsk', satellite={'norad_id': 99999}, transmitter={...})
+            # Result: Uses satellite-specific config from gr-satellites DB
+
+            # Unknown satellite with metadata
+            config = service.get_config('gmsk', transmitter={'description': 'GMSK USP'})
+            # Result: Detects USP framing from description, uses smart defaults
+
+            # Manual configuration
+            config = service.get_config('gmsk', overrides={'baudrate': 9600, 'framing': 'ax25'})
+            # Result: Uses manual overrides with fallback defaults
+        """
+        satellite = satellite or {}
+        transmitter = transmitter or {}
+        overrides = overrides or {}
+
+        norad_id = satellite.get("norad_id")
+        baudrate = self._resolve_baudrate(transmitter, overrides)
+        downlink_freq = transmitter.get("downlink_low")
+
+        # Try satellite-specific configuration first (highest priority after overrides)
+        if norad_id and self.satconfig_service and not overrides:
+            try:
+                sat_params = self.satconfig_service.get_decoder_parameters(
+                    norad_id=norad_id,
+                    baudrate=baudrate,
+                    frequency=downlink_freq,
+                )
+                self.logger.info(
+                    f"Loaded satellite config for NORAD {norad_id}: {sat_params['source']}"
+                )
+                return self._build_config_from_satellite(
+                    decoder_type, sat_params, transmitter, baudrate
+                )
+            except Exception as e:
+                self.logger.warning(f"Failed to load satellite config for NORAD {norad_id}: {e}")
+                self.logger.info("Falling back to metadata detection")
+
+        # Detect from transmitter metadata (second priority)
+        detected_config = self._detect_from_metadata(decoder_type, transmitter, baudrate)
+
+        # Apply manual overrides (highest priority)
+        if overrides:
+            detected_config = self._apply_overrides(detected_config, overrides)
+
+        # Populate satellite metadata
+        detected_config.satellite_norad_id = satellite.get("norad_id")
+        detected_config.satellite_name = satellite.get("name")
+
+        # Populate transmitter metadata
+        detected_config.transmitter_id = transmitter.get("id")
+        detected_config.transmitter_description = transmitter.get("description")
+        detected_config.transmitter_mode = transmitter.get("mode")
+        detected_config.transmitter_downlink_freq = transmitter.get("downlink_low")
+
+        self.logger.info(f"Resolved {decoder_type.upper()} config: {detected_config.to_dict()}")
+        return detected_config
+
+    def _resolve_baudrate(self, transmitter: Dict, overrides: Dict) -> int:
+        """Extract baudrate from transmitter or overrides"""
+        if "baudrate" in overrides:
+            baudrate = overrides["baudrate"]
+            if isinstance(baudrate, int):
+                return baudrate
+            return int(baudrate)
+        baud = transmitter.get("baud")
+        if baud is not None:
+            return int(baud)
+        return self._get_default_baudrate(transmitter.get("mode", ""))
+
+    def _get_default_baudrate(self, mode: str) -> int:
+        """Get default baudrate based on mode"""
+        mode_upper = mode.upper()
+        if "AFSK" in mode_upper:
+            return 1200  # APRS default
+        elif "BPSK" in mode_upper or "GMSK" in mode_upper or "GFSK" in mode_upper:
+            return 9600  # Common for digital modes
+        return 9600  # Generic fallback
+
+    def _build_config_from_satellite(
+        self, decoder_type: str, sat_params: Dict, transmitter: Dict, baudrate: int
+    ) -> DecoderConfig:
+        """Build configuration from satellite-specific parameters"""
+        config = DecoderConfig(
+            baudrate=baudrate,
+            framing=sat_params.get("framing", "ax25"),
+            config_source=sat_params.get("source", "satellite_config"),
+            deviation=sat_params.get("deviation"),
+            differential=sat_params.get("differential", False),
+        )
+
+        # Add decoder-specific parameters
+        if decoder_type == "afsk":
+            config.af_carrier = transmitter.get("af_carrier", 1700)  # APRS default
+
+        return config
+
+    def _detect_from_metadata(
+        self, decoder_type: str, transmitter: Dict, baudrate: int
+    ) -> DecoderConfig:
+        """Detect configuration from transmitter metadata (mode, description fields)"""
+        mode = transmitter.get("mode", "").upper()
+        description = transmitter.get("description", "").upper()
+
+        # Detect framing protocol
+        framing = self._detect_framing(mode, description)
+
+        # Detect deviation (FSK modes)
+        deviation = self._detect_deviation(decoder_type, transmitter, baudrate)
+
+        # Detect differential mode (BPSK)
+        differential = "DBPSK" in mode or "DBPSK" in description
+
+        config = DecoderConfig(
+            baudrate=baudrate,
+            framing=framing,
+            config_source="transmitter_metadata" if (mode or description) else "smart_default",
+            deviation=deviation,
+            differential=differential,
+        )
+
+        # Add decoder-specific parameters
+        if decoder_type == "afsk":
+            config.af_carrier = self._detect_af_carrier(description, baudrate)
+
+        return config
+
+    def _detect_framing(self, mode: str, description: str) -> str:
+        """
+        Detect framing protocol from mode and description fields.
+
+        Priority: Description field first (more detailed), then mode field.
+        """
+        # Check description first (more reliable)
+        if "GEOSCAN" in description:
+            return "geoscan"
+        elif "USP" in description:
+            return "usp"
+        elif "DOKA" in description or "CCSDS" in description:
+            return "doka"
+        elif "G3RUH" in description or "APRS" in description:
+            return "ax25"
+        elif "AX.25" in description or "AX25" in description:
+            return "ax25"
+
+        # Check mode field
+        if "GEOSCAN" in mode:
+            return "geoscan"
+        elif "USP" in mode:
+            return "usp"
+        elif "DOKA" in mode:
+            return "doka"
+        elif "AX.25" in mode or "AX25" in mode:
+            return "ax25"
+
+        # Default to AX.25 (most common for amateur satellites)
+        return "ax25"
+
+    def _detect_deviation(
+        self, decoder_type: str, transmitter: Dict, baudrate: int
+    ) -> Optional[int]:
+        """Detect frequency deviation for FSK modes"""
+        # Explicit deviation in transmitter dict (highest priority)
+        if "deviation" in transmitter:
+            deviation = transmitter["deviation"]
+            if deviation is not None:
+                return int(deviation)
+            return None
+
+        # Smart defaults based on decoder type and baudrate
+        if decoder_type == "afsk":
+            return 500 if baudrate == 1200 else 2400  # Bell 202 or G3RUH
+        elif decoder_type in ["gmsk", "gfsk"]:
+            return 5000  # Common for 9600 baud GMSK/GFSK
+        elif decoder_type == "bpsk":
+            return None  # BPSK doesn't use deviation
+
+        return None
+
+    def _detect_af_carrier(self, description: str, baudrate: int) -> int:
+        """Detect audio frequency carrier for AFSK"""
+        if "APRS" in description:
+            return 1700  # Bell 202 APRS
+        elif baudrate == 1200:
+            return 1700  # Likely Bell 202
+        else:
+            return 1200  # Generic packet radio
+
+    def _apply_overrides(self, config: DecoderConfig, overrides: Dict) -> DecoderConfig:
+        """Apply manual overrides to configuration"""
+        if "baudrate" in overrides:
+            config.baudrate = overrides["baudrate"]
+        if "framing" in overrides:
+            config.framing = overrides["framing"]
+        if "deviation" in overrides:
+            config.deviation = overrides["deviation"]
+        if "af_carrier" in overrides:
+            config.af_carrier = overrides["af_carrier"]
+        if "differential" in overrides:
+            config.differential = overrides["differential"]
+
+        config.config_source = "manual"
+        return config
+
+
+# Singleton instance for convenience
+decoder_config_service = DecoderConfigService()

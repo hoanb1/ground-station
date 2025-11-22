@@ -29,7 +29,7 @@ class TelemetryParser:
         """Initialize parser with registry for satellite-specific parsers"""
         self.ax25_parser = AX25Parser()
         self.payload_parsers = {}  # Registry: callsign_pattern -> parser
-        logger.info("Telemetry parser initialized")
+        logger.debug("Telemetry parser initialized")
 
     def register_payload_parser(self, identifier, parser):
         """

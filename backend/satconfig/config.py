@@ -14,17 +14,9 @@ import logging
 import pathlib
 from typing import Any, Dict, Optional
 
+from satellites.satyaml.satyaml import SatYAML
+
 logger = logging.getLogger("satellite-config")
-
-# Import gr-satellites YAML parser
-try:
-    from satellites.satyaml.satyaml import SatYAML
-
-    SATYAML_AVAILABLE = True
-    logger.info("gr-satellites SatYAML loaded successfully")
-except ImportError as e:
-    SATYAML_AVAILABLE = False
-    logger.warning(f"gr-satellites SatYAML not available: {e}")
 
 
 class SatelliteConfigService:
@@ -53,16 +45,13 @@ class SatelliteConfigService:
         self.overrides = self._load_overrides()
 
         # Initialize gr-satellites YAML parser
-        if SATYAML_AVAILABLE:
-            try:
-                self.satyaml = SatYAML()
-                logger.info(
-                    f"Loaded gr-satellites database with {len(list(self.satyaml.yaml_files()))} satellites"
-                )
-            except Exception as e:
-                logger.error(f"Failed to initialize SatYAML: {e}")
-                self.satyaml = None
-        else:
+        try:
+            self.satyaml = SatYAML()
+            logger.info(
+                f"Loaded gr-satellites database with {len(list(self.satyaml.yaml_files()))} satellites"
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize SatYAML: {e}")
             self.satyaml = None
 
     def _load_overrides(self) -> Dict[str, Any]:
@@ -241,6 +230,11 @@ class SatelliteConfigService:
         # Load from gr-satellites YAML
         tx = self.get_transmitter_config(norad_id, frequency, baudrate)
         if tx:
+            # Found satellite in gr-satellites database
+            sat = self.get_satellite_by_norad(norad_id)
+            sat_name = sat.get("name", f"NORAD-{norad_id}") if sat else f"NORAD-{norad_id}"
+            logger.info(f"Found '{sat_name}' (NORAD {norad_id}) in gr-satellites database")
+
             params["modulation"] = tx.get("modulation", "FSK")
             params["framing"] = self._map_framing(tx.get("framing", "AX.25"))
 
@@ -248,12 +242,16 @@ class SatelliteConfigService:
             if "deviation" in tx:
                 params["deviation"] = tx["deviation"]
                 params["source"] = "gr_satellites_yaml"
-                logger.info(f"Using YAML deviation for NORAD {norad_id}: {params['deviation']} Hz")
+                logger.info(
+                    f"  → Using gr-satellites deviation: {params['deviation']} Hz (framing: {params['framing']})"
+                )
             else:
                 # Smart default: estimate from modulation and baudrate
                 params["deviation"] = self._estimate_deviation(tx)
                 params["source"] = "smart_default"
-                logger.info(f"Estimated deviation for NORAD {norad_id}: {params['deviation']} Hz")
+                logger.info(
+                    f"   Deviation not in database, estimated {params['deviation']} Hz from {params['modulation']} @ {baudrate} baud"
+                )
 
             # Optional parameters
             if "precoding" in tx:
@@ -262,7 +260,9 @@ class SatelliteConfigService:
                 params["frame_size"] = tx["frame size"]
         else:
             # No YAML data, use smart defaults
-            logger.warning(f"No gr-satellites data for NORAD {norad_id}, using smart defaults")
+            logger.warning(
+                f"✗ NORAD {norad_id} not found in gr-satellites database, using smart defaults"
+            )
             params["deviation"] = baudrate / 2  # Narrow FSK default
             params["source"] = "smart_default"
 

@@ -257,6 +257,12 @@ loggers:
       - default
     propagate: no
 
+  telemetry.parser:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

@@ -17,6 +17,15 @@
 from dataclasses import dataclass
 from typing import List, Optional, Type
 
+# Import decoder classes
+from demodulators.afskdecoder import AFSKDecoder
+from demodulators.bpskdecoder import BPSKDecoder
+from demodulators.gfskdecoder import GFSKDecoder
+from demodulators.gmskdecoder import GMSKDecoder
+from demodulators.loradecoder import LoRaDecoder
+from demodulators.morsedecoder import MorseDecoder
+from demodulators.sstvdecoder import SSTVDecoder
+
 
 @dataclass
 class DecoderCapabilities:
@@ -59,15 +68,6 @@ class DecoderRegistry:
     def __init__(self):
         if self._initialized:
             return
-
-        # Import decoder classes
-        from demodulators.afskdecoder import AFSKDecoder
-        from demodulators.bpskdecoder import BPSKDecoder
-        from demodulators.gfskdecoder import GFSKDecoder
-        from demodulators.gmskdecoder import GMSKDecoder
-        from demodulators.loradecoder import LoRaDecoder
-        from demodulators.morsedecoder import MorseDecoder
-        from demodulators.sstvdecoder import SSTVDecoder
 
         # Define capabilities for each decoder
         self._decoders = {

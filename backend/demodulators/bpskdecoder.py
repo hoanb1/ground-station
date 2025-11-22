@@ -59,8 +59,6 @@
 #    - Extracts and reports AX.25 callsigns to UI
 #    - Automatic framing detection from satellite configuration
 
-import base64
-import json
 import logging
 import os
 import queue
@@ -72,16 +70,9 @@ from typing import Any, Dict
 import numpy as np
 from scipy import signal
 
+from demodulators.basedecoder import BaseDecoder
 from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
-
-# Try to import satellite config service
-try:
-    from satconfig.config import SatelliteConfigService
-
-    SATCONFIG_AVAILABLE = True
-except ImportError:
-    SATCONFIG_AVAILABLE = False
 
 logger = logging.getLogger("bpskdecoder")
 
@@ -463,7 +454,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             self.callback(payload, callsigns)
 
 
-class BPSKDecoder(threading.Thread):
+class BPSKDecoder(BaseDecoder, threading.Thread):
     """Real-time BPSK decoder using GNU Radio"""
 
     def __init__(
@@ -471,14 +462,11 @@ class BPSKDecoder(threading.Thread):
         iq_queue,
         data_queue,
         session_id,
+        config,  # Pre-resolved DecoderConfig from DecoderConfigService (contains all params + metadata)
         output_dir="data/decoded",
         vfo=None,
-        satellite=None,  # Satellite dict from database (contains norad_id, name, etc.)
-        transmitter=None,  # Complete transmitter dict with all parameters
-        baudrate=9600,  # Fallback if not in transmitter dict
-        differential=False,
-        packet_size=256,
-        batch_interval=5.0,  # Batch processing interval in seconds (increased to reduce mem usage)
+        batch_interval=5.0,  # Batch processing interval in seconds
+        packet_size=256,  # Optional override for packet size
     ):
         if not GNURADIO_AVAILABLE:
             logger.error("GNU Radio not available - BPSK decoder cannot be initialized")
@@ -502,96 +490,31 @@ class BPSKDecoder(threading.Thread):
         self.telemetry_parser = TelemetryParser()
         logger.info("Telemetry parser initialized for BPSK decoder")
 
-        # Store satellite and transmitter dicts
-        self.satellite = satellite or {}
-        self.transmitter = transmitter or {}
-
-        # Extract satellite info
-        self.norad_id = self.satellite.get("norad_id")
-        self.satellite_name = self.satellite.get("name", "Unknown")
-
-        # Extract BPSK parameters from transmitter dict or use defaults
-        self.baudrate = self.transmitter.get("baud", baudrate)
-        self.differential = self.transmitter.get("differential", differential)
-        self.packet_size = self.transmitter.get("packet_size", packet_size)
+        # Extract all parameters from resolved config (including metadata)
+        self.baudrate = config.baudrate
+        self.differential = config.differential if config.differential is not None else False
+        self.framing = config.framing
+        self.config_source = config.config_source
+        self.packet_size = config.packet_size or packet_size
         self.batch_interval = batch_interval
 
-        # Load satellite-specific configuration if satellite dict provided
-        self.config_source = "manual"  # Track where config came from
-        if self.norad_id and SATCONFIG_AVAILABLE:
-            try:
-                config_service = SatelliteConfigService()
-                sat_params = config_service.get_decoder_parameters(
-                    norad_id=self.norad_id,
-                    baudrate=self.baudrate,
-                    frequency=self.transmitter.get("downlink_low"),
-                )
+        # Extract satellite metadata from config
+        self.norad_id = config.satellite_norad_id
+        self.satellite_name = config.satellite_name or "Unknown"
 
-                # Apply satellite-specific configuration
-                if "framing" in sat_params:
-                    self.framing = sat_params["framing"]
-                if "differential" in sat_params:
-                    self.differential = sat_params["differential"]
-                self.config_source = sat_params["source"]
-                # Note: Config logging moved to after framing detection to avoid duplicates
+        # Extract transmitter metadata from config
+        self.transmitter_description = config.transmitter_description or "Unknown"
+        self.transmitter_mode = config.transmitter_mode or "BPSK"
+        self.transmitter_downlink_freq = config.transmitter_downlink_freq
 
-            except Exception as e:
-                logger.error(f"Failed to load satellite config for NORAD {self.norad_id}: {e}")
-                logger.info("Falling back to manual configuration")
-                # Fall through to manual config below
-                self.norad_id = None  # Mark as manual config
-
-        # Store transmitter downlink frequency for reference/fallback only
-        # The actual signal frequency will be determined from VFO state during decoding
-        # to track Doppler shifts in real-time
-        self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
+        # Log warning if downlink frequency not available
         if not self.transmitter_downlink_freq:
-            logger.warning("Transmitter downlink_low not available in transmitter dict")
-
-        # Store additional transmitter info
-        self.transmitter_description = self.transmitter.get("description", "Unknown")
-        self.transmitter_mode = self.transmitter.get("mode", "BPSK")
-
-        # Detect framing protocol from transmitter metadata
-        # This overrides smart defaults but respects explicit satellite configs from gr-satellites
-        # Priority: Check description first, then mode field, default to AX.25
-        if not hasattr(self, "config_source") or self.config_source in ["manual", "smart_default"]:
-            transmitter_mode = self.transmitter.get("mode", "BPSK").upper()
-            transmitter_desc = self.transmitter.get("description", "").upper()
-
-            detected_framing = None
-
-            # Check description first for all framing types
-            if "DOKA" in transmitter_desc or "CCSDS" in transmitter_desc:
-                detected_framing = "doka"
-            elif "G3RUH" in transmitter_desc:
-                # G3RUH scrambler implies AX.25 framing
-                detected_framing = "ax25"
-            elif "AX.25" in transmitter_desc or "AX25" in transmitter_desc:
-                detected_framing = "ax25"
-            # If nothing in description, check mode field
-            elif "DOKA" in transmitter_mode:
-                detected_framing = "doka"
-            elif "AX.25" in transmitter_mode or "AX25" in transmitter_mode:
-                detected_framing = "ax25"
-            else:
-                # Default to AX.25 if nothing found
-                detected_framing = "ax25"
-
-            # Apply detected framing if we found something
-            if detected_framing:
-                # If we had a smart default that differs, override it
-                if hasattr(self, "framing") and self.framing != detected_framing:
-                    logger.info(
-                        f"Overriding {self.config_source} framing '{self.framing}' "
-                        f"with transmitter metadata framing '{detected_framing}'"
-                    )
-                self.framing = detected_framing
-                # Note: Framing detection logged in final config summary below
-        # Note: No separate logging here - all config logged together below
+            logger.warning("Transmitter downlink frequency not available in config")
+            logger.debug(f"Config metadata: {config.to_dict()}")
 
         logger.info("BPSK decoder configuration:")
-        logger.info(f"  NORAD ID: {self.norad_id or 'N/A (manual config)'}")
+        logger.info(f"  Satellite: {self.satellite_name} (NORAD {self.norad_id or 'N/A'})")
+        logger.info(f"  Transmitter: {self.transmitter_description} ({self.transmitter_mode})")
         logger.info(f"  Baudrate: {self.baudrate}")
         logger.info(f"  Framing: {self.framing}")
         logger.info(f"  Differential: {self.differential}")
@@ -614,11 +537,8 @@ class BPSKDecoder(threading.Thread):
         }
         self.stats_lock = threading.Lock()
 
-        logger.info(f"BPSK decoder initialized for session {session_id}, VFO {vfo}")
-        if self.transmitter:
-            logger.info(f"Transmitter: {self.transmitter_description} ({self.transmitter_mode})")
         logger.info(
-            f"BPSK parameters: {self.baudrate} baud, differential={self.differential}, packet_size={self.packet_size} bytes"
+            f"BPSK decoder initialized for session {session_id}, VFO {vfo}: {self.baudrate} baud, differential={self.differential}, packet_size={self.packet_size} bytes"
         )
 
     def _get_vfo_state(self):
@@ -668,188 +588,41 @@ class BPSKDecoder(threading.Thread):
         """
         return hasattr(self, "framing") and self.framing == "doka"
 
-    def _on_packet_decoded(self, payload, callsigns=None):
-        """Callback when GNU Radio decodes a BPSK packet"""
-        try:
-            self.packet_count += 1
-            with self.stats_lock:
-                self.stats["packets_decoded"] = self.packet_count
-            logger.info(f"BPSK packet #{self.packet_count} decoded: {len(payload)} bytes")
+    def _get_decoder_type(self):
+        """Return decoder type string"""
+        return "bpsk"
 
-            # Parse telemetry using generic parser
-            # Remove HDLC flags if present (0x7E at start/end)
-            packet_data = payload
-            if len(packet_data) > 0 and packet_data[0] == 0x7E:
-                packet_data = packet_data[1:]
-            if len(packet_data) > 0 and packet_data[-1] == 0x7E:
-                packet_data = packet_data[:-1]
+    def _get_decoder_specific_metadata(self):
+        """Return BPSK-specific metadata"""
+        return {
+            "differential": self.differential,
+            "packet_size": self.packet_size,
+            "batch_interval": self.batch_interval,
+        }
 
-            telemetry_result = self.telemetry_parser.parse(packet_data)
-            logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
+    def _get_filename_params(self):
+        """Return filename parameters"""
+        return f"{self.baudrate}baud"
 
-            # Save to file
-            decode_timestamp = time.time()
-            timestamp_str = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"bpsk_{self.baudrate}baud_{timestamp_str}_{self.packet_count}.bin"
-            filepath = os.path.join(self.output_dir, filename)
+    def _get_parameters_string(self):
+        """Return human-readable parameters string"""
+        return f"{self.baudrate}baud"
 
-            with open(filepath, "wb") as f:
-                f.write(payload)
-            logger.info(f"Saved: {filepath}")
+    def _get_demodulator_params_metadata(self):
+        """Return BPSK demodulator parameters"""
+        return {
+            "fll_bandwidth_hz": 250,
+            "costas_bandwidth_hz": 100,
+            "rrc_alpha": 0.35,
+            "clock_recovery_bandwidth": 0.06,
+            "clock_recovery_limit": 0.004,
+        }
 
-            # Get current VFO state for metadata
-            vfo_state = self._get_vfo_state()
-
-            # Create comprehensive metadata
-            metadata = {
-                "packet": {
-                    "number": self.packet_count,
-                    "length_bytes": len(payload),
-                    "timestamp": decode_timestamp,
-                    "timestamp_iso": time.strftime(
-                        "%Y-%m-%dT%H:%M:%S%z", time.localtime(decode_timestamp)
-                    ),
-                    "hex": payload.hex(),
-                },
-                "decoder": {
-                    "type": "bpsk",
-                    "session_id": self.session_id,
-                    "baudrate": self.baudrate,
-                    "differential": self.differential,
-                    "packet_size": self.packet_size,
-                    "batch_interval": self.batch_interval,
-                },
-                "signal": {
-                    "frequency_hz": vfo_state.center_freq if vfo_state else None,
-                    "frequency_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
-                    "sample_rate_hz": self.sample_rate,
-                    "sdr_sample_rate_hz": self.sdr_sample_rate,
-                    "sdr_center_freq_hz": self.sdr_center_freq,
-                    "sdr_center_freq_mhz": (
-                        self.sdr_center_freq / 1e6 if self.sdr_center_freq else None
-                    ),
-                },
-                "vfo": {
-                    "id": self.vfo,
-                    "center_freq_hz": vfo_state.center_freq if vfo_state else None,
-                    "center_freq_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
-                    "bandwidth_hz": vfo_state.bandwidth if vfo_state else None,
-                    "bandwidth_khz": vfo_state.bandwidth / 1e3 if vfo_state else None,
-                    "active": vfo_state.active if vfo_state else None,
-                },
-                "satellite": (
-                    {
-                        "norad_id": self.norad_id,
-                        "name": self.satellite_name,
-                        "full_info": self.satellite,
-                    }
-                    if self.norad_id
-                    else None
-                ),
-                "transmitter": {
-                    "description": self.transmitter_description,
-                    "mode": self.transmitter_mode,
-                    "full_config": self.transmitter,
-                },
-                "decoder_config": {
-                    "source": self.config_source,
-                    "framing": self.framing,
-                    "payload_protocol": "ccsds" if self.framing == "doka" else "ax25",
-                },
-                "demodulator_parameters": {
-                    "fll_bandwidth_hz": 250,
-                    "costas_bandwidth_hz": 100,
-                    "rrc_alpha": 0.35,
-                    "clock_recovery_bandwidth": 0.06,
-                    "clock_recovery_limit": 0.004,
-                },
-                "file": {
-                    "binary": filename,
-                    "binary_path": filepath,
-                },
-            }
-
-            # Add callsigns if available
-            if callsigns:
-                metadata["ax25"] = {
-                    "from_callsign": callsigns.get("from"),
-                    "to_callsign": callsigns.get("to"),
-                }
-
-            # Add parsed telemetry data
-            metadata["telemetry"] = telemetry_result
-
-            # Save metadata JSON
-            metadata_filename = filename.replace(".bin", ".json")
-            metadata_filepath = os.path.join(self.output_dir, metadata_filename)
-            with open(metadata_filepath, "w") as f:
-                json.dump(metadata, f, indent=2)
-            logger.info(f"Saved metadata: {metadata_filepath}")
-
-            # Encode as base64 for transmission
-            packet_base64 = base64.b64encode(payload).decode()
-
-            # Send to UI
-            msg = {
-                "type": "decoder-output",
-                "decoder_type": "bpsk",
-                "session_id": self.session_id,
-                "vfo": self.vfo,
-                "timestamp": decode_timestamp,
-                "output": {
-                    "format": "application/octet-stream",
-                    "filename": filename,
-                    "filepath": filepath,
-                    "metadata_filename": metadata_filename,
-                    "metadata_filepath": metadata_filepath,
-                    "packet_data": packet_base64,
-                    "packet_length": len(payload),
-                    "packet_number": self.packet_count,
-                    "parameters": f"{self.baudrate}baud",
-                },
-            }
-
-            # Add callsigns if available
-            if callsigns:
-                msg["output"]["callsigns"] = callsigns
-
-            # Add satellite info to UI message
-            if self.norad_id:
-                msg["output"]["satellite"] = {
-                    "norad_id": self.norad_id,
-                    "name": self.satellite_name,
-                }
-
-            # Add parsed telemetry to UI message
-            if telemetry_result.get("success"):
-                msg["output"]["telemetry"] = {
-                    "parser": telemetry_result.get("parser"),
-                    "frame": telemetry_result.get("frame"),
-                    "data": telemetry_result.get("telemetry"),
-                }
-
-            # Add decoder configuration to UI message
-            msg["output"]["decoder_config"] = {
-                "source": self.config_source,
-                "framing": self.framing,
-                "payload_protocol": "ccsds" if self.framing == "doka" else "ax25",
-            }
-
-            try:
-                self.data_queue.put(msg, block=False)
-                with self.stats_lock:
-                    self.stats["data_messages_out"] += 1
-            except queue.Full:
-                logger.warning("Data queue full, dropping packet output")
-
-            # Don't send status update for individual packet decodes
-            # The decoder stays in DECODING status continuously
-
-        except Exception as e:
-            logger.error(f"Error processing decoded packet: {e}")
-            logger.exception(e)
-            with self.stats_lock:
-                self.stats["errors"] += 1
+    def _get_payload_protocol(self):
+        """BPSK uses CCSDS for DOKA, AX.25 otherwise"""
+        if self.framing == "doka":
+            return "ccsds"
+        return "ax25"
 
     def _on_flowgraph_status(self, status, info=None):
         """Callback when flowgraph status changes"""
