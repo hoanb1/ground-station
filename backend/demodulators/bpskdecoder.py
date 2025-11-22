@@ -569,6 +569,9 @@ class BPSKDecoder(threading.Thread):
             # Check description first for all framing types
             if "DOKA" in transmitter_desc or "CCSDS" in transmitter_desc:
                 self.framing = "doka"
+            elif "G3RUH" in transmitter_desc:
+                # G3RUH scrambler implies AX.25 framing
+                self.framing = "ax25"
             elif "AX.25" in transmitter_desc or "AX25" in transmitter_desc:
                 self.framing = "ax25"
             # If nothing in description, check mode field

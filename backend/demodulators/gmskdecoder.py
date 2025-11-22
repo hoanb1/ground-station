@@ -527,6 +527,9 @@ class GMSKDecoder(threading.Thread):
                 self.framing = "geoscan"
             elif "USP" in transmitter_desc:
                 self.framing = "usp"
+            elif "G3RUH" in transmitter_desc:
+                # G3RUH scrambler implies AX.25 framing
+                self.framing = "ax25"
             elif "AX.25" in transmitter_desc or "AX25" in transmitter_desc:
                 self.framing = "ax25"
             # If nothing in description, check mode field
