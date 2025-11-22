@@ -1,4 +1,4 @@
-# Ground Station - BPSK (9.6k) Decoder using GNU Radio
+# Ground Station - BPSK Decoder using GNU Radio
 # Developed by Claude (Anthropic AI) for the Ground Station project
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This decoder receives raw IQ samples directly from the SDR process (via iq_queue)
-# and demodulates BPSK signals, particularly for Tevel satellites at 9600 baud.
+# and demodulates BPSK signals with AX.25 or DOKA (CCSDS) framing.
 #
 # ARCHITECTURE NOTES (2025-11-19):
 # ================================
@@ -47,16 +47,17 @@
 #    - Costas loop - 100 Hz bandwidth for carrier phase recovery
 #    - Binary slicer, NRZI decode, G3RUH descrambler, HDLC deframing
 #
-# 4. KEY PARAMETERS (tuned for Tevel satellites):
+# 4. KEY PARAMETERS:
 #    - Batch interval: 3 seconds default (configurable, balance between latency and signal lock time)
 #    - FLL bandwidth: 250 Hz (handles frequency drift and residual offset)
 #    - Costas bandwidth: 100 Hz (carrier phase tracking)
-#    - Sample rate: 78125 Hz (8x oversampling for 9600 baud)
+#    - Sample rate: Automatically calculated based on baudrate (typically 8x oversampling)
 #
-# 5. VERIFIED WORKING:
-#    - 8 successful packet decodes from Tevel-2 (TVL2-6-0 <-> TVL2-6-1)
+# 5. FEATURES:
+#    - Supports AX.25 (G3RUH) and DOKA (CCSDS) framing
 #    - Handles VFO drift and off-center signals in IQ recordings
 #    - Extracts and reports AX.25 callsigns to UI
+#    - Automatic framing detection from satellite configuration
 
 import base64
 import json
@@ -333,27 +334,21 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 syncword_threshold=4,  # Allow 4 bit errors in syncword (CCSDS default)
             )
 
-            # For Tevel satellites, signal is typically at 436.400 MHz
-            # If VFO is not exactly centered, pass the offset to demodulator's FLL
-            # This helps the FLL lock onto the signal even if VFO drifts
-            expected_signal_freq = 436.400e6  # Tevel-8 frequency
-            # Calculate offset from VFO center (passed via closure from main thread)
-            # Note: We can't access vfo_center here, so use 0 and rely on FLL bandwidth
+            # Create BPSK demodulator
+            # The FLL (Frequency Lock Loop) handles any residual frequency offset
+            # after our frequency translation, so we set f_offset=0 and let it auto-track
             demod = bpsk_demodulator(
                 baudrate=self.baudrate,
                 samp_rate=self.sample_rate,
                 iq=True,
-                f_offset=0,  # Let FLL auto-track, it has 25 Hz bandwidth
+                f_offset=0,  # Let FLL auto-track with 250 Hz bandwidth
                 differential=self.differential,
                 manchester=False,
                 options=options,
             )
 
-            # Dynamically select deframer based on transmitter mode
-            # Check if this is a DOKA signal (mode='DOKA' or 'DOKA' in description)
-            is_doka = self._is_doka_signal()
-
-            if is_doka:
+            # Select deframer based on detected framing protocol
+            if self.framing == "doka":
                 # DOKA uses CCSDS-style framing with Reed-Solomon FEC
                 logger.info("Using CCSDS RS deframer for DOKA signal")
                 from satellites.components.deframers.ccsds_rs_deframer import ccsds_rs_deframer
@@ -370,8 +365,8 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
                     syncword_threshold=None,
                     options=options,
                 )
-            else:
-                # Standard AX.25 with G3RUH scrambler (for Tevel, etc.)
+            else:  # ax25 (default)
+                # Standard AX.25 with G3RUH scrambler
                 logger.info("Using AX.25 deframer with G3RUH scrambler")
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
 
