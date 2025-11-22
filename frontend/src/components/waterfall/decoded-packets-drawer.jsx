@@ -408,6 +408,11 @@ const DecodedPacketsDrawer = () => {
                 }}
             >
                 <DragIndicatorIcon sx={{ fontSize: '1rem', color: 'text.disabled' }} />
+                {packetsDrawerOpen ? (
+                    <KeyboardArrowDownIcon sx={{ fontSize: '1.2rem', color: 'text.secondary' }} />
+                ) : (
+                    <KeyboardArrowUpIcon sx={{ fontSize: '1.2rem', color: 'text.secondary' }} />
+                )}
                 <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
                     PACKETS
                 </Typography>
@@ -416,7 +421,7 @@ const DecodedPacketsDrawer = () => {
                 ) : (
                     <KeyboardArrowUpIcon sx={{ fontSize: '1.2rem', color: 'text.secondary' }} />
                 )}
-                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.disabled', ml: 0.5 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', color: 'text.disabled', ml: 0.5 }}>
                     ({rows.length})
                 </Typography>
             </Box>
