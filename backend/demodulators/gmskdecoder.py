@@ -516,34 +516,49 @@ class GMSKDecoder(threading.Thread):
         if not self.transmitter_downlink_freq:
             logger.warning("Transmitter downlink_low not available in transmitter dict")
 
-        # Detect framing protocol if not already set by config service
+        # Detect framing protocol from transmitter metadata
+        # This overrides smart defaults but respects explicit satellite configs from gr-satellites
         # Priority: Check description first, then mode field, default to AX.25
-        if not hasattr(self, "framing") or self.framing is None:
+        if not hasattr(self, "config_source") or self.config_source in ["manual", "smart_default"]:
             transmitter_mode = self.transmitter.get("mode", "GMSK").upper()
             transmitter_desc = self.transmitter.get("description", "").upper()
 
+            detected_framing = None
+
             # Check description first for all framing types
             if "GEOSCAN" in transmitter_desc:
-                self.framing = "geoscan"
+                detected_framing = "geoscan"
             elif "USP" in transmitter_desc:
-                self.framing = "usp"
+                detected_framing = "usp"
             elif "G3RUH" in transmitter_desc:
                 # G3RUH scrambler implies AX.25 framing
-                self.framing = "ax25"
+                detected_framing = "ax25"
             elif "AX.25" in transmitter_desc or "AX25" in transmitter_desc:
-                self.framing = "ax25"
+                detected_framing = "ax25"
             # If nothing in description, check mode field
             elif "GEOSCAN" in transmitter_mode:
-                self.framing = "geoscan"
+                detected_framing = "geoscan"
             elif "USP" in transmitter_mode:
-                self.framing = "usp"
+                detected_framing = "usp"
             elif "AX.25" in transmitter_mode or "AX25" in transmitter_mode:
-                self.framing = "ax25"
+                detected_framing = "ax25"
             else:
                 # Default to AX.25 if nothing found
-                self.framing = "ax25"
+                detected_framing = "ax25"
 
-            logger.info(f"Detected framing from transmitter metadata: {self.framing}")
+            # Apply detected framing if we found something
+            if detected_framing:
+                # If we had a smart default that differs, override it
+                if hasattr(self, "framing") and self.framing != detected_framing:
+                    logger.info(
+                        f"Overriding {self.config_source} framing '{self.framing}' "
+                        f"with transmitter metadata framing '{detected_framing}'"
+                    )
+                self.framing = detected_framing
+                logger.info(f"Detected framing from transmitter metadata: {self.framing}")
+        elif hasattr(self, "framing"):
+            # Explicit satellite config from gr-satellites database - respect it
+            logger.info(f"Using framing from {self.config_source}: {self.framing}")
 
         logger.info("GMSK decoder configuration:")
         logger.info(f"  NORAD ID: {self.norad_id or 'N/A (manual config)'}")
