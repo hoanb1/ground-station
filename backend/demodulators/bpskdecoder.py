@@ -206,7 +206,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         costas_bw=50,
         packet_size=256,
         batch_interval=5.0,
-        transmitter=None,
+        framing="ax25",  # Framing protocol: 'ax25' or 'doka'
     ):
         """
         Initialize BPSK decoder flowgraph using gr-satellites components
@@ -225,7 +225,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             costas_bw: Costas loop bandwidth (Hz)
             packet_size: Size of packet in bytes (unused, kept for compatibility)
             batch_interval: Batch processing interval in seconds (default: 3.0)
-            transmitter: Transmitter metadata dict for detecting DOKA signals
+            framing: Framing protocol - 'ax25' (G3RUH) or 'doka' (CCSDS)
         """
         if not GNURADIO_AVAILABLE:
             raise RuntimeError("GNU Radio not available - BPSK decoder cannot be initialized")
@@ -238,7 +238,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         self.status_callback = status_callback
         self.differential = differential
         self.batch_interval = batch_interval
-        self.transmitter = transmitter or {}  # Store for DOKA detection
+        self.framing = framing  # Store framing protocol
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
@@ -248,7 +248,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
         logger.info(
             f"BPSK flowgraph initialized: "
             f"{baudrate} baud, {sample_rate} sps, differential={differential}, "
-            f"batch_interval={batch_interval}s"
+            f"framing={framing}, batch_interval={batch_interval}s"
         )
 
     def process_samples(self, samples):
@@ -999,7 +999,7 @@ class BPSKDecoder(threading.Thread):
                             differential=self.differential,
                             packet_size=self.packet_size,
                             batch_interval=self.batch_interval,
-                            transmitter=self.transmitter,  # Pass transmitter for DOKA detection
+                            framing=self.framing,  # Pass framing protocol
                         )
                         flowgraph_started = True
                         logger.info(
