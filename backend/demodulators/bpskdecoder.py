@@ -453,30 +453,12 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
 
     def _is_doka_signal(self):
         """
-        Detect if this is a DOKA signal based on transmitter metadata.
-
-        DOKA signals can be identified by:
-        - mode field = 'DOKA'
-        - mode field = 'BPSK' with 'DOKA' in description
+        Check if this is a DOKA signal based on framing configuration.
 
         Returns:
             bool: True if this is a DOKA signal
         """
-        if not self.transmitter:
-            return False
-
-        mode = self.transmitter.get("mode", "").upper()
-        description = self.transmitter.get("description", "").upper()
-
-        # Check if mode is explicitly DOKA
-        if mode == "DOKA":
-            return True
-
-        # Check if BPSK with DOKA in description
-        if mode == "BPSK" and "DOKA" in description:
-            return True
-
-        return False
+        return hasattr(self, "framing") and self.framing == "doka"
 
     def _on_packet_decoded(self, payload, callsigns=None):
         """Called when a BPSK packet is successfully decoded"""
@@ -548,19 +530,24 @@ class BPSKDecoder(threading.Thread):
                     frequency=self.transmitter.get("downlink_low"),
                 )
 
-                # BPSK typically uses framing info, less common to have deviation
-                # But we can still track config source
+                # Apply satellite-specific configuration
+                if "framing" in sat_params:
+                    self.framing = sat_params["framing"]
+                if "differential" in sat_params:
+                    self.differential = sat_params["differential"]
                 self.config_source = sat_params["source"]
 
                 logger.info(f"Loaded config for {self.satellite_name} (NORAD {self.norad_id}):")
                 logger.info(f"  Baudrate: {self.baudrate}")
-                logger.info(f"  Framing: {sat_params.get('framing', 'ax25')}")
+                logger.info(f"  Framing: {self.framing}")
+                logger.info(f"  Differential: {self.differential}")
                 logger.info(f"  Source: {self.config_source}")
 
             except Exception as e:
                 logger.error(f"Failed to load satellite config for NORAD {self.norad_id}: {e}")
                 logger.info("Falling back to manual configuration")
-                self.norad_id = None
+                # Fall through to manual config below
+                self.norad_id = None  # Mark as manual config
 
         # Store transmitter downlink frequency for reference/fallback only
         # The actual signal frequency will be determined from VFO state during decoding
@@ -569,20 +556,38 @@ class BPSKDecoder(threading.Thread):
         if not self.transmitter_downlink_freq:
             logger.warning("Transmitter downlink_low not available in transmitter dict")
 
-        logger.info(f"BPSK decoder received transmitter dict: {self.transmitter}")
-        logger.info(
-            f"Extracted baud rate: {self.baudrate} (from transmitter: {self.transmitter.get('baud')}, fallback: {baudrate})"
-        )
-
         # Store additional transmitter info
         self.transmitter_description = self.transmitter.get("description", "Unknown")
         self.transmitter_mode = self.transmitter.get("mode", "BPSK")
 
-        # Log detected framing type
-        if self._is_doka_signal():
-            logger.info("DOKA signal detected - will use CCSDS RS deframer")
-        else:
-            logger.info("Standard BPSK signal - will use AX.25 deframer with G3RUH")
+        # Detect framing protocol if not already set by config service
+        # Priority: Check description first, then mode field, default to AX.25
+        if not hasattr(self, "framing") or self.framing is None:
+            transmitter_mode = self.transmitter.get("mode", "BPSK").upper()
+            transmitter_desc = self.transmitter.get("description", "").upper()
+
+            # Check description first for all framing types
+            if "DOKA" in transmitter_desc or "CCSDS" in transmitter_desc:
+                self.framing = "doka"
+            elif "AX.25" in transmitter_desc or "AX25" in transmitter_desc:
+                self.framing = "ax25"
+            # If nothing in description, check mode field
+            elif "DOKA" in transmitter_mode:
+                self.framing = "doka"
+            elif "AX.25" in transmitter_mode or "AX25" in transmitter_mode:
+                self.framing = "ax25"
+            else:
+                # Default to AX.25 if nothing found
+                self.framing = "ax25"
+
+            logger.info(f"Detected framing from transmitter metadata: {self.framing}")
+
+        logger.info("BPSK decoder configuration:")
+        logger.info(f"  NORAD ID: {self.norad_id or 'N/A (manual config)'}")
+        logger.info(f"  Baudrate: {self.baudrate}")
+        logger.info(f"  Framing: {self.framing}")
+        logger.info(f"  Differential: {self.differential}")
+        logger.info(f"  Config source: {self.config_source}")
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -648,30 +653,12 @@ class BPSKDecoder(threading.Thread):
 
     def _is_doka_signal(self):
         """
-        Detect if this is a DOKA signal based on transmitter metadata.
-
-        DOKA signals can be identified by:
-        - mode field = 'DOKA'
-        - mode field = 'BPSK' with 'DOKA' in description
+        Check if this is a DOKA signal based on framing configuration.
 
         Returns:
             bool: True if this is a DOKA signal
         """
-        if not self.transmitter:
-            return False
-
-        mode = self.transmitter.get("mode", "").upper()
-        description = self.transmitter.get("description", "").upper()
-
-        # Check if mode is explicitly DOKA
-        if mode == "DOKA":
-            return True
-
-        # Check if BPSK with DOKA in description
-        if mode == "BPSK" and "DOKA" in description:
-            return True
-
-        return False
+        return hasattr(self, "framing") and self.framing == "doka"
 
     def _on_packet_decoded(self, payload, callsigns=None):
         """Callback when GNU Radio decodes a BPSK packet"""

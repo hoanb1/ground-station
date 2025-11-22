@@ -517,16 +517,27 @@ class GMSKDecoder(threading.Thread):
             logger.warning("Transmitter downlink_low not available in transmitter dict")
 
         # Detect framing protocol if not already set by config service
-        # Priority order: GEOSCAN > USP > AX.25 (default)
+        # Priority: Check description first, then mode field, default to AX.25
         if not hasattr(self, "framing") or self.framing is None:
             transmitter_mode = self.transmitter.get("mode", "GMSK").upper()
             transmitter_desc = self.transmitter.get("description", "").upper()
 
+            # Check description first for all framing types
             if "GEOSCAN" in transmitter_desc:
+                self.framing = "geoscan"
+            elif "USP" in transmitter_desc:
+                self.framing = "usp"
+            elif "AX.25" in transmitter_desc or "AX25" in transmitter_desc:
+                self.framing = "ax25"
+            # If nothing in description, check mode field
+            elif "GEOSCAN" in transmitter_mode:
                 self.framing = "geoscan"
             elif "USP" in transmitter_mode:
                 self.framing = "usp"
+            elif "AX.25" in transmitter_mode or "AX25" in transmitter_mode:
+                self.framing = "ax25"
             else:
+                # Default to AX.25 if nothing found
                 self.framing = "ax25"
 
             logger.info(f"Detected framing from transmitter metadata: {self.framing}")
