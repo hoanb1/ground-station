@@ -758,6 +758,7 @@ class BPSKDecoder(threading.Thread):
                 },
                 "decoder_config": {
                     "source": self.config_source,
+                    "framing": self.framing,
                 },
                 "demodulator_parameters": {
                     "fll_bandwidth_hz": 250,
@@ -852,14 +853,11 @@ class BPSKDecoder(threading.Thread):
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
-        # Determine framing type
-        framing_type = "doka_ccsds_rs" if self._is_doka_signal() else "ax25_g3ruh"
-
         # Build decoder configuration info
         config_info = {
             "baudrate": self.baudrate,
             "differential": self.differential,
-            "framing": framing_type,  # Dynamic based on signal type
+            "framing": self.framing,  # Use detected framing protocol directly
             "transmitter": self.transmitter_description,
             "transmitter_mode": self.transmitter_mode,
             "transmitter_downlink_mhz": (
