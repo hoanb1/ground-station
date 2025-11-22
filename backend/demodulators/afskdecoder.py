@@ -469,12 +469,7 @@ class AFSKDecoder(threading.Thread):
                 if "framing" in sat_params:
                     self.framing = sat_params["framing"]
                 self.config_source = sat_params["source"]
-
-                logger.info(f"Loaded config for {self.satellite_name} (NORAD {self.norad_id}):")
-                logger.info(f"  Baudrate: {self.baudrate}")
-                logger.info(f"  Deviation: {self.deviation} Hz")
-                logger.info(f"  Framing: {self.framing}")
-                logger.info(f"  Source: {self.config_source}")
+                # Note: Config logging moved to final config summary to avoid duplicates
 
             except Exception as e:
                 logger.error(f"Failed to load satellite config for NORAD {self.norad_id}: {e}")

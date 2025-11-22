@@ -499,12 +499,7 @@ class GMSKDecoder(threading.Thread):
                 self.deviation = sat_params["deviation"]
                 self.framing = sat_params["framing"]
                 self.config_source = sat_params["source"]
-
-                logger.info(f"Loaded config for {self.satellite_name} (NORAD {self.norad_id}):")
-                logger.info(f"  Baudrate: {self.baudrate}")
-                logger.info(f"  Deviation: {self.deviation} Hz")
-                logger.info(f"  Framing: {self.framing}")
-                logger.info(f"  Source: {self.config_source}")
+                # Note: Config logging moved to after framing detection to avoid duplicates
 
             except Exception as e:
                 logger.error(f"Failed to load satellite config for NORAD {self.norad_id}: {e}")
@@ -558,10 +553,8 @@ class GMSKDecoder(threading.Thread):
                         f"with transmitter metadata framing '{detected_framing}'"
                     )
                 self.framing = detected_framing
-                logger.info(f"Detected framing from transmitter metadata: {self.framing}")
-        elif hasattr(self, "framing"):
-            # Explicit satellite config from gr-satellites database - respect it
-            logger.info(f"Using framing from {self.config_source}: {self.framing}")
+                # Note: Framing detection logged in final config summary below
+        # Note: No separate logging here - all config logged together below
 
         logger.info("GMSK decoder configuration:")
         logger.info(f"  NORAD ID: {self.norad_id or 'N/A (manual config)'}")

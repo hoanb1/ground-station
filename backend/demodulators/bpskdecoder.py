@@ -533,12 +533,7 @@ class BPSKDecoder(threading.Thread):
                 if "differential" in sat_params:
                     self.differential = sat_params["differential"]
                 self.config_source = sat_params["source"]
-
-                logger.info(f"Loaded config for {self.satellite_name} (NORAD {self.norad_id}):")
-                logger.info(f"  Baudrate: {self.baudrate}")
-                logger.info(f"  Framing: {self.framing}")
-                logger.info(f"  Differential: {self.differential}")
-                logger.info(f"  Source: {self.config_source}")
+                # Note: Config logging moved to after framing detection to avoid duplicates
 
             except Exception as e:
                 logger.error(f"Failed to load satellite config for NORAD {self.norad_id}: {e}")
@@ -592,10 +587,8 @@ class BPSKDecoder(threading.Thread):
                         f"with transmitter metadata framing '{detected_framing}'"
                     )
                 self.framing = detected_framing
-                logger.info(f"Detected framing from transmitter metadata: {self.framing}")
-        elif hasattr(self, "framing"):
-            # Explicit satellite config from gr-satellites database - respect it
-            logger.info(f"Using framing from {self.config_source}: {self.framing}")
+                # Note: Framing detection logged in final config summary below
+        # Note: No separate logging here - all config logged together below
 
         logger.info("BPSK decoder configuration:")
         logger.info(f"  NORAD ID: {self.norad_id or 'N/A (manual config)'}")
