@@ -118,6 +118,10 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                             label="Parser"
                             value={telemetry.parser || 'ax25'}
                         />
+                        <InfoRow
+                            label=""
+                            value=""
+                        />
                     </InfoSection>
 
                     {/* Packet Metadata */}
