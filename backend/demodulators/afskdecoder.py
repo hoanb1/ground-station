@@ -324,6 +324,7 @@ class AFSKFlowgraph(_AFSKFlowgraphBase):  # type: ignore[misc,valid-type]
 
             deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
             logger.info("Using AX.25 deframer (G3RUH descrambler)")
+            logger.info("  Payload protocol: AX.25 with HDLC framing")
 
             # Create message handler for this batch
             msg_handler = AFSKMessageHandler(self.callback)
@@ -651,6 +652,7 @@ class AFSKDecoder(threading.Thread):
                 "decoder_config": {
                     "source": self.config_source,
                     "framing": self.framing,
+                    "payload_protocol": "ax25",  # AFSK always uses AX.25
                 },
                 "demodulator_parameters": {
                     "af_carrier_hz": self.af_carrier,
@@ -722,6 +724,14 @@ class AFSKDecoder(threading.Thread):
                     "frame": telemetry_result.get("frame"),
                     "data": telemetry_result.get("telemetry"),
                 }
+
+            # Add decoder configuration to UI message
+            msg["output"]["decoder_config"] = {
+                "source": self.config_source,
+                "framing": self.framing,
+                "payload_protocol": "ax25",  # AFSK always uses AX.25
+            }
+
             try:
                 self.data_queue.put(msg, block=False)
                 with self.stats_lock:

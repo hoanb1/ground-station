@@ -351,6 +351,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             if self.framing == "doka":
                 # DOKA uses CCSDS-style framing with Reed-Solomon FEC
                 logger.info("Using CCSDS RS deframer for DOKA signal")
+                logger.info("  Payload protocol: CCSDS telemetry frames")
                 from satellites.components.deframers.ccsds_rs_deframer import ccsds_rs_deframer
 
                 # DOKA uses standard CCSDS frame parameters
@@ -368,6 +369,7 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             else:  # ax25 (default)
                 # Standard AX.25 with G3RUH scrambler
                 logger.info("Using AX.25 deframer with G3RUH scrambler")
+                logger.info("  Payload protocol: AX.25 with HDLC framing")
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
 
             # Create message handler for this batch
@@ -759,6 +761,7 @@ class BPSKDecoder(threading.Thread):
                 "decoder_config": {
                     "source": self.config_source,
                     "framing": self.framing,
+                    "payload_protocol": "ccsds" if self.framing == "doka" else "ax25",
                 },
                 "demodulator_parameters": {
                     "fll_bandwidth_hz": 250,
@@ -831,6 +834,14 @@ class BPSKDecoder(threading.Thread):
                     "frame": telemetry_result.get("frame"),
                     "data": telemetry_result.get("telemetry"),
                 }
+
+            # Add decoder configuration to UI message
+            msg["output"]["decoder_config"] = {
+                "source": self.config_source,
+                "framing": self.framing,
+                "payload_protocol": "ccsds" if self.framing == "doka" else "ax25",
+            }
+
             try:
                 self.data_queue.put(msg, block=False)
                 with self.stats_lock:

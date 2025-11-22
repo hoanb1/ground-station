@@ -77,6 +77,10 @@ const DecodedPacketsDrawer = () => {
                     hasTelemetry: !!output.output.telemetry,
                     telemetry: output.output.telemetry,
                     parameters: output.output.parameters,
+                    // Decoder config
+                    framing: output.output.decoder_config?.framing || '-',
+                    payloadProtocol: output.output.decoder_config?.payload_protocol || '-',
+                    configSource: output.output.decoder_config?.source || '-',
                     // File paths for telemetry viewer
                     filename: output.output.filename,
                     filepath: output.output.filepath,
@@ -215,6 +219,54 @@ const DecodedPacketsDrawer = () => {
                         color: 'secondary.main',
                     }}
                 />
+            )
+        },
+        {
+            field: 'framing',
+            headerName: 'Framing',
+            minWidth: 90,
+            flex: 0.8,
+            align: 'center',
+            headerAlign: 'center',
+            renderCell: (params) => (
+                <Chip
+                    label={params.value}
+                    size="small"
+                    sx={{
+                        height: '20px',
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        backgroundColor: alpha(theme.palette.warning.main, 0.15),
+                        border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+                        color: 'warning.main',
+                    }}
+                />
+            )
+        },
+        {
+            field: 'payloadProtocol',
+            headerName: 'Payload',
+            minWidth: 90,
+            flex: 0.8,
+            align: 'center',
+            headerAlign: 'center',
+            renderCell: (params) => (
+                <Tooltip title={`Payload protocol: ${params.value}`}>
+                    <Chip
+                        label={params.value}
+                        size="small"
+                        sx={{
+                            height: '20px',
+                            fontSize: '0.65rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            backgroundColor: alpha(theme.palette.success.main, 0.15),
+                            border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                            color: 'success.main',
+                        }}
+                    />
+                </Tooltip>
             )
         },
         {

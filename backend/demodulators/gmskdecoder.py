@@ -339,6 +339,7 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 logger.info(
                     f"Using GEOSCAN deframer (frame_size={frame_size}, PN9 scrambler, CC11xx CRC)"
                 )
+                logger.info("  Payload protocol: GEOSCAN proprietary format")
             elif self.framing == "usp":
                 from satellites.components.deframers.usp_deframer import usp_deframer
 
@@ -349,11 +350,13 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 logger.info(
                     f"Using USP deframer (syncword_threshold={syncword_thresh}, Viterbi + RS FEC)"
                 )
+                logger.info("  Expected payload protocol: AX.25 (USP wraps AX.25 packets)")
             else:  # default to ax25
                 from satellites.components.deframers.ax25_deframer import ax25_deframer
 
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
                 logger.info("Using AX.25 deframer (G3RUH descrambler)")
+                logger.info("  Payload protocol: AX.25 with HDLC framing")
             # Create message handler for this batch
             msg_handler = GMSKMessageHandler(self.callback)
 
@@ -733,6 +736,9 @@ class GMSKDecoder(threading.Thread):
                 "decoder_config": {
                     "source": self.config_source,
                     "framing": self.framing,
+                    "payload_protocol": (
+                        "ax25" if self.framing in ["ax25", "usp"] else "proprietary"
+                    ),
                 },
                 "demodulator_parameters": {
                     "deviation_hz": self.deviation,
@@ -803,6 +809,14 @@ class GMSKDecoder(threading.Thread):
                     "frame": telemetry_result.get("frame"),
                     "data": telemetry_result.get("telemetry"),
                 }
+
+            # Add decoder configuration to UI message
+            msg["output"]["decoder_config"] = {
+                "source": self.config_source,
+                "framing": self.framing,
+                "payload_protocol": "ax25" if self.framing in ["ax25", "usp"] else "proprietary",
+            }
+
             try:
                 self.data_queue.put(msg, block=False)
                 with self.stats_lock:
