@@ -53,7 +53,8 @@ const waterfallPersistConfig = {
     storage,
     whitelist: ['centerFrequency', 'colorMap', 'dbRange', 'gain', 'sampleRate', 'showRightSideWaterFallAccessories',
         'showLeftSideWaterFallAccessories', 'selectedAntenna', 'selectedSDRId', 'selectedOffsetMode',
-        'selectedOffsetValue', 'fftAveraging', 'showRotatorDottedLines', 'autoScalePreset', 'expandedPanels']
+        'selectedOffsetValue', 'fftAveraging', 'showRotatorDottedLines', 'autoScalePreset', 'expandedPanels',
+        'packetsDrawerHeight', 'packetsDrawerOpen']
 };
 
 // Persist configuration for VFO slice

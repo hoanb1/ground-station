@@ -426,22 +426,24 @@ const DecodedPacketsDrawer = () => {
         }
     };
 
-    // Mouse down on handle to start dragging
+    // Mouse/touch down on handle to start dragging
     const handleMouseDown = (e) => {
         if (packetsDrawerOpen) {
             setIsDragging(true);
             setHasDragged(false); // Reset drag flag
-            setDragStartY(e.clientY);
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+            setDragStartY(clientY);
             setDragStartHeight(packetsDrawerHeight);
             e.preventDefault();
         }
     };
 
-    // Mouse move while dragging
+    // Mouse/touch move while dragging
     useEffect(() => {
         const handleMouseMove = (e) => {
             if (isDragging) {
-                const deltaY = dragStartY - e.clientY; // Inverted because drawer grows upward
+                const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+                const deltaY = dragStartY - clientY; // Inverted because drawer grows upward
                 const newHeight = Math.min(maxHeight, Math.max(minHeight, dragStartHeight + deltaY));
 
                 // If moved more than 5px, consider it a drag
@@ -462,11 +464,15 @@ const DecodedPacketsDrawer = () => {
         if (isDragging) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
+            document.addEventListener('touchmove', handleMouseMove, { passive: false });
+            document.addEventListener('touchend', handleMouseUp);
         }
 
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('touchmove', handleMouseMove);
+            document.removeEventListener('touchend', handleMouseUp);
         };
     }, [isDragging, dragStartY, dragStartHeight, dispatch]);
 
@@ -508,6 +514,7 @@ const DecodedPacketsDrawer = () => {
             <Box
                 className="decoded-packets-drawer-handle"
                 onMouseDown={handleMouseDown}
+                onTouchStart={handleMouseDown}
                 onClick={handleToggle}
                 sx={{
                     height: '32px',
