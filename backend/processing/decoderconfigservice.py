@@ -105,7 +105,7 @@ class DecoderConfigService:
                     f"Loaded satellite config for NORAD {norad_id}: {sat_params['source']}"
                 )
                 return self._build_config_from_satellite(
-                    decoder_type, sat_params, transmitter, baudrate
+                    decoder_type, sat_params, satellite, transmitter, baudrate
                 )
             except Exception as e:
                 self.logger.warning(f"Failed to load satellite config for NORAD {norad_id}: {e}")
@@ -118,15 +118,9 @@ class DecoderConfigService:
         if overrides:
             detected_config = self._apply_overrides(detected_config, overrides)
 
-        # Populate satellite metadata
-        detected_config.satellite_norad_id = satellite.get("norad_id")
-        detected_config.satellite_name = satellite.get("name")
-
-        # Populate transmitter metadata
-        detected_config.transmitter_id = transmitter.get("id")
-        detected_config.transmitter_description = transmitter.get("description")
-        detected_config.transmitter_mode = transmitter.get("mode")
-        detected_config.transmitter_downlink_freq = transmitter.get("downlink_low")
+        # Populate satellite and transmitter metadata as complete dicts
+        detected_config.satellite = satellite if satellite else None
+        detected_config.transmitter = transmitter if transmitter else None
 
         self.logger.info(f"Resolved {decoder_type.upper()} config: {detected_config.to_dict()}")
         return detected_config
@@ -153,20 +147,44 @@ class DecoderConfigService:
         return 9600  # Generic fallback
 
     def _build_config_from_satellite(
-        self, decoder_type: str, sat_params: Dict, transmitter: Dict, baudrate: int
+        self, decoder_type: str, sat_params: Dict, satellite: Dict, transmitter: Dict, baudrate: int
     ) -> DecoderConfig:
         """Build configuration from satellite-specific parameters"""
+        # If this is a "smart_default" (satellite not found in gr-satellites),
+        # detect framing from transmitter metadata instead of using default
+        if sat_params.get("source") == "smart_default":
+            mode = transmitter.get("mode", "")
+            description = transmitter.get("description", "")
+            framing = self._detect_framing(mode, description)
+            # Detect deviation from transmitter metadata
+            deviation = self._detect_deviation(decoder_type, transmitter, baudrate)
+            self.logger.info(
+                f"Satellite not in gr-satellites: using transmitter metadata "
+                f"(framing='{framing}', deviation={deviation})"
+            )
+            # Use transmitter_metadata as source since we're detecting from transmitter
+            config_source = "transmitter_metadata" if (mode or description) else "smart_default"
+        else:
+            # Use framing and deviation from gr-satellites database
+            framing = sat_params.get("framing", "ax25")
+            deviation = sat_params.get("deviation")
+            config_source = sat_params.get("source", "satellite_config")
+
         config = DecoderConfig(
             baudrate=baudrate,
-            framing=sat_params.get("framing", "ax25"),
-            config_source=sat_params.get("source", "satellite_config"),
-            deviation=sat_params.get("deviation"),
+            framing=framing,
+            config_source=config_source,
+            deviation=deviation,
             differential=sat_params.get("differential", False),
         )
 
         # Add decoder-specific parameters
         if decoder_type == "afsk":
             config.af_carrier = transmitter.get("af_carrier", 1700)  # APRS default
+
+        # Populate satellite and transmitter metadata as complete dicts
+        config.satellite = satellite if satellite else None
+        config.transmitter = transmitter if transmitter else None
 
         return config
 
@@ -206,26 +224,30 @@ class DecoderConfigService:
 
         Priority: Description field first (more detailed), then mode field.
         """
+        # Convert to uppercase for case-insensitive matching
+        mode_upper = mode.upper()
+        description_upper = description.upper()
+
         # Check description first (more reliable)
-        if "GEOSCAN" in description:
+        if "GEOSCAN" in description_upper:
             return "geoscan"
-        elif "USP" in description:
+        elif "USP" in description_upper:
             return "usp"
-        elif "DOKA" in description or "CCSDS" in description:
+        elif "DOKA" in description_upper or "CCSDS" in description_upper:
             return "doka"
-        elif "G3RUH" in description or "APRS" in description:
+        elif "G3RUH" in description_upper or "APRS" in description_upper:
             return "ax25"
-        elif "AX.25" in description or "AX25" in description:
+        elif "AX.25" in description_upper or "AX25" in description_upper:
             return "ax25"
 
         # Check mode field
-        if "GEOSCAN" in mode:
+        if "GEOSCAN" in mode_upper:
             return "geoscan"
-        elif "USP" in mode:
+        elif "USP" in mode_upper:
             return "usp"
-        elif "DOKA" in mode:
+        elif "DOKA" in mode_upper:
             return "doka"
-        elif "AX.25" in mode or "AX25" in mode:
+        elif "AX.25" in mode_upper or "AX25" in mode_upper:
             return "ax25"
 
         # Default to AX.25 (most common for amateur satellites)

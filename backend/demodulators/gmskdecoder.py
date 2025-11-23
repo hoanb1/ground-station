@@ -244,7 +244,6 @@ class GMSKFlowgraph(gr.top_block):
             if self.status_callback:
                 self.status_callback(DecoderStatus.DECODING, {"buffer_samples": buffer_size})
 
-            logger.info(f"Processing batch: {buffer_size} samples ({self.batch_interval}s)")
             self._process_buffer()
 
     def _process_buffer(self):
@@ -280,10 +279,6 @@ class GMSKFlowgraph(gr.top_block):
 
             # Create FSK demodulator (GMSK is a type of FSK with Gaussian pulse shaping)
             # iq=True because we're feeding complex IQ samples
-            logger.info(
-                f"Creating FSK demodulator: baudrate={self.baudrate}, "
-                f"samp_rate={self.sample_rate}, deviation={self.deviation}"
-            )
             demod = fsk_demodulator(
                 baudrate=self.baudrate,
                 samp_rate=self.sample_rate,
@@ -305,23 +300,22 @@ class GMSKFlowgraph(gr.top_block):
                     syncword_threshold=4,  # Standard GEOSCAN default
                     options=options,
                 )
-                logger.info(
-                    f"Using GEOSCAN deframer (frame_size={frame_size}, PN9 scrambler, CC11xx CRC)"
-                )
-                logger.info("  Payload protocol: GEOSCAN proprietary format")
+                frame_info = f"GEOSCAN(sz={frame_size},PN9,CC11xx)"
             elif self.framing == "usp":
                 # Increase syncword threshold for low SNR (allow more bit errors)
                 # Default is 13, trying 20 for weak signals
                 syncword_thresh = 20
                 deframer = usp_deframer(syncword_threshold=syncword_thresh, options=options)
-                logger.info(
-                    f"Using USP deframer (syncword_threshold={syncword_thresh}, Viterbi + RS FEC)"
-                )
-                logger.info("  Expected payload protocol: AX.25 (USP wraps AX.25 packets)")
+                frame_info = f"USP(sw_th={syncword_thresh},Vit+RS)"
             else:  # default to ax25
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
-                logger.info("Using AX.25 deframer (G3RUH descrambler)")
-                logger.info("  Payload protocol: AX.25 with HDLC framing")
+                frame_info = "AX25(G3RUH)"
+
+            logger.info(
+                f"Batch: {len(samples_to_process)} samp ({self.batch_interval}s) | "
+                f"FSK: {self.baudrate}bd, {self.sample_rate:.0f}sps, dev={self.deviation} | "
+                f"Frame: {frame_info}"
+            )
             # Create message handler for this batch
             msg_handler = GMSKMessageHandler(self.callback)
 
@@ -436,27 +430,27 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         self.config_source = config.config_source
         self.batch_interval = batch_interval
 
-        # Extract satellite metadata from config
-        self.norad_id = config.satellite_norad_id
-        self.satellite_name = config.satellite_name or "Unknown"
+        # Extract satellite and transmitter metadata from config
+        self.satellite = config.satellite or {}
+        self.transmitter = config.transmitter or {}
 
-        # Extract transmitter metadata from config
-        self.transmitter_description = config.transmitter_description or "Unknown"
-        self.transmitter_mode = config.transmitter_mode or "GMSK"
-        self.transmitter_downlink_freq = config.transmitter_downlink_freq
+        # Extract commonly used fields for convenience
+        self.norad_id = self.satellite.get("norad_id")
+        self.satellite_name = self.satellite.get("name") or "Unknown"
+        self.transmitter_description = self.transmitter.get("description") or "Unknown"
+        self.transmitter_mode = self.transmitter.get("mode") or "GMSK"
+        self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
 
         # Log warning if downlink frequency not available
         if not self.transmitter_downlink_freq:
             logger.warning("Transmitter downlink frequency not available in config")
             logger.debug(f"Config metadata: {config.to_dict()}")
 
-        logger.info("GMSK decoder configuration:")
-        logger.info(f"  Satellite: {self.satellite_name} (NORAD {self.norad_id or 'N/A'})")
-        logger.info(f"  Transmitter: {self.transmitter_description} ({self.transmitter_mode})")
-        logger.info(f"  Baudrate: {self.baudrate}")
-        logger.info(f"  Deviation: {self.deviation} Hz")
-        logger.info(f"  Framing: {self.framing}")
-        logger.info(f"  Config source: {self.config_source}")
+        logger.info(
+            f"GMSK config: {self.satellite_name} (NORAD {self.norad_id or 'N/A'}) | "
+            f"TX: {self.transmitter_description} ({self.transmitter_mode}) | "
+            f"{self.baudrate}bd, dev={self.deviation}Hz, {self.framing} | src: {self.config_source}"
+        )
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -676,11 +670,19 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
                             decimation, vfo_bandwidth, self.sdr_sample_rate
                         )
 
+                        # Calculate offset frequency for logging
+                        offset_freq_init = vfo_center - sdr_center
+
+                        # Consolidated initialization log
+                        tx_info = (
+                            f", TX={self.transmitter_downlink_freq/1e6:.3f}MHz"
+                            if self.transmitter_downlink_freq
+                            else ""
+                        )
                         logger.info(
-                            f"GMSK decoder: {self.baudrate} baud, target rate: {target_sample_rate/1e3:.2f}kS/s ({target_sps} sps), "
-                            f"SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, VFO BW: {vfo_bandwidth/1e3:.0f} kHz, "
-                            f"decimation: {decimation}, output rate: {self.sample_rate/1e6:.2f} MS/s, "
-                            f"VFO center: {vfo_center/1e6:.3f} MHz, SDR center: {sdr_center/1e6:.3f} MHz"
+                            f"GMSK init: {self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps) | "
+                            f"SDR={self.sdr_sample_rate/1e6:.2f}MS/s, VFO_BW={vfo_bandwidth/1e3:.0f}kHz, dec={decimation}, out={self.sample_rate/1e6:.2f}MS/s | "
+                            f"VFO={vfo_center/1e6:.3f}MHz, SDR_ctr={sdr_center/1e6:.3f}MHz, ofs={offset_freq_init/1e3:.1f}kHz{tx_info}"
                         )
 
                         # Initialize flowgraph
@@ -696,24 +698,12 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
                             framing=self.framing,
                         )
                         flowgraph_started = True
-                        logger.info(
-                            f"GMSK flowgraph initialized - ready to decode (VFO @ {vfo_center/1e6:.3f} MHz)"
-                        )
 
                     # Step 1: Frequency translation to put SIGNAL at baseband center
                     # CRITICAL: Use current VFO center frequency (where user/Doppler correction has tuned)
                     # This tracks Doppler shifts in real-time during satellite passes
                     # VFO state is read on every IQ chunk (~100ms), providing continuous Doppler tracking
                     offset_freq = vfo_center - sdr_center
-                    if chunks_received == 0:
-                        logger.info(
-                            f"Translating signal from VFO center {vfo_center/1e6:.3f} MHz to baseband"
-                        )
-                        logger.info(f"Frequency translation: offset = {offset_freq/1e3:.1f} kHz")
-                        if self.transmitter_downlink_freq:
-                            logger.info(
-                                f"Transmitter downlink freq (reference): {self.transmitter_downlink_freq/1e6:.3f} MHz"
-                            )
                     translated = self._frequency_translate(
                         samples, offset_freq, self.sdr_sample_rate
                     )
@@ -739,10 +729,6 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
 
                     chunks_received += 1
                     if chunks_received % 100 == 0:
-                        logger.debug(
-                            f"Received {chunks_received} chunks, "
-                            f"packets decoded: {self.packet_count}"
-                        )
                         # Send periodic stats update
                         self._send_stats_update()
 

@@ -71,7 +71,7 @@ class GFSKDecoder(GMSKDecoder):
 
         # Override transmitter mode if not already set or if it was set to GMSK
         if not self.transmitter_mode or self.transmitter_mode == "GMSK":
-            self.transmitter_mode = config.transmitter_mode or "GFSK"
+            self.transmitter_mode = (config.transmitter or {}).get("mode") or "GFSK"
 
     def _get_decoder_type(self):
         """GFSK decoder type"""

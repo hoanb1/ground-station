@@ -238,7 +238,6 @@ class AFSKFlowgraph(gr.top_block):
             if self.status_callback:
                 self.status_callback(DecoderStatus.DECODING, {"buffer_samples": buffer_size})
 
-            logger.info(f"Processing batch: {buffer_size} samples ({self.batch_interval}s)")
             self._process_buffer()
 
     def _process_buffer(self):
@@ -273,11 +272,6 @@ class AFSKFlowgraph(gr.top_block):
 
             # Create AFSK demodulator
             # iq=False because we're feeding real audio samples (already FM demodulated)
-            logger.info(
-                f"Creating AFSK demodulator: baudrate={self.baudrate}, "
-                f"samp_rate={self.sample_rate}, af_carrier={self.af_carrier}, "
-                f"deviation={self.deviation}"
-            )
             demod = afsk_demodulator(
                 baudrate=self.baudrate,
                 samp_rate=self.sample_rate,
@@ -290,8 +284,12 @@ class AFSKFlowgraph(gr.top_block):
 
             # Create AX.25 deframer (AFSK typically uses AX.25)
             deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
-            logger.info("Using AX.25 deframer (G3RUH descrambler)")
-            logger.info("  Payload protocol: AX.25 with HDLC framing")
+
+            logger.info(
+                f"Batch: {len(samples_to_process)} samp ({self.batch_interval}s) | "
+                f"AFSK: {self.baudrate}bd, {self.sample_rate:.0f}sps, af_carrier={self.af_carrier}, dev={self.deviation} | "
+                f"Frame: AX25(G3RUH)"
+            )
 
             # Create message handler for this batch
             msg_handler = AFSKMessageHandler(self.callback)
@@ -405,28 +403,27 @@ class AFSKDecoder(BaseDecoder, threading.Thread):
         self.config_source = config.config_source
         self.batch_interval = batch_interval
 
-        # Extract satellite metadata from config
-        self.norad_id = config.satellite_norad_id
-        self.satellite_name = config.satellite_name or "Unknown"
+        # Extract satellite and transmitter metadata from config
+        self.satellite = config.satellite or {}
+        self.transmitter = config.transmitter or {}
 
-        # Extract transmitter metadata from config
-        self.transmitter_description = config.transmitter_description or "Unknown"
-        self.transmitter_mode = config.transmitter_mode or "AFSK"
-        self.transmitter_downlink_freq = config.transmitter_downlink_freq
+        # Extract commonly used fields for convenience
+        self.norad_id = self.satellite.get("norad_id")
+        self.satellite_name = self.satellite.get("name") or "Unknown"
+        self.transmitter_description = self.transmitter.get("description") or "Unknown"
+        self.transmitter_mode = self.transmitter.get("mode") or "AFSK"
+        self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
 
         # Log warning if downlink frequency not available
         if not self.transmitter_downlink_freq:
             logger.warning("Transmitter downlink frequency not available in config")
             logger.debug(f"Config metadata: {config.to_dict()}")
 
-        logger.info("AFSK decoder configuration:")
-        logger.info(f"  Satellite: {self.satellite_name} (NORAD {self.norad_id or 'N/A'})")
-        logger.info(f"  Transmitter: {self.transmitter_description} ({self.transmitter_mode})")
-        logger.info(f"  Baudrate: {self.baudrate}")
-        logger.info(f"  AF Carrier: {self.af_carrier} Hz")
-        logger.info(f"  Deviation: {self.deviation} Hz")
-        logger.info(f"  Framing: {self.framing}")
-        logger.info(f"  Config source: {self.config_source}")
+        logger.info(
+            f"AFSK config: {self.satellite_name} (NORAD {self.norad_id or 'N/A'}) | "
+            f"TX: {self.transmitter_description} ({self.transmitter_mode}) | "
+            f"{self.baudrate}bd, af_carrier={self.af_carrier}Hz, dev={self.deviation}Hz, {self.framing} | src: {self.config_source}"
+        )
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -630,10 +627,6 @@ class AFSKDecoder(BaseDecoder, threading.Thread):
 
                     chunks_received += 1
                     if chunks_received % 100 == 0:
-                        logger.debug(
-                            f"Received {chunks_received} chunks, "
-                            f"packets decoded: {self.packet_count}"
-                        )
                         # Send periodic stats update
                         self._send_stats_update()
 

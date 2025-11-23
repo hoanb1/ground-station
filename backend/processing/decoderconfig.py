@@ -15,7 +15,7 @@
 
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional
 
 
 @dataclass
@@ -53,14 +53,10 @@ class DecoderConfig:
     packet_size: Optional[int] = None  # Expected packet size in bytes
 
     # Satellite metadata (for logging, file naming, telemetry parsing)
-    satellite_norad_id: Optional[int] = None
-    satellite_name: Optional[str] = None
+    satellite: Optional[Dict] = None
 
     # Transmitter metadata (for logging, file naming, reference)
-    transmitter_id: Optional[int] = None
-    transmitter_description: Optional[str] = None
-    transmitter_mode: Optional[str] = None
-    transmitter_downlink_freq: Optional[float] = None
+    transmitter: Optional[Dict] = None
 
     def __eq__(self, other):
         """
@@ -105,10 +101,6 @@ class DecoderConfig:
             "af_carrier": self.af_carrier,
             "differential": self.differential,
             "packet_size": self.packet_size,
-            "satellite_norad_id": self.satellite_norad_id,
-            "satellite_name": self.satellite_name,
-            "transmitter_id": self.transmitter_id,
-            "transmitter_description": self.transmitter_description,
-            "transmitter_mode": self.transmitter_mode,
-            "transmitter_downlink_freq": self.transmitter_downlink_freq,
+            "satellite": self.satellite,
+            "transmitter": self.transmitter,
         }

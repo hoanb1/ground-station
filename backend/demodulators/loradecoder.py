@@ -562,11 +562,7 @@ class LoRaDecoder(threading.Thread):
 
                     chunks_received += 1
                     if chunks_received % 100 == 0:
-                        logger.debug(
-                            f"Received {chunks_received} chunks, "
-                            f"buffer: {len(samples_buffer)} samples, "
-                            f"packets decoded: {self.packet_count}"
-                        )
+                        pass  # Periodic stats update without logging
 
                 except queue.Empty:
                     pass

@@ -44,11 +44,13 @@ class BaseDecoder:
     - session_id: str - Session identifier
     - baudrate: int - Baud rate
     - vfo: Optional[int] - VFO identifier
-    - norad_id: Optional[int] - NORAD satellite ID
-    - satellite_name: str - Satellite name
-    - transmitter_description: str - Transmitter description
-    - transmitter_mode: str - Transmitter mode
-    - transmitter_downlink_freq: Optional[float] - Downlink frequency in Hz
+    - satellite: Dict - Satellite metadata dict (norad_id, name, etc.)
+    - transmitter: Dict - Transmitter metadata dict (description, mode, downlink_low, etc.)
+    - norad_id: Optional[int] - NORAD satellite ID (extracted from satellite dict)
+    - satellite_name: str - Satellite name (extracted from satellite dict)
+    - transmitter_description: str - Transmitter description (extracted from transmitter dict)
+    - transmitter_mode: str - Transmitter mode (extracted from transmitter dict)
+    - transmitter_downlink_freq: Optional[float] - Downlink frequency in Hz (extracted from transmitter dict)
     - config_source: str - Configuration source
     - framing: str - Framing protocol
     - data_queue: queue.Queue - Queue for output data
@@ -77,6 +79,8 @@ class BaseDecoder:
     session_id: str
     baudrate: int
     vfo: Optional[int]
+    satellite: Dict
+    transmitter: Dict
     norad_id: Optional[int]
     satellite_name: str
     transmitter_description: str

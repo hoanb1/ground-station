@@ -260,7 +260,6 @@ class BPSKFlowgraph(gr.top_block):
             if self.status_callback:
                 self.status_callback(DecoderStatus.DECODING, {"buffer_samples": buffer_size})
 
-            logger.info(f"Processing batch: {buffer_size} samples ({self.batch_interval}s)")
             self._process_buffer()
 
     def _process_buffer(self):
@@ -320,9 +319,6 @@ class BPSKFlowgraph(gr.top_block):
             # Select deframer based on detected framing protocol
             if self.framing == "doka":
                 # DOKA uses CCSDS-style framing with Reed-Solomon FEC
-                logger.info("Using CCSDS RS deframer for DOKA signal")
-                logger.info("  Payload protocol: CCSDS telemetry frames")
-
                 # DOKA uses standard CCSDS frame parameters
                 # 223 bytes data + 32 bytes RS parity = 255 byte total frame (standard CCSDS)
                 deframer = ccsds_rs_deframer(
@@ -335,11 +331,17 @@ class BPSKFlowgraph(gr.top_block):
                     syncword_threshold=None,
                     options=options,
                 )
+                frame_info = "CCSDS_RS(sz=223,dual)"
             else:  # ax25 (default)
                 # Standard AX.25 with G3RUH scrambler
-                logger.info("Using AX.25 deframer with G3RUH scrambler")
-                logger.info("  Payload protocol: AX.25 with HDLC framing")
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
+                frame_info = "AX25(G3RUH)"
+
+            logger.info(
+                f"Batch: {len(samples_to_process)} samp ({self.batch_interval}s) | "
+                f"BPSK: {self.baudrate}bd, {self.sample_rate:.0f}sps, diff={self.differential} | "
+                f"Frame: {frame_info}"
+            )
 
             # Create message handler for this batch
             msg_handler = BPSKMessageHandler(self.callback)
@@ -472,27 +474,27 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
         self.packet_size = config.packet_size or packet_size
         self.batch_interval = batch_interval
 
-        # Extract satellite metadata from config
-        self.norad_id = config.satellite_norad_id
-        self.satellite_name = config.satellite_name or "Unknown"
+        # Extract satellite and transmitter metadata from config
+        self.satellite = config.satellite or {}
+        self.transmitter = config.transmitter or {}
 
-        # Extract transmitter metadata from config
-        self.transmitter_description = config.transmitter_description or "Unknown"
-        self.transmitter_mode = config.transmitter_mode or "BPSK"
-        self.transmitter_downlink_freq = config.transmitter_downlink_freq
+        # Extract commonly used fields for convenience
+        self.norad_id = self.satellite.get("norad_id")
+        self.satellite_name = self.satellite.get("name") or "Unknown"
+        self.transmitter_description = self.transmitter.get("description") or "Unknown"
+        self.transmitter_mode = self.transmitter.get("mode") or "BPSK"
+        self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
 
         # Log warning if downlink frequency not available
         if not self.transmitter_downlink_freq:
             logger.warning("Transmitter downlink frequency not available in config")
             logger.debug(f"Config metadata: {config.to_dict()}")
 
-        logger.info("BPSK decoder configuration:")
-        logger.info(f"  Satellite: {self.satellite_name} (NORAD {self.norad_id or 'N/A'})")
-        logger.info(f"  Transmitter: {self.transmitter_description} ({self.transmitter_mode})")
-        logger.info(f"  Baudrate: {self.baudrate}")
-        logger.info(f"  Framing: {self.framing}")
-        logger.info(f"  Differential: {self.differential}")
-        logger.info(f"  Config source: {self.config_source}")
+        logger.info(
+            f"BPSK config: {self.satellite_name} (NORAD {self.norad_id or 'N/A'}) | "
+            f"TX: {self.transmitter_description} ({self.transmitter_mode}) | "
+            f"{self.baudrate}bd, {self.framing}, diff={self.differential} | src: {self.config_source}"
+        )
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -779,10 +781,6 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
 
                     chunks_received += 1
                     if chunks_received % 100 == 0:
-                        logger.debug(
-                            f"Received {chunks_received} chunks, "
-                            f"packets decoded: {self.packet_count}"
-                        )
                         # Send periodic stats update
                         self._send_stats_update()
 
