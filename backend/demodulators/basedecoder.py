@@ -154,13 +154,28 @@ class BaseDecoder:
                 from_callsign = callsigns.get("from")
                 if from_callsign:
                     lookup_table = _load_callsign_lookup()
+
+                    # Try exact match first
                     identified_norad_id = lookup_table.get(from_callsign)
-                    if identified_norad_id:
+
+                    # If not found and callsign ends with -1 (or other single digit SSID), try without it
+                    if not identified_norad_id and from_callsign.endswith(
+                        ("-0", "-1", "-2", "-3", "-4", "-5", "-6", "-7", "-8", "-9")
+                    ):
+                        base_callsign = from_callsign[:-2]  # Remove last 2 chars (-X)
+                        identified_norad_id = lookup_table.get(base_callsign)
+                        if identified_norad_id:
+                            identified_satellite = base_callsign
+                            logger.info(
+                                f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id}) from callsign {from_callsign}"
+                            )
+
+                    if identified_norad_id and not identified_satellite:
                         identified_satellite = from_callsign
                         logger.info(
                             f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id})"
                         )
-                    else:
+                    elif not identified_norad_id:
                         logger.debug(f"  Callsign '{from_callsign}' not found in lookup table")
 
             # Remove HDLC flags for processing
