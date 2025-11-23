@@ -157,7 +157,6 @@ class SatelliteConfigService:
             for tx_name, tx in transmitters.items():
                 freq_match: Dict[str, Any] = tx
                 if abs(freq_match.get("frequency", 0) - frequency) < 100e3:
-                    logger.debug(f"Matched transmitter by frequency: {tx_name}")
                     return freq_match
 
         # Match by baudrate
@@ -165,12 +164,10 @@ class SatelliteConfigService:
             for tx_name, tx in transmitters.items():
                 baud_match: Dict[str, Any] = tx
                 if baud_match.get("baudrate") == baudrate:
-                    logger.debug(f"Matched transmitter by baudrate: {tx_name}")
                     return baud_match
 
         # Return first transmitter as fallback
         first_tx: Dict[str, Any] = list(transmitters.values())[0]
-        logger.debug("Using first transmitter as fallback")
         return first_tx
 
     def get_decoder_parameters(
@@ -233,7 +230,6 @@ class SatelliteConfigService:
             # Found satellite in gr-satellites database
             sat = self.get_satellite_by_norad(norad_id)
             sat_name = sat.get("name", f"NORAD-{norad_id}") if sat else f"NORAD-{norad_id}"
-            logger.info(f"Found '{sat_name}' (NORAD {norad_id}) in gr-satellites database")
 
             params["modulation"] = tx.get("modulation", "FSK")
             params["framing"] = self._map_framing(tx.get("framing", "AX.25"))
@@ -242,16 +238,17 @@ class SatelliteConfigService:
             if "deviation" in tx:
                 params["deviation"] = tx["deviation"]
                 params["source"] = "gr_satellites_yaml"
-                logger.info(
-                    f"  → Using gr-satellites deviation: {params['deviation']} Hz (framing: {params['framing']})"
-                )
+                source_label = "gr-satellites"
             else:
                 # Smart default: estimate from modulation and baudrate
                 params["deviation"] = self._estimate_deviation(tx)
                 params["source"] = "smart_default"
-                logger.info(
-                    f"   Deviation not in database, estimated {params['deviation']} Hz from {params['modulation']} @ {baudrate} baud"
-                )
+                source_label = "estimated"
+
+            logger.info(
+                f"{sat_name} (NORAD {norad_id}) | "
+                f"{params['modulation']}, {baudrate}bd, dev={params['deviation']}Hz, {params['framing']} | src: {source_label}"
+            )
 
             # Optional parameters
             if "precoding" in tx:
@@ -261,7 +258,7 @@ class SatelliteConfigService:
         else:
             # No YAML data, use smart defaults
             logger.warning(
-                f"✗ NORAD {norad_id} not found in gr-satellites database, using smart defaults"
+                f"NORAD {norad_id} not found in gr-satellites database, using smart defaults"
             )
             params["deviation"] = baudrate / 2  # Narrow FSK default
             params["source"] = "smart_default"
@@ -293,8 +290,6 @@ class SatelliteConfigService:
             # Add more mappings as needed
         }
         result = mapping.get(gr_sat_framing, "ax25")
-        if result != gr_sat_framing.lower():
-            logger.debug(f"Mapped framing '{gr_sat_framing}' -> '{result}'")
         return result
 
     def _estimate_deviation(self, tx: Dict[str, Any]) -> float:
