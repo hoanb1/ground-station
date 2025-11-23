@@ -63,6 +63,11 @@ from enum import Enum
 from typing import Any, Dict
 
 import numpy as np
+from gnuradio import blocks, gr
+from satellites.components.deframers.ax25_deframer import ax25_deframer
+from satellites.components.deframers.geoscan_deframer import geoscan_deframer
+from satellites.components.deframers.usp_deframer import usp_deframer
+from satellites.components.demodulators.fsk_demodulator import fsk_demodulator
 from scipy import signal
 
 from demodulators.basedecoder import BaseDecoder
@@ -70,18 +75,6 @@ from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
 logger = logging.getLogger("gmskdecoder")
-
-# Try to import GNU Radio
-GNURADIO_AVAILABLE = False
-
-try:
-    from gnuradio import blocks, gr
-
-    GNURADIO_AVAILABLE = True
-    logger.info("GNU Radio available - GMSK decoder enabled")
-except ImportError as e:
-    logger.warning(f"GNU Radio not available: {e}")
-    logger.warning("GMSK decoder will not be functional")
 
 
 class DecoderStatus(Enum):
@@ -153,14 +146,7 @@ class GMSKMessageHandler(gr.basic_block):
             traceback.print_exc()
 
 
-# Define base class conditionally
-if GNURADIO_AVAILABLE and gr is not None:
-    _GMSKFlowgraphBase = gr.top_block
-else:
-    _GMSKFlowgraphBase = object
-
-
-class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
+class GMSKFlowgraph(gr.top_block):
     """
     GMSK flowgraph using gr-satellites FSK demodulator components
 
@@ -198,9 +184,6 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
             batch_interval: Batch processing interval in seconds (default: 5.0)
             framing: Framing protocol - 'ax25' (G3RUH) or 'usp' (USP FEC)
         """
-        if not GNURADIO_AVAILABLE:
-            raise RuntimeError("GNU Radio not available - GMSK decoder cannot be initialized")
-
         super().__init__("GMSK Decoder")
 
         self.sample_rate = sample_rate
@@ -279,9 +262,6 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
             # Create a NEW flowgraph for each batch to avoid connection conflicts
             # This is necessary because hierarchical blocks can't be easily disconnected
 
-            # Import gr-satellites components
-            from satellites.components.demodulators.fsk_demodulator import fsk_demodulator
-
             # Create a temporary top_block
             tb = gr.top_block("GMSK Batch Processor")
 
@@ -317,8 +297,6 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
 
             # Create appropriate deframer based on framing protocol
             if self.framing == "geoscan":
-                from satellites.components.deframers.geoscan_deframer import geoscan_deframer
-
                 # GEOSCAN uses 66 or 74 byte frames (varies by satellite)
                 # Default to 66 (most common), will need satellite-specific config for others
                 frame_size = 66
@@ -332,8 +310,6 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 )
                 logger.info("  Payload protocol: GEOSCAN proprietary format")
             elif self.framing == "usp":
-                from satellites.components.deframers.usp_deframer import usp_deframer
-
                 # Increase syncword threshold for low SNR (allow more bit errors)
                 # Default is 13, trying 20 for weak signals
                 syncword_thresh = 20
@@ -343,8 +319,6 @@ class GMSKFlowgraph(_GMSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 )
                 logger.info("  Expected payload protocol: AX.25 (USP wraps AX.25 packets)")
             else:  # default to ax25
-                from satellites.components.deframers.ax25_deframer import ax25_deframer
-
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
                 logger.info("Using AX.25 deframer (G3RUH descrambler)")
                 logger.info("  Payload protocol: AX.25 with HDLC framing")
@@ -436,10 +410,6 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         vfo=None,
         batch_interval=5.0,  # Batch processing interval in seconds
     ):
-        if not GNURADIO_AVAILABLE:
-            logger.error("GNU Radio not available - GMSK decoder cannot be initialized")
-            raise RuntimeError("GNU Radio not available")
-
         super().__init__(daemon=True, name=f"GMSKDecoder-{session_id}")
         self.iq_queue = iq_queue
         self.data_queue = data_queue
@@ -701,24 +671,16 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
                             decimation = 1
                         self.sample_rate = self.sdr_sample_rate / decimation
 
-                        logger.info(
-                            f"GMSK baudrate: {self.baudrate} baud, "
-                            f"target rate: {target_sample_rate/1e3:.2f}kS/s ({target_sps} sps)"
-                        )
-
                         # Design decimation filter
                         self.decimation_filter = self._design_decimation_filter(
                             decimation, vfo_bandwidth, self.sdr_sample_rate
                         )
 
                         logger.info(
-                            f"GMSK decoder: SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, "
-                            f"VFO BW: {vfo_bandwidth/1e3:.0f} kHz, decimation: {decimation}, "
-                            f"output rate: {self.sample_rate/1e6:.2f} MS/s"
-                        )
-                        logger.info(
-                            f"VFO center: {vfo_center/1e6:.3f} MHz, "
-                            f"SDR center: {sdr_center/1e6:.3f} MHz"
+                            f"GMSK decoder: {self.baudrate} baud, target rate: {target_sample_rate/1e3:.2f}kS/s ({target_sps} sps), "
+                            f"SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, VFO BW: {vfo_bandwidth/1e3:.0f} kHz, "
+                            f"decimation: {decimation}, output rate: {self.sample_rate/1e6:.2f} MS/s, "
+                            f"VFO center: {vfo_center/1e6:.3f} MHz, SDR center: {sdr_center/1e6:.3f} MHz"
                         )
 
                         # Initialize flowgraph

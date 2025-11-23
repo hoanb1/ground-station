@@ -17,6 +17,11 @@
 from dataclasses import dataclass
 from typing import List, Optional, Type
 
+from demodulators.amdemodulator import AMDemodulator
+from demodulators.fmdemodulator import FMDemodulator
+from demodulators.fmstereodemodulator import FMStereoDemodulator
+from demodulators.ssbdemodulator import SSBDemodulator
+
 
 @dataclass
 class DemodulatorCapabilities:
@@ -55,12 +60,6 @@ class DemodulatorRegistry:
     def __init__(self):
         if self._initialized:
             return
-
-        # Import demodulator classes
-        from demodulators.amdemodulator import AMDemodulator
-        from demodulators.fmdemodulator import FMDemodulator
-        from demodulators.fmstereodemodulator import FMStereoDemodulator
-        from demodulators.ssbdemodulator import SSBDemodulator
 
         # Define capabilities for each demodulator
         self._demodulators = {

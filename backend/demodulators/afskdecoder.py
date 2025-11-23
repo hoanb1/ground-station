@@ -59,24 +59,15 @@ from enum import Enum
 from typing import Any, Dict
 
 import numpy as np
+from gnuradio import blocks, gr
+from satellites.components.deframers.ax25_deframer import ax25_deframer
+from satellites.components.demodulators.afsk_demodulator import afsk_demodulator
 
 from demodulators.basedecoder import BaseDecoder
 from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
 logger = logging.getLogger("afskdecoder")
-
-# Try to import GNU Radio
-GNURADIO_AVAILABLE = False
-
-try:
-    from gnuradio import blocks, gr
-
-    GNURADIO_AVAILABLE = True
-    logger.info("GNU Radio available - AFSK decoder enabled")
-except ImportError as e:
-    logger.warning(f"GNU Radio not available: {e}")
-    logger.warning("AFSK decoder will not be functional")
 
 
 class DecoderStatus(Enum):
@@ -148,14 +139,7 @@ class AFSKMessageHandler(gr.basic_block):
             traceback.print_exc()
 
 
-# Define base class conditionally
-if GNURADIO_AVAILABLE and gr is not None:
-    _AFSKFlowgraphBase = gr.top_block
-else:
-    _AFSKFlowgraphBase = object
-
-
-class AFSKFlowgraph(_AFSKFlowgraphBase):  # type: ignore[misc,valid-type]
+class AFSKFlowgraph(gr.top_block):
     """
     AFSK flowgraph using gr-satellites AFSK demodulator components
 
@@ -194,9 +178,6 @@ class AFSKFlowgraph(_AFSKFlowgraphBase):  # type: ignore[misc,valid-type]
             batch_interval: Batch processing interval in seconds (default: 5.0)
             framing: Framing protocol - 'ax25' (G3RUH, default for AFSK)
         """
-        if not GNURADIO_AVAILABLE:
-            raise RuntimeError("GNU Radio not available - AFSK decoder cannot be initialized")
-
         super().__init__("AFSK Decoder")
 
         self.sample_rate = sample_rate
@@ -275,9 +256,6 @@ class AFSKFlowgraph(_AFSKFlowgraphBase):  # type: ignore[misc,valid-type]
             # Create a NEW flowgraph for each batch to avoid connection conflicts
             # This is necessary because hierarchical blocks can't be easily disconnected
 
-            # Import gr-satellites components
-            from satellites.components.demodulators.afsk_demodulator import afsk_demodulator
-
             # Create a temporary top_block
             tb = gr.top_block("AFSK Batch Processor")
 
@@ -311,8 +289,6 @@ class AFSKFlowgraph(_AFSKFlowgraphBase):  # type: ignore[misc,valid-type]
             )
 
             # Create AX.25 deframer (AFSK typically uses AX.25)
-            from satellites.components.deframers.ax25_deframer import ax25_deframer
-
             deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
             logger.info("Using AX.25 deframer (G3RUH descrambler)")
             logger.info("  Payload protocol: AX.25 with HDLC framing")
@@ -405,10 +381,6 @@ class AFSKDecoder(BaseDecoder, threading.Thread):
         vfo=None,
         batch_interval=5.0,  # Batch processing interval in seconds
     ):
-        if not GNURADIO_AVAILABLE:
-            logger.error("GNU Radio not available - AFSK decoder cannot be initialized")
-            raise RuntimeError("GNU Radio not available")
-
         super().__init__(daemon=True, name=f"AFSKDecoder-{session_id}")
         self.audio_queue = audio_queue
         self.data_queue = data_queue
@@ -712,7 +684,6 @@ class AFSKDecoder(BaseDecoder, threading.Thread):
 
 # Export all necessary components
 __all__ = [
-    "GNURADIO_AVAILABLE",
     "DecoderStatus",
     "AFSKFlowgraph",
     "AFSKMessageHandler",

@@ -26,13 +26,7 @@
 # This is essentially an alias to the GMSK decoder with appropriate naming
 # for clarity when dealing with GFSK-specific satellites.
 
-from .gmskdecoder import (
-    GNURADIO_AVAILABLE,
-    DecoderStatus,
-    GMSKDecoder,
-    GMSKFlowgraph,
-    GMSKMessageHandler,
-)
+from .gmskdecoder import DecoderStatus, GMSKDecoder, GMSKFlowgraph, GMSKMessageHandler
 
 # Create aliases for GFSK
 GFSKFlowgraph = GMSKFlowgraph
@@ -187,7 +181,6 @@ class GFSKDecoder(GMSKDecoder):
 
 # Export all necessary components
 __all__ = [
-    "GNURADIO_AVAILABLE",
     "DecoderStatus",
     "GFSKFlowgraph",
     "GFSKMessageHandler",

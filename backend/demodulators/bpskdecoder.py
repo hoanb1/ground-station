@@ -68,6 +68,10 @@ from enum import Enum
 from typing import Any, Dict
 
 import numpy as np
+from gnuradio import blocks, gr
+from satellites.components.deframers.ax25_deframer import ax25_deframer
+from satellites.components.deframers.ccsds_rs_deframer import ccsds_rs_deframer
+from satellites.components.demodulators.bpsk_demodulator import bpsk_demodulator
 from scipy import signal
 
 from demodulators.basedecoder import BaseDecoder
@@ -75,18 +79,6 @@ from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
 logger = logging.getLogger("bpskdecoder")
-
-# Try to import GNU Radio
-GNURADIO_AVAILABLE = False
-
-try:
-    from gnuradio import blocks, gr
-
-    GNURADIO_AVAILABLE = True
-    logger.info("GNU Radio available - BPSK decoder enabled")
-except ImportError as e:
-    logger.warning(f"GNU Radio not available: {e}")
-    logger.warning("BPSK decoder will not be functional")
 
 
 class DecoderStatus(Enum):
@@ -167,14 +159,7 @@ class BPSKMessageHandler(gr.basic_block):
             traceback.print_exc()
 
 
-# Define base class conditionally
-if GNURADIO_AVAILABLE and gr is not None:
-    _BPSKFlowgraphBase = gr.top_block
-else:
-    _BPSKFlowgraphBase = object
-
-
-class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
+class BPSKFlowgraph(gr.top_block):
     """
     Continuous BPSK flowgraph using gr-satellites components
 
@@ -218,9 +203,6 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             batch_interval: Batch processing interval in seconds (default: 3.0)
             framing: Framing protocol - 'ax25' (G3RUH) or 'doka' (CCSDS)
         """
-        if not GNURADIO_AVAILABLE:
-            raise RuntimeError("GNU Radio not available - BPSK decoder cannot be initialized")
-
         super().__init__("BPSK Decoder")
 
         self.sample_rate = sample_rate
@@ -301,9 +283,6 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
             # This is necessary because hierarchical blocks can't be easily disconnected
             import argparse
 
-            from satellites.components.deframers.ax25_deframer import ax25_deframer
-            from satellites.components.demodulators.bpsk_demodulator import bpsk_demodulator
-
             # Create a temporary top_block
             tb = gr.top_block("BPSK Batch Processor")
 
@@ -343,7 +322,6 @@ class BPSKFlowgraph(_BPSKFlowgraphBase):  # type: ignore[misc,valid-type]
                 # DOKA uses CCSDS-style framing with Reed-Solomon FEC
                 logger.info("Using CCSDS RS deframer for DOKA signal")
                 logger.info("  Payload protocol: CCSDS telemetry frames")
-                from satellites.components.deframers.ccsds_rs_deframer import ccsds_rs_deframer
 
                 # DOKA uses standard CCSDS frame parameters
                 # 223 bytes data + 32 bytes RS parity = 255 byte total frame (standard CCSDS)
@@ -468,10 +446,6 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
         batch_interval=5.0,  # Batch processing interval in seconds
         packet_size=256,  # Optional override for packet size
     ):
-        if not GNURADIO_AVAILABLE:
-            logger.error("GNU Radio not available - BPSK decoder cannot be initialized")
-            raise RuntimeError("GNU Radio not available")
-
         super().__init__(daemon=True, name=f"BPSKDecoder-{session_id}")
         self.iq_queue = iq_queue
         self.data_queue = data_queue
@@ -737,24 +711,16 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
                             decimation = 1
                         self.sample_rate = self.sdr_sample_rate / decimation
 
-                        logger.info(
-                            f"BPSK baudrate: {self.baudrate} baud, "
-                            f"target rate: {target_sample_rate/1e3:.2f}kS/s ({target_sps} sps)"
-                        )
-
                         # Design decimation filter
                         self.decimation_filter = self._design_decimation_filter(
                             decimation, vfo_bandwidth, self.sdr_sample_rate
                         )
 
                         logger.info(
-                            f"BPSK decoder: SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, "
-                            f"VFO BW: {vfo_bandwidth/1e3:.0f} kHz, decimation: {decimation}, "
-                            f"output rate: {self.sample_rate/1e6:.2f} MS/s"
-                        )
-                        logger.info(
-                            f"VFO center: {vfo_center/1e6:.3f} MHz, "
-                            f"SDR center: {sdr_center/1e6:.3f} MHz"
+                            f"BPSK decoder: {self.baudrate} baud, target rate: {target_sample_rate/1e3:.2f}kS/s ({target_sps} sps), "
+                            f"SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, VFO BW: {vfo_bandwidth/1e3:.0f} kHz, "
+                            f"decimation: {decimation}, output rate: {self.sample_rate/1e6:.2f} MS/s, "
+                            f"VFO center: {vfo_center/1e6:.3f} MHz, SDR center: {sdr_center/1e6:.3f} MHz"
                         )
 
                         # Initialize flowgraph

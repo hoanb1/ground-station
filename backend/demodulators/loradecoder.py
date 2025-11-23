@@ -26,21 +26,12 @@ import time
 from enum import Enum
 
 import numpy as np
+from gnuradio import blocks, gr, lora_sdr
 from scipy import signal
 
 from vfos.state import VFOManager
 
 logger = logging.getLogger("loradecoder")
-
-# Try to import GNU Radio and gr-lora_sdr
-GNURADIO_AVAILABLE = False
-try:
-    from gnuradio import blocks, gr, lora_sdr
-
-    GNURADIO_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"GNU Radio or gr-lora_sdr not available: {e}")
-    logger.warning("LoRa decoder will not be functional")
 
 
 class DecoderStatus(Enum):
@@ -89,14 +80,7 @@ class LoRaMessageSink(gr.sync_block):
             traceback.print_exc()
 
 
-# Define base class conditionally
-if GNURADIO_AVAILABLE and gr is not None:
-    _LoRaFlowgraphBase = gr.top_block
-else:
-    _LoRaFlowgraphBase = object
-
-
-class LoRaFlowgraph(_LoRaFlowgraphBase):  # type: ignore[misc,valid-type]
+class LoRaFlowgraph(gr.top_block):
     """GNU Radio flowgraph for LoRa decoding using gr-lora_sdr blocks"""
 
     def __init__(
@@ -124,11 +108,6 @@ class LoRaFlowgraph(_LoRaFlowgraphBase):  # type: ignore[misc,valid-type]
             has_crc: Whether packets have CRC
             impl_head: Implicit header mode
         """
-        if not GNURADIO_AVAILABLE:
-            raise RuntimeError(
-                "GNU Radio or gr-lora_sdr not available - LoRa decoder cannot be initialized"
-            )
-
         super().__init__("LoRa Decoder")
 
         self.sample_rate = sample_rate
@@ -263,12 +242,6 @@ class LoRaDecoder(threading.Thread):
         cr=1,  # Coding rate 4/5 - will auto-detect
         sync_word=None,  # Auto-detect by default
     ):
-        if not GNURADIO_AVAILABLE:
-            logger.error(
-                "GNU Radio or gr-lora_sdr not available - LoRa decoder cannot be initialized"
-            )
-            raise RuntimeError("GNU Radio or gr-lora_sdr not available")
-
         super().__init__(daemon=True, name=f"LoRaDecoder-{session_id}")
         self.iq_queue = iq_queue
         self.data_queue = data_queue
@@ -459,21 +432,15 @@ class LoRaDecoder(threading.Thread):
                             decimation = 1
                         self.sample_rate = self.sdr_sample_rate / decimation
 
-                        logger.info(
-                            f"LoRa BW: {self.bw/1e3:.0f}kHz, target rate: {target_sample_rate/1e6:.2f}MS/s (4x oversample)"
-                        )
-
                         # Design decimation filter
                         self.decimation_filter = self._design_decimation_filter(
                             decimation, vfo_bandwidth, self.sdr_sample_rate
                         )
 
                         logger.info(
-                            f"LoRa decoder: SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, "
-                            f"VFO BW: {vfo_bandwidth/1e3:.0f} kHz, decimation: {decimation}, "
-                            f"output rate: {self.sample_rate/1e6:.2f} MS/s"
-                        )
-                        logger.info(
+                            f"LoRa decoder: BW: {self.bw/1e3:.0f}kHz, target rate: {target_sample_rate/1e6:.2f}MS/s (4x oversample), "
+                            f"SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, VFO BW: {vfo_bandwidth/1e3:.0f} kHz, "
+                            f"decimation: {decimation}, output rate: {self.sample_rate/1e6:.2f} MS/s, "
                             f"VFO center: {vfo_center/1e6:.3f} MHz, SDR center: {sdr_center/1e6:.3f} MHz"
                         )
 
