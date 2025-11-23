@@ -56,7 +56,7 @@ const initialState = {
     // UI state
     ui: {
         selectedOutput: null,      // Currently viewing output ID
-        galleryFilter: 'all',      // all, sstv, afsk, rtty, etc.
+        galleryFilter: 'all',      // all, sstv, afsk, morse, gmsk, etc.
         showGallery: false,
         showDecoderPanel: false,
     }

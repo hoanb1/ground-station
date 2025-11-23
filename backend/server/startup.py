@@ -136,7 +136,7 @@ process_manager.set_sio(sio)
 # Mount static directories
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 
-# Mount data directories for recordings, snapshots, and decoded data (SSTV, AFSK, RTTY, etc.)
+# Mount data directories for recordings, snapshots, and decoded data (SSTV, AFSK, Morse, etc.)
 # Ensure these directories exist before mounting
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 recordings_dir = os.path.join(backend_dir, "..", "data", "recordings")
@@ -194,7 +194,7 @@ async def init_db():
         os.path.join(backend_dir, "data", "snapshots"),
         os.path.join(
             backend_dir, "data", "decoded"
-        ),  # For SSTV images, AFSK packets, RTTY text, etc.
+        ),  # For SSTV images, AFSK packets, Morse audio, etc.
         os.path.join(backend_dir, "data", "configs"),  # For satellite decoder configurations
         os.path.join(backend_dir, "data", "uhd_images"),  # For UHD FPGA images
         os.path.join(backend_dir, "data", "uhd_config"),  # For UHD configuration files

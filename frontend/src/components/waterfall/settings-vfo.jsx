@@ -665,10 +665,8 @@ const VfoAccordion = ({
                                                     // Use default from vfo-config.js
                                                     updates.bandwidth = 30000; // 30 kHz default
                                                 }
-                                            } else if (newValue === 'afsk' || newValue === 'rtty') {
-                                                updates.bandwidth = 3300; // 3.3 kHz for AFSK/RTTY
-                                            } else if (newValue === 'psk31') {
-                                                updates.bandwidth = 3300; // 3.3 kHz for PSK31
+                                            } else if (newValue === 'afsk') {
+                                                updates.bandwidth = 3300; // 3.3 kHz for AFSK
                                             }
 
                                             onVFOPropertyChange(vfoIndex, updates);
@@ -726,8 +724,6 @@ const VfoAccordion = ({
                                 <ToggleButton value="gfsk">{t('vfo.decoders_modes.gfsk', 'GFSK')}</ToggleButton>
                                 <ToggleButton value="bpsk">{t('vfo.decoders_modes.bpsk', 'BPSK')}</ToggleButton>
                                 <ToggleButton value="afsk">{t('vfo.decoders_modes.afsk', 'AFSK')}</ToggleButton>
-                                <ToggleButton value="rtty">{t('vfo.decoders_modes.rtty', 'RTTY')}</ToggleButton>
-                                <ToggleButton value="psk31">{t('vfo.decoders_modes.psk31', 'PSK31')}</ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
 

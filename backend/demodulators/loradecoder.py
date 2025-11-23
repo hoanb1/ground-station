@@ -249,12 +249,9 @@ class LoRaDecoder(threading.Thread):
         iq_queue,
         data_queue,
         session_id,
+        config,  # Pre-resolved DecoderConfig from DecoderConfigService (contains all params + metadata)
         output_dir="data/decoded",
         vfo=None,
-        sf=11,  # Meshtastic LONG_FAST default
-        bw=250000,  # Meshtastic LONG_FAST default
-        cr=1,  # Coding rate 4/5 - will auto-detect
-        sync_word=None,  # Auto-detect by default
     ):
         if not LORA_SDR_AVAILABLE:
             logger.error("gr-lora_sdr not available - LoRa decoder cannot be initialized")
@@ -274,11 +271,13 @@ class LoRaDecoder(threading.Thread):
         self.decimation_filter = None  # Filter for decimation
         self.packet_count = 0
 
-        # LoRa parameters
-        self.sf = sf
-        self.bw = bw
-        self.cr = cr
+        # Extract LoRa parameters from config with defaults
+        # Meshtastic LONG_FAST defaults: SF11, 250kHz BW, CR 4/5
+        self.sf = config.get("sf", 11)
+        self.bw = config.get("bw", 250000)
+        self.cr = config.get("cr", 1)  # Coding rate 4/5 - will auto-detect
         # sync_word: None = auto-detect [0, 0], or specific like [0x12]
+        sync_word = config.get("sync_word")
         self.sync_word = sync_word if sync_word is not None else [0, 0]
 
         os.makedirs(self.output_dir, exist_ok=True)
@@ -288,7 +287,7 @@ class LoRaDecoder(threading.Thread):
 
         logger.info(f"LoRa decoder initialized for session {session_id}, VFO {vfo}")
         logger.info(
-            f"LoRa parameters: SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}, sync_word={self.sync_word}"
+            f"LoRa parameters: SF{self.sf}, BW{self.bw/1000:.0f}kHz, CR4/{self.cr+4}, sync_word={self.sync_word}"
         )
 
     def _get_vfo_state(self):

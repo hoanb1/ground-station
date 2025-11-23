@@ -334,7 +334,7 @@ class ProcessLifecycleManager:
                 "clients": {client_id},
                 "demodulators": {},  # Will store demodulator threads per session
                 "recorders": {},  # Will store recorder threads per session (separate from demodulators)
-                "decoders": {},  # Will store decoder threads per session (SSTV, AFSK, RTTY, etc.)
+                "decoders": {},  # Will store decoder threads per session (SSTV, AFSK, Morse, etc.)
                 "fft_stats": {},  # Latest stats from FFT processor
             }
 
@@ -645,7 +645,7 @@ class ProcessLifecycleManager:
                             "decoder-output",
                             "decoder-error",
                         ]:
-                            # Decoder messages (SSTV, AFSK, RTTY, PSK31, etc.)
+                            # Decoder messages (SSTV, AFSK, Morse, GMSK, etc.)
                             # Send to specific session only
                             session_id = data.get("session_id")
                             if session_id:

@@ -104,8 +104,9 @@
       "morse": "Morse",
       "lora": "LoRa",
       "afsk": "AFSK",
-      "rtty": "RTTY",
-      "psk31": "PSK31"
+      "gmsk": "GMSK",
+      "gfsk": "GFSK",
+      "bpsk": "BPSK"
     },
     "lock_to_transmitter": "Lock to Transmitter",
     "none": "None",

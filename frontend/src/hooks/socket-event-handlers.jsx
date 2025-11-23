@@ -460,7 +460,7 @@ export const useSocketEventHandlers = (socket) => {
             store.dispatch(updateMetrics(data));
         });
 
-        // Decoder data events (SSTV, AFSK, RTTY, PSK31, etc.)
+        // Decoder data events (SSTV, AFSK, Morse, GMSK, etc.)
         socket.on('decoder-data', (data) => {
             switch (data.type) {
                 case 'decoder-status':

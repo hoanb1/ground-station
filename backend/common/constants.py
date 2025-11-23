@@ -40,7 +40,7 @@ class SocketEvents:
     # Audio
     AUDIO_DATA = "audio-data"
 
-    # Decoders (SSTV, AFSK, RTTY, PSK31, etc.)
+    # Decoders (SSTV, AFSK, Morse, GMSK, etc.)
     DECODER_DATA = "decoder-data"
 
     # VFO

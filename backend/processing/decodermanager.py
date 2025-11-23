@@ -25,7 +25,7 @@ from processing.demodulatorregistry import demodulator_registry
 
 class DecoderManager:
     """
-    Manager for decoder consumers (SSTV, AFSK, RTTY, etc.)
+    Manager for decoder consumers (SSTV, AFSK, Morse, etc.)
     Decoders are special as they consume audio from demodulators
     """
 
@@ -48,7 +48,7 @@ class DecoderManager:
         Start a decoder thread for a specific session.
 
         Decoders consume audio from a demodulator and produce decoded data
-        (e.g., SSTV images, AFSK packets, RTTY text).
+        (e.g., SSTV images, AFSK packets, Morse code).
 
         This method automatically creates an internal FM demodulator specifically
         for the decoder if one doesn't already exist for this session.
