@@ -301,17 +301,21 @@ RUN git clone --depth=1 https://github.com/tapparelj/gr-lora_sdr.git && \
     cd gr-lora_sdr && \
     mkdir build && \
     cd build && \
+    ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then LIB_ARCH="x86_64-linux-gnu"; \
+    elif [ "$ARCH" = "aarch64" ]; then LIB_ARCH="aarch64-linux-gnu"; \
+    else LIB_ARCH="$ARCH-linux-gnu"; fi && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
           -DPYTHON_EXECUTABLE=/app/venv/bin/python3 \
           -DPYTHON_INCLUDE_DIR=/usr/include/python3.12 \
-          -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.12.so .. && \
+          -DPYTHON_LIBRARY=/usr/lib/$LIB_ARCH/libpython3.12.so .. && \
     make -j$(nproc) && \
     sudo make install -j$(nproc) && \
     sudo ldconfig
 
-# Copy gr-lora_sdr Python bindings to virtual environment
-RUN cp -r /usr/local/lib/python3/dist-packages/lora_sdr* /app/venv/lib/python3.12/site-packages/ 2>/dev/null || \
-    cp -r /usr/local/lib/python3.12/site-packages/lora_sdr* /app/venv/lib/python3.12/site-packages/ 2>/dev/null || \
+# Copy gr-lora_sdr Python bindings to virtual environment (it installs as a subdirectory of gnuradio)
+RUN cp -r /usr/local/lib/python3.12/site-packages/gnuradio/lora_sdr /app/venv/lib/python3.12/site-packages/gnuradio/ 2>/dev/null || \
+    cp -r /usr/local/lib/python3/dist-packages/gnuradio/lora_sdr /app/venv/lib/python3.12/site-packages/gnuradio/ 2>/dev/null || \
     echo "Warning: Could not find lora_sdr Python bindings"
 
 # Compile gr-satellites
