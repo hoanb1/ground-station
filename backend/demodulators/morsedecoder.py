@@ -110,6 +110,7 @@ class MorseDecoder(threading.Thread):
         audio_queue,
         data_queue,
         session_id,
+        config=None,  # Pre-resolved DecoderConfig (unused for Morse, kept for compatibility)
         sample_rate=44100,
         output_dir="data/decoded",
         vfo=None,
