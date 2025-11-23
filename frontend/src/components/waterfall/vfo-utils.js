@@ -192,15 +192,18 @@ export const canvasDrawingUtils = {
             const secondaryLabelTop = labelTop + labelHeight + 2; // 2px gap below primary label
             const decoderType = decoderInfo.decoder_type;
 
-            // Handle BPSK, GMSK, and GFSK decoders with output info
-            if (decoderType === 'bpsk' || decoderType === 'gmsk' || decoderType === 'gfsk') {
+            // Handle BPSK, GMSK, GFSK, and AFSK decoders with output info
+            if (decoderType === 'bpsk' || decoderType === 'gmsk' || decoderType === 'gfsk' || decoderType === 'afsk') {
                 const status = decoderInfo.status || 'processing';
-                const fromCallsign = bpskOutputs?.fromCallsign || 'NO CALL';
                 const outputCount = bpskOutputs?.count || 0;
                 const baudrate = decoderInfo.info?.baudrate || 0;
+                const framing = decoderInfo.info?.framing || 'unknown';
 
-                // Template-based label: STATUS | CALLSIGN | COUNT | BAUDRATE
-                const fullText = `${status.toUpperCase()} | ${fromCallsign} | ${outputCount} | ${baudrate}bd`;
+                // Format baudrate for compact display
+                const formattedBaudrate = formatBaudrate(baudrate);
+
+                // Template-based label: STATUS | DECODER BAUDRATE | FRAMING | PACKET_COUNT
+                const fullText = `${status.toUpperCase()} | ${decoderType.toUpperCase()} ${formattedBaudrate} | ${framing.toUpperCase()} | ${outputCount} PKT`;
 
                 ctx.font = '10px Monospace';
                 const fullTextMetrics = ctx.measureText(fullText);
@@ -282,6 +285,24 @@ export const canvasDrawingUtils = {
             }
         }
     }
+};
+
+/**
+ * Format baudrate for compact display
+ * @param {number} baudrate - Baudrate in baud (e.g., 9600, 1200)
+ * @returns {string} - Formatted string (e.g., "9k6", "1k2")
+ */
+export const formatBaudrate = (baudrate) => {
+    if (!baudrate || baudrate === 0) return '0';
+
+    if (baudrate >= 1000) {
+        const kilobaud = baudrate / 1000;
+        // Format as "Xk" with one decimal if needed, removing trailing .0
+        const formatted = kilobaud.toFixed(1).replace('.0', '');
+        return `${formatted}k`.replace('.', 'k');
+    }
+
+    return `${baudrate}`;
 };
 
 /**
