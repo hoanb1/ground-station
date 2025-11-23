@@ -22,9 +22,17 @@ from demodulators.afskdecoder import AFSKDecoder
 from demodulators.bpskdecoder import BPSKDecoder
 from demodulators.gfskdecoder import GFSKDecoder
 from demodulators.gmskdecoder import GMSKDecoder
-from demodulators.loradecoder import LoRaDecoder
 from demodulators.morsedecoder import MorseDecoder
 from demodulators.sstvdecoder import SSTVDecoder
+
+# Try to import LoRa decoder (optional, requires gr-lora_sdr)
+try:
+    from demodulators.loradecoder import LoRaDecoder
+
+    LORA_AVAILABLE = True
+except ImportError:
+    LoRaDecoder = None
+    LORA_AVAILABLE = False
 
 
 @dataclass
@@ -101,16 +109,6 @@ class DecoderRegistry:
                 supports_transmitter_config=False,
                 description="Morse code (CW) decoder",
             ),
-            "lora": DecoderCapabilities(
-                name="lora",
-                decoder_class=LoRaDecoder,
-                needs_raw_iq=True,  # Works on raw IQ samples
-                required_demodulator=None,  # No demodulator needed
-                demodulator_mode=None,
-                default_bandwidth=125000,  # 125 kHz typical
-                supports_transmitter_config=False,
-                description="LoRa chirp spread spectrum decoder",
-            ),
             "gmsk": DecoderCapabilities(
                 name="gmsk",
                 decoder_class=GMSKDecoder,
@@ -142,6 +140,19 @@ class DecoderRegistry:
                 description="Binary Phase Shift Keying decoder",
             ),
         }
+
+        # Add LoRa decoder only if gr-lora_sdr is available
+        if LORA_AVAILABLE:
+            self._decoders["lora"] = DecoderCapabilities(
+                name="lora",
+                decoder_class=LoRaDecoder,
+                needs_raw_iq=True,  # Works on raw IQ samples
+                required_demodulator=None,  # No demodulator needed
+                demodulator_mode=None,
+                default_bandwidth=125000,  # 125 kHz typical
+                supports_transmitter_config=False,
+                description="LoRa chirp spread spectrum decoder",
+            )
 
         self._initialized = True
 

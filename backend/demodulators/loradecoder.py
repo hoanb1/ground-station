@@ -26,12 +26,23 @@ import time
 from enum import Enum
 
 import numpy as np
-from gnuradio import blocks, gr, lora_sdr
+from gnuradio import blocks, gr
 from scipy import signal
 
 from vfos.state import VFOManager
 
 logger = logging.getLogger("loradecoder")
+
+# Try to import gr-lora_sdr (optional module)
+LORA_SDR_AVAILABLE = False
+try:
+    from gnuradio import lora_sdr
+
+    LORA_SDR_AVAILABLE = True
+    logger.info("gr-lora_sdr available - LoRa decoder enabled")
+except ImportError as e:
+    logger.warning(f"gr-lora_sdr not available: {e}")
+    logger.warning("LoRa decoder will not be functional")
 
 
 class DecoderStatus(Enum):
@@ -108,6 +119,9 @@ class LoRaFlowgraph(gr.top_block):
             has_crc: Whether packets have CRC
             impl_head: Implicit header mode
         """
+        if not LORA_SDR_AVAILABLE:
+            raise RuntimeError("gr-lora_sdr not available - LoRa decoder cannot be initialized")
+
         super().__init__("LoRa Decoder")
 
         self.sample_rate = sample_rate
@@ -242,6 +256,10 @@ class LoRaDecoder(threading.Thread):
         cr=1,  # Coding rate 4/5 - will auto-detect
         sync_word=None,  # Auto-detect by default
     ):
+        if not LORA_SDR_AVAILABLE:
+            logger.error("gr-lora_sdr not available - LoRa decoder cannot be initialized")
+            raise RuntimeError("gr-lora_sdr not available")
+
         super().__init__(daemon=True, name=f"LoRaDecoder-{session_id}")
         self.iq_queue = iq_queue
         self.data_queue = data_queue
