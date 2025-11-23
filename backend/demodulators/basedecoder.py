@@ -27,6 +27,27 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger("basedecoder")
 
+# Load satellite callsign to NORAD ID lookup table
+_CALLSIGN_LOOKUP = None
+
+
+def _load_callsign_lookup():
+    """Load the satellite callsign to NORAD ID lookup table."""
+    global _CALLSIGN_LOOKUP
+    if _CALLSIGN_LOOKUP is None:
+        try:
+            lookup_path = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), "satellite-norad-lookup.json"
+            )
+            with open(lookup_path, "r") as f:
+                data = json.load(f)
+                _CALLSIGN_LOOKUP = data.get("satellites", {})
+            logger.info(f"Loaded {len(_CALLSIGN_LOOKUP)} satellite callsigns from lookup table")
+        except Exception as e:
+            logger.error(f"Failed to load callsign lookup table: {e}")
+            _CALLSIGN_LOOKUP = {}
+    return _CALLSIGN_LOOKUP
+
 
 class BaseDecoder:
     """
@@ -123,9 +144,24 @@ class BaseDecoder:
             decoder_type = self._get_decoder_type()
             logger.info(f"{decoder_type.upper()} transmission decoded: {len(payload)} bytes")
 
-            # Log callsigns if available
+            # Log callsigns if available and perform NORAD ID lookup
+            identified_norad_id = None
+            identified_satellite = None
             if callsigns:
                 logger.info(f"  Callsigns: {callsigns.get('to')} <- {callsigns.get('from')}")
+
+                # Look up NORAD ID from callsign
+                from_callsign = callsigns.get("from")
+                if from_callsign:
+                    lookup_table = _load_callsign_lookup()
+                    identified_norad_id = lookup_table.get(from_callsign)
+                    if identified_norad_id:
+                        identified_satellite = from_callsign
+                        logger.info(
+                            f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id})"
+                        )
+                    else:
+                        logger.debug(f"  Callsign '{from_callsign}' not found in lookup table")
 
             # Remove HDLC flags for processing
             packet_data = self._strip_hdlc_flags(payload)
@@ -147,7 +183,14 @@ class BaseDecoder:
 
             # Build metadata
             metadata = self._build_metadata(
-                payload, decode_timestamp, filename, filepath, callsigns, telemetry_result
+                payload,
+                decode_timestamp,
+                filename,
+                filepath,
+                callsigns,
+                telemetry_result,
+                identified_norad_id,
+                identified_satellite,
             )
 
             # Save metadata JSON
@@ -167,6 +210,8 @@ class BaseDecoder:
                 metadata_filepath,
                 callsigns,
                 telemetry_result,
+                identified_norad_id,
+                identified_satellite,
             )
 
         except Exception as e:
@@ -234,6 +279,8 @@ class BaseDecoder:
         filepath: str,
         callsigns: Optional[Dict[str, str]],
         telemetry_result: Dict[str, Any],
+        identified_norad_id: Optional[int] = None,
+        identified_satellite: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Build comprehensive metadata dictionary.
@@ -245,6 +292,8 @@ class BaseDecoder:
             filepath: Binary filepath
             callsigns: Optional dict with 'from' and 'to' callsigns
             telemetry_result: Dict with telemetry parsing results
+            identified_norad_id: Optional NORAD ID from callsign lookup
+            identified_satellite: Optional satellite name from callsign lookup
 
         Returns:
             dict: Comprehensive metadata
@@ -278,6 +327,10 @@ class BaseDecoder:
                 "from_callsign": callsigns.get("from"),
                 "to_callsign": callsigns.get("to"),
             }
+            # Add identified satellite info if available
+            if identified_norad_id:
+                metadata["ax25"]["identified_norad_id"] = identified_norad_id
+                metadata["ax25"]["identified_satellite"] = identified_satellite
 
         # Add telemetry
         metadata["telemetry"] = telemetry_result
@@ -408,6 +461,8 @@ class BaseDecoder:
         metadata_filepath: str,
         callsigns: Optional[Dict[str, str]],
         telemetry_result: Dict[str, Any],
+        identified_norad_id: Optional[int] = None,
+        identified_satellite: Optional[str] = None,
     ) -> None:
         """
         Send decoded packet to UI via data queue.
@@ -421,6 +476,8 @@ class BaseDecoder:
             metadata_filepath: Metadata JSON filepath
             callsigns: Optional dict with 'from' and 'to' callsigns
             telemetry_result: Dict with telemetry parsing results
+            identified_norad_id: Optional NORAD ID from callsign lookup
+            identified_satellite: Optional satellite name from callsign lookup
         """
         packet_base64 = base64.b64encode(payload).decode()
         decoder_type = self._get_decoder_type()
@@ -439,7 +496,11 @@ class BaseDecoder:
 
         # Add callsigns if available
         if callsigns:
-            output_data["callsigns"] = callsigns
+            output_data["callsigns"] = callsigns.copy()
+            # Add identified satellite info if available
+            if identified_norad_id:
+                output_data["callsigns"]["identified_norad_id"] = identified_norad_id
+                output_data["callsigns"]["identified_satellite"] = identified_satellite
 
         # Add satellite info
         if self.norad_id:

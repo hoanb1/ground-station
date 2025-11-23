@@ -100,7 +100,6 @@ import {
     paintLeftMarginFiller
 } from './waterfall-utils.jsx';
 import { useWaterfallEventHandlers, useSnapshotHandlers } from './waterfall-events.jsx';
-import DecodedPacketsOverlay from './decoded-packets-overlay.jsx';
 
 // Make a new worker
 export const createExternalWorker = () => {

@@ -21,7 +21,6 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Box, Typography, Chip, Tooltip, useTheme, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, Alert } from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
-import { getNoradFromCallsign } from '../../utils/satellite-lookup';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -70,13 +69,15 @@ const DecodedPacketsDrawer = () => {
             .slice(-100) // Take last 100 entries
             .map(output => {
                 const fromCallsign = output.output.callsigns.from;
-                const noradId = getNoradFromCallsign(fromCallsign);
+                // Use identified NORAD ID from backend lookup, then configured satellite
+                const noradId = output.output.callsigns.identified_norad_id || output.output.satellite?.norad_id;
+                const satelliteName = output.output.callsigns.identified_satellite || output.output.satellite?.name || '-';
 
                 return {
                     id: output.id,
                     timestamp: new Date(output.timestamp * 1000),
-                    satelliteName: output.output.satellite?.name || '-',
-                    noradId: output.output.satellite?.norad_id || noradId,
+                    satelliteName: satelliteName,
+                    noradId: noradId,
                     from: fromCallsign,
                     to: output.output.callsigns.to,
                     decoderType: output.decoder_type,
