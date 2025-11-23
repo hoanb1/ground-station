@@ -65,6 +65,7 @@ from typing import Any, Dict
 import numpy as np
 from gnuradio import blocks, gr
 from satellites.components.deframers.ax25_deframer import ax25_deframer
+from satellites.components.deframers.ccsds_concatenated_deframer import ccsds_concatenated_deframer
 from satellites.components.deframers.geoscan_deframer import geoscan_deframer
 from satellites.components.deframers.usp_deframer import usp_deframer
 from satellites.components.demodulators.fsk_demodulator import fsk_demodulator
@@ -307,6 +308,10 @@ class GMSKFlowgraph(gr.top_block):
                 syncword_thresh = 20
                 deframer = usp_deframer(syncword_threshold=syncword_thresh, options=options)
                 frame_info = f"USP(sw_th={syncword_thresh},Vit+RS)"
+            elif self.framing == "doka":
+                # DOKA/CCSDS concatenated frames (used by some Russian satellites)
+                deframer = ccsds_concatenated_deframer(options=options)
+                frame_info = "DOKA(CCSDS)"
             else:  # default to ax25
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
                 frame_info = "AX25(G3RUH)"
