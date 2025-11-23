@@ -279,34 +279,14 @@ class DecoderManager:
                     f"decoder:{session_id}", maxsize=10
                 )
 
-                # If UI audio streaming requested, subscribe UI as well
-                ui_forwarder_thread = None
+                # If UI audio streaming requested, subscribe the caller's queue directly
+                ui_subscription_key = None
                 if audio_out_queue is not None:
-                    ui_audio_queue = audio_broadcaster.subscribe(f"ui:{session_id}", maxsize=10)
-                    self.logger.info("UI audio streaming enabled via AudioBroadcaster")
-
-                    # Start a daemon thread to forward audio from ui_audio_queue to audio_out_queue
-                    # This bridges the broadcaster subscriber queue to the caller's queue
-                    # Thread will auto-cleanup when broadcaster stops or process exits
-                    import threading
-
-                    def forward_audio():
-                        while True:
-                            try:
-                                audio_msg = ui_audio_queue.get(timeout=1.0)
-                                try:
-                                    audio_out_queue.put_nowait(audio_msg)
-                                except Exception:
-                                    pass  # Drop if UI queue full
-                            except Exception:
-                                break  # Exit on timeout or error
-
-                    ui_forwarder_thread = threading.Thread(
-                        target=forward_audio, daemon=True, name=f"UIAudioForwarder-{session_id}"
+                    ui_subscription_key = f"ui:{session_id}"
+                    audio_broadcaster.subscribe_existing_queue(ui_subscription_key, audio_out_queue)
+                    self.logger.info(
+                        "UI audio streaming enabled via direct AudioBroadcaster subscription"
                     )
-                    ui_forwarder_thread.start()
-                    # Note: Thread reference stored in decoder entry but not explicitly joined
-                    # Daemon thread will exit automatically when broadcaster stops
 
                 # Resolve decoder configuration using DecoderConfigService
                 # This centralizes all parameter resolution logic
@@ -336,6 +316,9 @@ class DecoderManager:
 
                 subscription_key_to_store = None
                 audio_broadcaster_instance = audio_broadcaster  # Store for cleanup
+                ui_subscription_key_to_store = (
+                    ui_subscription_key  # Store UI subscription for cleanup
+                )
 
             # Store reference in multi-VFO structure
             if "decoders" not in process_info:
@@ -351,9 +334,9 @@ class DecoderManager:
                 "subscription_key": subscription_key_to_store,  # For raw IQ decoders
                 "needs_raw_iq": needs_raw_iq,  # Track if this is a raw IQ decoder
                 "audio_broadcaster": audio_broadcaster_instance,  # AudioBroadcaster instance for cleanup
-                "ui_forwarder_thread": (
-                    ui_forwarder_thread if not needs_raw_iq else None
-                ),  # UI forwarder thread reference
+                "ui_subscription_key": (
+                    ui_subscription_key_to_store if not needs_raw_iq else None
+                ),  # UI subscription key for cleanup
                 "config": (
                     decoder_config if needs_raw_iq or not internal_demod_created else decoder_config
                 ),  # Store config for comparison
@@ -445,7 +428,7 @@ class DecoderManager:
             subscription_key = decoder_entry.get("subscription_key")  # For raw IQ decoders
             needs_raw_iq = decoder_entry.get("needs_raw_iq", False)
             audio_broadcaster = decoder_entry.get("audio_broadcaster")  # AudioBroadcaster instance
-            ui_forwarder_thread = decoder_entry.get("ui_forwarder_thread")  # noqa: F841
+            ui_subscription_key = decoder_entry.get("ui_subscription_key")  # UI subscription key
 
             decoder_name = type(decoder).__name__
             decoder.stop()
@@ -458,8 +441,17 @@ class DecoderManager:
                     iq_broadcaster.unsubscribe(subscription_key)
                     self.logger.info(f"Unsubscribed {decoder_name} from IQ broadcaster")
 
-            # If we have an AudioBroadcaster, stop it
+            # If we have an AudioBroadcaster, unsubscribe UI and decoder, then stop it
             if audio_broadcaster:
+                # Unsubscribe decoder
+                audio_broadcaster.unsubscribe(f"decoder:{session_id}")
+                # Unsubscribe UI if it was subscribed
+                if ui_subscription_key:
+                    audio_broadcaster.unsubscribe(ui_subscription_key)
+                    self.logger.info(
+                        f"Unsubscribed UI from AudioBroadcaster for session {session_id}"
+                    )
+                # Stop the broadcaster
                 audio_broadcaster.stop()
                 vfo_info = f" VFO {vfo_number}" if vfo_number else ""
                 self.logger.info(f"Stopped AudioBroadcaster for session {session_id}{vfo_info}")

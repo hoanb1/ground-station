@@ -92,6 +92,31 @@ class AudioBroadcaster(threading.Thread):
         )
         return subscriber_queue
 
+    def subscribe_existing_queue(self, name: str, existing_queue: queue.Queue) -> None:
+        """
+        Subscribe an existing queue to audio stream.
+
+        Useful when the caller already has a queue (e.g., for UI streaming)
+        and wants to receive audio copies without creating an intermediate queue.
+
+        Args:
+            name: Subscriber name (e.g., "ui:session123")
+            existing_queue: Pre-existing queue to receive audio messages
+        """
+        with self.subscribers_lock:
+            self.subscribers[name] = {
+                "queue": existing_queue,
+                "maxsize": existing_queue._maxsize if hasattr(existing_queue, "_maxsize") else 0,
+                "delivered": 0,
+                "dropped": 0,
+                "errors": 0,
+            }
+
+        logger.info(
+            f"New subscriber with existing queue: '{name}' "
+            f"(total subscribers: {len(self.subscribers)})"
+        )
+
     def unsubscribe(self, name: str):
         """
         Unsubscribe from audio stream.
