@@ -36,6 +36,12 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         return result;
     }
 
+    // Don't sync to backend if not streaming (except when starting streaming)
+    const isStreaming = state.waterfallState.isStreaming;
+    if (!isStreaming && action.type !== 'waterfallState/setIsStreaming') {
+        return result;
+    }
+
     // Handle VFO property changes
     if (action.type === 'vfo/setVFOProperty') {
         const { vfoNumber, updates, skipBackendSync } = action.payload;
