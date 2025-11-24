@@ -410,14 +410,31 @@ export default function FileBrowser() {
         if (item.type !== 'decoded') return;
 
         try {
-            // Fetch metadata JSON file
-            const metadataUrl = item.url.replace('.bin', '.json');
+            // Fetch metadata JSON file - handle both .bin and .png extensions
+            let metadataUrl;
+            if (item.url.endsWith('.png')) {
+                metadataUrl = item.url.replace('.png', '.json');
+            } else if (item.url.endsWith('.bin')) {
+                metadataUrl = item.url.replace('.bin', '.json');
+            } else {
+                // Fallback: append .json
+                metadataUrl = item.url + '.json';
+            }
+
             const response = await fetch(metadataUrl);
             const metadata = await response.json();
 
-            setTelemetryFile(item);
-            setTelemetryMetadata(metadata);
-            setTelemetryViewerOpen(true);
+            // For SSTV images (.png), show simple preview with metadata
+            if (item.url.endsWith('.png')) {
+                setSelectedItem(item);
+                setTelemetryMetadata(metadata);
+                setDetailsOpen(true);
+            } else {
+                // For other decoded files, use telemetry viewer
+                setTelemetryFile(item);
+                setTelemetryMetadata(metadata);
+                setTelemetryViewerOpen(true);
+            }
         } catch (error) {
             toast.error(`Failed to load telemetry metadata: ${error.message}`);
         }
@@ -1282,6 +1299,107 @@ export default function FileBrowser() {
                                 <Typography variant="body2" color="text.secondary">
                                     Modified: {formatDate(selectedItem.modified)}
                                 </Typography>
+                            </Box>
+                        )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => handleDownload(selectedItem)} startIcon={<DownloadIcon />}>
+                            Download
+                        </Button>
+                        <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
+            {/* Decoded Image Preview Dialog (SSTV with metadata) */}
+            {selectedItem?.type === 'decoded' && selectedItem?.url?.endsWith('.png') && (
+                <Dialog
+                    open={detailsOpen}
+                    onClose={() => setDetailsOpen(false)}
+                    maxWidth="lg"
+                    fullWidth
+                >
+                    <DialogTitle>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="h6">{selectedItem?.displayName || selectedItem?.filename}</Typography>
+                            <Box>
+                                {telemetryMetadata?.decoder?.mode && (
+                                    <Chip
+                                        label={telemetryMetadata.decoder.mode}
+                                        size="small"
+                                        color="success"
+                                        sx={{ mr: 1, height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                    />
+                                )}
+                                {telemetryMetadata?.image?.width && telemetryMetadata?.image?.height && (
+                                    <Chip
+                                        label={`${telemetryMetadata.image.width}×${telemetryMetadata.image.height}`}
+                                        size="small"
+                                        sx={{ mr: 1, height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                    />
+                                )}
+                                <Chip label={formatBytes(selectedItem?.size || 0)} size="small" sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+                            </Box>
+                        </Box>
+                    </DialogTitle>
+                    <DialogContent>
+                        {selectedItem && (
+                            <Box>
+                                {/* Image */}
+                                <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                    <img
+                                        src={selectedItem.url}
+                                        alt={selectedItem.displayName || selectedItem.filename}
+                                        style={{ maxWidth: '100%', height: 'auto' }}
+                                    />
+                                </Box>
+
+                                {/* Metadata */}
+                                {telemetryMetadata && (
+                                    <Box sx={{ mt: 2 }}>
+                                        <Typography variant="subtitle2" color="text.primary" gutterBottom>
+                                            Metadata
+                                        </Typography>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
+                                            {telemetryMetadata.decoder?.type && (
+                                                <>
+                                                    <Typography variant="body2" color="text.secondary">Decoder Type:</Typography>
+                                                    <Typography variant="body2">{telemetryMetadata.decoder.type.toUpperCase()}</Typography>
+                                                </>
+                                            )}
+                                            {telemetryMetadata.decoder?.mode && (
+                                                <>
+                                                    <Typography variant="body2" color="text.secondary">SSTV Mode:</Typography>
+                                                    <Typography variant="body2">{telemetryMetadata.decoder.mode}</Typography>
+                                                </>
+                                            )}
+                                            {telemetryMetadata.signal?.frequency_mhz && (
+                                                <>
+                                                    <Typography variant="body2" color="text.secondary">Frequency:</Typography>
+                                                    <Typography variant="body2">{telemetryMetadata.signal.frequency_mhz.toFixed(6)} MHz</Typography>
+                                                </>
+                                            )}
+                                            {telemetryMetadata.signal?.sample_rate_hz && (
+                                                <>
+                                                    <Typography variant="body2" color="text.secondary">Sample Rate:</Typography>
+                                                    <Typography variant="body2">{telemetryMetadata.signal.sample_rate_hz} Hz</Typography>
+                                                </>
+                                            )}
+                                            {telemetryMetadata.vfo?.bandwidth_khz && (
+                                                <>
+                                                    <Typography variant="body2" color="text.secondary">VFO Bandwidth:</Typography>
+                                                    <Typography variant="body2">{telemetryMetadata.vfo.bandwidth_khz.toFixed(1)} kHz</Typography>
+                                                </>
+                                            )}
+                                            {telemetryMetadata.image?.timestamp_iso && (
+                                                <>
+                                                    <Typography variant="body2" color="text.secondary">Decoded:</Typography>
+                                                    <Typography variant="body2">{telemetryMetadata.image.timestamp_iso}</Typography>
+                                                </>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                )}
                             </Box>
                         )}
                     </DialogContent>

@@ -20,6 +20,7 @@
 
 import base64
 import io
+import json
 import logging
 import os
 import queue
@@ -530,6 +531,53 @@ class SSTVDecoder(threading.Thread):
         image.save(filepath)
         logger.info(f"Saved: {filepath}")
 
+        # Get VFO state for metadata
+        vfo_state = None
+        if self.vfo is not None:
+            vfo_state = self.vfo_manager.get_vfo_state(self.session_id, self.vfo)
+
+        # Build metadata
+        decode_timestamp = time.time()
+        metadata = {
+            "image": {
+                "filename": filename,
+                "filepath": filepath,
+                "format": "image/png",
+                "width": image.width,
+                "height": image.height,
+                "mode": mode_name,
+                "timestamp": decode_timestamp,
+                "timestamp_iso": time.strftime(
+                    "%Y-%m-%dT%H:%M:%S%z", time.localtime(decode_timestamp)
+                ),
+            },
+            "decoder": {
+                "type": "sstv",
+                "session_id": self.session_id,
+                "mode": mode_name,
+            },
+            "signal": {
+                "frequency_hz": vfo_state.center_freq if vfo_state else None,
+                "frequency_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
+                "sample_rate_hz": self.sample_rate,
+            },
+            "vfo": {
+                "id": self.vfo,
+                "center_freq_hz": vfo_state.center_freq if vfo_state else None,
+                "center_freq_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
+                "bandwidth_hz": vfo_state.bandwidth if vfo_state else None,
+                "bandwidth_khz": vfo_state.bandwidth / 1e3 if vfo_state else None,
+                "active": vfo_state.active if vfo_state else None,
+            },
+        }
+
+        # Save metadata JSON
+        metadata_filename = filename.replace(".png", ".json")
+        metadata_filepath = os.path.join(self.output_dir, metadata_filename)
+        with open(metadata_filepath, "w") as f:
+            json.dump(metadata, f, indent=2)
+        logger.info(f"Saved metadata: {metadata_filepath}")
+
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
         img_base64 = base64.b64encode(buffer.getvalue()).decode()
@@ -539,11 +587,13 @@ class SSTVDecoder(threading.Thread):
             "decoder_type": "sstv",
             "session_id": self.session_id,
             "vfo": self.vfo,
-            "timestamp": time.time(),
+            "timestamp": decode_timestamp,
             "output": {
                 "format": "image/png",
                 "filename": filename,
                 "filepath": filepath,
+                "metadata_filename": metadata_filename,
+                "metadata_filepath": metadata_filepath,
                 "image_data": img_base64,
                 "mode": mode_name,
                 "width": image.width,
