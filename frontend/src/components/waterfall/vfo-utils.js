@@ -331,7 +331,7 @@ export const formatBaudrate = (baudrate) => {
         const kilobaud = baudrate / 1000;
         // Format as "Xk" with one decimal if needed, removing trailing .0
         const formatted = kilobaud.toFixed(1).replace('.0', '');
-        return `${formatted}k`.replace('.', 'k');
+        return `${formatted}`.replace('.', 'k');
     }
 
     return `${baudrate}`;
