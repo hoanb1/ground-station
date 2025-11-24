@@ -33,7 +33,8 @@ import {
     calculateVFOFrequencyBounds,
     generateVFOLabelText,
     getVisibleFrequencyRange,
-    formatFrequency
+    formatFrequency,
+    formatBaudrate
 } from './vfo-utils.js';
 import {
     useVFODragHandlers,
@@ -499,6 +500,47 @@ const VFOMarkersContainer = ({
                 }
             }
 
+            // Check secondary decoder label if it exists (positioned at y: 25-41px)
+            const secondaryLabelYRange = isTouchDevice ? 45 : 41;
+            if (decoderInfo && y >= 25 && y <= secondaryLabelYRange) {
+                const ctx = getCanvasContext();
+                if (ctx) {
+                    ctx.font = '10px Monospace';
+
+                    // Calculate secondary label text based on decoder type
+                    let secondaryLabelText = '';
+                    const decoderType = decoderInfo.decoder_type;
+
+                    if (['bpsk', 'fsk', 'gmsk', 'gfsk', 'afsk'].includes(decoderType)) {
+                        const status = decoderInfo.status || 'processing';
+                        const baudrate = decoderInfo.info?.baudrate || 0;
+                        const framing = decoderInfo.info?.framing || 'unknown';
+                        const formattedBaudrate = formatBaudrate(baudrate);
+                        const outputCount = 0; // We can't get real count here, but width is similar
+                        secondaryLabelText = `${status.toUpperCase()} | ${decoderType.toUpperCase()} ${formattedBaudrate} | ${framing.toUpperCase()} | ${outputCount} PKT`;
+                    } else {
+                        // For other decoder types, construct the label
+                        const parts = [decoderType.toUpperCase()];
+                        if (decoderInfo.status) parts.push(decoderInfo.status);
+                        if (decoderInfo.mode) parts.push(decoderInfo.mode);
+                        if (decoderInfo.progress !== null && decoderInfo.progress !== undefined) {
+                            parts.push(`${Math.round(decoderInfo.progress)}%`);
+                        }
+                        secondaryLabelText = parts.join(' | ');
+                    }
+
+                    if (secondaryLabelText) {
+                        const secondaryTextMetrics = ctx.measureText(secondaryLabelText);
+                        const secondaryLabelWidth = secondaryTextMetrics.width + 8;
+
+                        // Check if mouse is over secondary label area
+                        if (Math.abs(canvasX - centerX) <= secondaryLabelWidth / 2) {
+                            return { key, element: 'body' };
+                        }
+                    }
+                }
+            }
+
             // Check edge handles based on mode configuration and bandwidth lock state
             // Use the new position (edgeHandleYPosition) with an appropriate range
             const edgeYMin = edgeHandleYPosition - edgeHandleHeight / 2;
@@ -521,10 +563,21 @@ const VFOMarkersContainer = ({
                 }
             }
 
-            // Check if click is within the VFO body area (but not on edge handles)
-            if (canvasX >= leftEdgeX && canvasX <= rightEdgeX &&
-                !(y >= edgeYMin && y <= edgeYMax)) {
-                return { key, element: 'body' }; // Treat clicks within VFO body as body drag
+            // Check if this is a center-only mode (no sidebands)
+            const centerOnly = isCenterLineOnly(mode, marker.decoder);
+
+            // For center-only modes, only allow dragging near the center line
+            if (centerOnly) {
+                const centerLineHitWidth = isTouchDevice ? 12 : 6;
+                if (Math.abs(canvasX - centerX) <= centerLineHitWidth) {
+                    return { key, element: 'body' };
+                }
+            } else {
+                // Check if click is within the VFO body area (but not on edge handles)
+                if (canvasX >= leftEdgeX && canvasX <= rightEdgeX &&
+                    !(y >= edgeYMin && y <= edgeYMax)) {
+                    return { key, element: 'body' }; // Treat clicks within VFO body as body drag
+                }
             }
 
             return null;

@@ -368,6 +368,27 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
+        # Build decoder configuration info (like other decoders)
+        config_info = {
+            "spreading_factor": self.sf,
+            "bandwidth_hz": self.bw,
+            "bandwidth_khz": self.bw / 1000 if self.bw else None,
+            "coding_rate": f"4/{self.cr + 4}" if self.cr is not None else None,
+            "sync_word": self.sync_word,
+            "framing": self.framing,
+            "transmitter": self.transmitter_description,
+            "transmitter_mode": self.transmitter_mode,
+            "transmitter_downlink_mhz": (
+                round(self.transmitter_downlink_freq / 1e6, 3)
+                if self.transmitter_downlink_freq
+                else None
+            ),
+        }
+
+        # Merge with any additional info passed in
+        if info:
+            config_info.update(info)
+
         msg = {
             "type": "decoder-status",
             "status": status.value,
@@ -375,7 +396,7 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
-            "info": info or {},
+            "info": config_info,
         }
         try:
             self.data_queue.put(msg, block=False)
