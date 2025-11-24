@@ -17,7 +17,6 @@
 # LoRa decoder using GNU Radio gr-lora_sdr blocks for proper LoRa PHY decoding.
 # This decoder receives raw IQ samples directly from the SDR process (via iq_queue).
 
-import base64
 import logging
 import os
 import queue
@@ -29,6 +28,8 @@ import numpy as np
 from gnuradio import blocks, gr
 from scipy import signal
 
+from demodulators.basedecoder import BaseDecoder
+from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
 logger = logging.getLogger("loradecoder")
@@ -241,7 +242,7 @@ class LoRaFlowgraph(gr.top_block):
             self.callback(payload)
 
 
-class LoRaDecoder(threading.Thread):
+class LoRaDecoder(BaseDecoder, threading.Thread):
     """Real-time LoRa decoder using GNU Radio gr-lora_sdr"""
 
     def __init__(
@@ -257,28 +258,49 @@ class LoRaDecoder(threading.Thread):
             logger.error("gr-lora_sdr not available - LoRa decoder cannot be initialized")
             raise RuntimeError("gr-lora_sdr not available")
 
-        super().__init__(daemon=True, name=f"LoRaDecoder-{session_id}")
+        threading.Thread.__init__(self, daemon=True, name=f"LoRaDecoder-{session_id}")
+
+        # BaseDecoder required attributes
         self.iq_queue = iq_queue
         self.data_queue = data_queue
         self.session_id = session_id
+        self.output_dir = output_dir
+        self.vfo = vfo
+        self.packet_count = 0
+        self.stats_lock = threading.Lock()
+        self.stats = {
+            "packets_decoded": 0,
+            "errors": 0,
+            "data_messages_out": 0,
+        }
+        self.telemetry_parser = TelemetryParser()
+
+        # LoRa-specific attributes
         self.sample_rate = None  # VFO bandwidth sample rate (after decimation)
         self.sdr_sample_rate = None  # Full SDR sample rate
         self.running = True
-        self.output_dir = output_dir
-        self.vfo = vfo
         self.vfo_manager = VFOManager()
         self.sdr_center_freq = None  # SDR center frequency
         self.decimation_filter = None  # Filter for decimation
-        self.packet_count = 0
 
-        # Extract LoRa parameters from config with defaults
-        # Meshtastic LONG_FAST defaults: SF11, 250kHz BW, CR 4/5
-        self.sf = config.get("sf", 11)
-        self.bw = config.get("bw", 250000)
-        self.cr = config.get("cr", 1)  # Coding rate 4/5 - will auto-detect
+        # Extract LoRa parameters from config (no defaults - enable auto-detection)
+        self.sf = config.sf  # None = auto-detect
+        self.bw = config.bw  # None = auto-detect
+        self.cr = config.cr  # None = auto-detect
         # sync_word: None = auto-detect [0, 0], or specific like [0x12]
-        sync_word = config.get("sync_word")
-        self.sync_word = sync_word if sync_word is not None else [0, 0]
+        self.sync_word = config.sync_word if config.sync_word is not None else [0, 0]
+
+        # BaseDecoder required metadata attributes
+        self.baudrate = config.baudrate  # Not really used for LoRa, but required by BaseDecoder
+        self.framing = config.framing
+        self.config_source = config.config_source
+        self.satellite = config.satellite or {}
+        self.transmitter = config.transmitter or {}
+        self.norad_id = self.satellite.get("norad_id")
+        self.satellite_name = self.satellite.get("name", "")
+        self.transmitter_description = self.transmitter.get("description", "")
+        self.transmitter_mode = (config.transmitter or {}).get("mode") or "LoRa"
+        self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -286,15 +308,12 @@ class LoRaDecoder(threading.Thread):
         self.flowgraph = None
 
         logger.info(f"LoRa decoder initialized for session {session_id}, VFO {vfo}")
-        logger.info(
-            f"LoRa parameters: SF{self.sf}, BW{self.bw/1000:.0f}kHz, CR4/{self.cr+4}, sync_word={self.sync_word}"
-        )
-
-    def _get_vfo_state(self):
-        """Get VFO state for this decoder."""
-        if self.vfo is not None:
-            return self.vfo_manager.get_vfo_state(self.session_id, self.vfo)
-        return None
+        if self.sf is None or self.bw is None or self.cr is None:
+            logger.info("LoRa auto-detection enabled - will scan common parameters")
+        else:
+            logger.info(
+                f"LoRa parameters: SF{self.sf}, BW{self.bw/1000:.0f}kHz, CR4/{self.cr+4}, sync_word={self.sync_word}"
+            )
 
     def _frequency_translate(self, samples, offset_freq, sample_rate):
         """Translate frequency by offset (shift signal in frequency domain)."""
@@ -329,61 +348,23 @@ class LoRaDecoder(threading.Thread):
         return filtered[::decimation_factor]
 
     def _on_packet_decoded(self, payload):
-        """Callback when GNU Radio decodes a LoRa packet"""
-        try:
-            self.packet_count += 1
-            logger.info(f"LoRa packet #{self.packet_count} decoded: {len(payload)} bytes")
+        """
+        Callback when GNU Radio decodes a LoRa packet.
+        Delegates to BaseDecoder's implementation for comprehensive metadata handling.
+        """
+        # Call BaseDecoder's _on_packet_decoded which handles:
+        # - Packet validation
+        # - Counting and stats
+        # - Telemetry parsing
+        # - File saving (binary + JSON metadata)
+        # - UI message construction and sending
+        BaseDecoder._on_packet_decoded(self, payload, callsigns=None)
 
-            # Save to file
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"lora_SF{self.sf}_BW{self.bw//1000}kHz_{timestamp}_{self.packet_count}.bin"
-            filepath = os.path.join(self.output_dir, filename)
-
-            with open(filepath, "wb") as f:
-                f.write(payload)
-            logger.info(f"Saved: {filepath}")
-
-            # Encode as base64 for transmission
-            packet_base64 = base64.b64encode(payload).decode()
-
-            # Try to decode as ASCII for display
-            try:
-                packet_text = payload.decode("ascii", errors="replace")
-            except UnicodeDecodeError:
-                packet_text = payload.hex()
-
-            # Send to UI
-            msg = {
-                "type": "decoder-output",
-                "decoder_type": "lora",
-                "session_id": self.session_id,
-                "vfo": self.vfo,
-                "timestamp": time.time(),
-                "output": {
-                    "format": "application/octet-stream",
-                    "filename": filename,
-                    "filepath": filepath,
-                    "packet_data": packet_base64,
-                    "packet_text": packet_text,
-                    "packet_length": len(payload),
-                    "packet_number": self.packet_count,
-                    "parameters": f"SF{self.sf}_BW{self.bw//1000}kHz_CR4/{self.cr+4}",
-                },
-            }
-            try:
-                self.data_queue.put(msg, block=False)
-            except queue.Full:
-                logger.warning("Data queue full, dropping packet output")
-
-            # Send status update
-            self._send_status_update(
-                DecoderStatus.COMPLETED,
-                {"packet_number": self.packet_count, "packet_length": len(payload)},
-            )
-
-        except Exception as e:
-            logger.error(f"Error processing decoded packet: {e}")
-            logger.exception(e)
+        # Send status update (LoRa-specific)
+        self._send_status_update(
+            DecoderStatus.COMPLETED,
+            {"packet_number": self.packet_count, "packet_length": len(payload)},
+        )
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
@@ -443,7 +424,9 @@ class LoRaDecoder(threading.Thread):
 
                         # Calculate decimation factor for 4x oversampling of LoRa bandwidth
                         # gr-lora_sdr works best with 4x oversampling
-                        target_sample_rate = self.bw * 4  # 4x oversampling
+                        # Use a reasonable default bandwidth for initial setup if not specified
+                        default_bw = self.bw if self.bw is not None else 250000
+                        target_sample_rate = default_bw * 4  # 4x oversampling
                         decimation = int(self.sdr_sample_rate / target_sample_rate)
                         if decimation < 1:
                             decimation = 1
@@ -454,12 +437,20 @@ class LoRaDecoder(threading.Thread):
                             decimation, vfo_bandwidth, self.sdr_sample_rate
                         )
 
-                        logger.info(
-                            f"LoRa decoder: BW: {self.bw/1e3:.0f}kHz, target rate: {target_sample_rate/1e6:.2f}MS/s (4x oversample), "
-                            f"SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, VFO BW: {vfo_bandwidth/1e3:.0f} kHz, "
-                            f"decimation: {decimation}, output rate: {self.sample_rate/1e6:.2f} MS/s, "
-                            f"VFO center: {vfo_center/1e6:.3f} MHz, SDR center: {sdr_center/1e6:.3f} MHz"
-                        )
+                        if self.bw is not None:
+                            logger.info(
+                                f"LoRa decoder: BW: {self.bw/1e3:.0f}kHz, target rate: {target_sample_rate/1e6:.2f}MS/s (4x oversample), "
+                                f"SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, VFO BW: {vfo_bandwidth/1e3:.0f} kHz, "
+                                f"decimation: {decimation}, output rate: {self.sample_rate/1e6:.2f} MS/s, "
+                                f"VFO center: {vfo_center/1e6:.3f} MHz, SDR center: {sdr_center/1e6:.3f} MHz"
+                            )
+                        else:
+                            logger.info(
+                                f"LoRa decoder: Using default BW {default_bw/1e3:.0f}kHz for initialization, "
+                                f"target rate: {target_sample_rate/1e6:.2f}MS/s (4x oversample), "
+                                f"SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, VFO BW: {vfo_bandwidth/1e3:.0f} kHz, "
+                                f"decimation: {decimation}, output rate: {self.sample_rate/1e6:.2f} MS/s"
+                            )
 
                         # Calculate buffer sizes
                         buffer_samples = int(self.sample_rate * buffer_duration)
@@ -488,66 +479,81 @@ class LoRaDecoder(threading.Thread):
                     if len(samples_buffer) >= process_samples:
                         # Process the buffered samples (only log every 20th time to reduce spam)
                         if chunks_received % 20 == 0:
-                            logger.debug(
-                                f"Processing {len(samples_buffer)} samples (SF{self.sf}, BW{self.bw/1000:.0f}kHz)"
+                            params_str = ""
+                            if self.sf is not None and self.bw is not None:
+                                params_str = f" (SF{self.sf}, BW{self.bw/1000:.0f}kHz)"
+                            logger.debug(f"Processing {len(samples_buffer)} samples{params_str}")
+
+                        # Auto-detection logic: try multiple parameters if not specified
+                        # Set defaults for scanning
+                        sfs_to_try = [self.sf] if self.sf is not None else [7, 8, 9, 10, 11, 12]
+                        crs_to_try = [self.cr] if self.cr is not None else [1, 2, 3, 4]
+                        bws_to_try = [self.bw] if self.bw is not None else [125000, 250000, 500000]
+
+                        # Only scan all parameters if we haven't decoded anything and it's time to try
+                        scan_all = self.packet_count == 0 and chunks_received % 10 == 0
+
+                        if scan_all and (self.sf is None or self.bw is None or self.cr is None):
+                            logger.info(
+                                f"Auto-detection: scanning SFs={sfs_to_try}, BWs={[bw/1000 for bw in bws_to_try]}kHz, CRs={crs_to_try}"
                             )
 
-                        # Try multiple spreading factors if we haven't decoded anything yet
-                        # This helps with auto-detection
-                        sfs_to_try = [self.sf]  # Start with configured SF
-                        if self.packet_count == 0 and chunks_received % 10 == 0:
-                            # Every 10 chunks (~5s), also try other common SFs
-                            sfs_to_try = [7, 8, 9, 10, 11, 12]
-                            logger.info(f"No packets decoded yet, trying all SFs: {sfs_to_try}")
+                        # If parameters are locked in (either from config or found), only try those
+                        if self.packet_count > 0 or not scan_all:
+                            sfs_to_try = [self.sf if self.sf is not None else 7]
+                            crs_to_try = [self.cr if self.cr is not None else 1]
+                            bws_to_try = [self.bw if self.bw is not None else 125000]
 
-                        for sf in sfs_to_try:
-                            # Try different coding rates too
-                            crs_to_try = [self.cr]  # Start with configured CR
-                            if self.packet_count == 0 and len(sfs_to_try) > 1:
-                                # Try all common CRs
-                                crs_to_try = [1, 2, 3, 4]  # 4/5, 4/6, 4/7, 4/8
+                        for bw in bws_to_try:
+                            for sf in sfs_to_try:
+                                for cr in crs_to_try:
+                                    # Try both explicit and implicit header modes only during scan
+                                    impl_head_modes = [False, True] if scan_all else [False]
 
-                            for cr in crs_to_try:
-                                # Try both explicit and implicit header modes
-                                impl_head_modes = [False]  # Start with explicit (standard)
-                                if self.packet_count == 0 and len(sfs_to_try) > 1:
-                                    # If trying multiple SFs, also try implicit header
-                                    impl_head_modes = [False, True]
+                                    for impl_head in impl_head_modes:
+                                        # Create a new flowgraph for this batch
+                                        flowgraph = LoRaFlowgraph(
+                                            sample_rate=self.sample_rate,
+                                            center_freq=vfo_center,
+                                            callback=self._on_packet_decoded,
+                                            sf=sf,
+                                            bw=bw,
+                                            cr=cr,
+                                            sync_word=self.sync_word,
+                                            impl_head=impl_head,
+                                        )
 
-                                for impl_head in impl_head_modes:
-                                    # Create a new flowgraph for this batch
-                                    flowgraph = LoRaFlowgraph(
-                                        sample_rate=self.sample_rate,
-                                        center_freq=vfo_center,
-                                        callback=self._on_packet_decoded,
-                                        sf=sf,
-                                        bw=self.bw,
-                                        cr=cr,
-                                        sync_word=self.sync_word,
-                                        impl_head=impl_head,
-                                    )
+                                        # Process batch (blocking)
+                                        flowgraph.process_batch(samples_buffer)
 
-                                    # Process batch (blocking)
-                                    flowgraph.process_batch(samples_buffer)
+                                        # Cleanup
+                                        del flowgraph
 
-                                    # Cleanup
-                                    del flowgraph
+                                        # If we decoded a packet, lock in the parameters
+                                        if self.packet_count > 0:
+                                            if sf != self.sf or cr != self.cr or bw != self.bw:
+                                                logger.info(
+                                                    f"Auto-detected working parameters! SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}, impl_head={impl_head}"
+                                                )
+                                                self.sf = sf
+                                                self.bw = bw
+                                                self.cr = cr
+                                            break
 
-                                    # If we decoded a packet, update our parameters
                                     if self.packet_count > 0:
-                                        if sf != self.sf or cr != self.cr:
-                                            logger.info(
-                                                f"Found working parameters! SF{sf}, CR4/{cr+4}, impl_head={impl_head}"
-                                            )
-                                            self.sf = sf
-                                            self.cr = cr
-                                        break
+                                        break  # Exit impl_head loop
 
                                 if self.packet_count > 0:
-                                    break  # Exit impl_head loop
+                                    break  # Exit CR loop
+
+                                if self.packet_count > 0:
+                                    break  # Exit CR loop
 
                             if self.packet_count > 0:
-                                break  # Exit SF loop if we decoded something
+                                break  # Exit SF loop
+
+                            if self.packet_count > 0:
+                                break  # Exit BW loop
 
                         # Keep overlap for packet boundaries (last 0.5s)
                         if self.sample_rate is not None:
@@ -592,3 +598,61 @@ class LoRaDecoder(threading.Thread):
             self.data_queue.put(msg, block=False)
         except queue.Full:
             pass
+
+    # BaseDecoder abstract methods implementation
+
+    def _get_decoder_type(self) -> str:
+        """Return decoder type string."""
+        return "lora"
+
+    def _get_decoder_specific_metadata(self) -> dict:
+        """Return LoRa-specific metadata."""
+        return {
+            "spreading_factor": self.sf,
+            "bandwidth_hz": self.bw,
+            "bandwidth_khz": self.bw / 1000 if self.bw else None,
+            "coding_rate": f"4/{self.cr + 4}" if self.cr is not None else None,
+            "sync_word": self.sync_word,
+        }
+
+    def _get_filename_params(self) -> str:
+        """Return string for filename parameters."""
+        sf_str = f"SF{self.sf}" if self.sf else "SFauto"
+        bw_str = f"BW{self.bw//1000}kHz" if self.bw else "BWauto"
+        return f"{sf_str}_{bw_str}"
+
+    def _get_parameters_string(self) -> str:
+        """Return human-readable parameters string for UI."""
+        parts = []
+        if self.sf is not None:
+            parts.append(f"SF{self.sf}")
+        else:
+            parts.append("SF:auto")
+
+        if self.bw is not None:
+            parts.append(f"BW{self.bw//1000}kHz")
+        else:
+            parts.append("BW:auto")
+
+        if self.cr is not None:
+            parts.append(f"CR4/{self.cr+4}")
+        else:
+            parts.append("CR:auto")
+
+        return ", ".join(parts)
+
+    def _get_demodulator_params_metadata(self) -> dict:
+        """Return demodulator parameters metadata."""
+        return {
+            "spreading_factor": self.sf,
+            "bandwidth_hz": self.bw,
+            "coding_rate": self.cr,
+            "coding_rate_string": f"4/{self.cr + 4}" if self.cr is not None else None,
+            "sync_word": self.sync_word,
+        }
+
+    def _get_vfo_state(self):
+        """Get VFO state for this decoder."""
+        if self.vfo is not None:
+            return self.vfo_manager.get_vfo_state(self.session_id, self.vfo)
+        return None

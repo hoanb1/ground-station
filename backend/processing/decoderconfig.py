@@ -49,6 +49,12 @@ class DecoderConfig:
     # BPSK-specific parameters
     differential: Optional[bool] = None  # DBPSK mode
 
+    # LoRa-specific parameters
+    sf: Optional[int] = None  # Spreading factor (7-12)
+    bw: Optional[int] = None  # Bandwidth (125000, 250000, 500000)
+    cr: Optional[int] = None  # Coding rate (1-4, corresponding to 4/5 through 4/8)
+    sync_word: Optional[list] = None  # Sync word ([0, 0] for auto-detect)
+
     # Optional metadata
     packet_size: Optional[int] = None  # Expected packet size in bytes
 
@@ -77,6 +83,10 @@ class DecoderConfig:
             and self.deviation == other.deviation
             and self.af_carrier == other.af_carrier
             and self.differential == other.differential
+            and self.sf == other.sf
+            and self.bw == other.bw
+            and self.cr == other.cr
+            and self.sync_word == other.sync_word
         )
 
     def __hash__(self):
@@ -88,6 +98,10 @@ class DecoderConfig:
                 self.deviation,
                 self.af_carrier,
                 self.differential,
+                self.sf,
+                self.bw,
+                self.cr,
+                tuple(self.sync_word) if self.sync_word else None,
             )
         )
 
@@ -100,6 +114,10 @@ class DecoderConfig:
             "deviation": self.deviation,
             "af_carrier": self.af_carrier,
             "differential": self.differential,
+            "sf": self.sf,
+            "bw": self.bw,
+            "cr": self.cr,
+            "sync_word": self.sync_word,
             "packet_size": self.packet_size,
             "satellite": self.satellite,
             "transmitter": self.transmitter,
