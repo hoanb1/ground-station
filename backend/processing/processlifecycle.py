@@ -207,8 +207,9 @@ class ProcessLifecycleManager:
             # Add the client to the existing process
             self.processes[sdr_id]["clients"].add(client_id)
 
-            self.logger.info("CLIENTS : ")
-            self.logger.info(self.processes[sdr_id]["clients"])
+            self.logger.info(
+                f"Active clients for SDR {sdr_id}: {self.processes[sdr_id]['clients']}"
+            )
 
             # Update the configuration if needed
             config = {"client_id": client_id}
