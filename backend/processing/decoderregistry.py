@@ -22,11 +22,9 @@ from demodulators.afskdecoder import AFSKDecoder
 from demodulators.bpskdecoder import BPSKDecoder
 from demodulators.fskdecoder import FSKDecoder
 from demodulators.gfskdecoder import GFSKDecoder
+from demodulators.gmskdecoder import GMSKDecoder
 from demodulators.morsedecoder import MorseDecoder
 from demodulators.sstvdecoder import SSTVDecoder
-
-# Backward compatibility alias
-GMSKDecoder = FSKDecoder
 
 # Try to import LoRa decoder (optional, requires gr-lora_sdr)
 try:

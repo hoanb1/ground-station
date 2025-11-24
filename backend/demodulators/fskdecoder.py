@@ -822,9 +822,3 @@ class FSKDecoder(BaseDecoder, threading.Thread):
                 self.stats["data_messages_out"] += 1
         except queue.Full:
             pass
-
-
-# Backward compatibility aliases
-GMSKDecoder = FSKDecoder
-GMSKFlowgraph = FSKFlowgraph
-GMSKMessageHandler = FSKMessageHandler
