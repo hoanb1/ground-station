@@ -267,15 +267,10 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
 
                         // Check if frequency has changed (to avoid unnecessary updates)
                         if (vfo.frequency !== finalFrequency) {
-                            // Only send backend updates for the selected VFO (actively playing audio)
-                            // This avoids restarting demodulators for inactive locked VFOs
-                            const selectedVFO = state.vfo.selectedVFO;
-                            const skipSync = vfoNum !== selectedVFO;
-
                             store.dispatch(setVFOProperty({
                                 vfoNumber: vfoNum,
                                 updates: { frequency: finalFrequency },
-                                skipBackendSync: skipSync
+                                skipBackendSync: false
                             }));
 
                             const offsetStr = offset !== 0 ? ` (offset: ${offset >= 0 ? '+' : ''}${(offset / 1e3).toFixed(1)} kHz)` : '';
