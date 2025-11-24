@@ -245,6 +245,38 @@ export const canvasDrawingUtils = {
                     ctx.fillStyle = '#ffffff';
                     ctx.textAlign = 'center';
                     ctx.fillText(fullText, centerX, secondaryLabelTop + 12);
+                } else if (decoderType === 'lora') {
+                    // LoRa-specific label format
+                    const status = decoderInfo.status || 'listening';
+                    const sf = decoderInfo.info?.spreading_factor;
+                    const bw = decoderInfo.info?.bandwidth_khz;
+                    const cr = decoderInfo.info?.coding_rate;
+
+                    // Build LoRa parameters part
+                    let loraParams;
+                    if (sf !== null && bw !== null && cr !== null) {
+                        loraParams = `SF${sf} BW${bw} CR${cr}`;
+                    } else {
+                        loraParams = 'DETECTING';
+                    }
+
+                    const decoderText = `${status.toUpperCase()} | ${loraParams}`;
+
+                    ctx.font = '10px Monospace';
+                    const decoderTextMetrics = ctx.measureText(decoderText);
+                    const decoderLabelWidth = decoderTextMetrics.width + 8;
+                    const decoderLabelHeight = 16;
+
+                    // Draw background
+                    ctx.fillStyle = `${color}${opacity}`;
+                    ctx.beginPath();
+                    ctx.roundRect(centerX - decoderLabelWidth / 2, secondaryLabelTop, decoderLabelWidth, decoderLabelHeight, 2);
+                    ctx.fill();
+
+                    // Draw text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(decoderText, centerX, secondaryLabelTop + 12);
                 } else {
                     // Standard decoder label (status/progress/mode)
                     const parts = [];

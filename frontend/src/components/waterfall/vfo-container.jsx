@@ -518,6 +518,15 @@ const VFOMarkersContainer = ({
                         const formattedBaudrate = formatBaudrate(baudrate);
                         const outputCount = 0; // We can't get real count here, but width is similar
                         secondaryLabelText = `${status.toUpperCase()} | ${decoderType.toUpperCase()} ${formattedBaudrate} | ${framing.toUpperCase()} | ${outputCount} PKT`;
+                    } else if (decoderType === 'lora') {
+                        const status = decoderInfo.status || 'listening';
+                        const sf = decoderInfo.info?.spreading_factor;
+                        const bw = decoderInfo.info?.bandwidth_khz;
+                        const cr = decoderInfo.info?.coding_rate;
+                        const loraParams = (sf !== null && bw !== null && cr !== null)
+                            ? `SF${sf} BW${bw} CR${cr}`
+                            : 'DETECTING';
+                        secondaryLabelText = `${status.toUpperCase()} | ${loraParams}`;
                     } else {
                         // For other decoder types, construct the label
                         const parts = [decoderType.toUpperCase()];

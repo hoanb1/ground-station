@@ -267,6 +267,33 @@ export const DECODERS = {
             return 30000; // fallback to default
         },
     },
+    fsk: {
+        internalName: 'fsk',
+        displayName: 'FSK',
+        description: 'FSK decoder (Frequency Shift Keying, processes raw IQ, no demodulator)',
+        requiresDemodulator: null, // raw IQ decoder
+        overrideDemodulator: 'none', // disable audio demodulator
+        centerLineOnly: false, // show sidebands representing actual bandwidth
+        hasStatusDisplay: true,
+        hasProgressDisplay: false,
+        hasTextOutput: false,
+        hasModeDisplay: false,
+        defaultBandwidth: 25000, // 25 kHz default (suitable for 1200-9600 baud + Doppler)
+        bandwidthType: 'double-sided', // bandwidth is divided equally on both sides of center
+        showBothEdges: true, // show both edges
+        allowLeftEdgeDrag: false, // edges not draggable (bandwidth locked)
+        allowRightEdgeDrag: false, // edges not draggable (bandwidth locked)
+        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±12.5kHz
+        lockedBandwidth: true, // bandwidth is determined by baud rate, not user-adjustable
+        calculateBandwidth: (transmitter) => {
+            // Calculate optimal bandwidth based on transmitter baud rate
+            // Formula: 3x baud rate (for FSK spectral width + Doppler margin)
+            if (transmitter && transmitter.baud) {
+                return transmitter.baud * 3;
+            }
+            return 25000; // fallback to default
+        },
+    },
     bpsk: {
         internalName: 'bpsk',
         displayName: 'BPSK',
