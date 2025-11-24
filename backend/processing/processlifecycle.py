@@ -632,9 +632,9 @@ class ProcessLifecycleManager:
                                     SocketEvents.SDR_STATUS, {"streaming": False}, room=sdr_id
                                 )
 
-                            # Remove process info
-                            if sdr_id in self.processes:
-                                del self.processes[sdr_id]
+                            # Don't delete process info here - let the finally block handle cleanup
+                            # This ensures stop_sdr_process() can still kill the process if needed
+                            # Process info will be deleted in stop_sdr_process() after proper cleanup
 
                             # Exit the loop
                             break
