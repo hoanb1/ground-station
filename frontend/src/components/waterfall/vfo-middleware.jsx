@@ -37,7 +37,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     }
 
     // Don't sync to backend if not streaming (except when starting streaming)
-    const isStreaming = state.waterfallState.isStreaming;
+    const isStreaming = state.waterfall.isStreaming;
     if (!isStreaming && action.type !== 'waterfallState/setIsStreaming') {
         return result;
     }
