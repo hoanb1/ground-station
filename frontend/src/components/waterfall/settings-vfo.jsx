@@ -270,7 +270,13 @@ const VfoAccordion = ({
                                     <Select
                                         variant={'filled'}
                                         labelId={`vfo-${vfoIndex}-lock-transmitter-label`}
-                                        value={vfoMarkers[vfoIndex]?.lockedTransmitterId || 'none'}
+                                        value={(() => {
+                                            const currentValue = vfoMarkers[vfoIndex]?.lockedTransmitterId;
+                                            if (!currentValue) return 'none';
+                                            // Check if the current value exists in the transmitters list
+                                            const exists = transmitters.some(tx => tx.id === currentValue);
+                                            return exists ? currentValue : 'none';
+                                        })()}
                                         label={t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
                                         onChange={(e) => {
                                             const transmitterId = e.target.value === 'none' ? null : e.target.value;
