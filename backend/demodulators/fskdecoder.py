@@ -1,4 +1,4 @@
-# Ground Station - GMSK Decoder using GNU Radio
+# Ground Station - FSK-Family Decoder using GNU Radio
 # Developed by Claude (Anthropic AI) for the Ground Station project
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,13 +14,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-# GMSK decoder implementation based on gr-satellites by Daniel Estevez
+# FSK-family decoder implementation (FSK, GFSK, GMSK) based on gr-satellites by Daniel Estevez
 # https://github.com/daniestevez/gr-satellites
 # Copyright 2019 Daniel Estevez <daniel@destevez.net>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # This decoder receives raw IQ samples directly from the SDR process (via iq_queue)
-# and demodulates GMSK signals using gr-satellites FSK demodulator components.
+# and demodulates FSK-family signals (FSK, GFSK, GMSK) using gr-satellites FSK demodulator.
+#
+# NOTE: FSK, GFSK, and GMSK all use the same demodulator - the differences are in pulse
+# shaping (rectangular for FSK, Gaussian for GFSK/GMSK), which the demodulator handles
+# automatically via adaptive timing recovery and matched filters.
 #
 # ARCHITECTURE NOTES:
 # ==================
@@ -75,7 +79,7 @@ from demodulators.basedecoder import BaseDecoder
 from telemetry.parser import TelemetryParser
 from vfos.state import VFOManager
 
-logger = logging.getLogger("gmskdecoder")
+logger = logging.getLogger("fskdecoder")
 
 
 class DecoderStatus(Enum):
@@ -89,11 +93,11 @@ class DecoderStatus(Enum):
     ERROR = "error"
 
 
-class GMSKMessageHandler(gr.basic_block):
+class FSKMessageHandler(gr.basic_block):
     """Message handler to receive PDU messages from HDLC deframer"""
 
     def __init__(self, callback):
-        gr.basic_block.__init__(self, name="gmsk_message_handler", in_sig=None, out_sig=None)
+        gr.basic_block.__init__(self, name="fsk_message_handler", in_sig=None, out_sig=None)
         self.callback = callback
         self.message_port_register_in(gr.pmt.intern("in"))
         self.set_msg_handler(gr.pmt.intern("in"), self.handle_msg)
@@ -147,12 +151,12 @@ class GMSKMessageHandler(gr.basic_block):
             traceback.print_exc()
 
 
-class GMSKFlowgraph(gr.top_block):
+class FSKFlowgraph(gr.top_block):
     """
-    GMSK flowgraph using gr-satellites FSK demodulator components
+    FSK-family flowgraph using gr-satellites FSK demodulator components
 
-    Based on gr-satellites fsk_demodulator and ax25_deframer.
-    Uses tested components for FSK/GMSK demodulation and AX.25 deframing.
+    Handles FSK, GFSK, and GMSK modulations using the same demodulator.
+    Based on gr-satellites fsk_demodulator with support for multiple framing protocols.
     """
 
     def __init__(
@@ -167,10 +171,11 @@ class GMSKFlowgraph(gr.top_block):
         clk_bw=0.06,
         clk_limit=0.004,
         batch_interval=5.0,
-        framing="ax25",  # 'ax25' or 'usp'
+        framing="ax25",  # 'ax25', 'usp', 'geoscan', 'doka'
+        modulation_subtype="FSK",  # 'FSK', 'GFSK', or 'GMSK' (metadata only)
     ):
         """
-        Initialize GMSK decoder flowgraph using gr-satellites FSK demodulator
+        Initialize FSK-family decoder flowgraph using gr-satellites FSK demodulator
 
         Args:
             sample_rate: Input sample rate (Hz)
@@ -183,9 +188,10 @@ class GMSKFlowgraph(gr.top_block):
             clk_bw: Clock recovery bandwidth (relative to baudrate)
             clk_limit: Clock recovery limit (relative to baudrate)
             batch_interval: Batch processing interval in seconds (default: 5.0)
-            framing: Framing protocol - 'ax25' (G3RUH) or 'usp' (USP FEC)
+            framing: Framing protocol - 'ax25' (G3RUH), 'usp' (USP FEC), 'geoscan', 'doka'
+            modulation_subtype: 'FSK', 'GFSK', or 'GMSK' (metadata only, for logging)
         """
-        super().__init__("GMSK Decoder")
+        super().__init__("FSK Decoder")
 
         self.sample_rate = sample_rate
         self.baudrate = baudrate
@@ -198,6 +204,7 @@ class GMSKFlowgraph(gr.top_block):
         self.clk_bw = clk_bw
         self.clk_limit = clk_limit
         self.framing = framing
+        self.modulation_subtype = modulation_subtype
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
@@ -205,7 +212,7 @@ class GMSKFlowgraph(gr.top_block):
         self.current_mode = "decoding"  # Track current mode
 
         logger.info(
-            f"GMSK flowgraph initialized: "
+            f"FSK flowgraph initialized: {modulation_subtype} | "
             f"{baudrate} baud, {sample_rate} sps, deviation={deviation} Hz, "
             f"framing={framing}, batch_interval={batch_interval}s"
         )
@@ -263,7 +270,7 @@ class GMSKFlowgraph(gr.top_block):
             # This is necessary because hierarchical blocks can't be easily disconnected
 
             # Create a temporary top_block
-            tb = gr.top_block("GMSK Batch Processor")
+            tb = gr.top_block("FSK Batch Processor")
 
             # Create vector source with accumulated samples
             source = blocks.vector_source_c(samples_to_process.tolist(), repeat=False)
@@ -322,7 +329,7 @@ class GMSKFlowgraph(gr.top_block):
                 f"Frame: {frame_info}"
             )
             # Create message handler for this batch
-            msg_handler = GMSKMessageHandler(self.callback)
+            msg_handler = FSKMessageHandler(self.callback)
 
             # Build flowgraph
             tb.connect(source, demod, deframer)
@@ -396,8 +403,13 @@ class GMSKFlowgraph(gr.top_block):
             self._process_buffer()
 
 
-class GMSKDecoder(BaseDecoder, threading.Thread):
-    """Real-time GMSK decoder using GNU Radio"""
+class FSKDecoder(BaseDecoder, threading.Thread):
+    """Real-time FSK-family decoder using GNU Radio
+
+    Handles FSK, GFSK, and GMSK modulations using gr-satellites fsk_demodulator.
+    All three modulation types use the same demodulator - pulse shaping differences
+    (rectangular vs Gaussian) are handled automatically by the timing recovery.
+    """
 
     def __init__(
         self,
@@ -408,8 +420,9 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         output_dir="data/decoded",
         vfo=None,
         batch_interval=5.0,  # Batch processing interval in seconds
+        modulation_subtype="FSK",  # 'FSK', 'GFSK', or 'GMSK' (metadata only)
     ):
-        super().__init__(daemon=True, name=f"GMSKDecoder-{session_id}")
+        super().__init__(daemon=True, name=f"FSKDecoder-{session_id}")
         self.iq_queue = iq_queue
         self.data_queue = data_queue
         self.session_id = session_id
@@ -422,18 +435,39 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         self.sdr_center_freq = None  # SDR center frequency
         self.decimation_filter = None  # Filter for decimation
         self.packet_count = 0
-        logger.info("GMSKDecoder initialized: packet_count set to 0")
+        self.modulation_subtype = modulation_subtype  # FSK, GFSK, or GMSK
+        logger.info(f"FSKDecoder initialized ({modulation_subtype}): packet_count set to 0")
 
         # Initialize telemetry parser
         self.telemetry_parser = TelemetryParser()
-        logger.info("Telemetry parser initialized for GMSK decoder")
+        logger.info(f"Telemetry parser initialized for FSK decoder ({modulation_subtype})")
 
         # Extract all parameters from resolved config (including metadata)
         self.baudrate = config.baudrate
-        self.deviation = config.deviation
         self.framing = config.framing
         self.config_source = config.config_source
         self.batch_interval = batch_interval
+
+        # Deviation: Use config value or smart default based on baudrate
+        # FSK demodulator REQUIRES a deviation value (cannot be None)
+        if config.deviation is not None:
+            self.deviation = config.deviation
+        else:
+            # Smart defaults based on baudrate (common FSK/GMSK practices)
+            if self.baudrate <= 1200:
+                self.deviation = 600  # Low baudrate: narrow deviation
+            elif self.baudrate <= 2400:
+                self.deviation = 1200  # 2400 baud
+            elif self.baudrate <= 4800:
+                self.deviation = 2400  # 4800 baud
+            elif self.baudrate <= 9600:
+                self.deviation = 5000  # 9600 baud (most common)
+            else:
+                self.deviation = int(self.baudrate * 0.5)  # High baudrate: ~50% of baudrate
+            logger.warning(
+                f"Deviation not specified in config, using smart default: {self.deviation} Hz "
+                f"(baudrate={self.baudrate})"
+            )
 
         # Extract satellite and transmitter metadata from config
         self.satellite = config.satellite or {}
@@ -452,7 +486,7 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
             logger.debug(f"Config metadata: {config.to_dict()}")
 
         logger.info(
-            f"GMSK config: {self.satellite_name} (NORAD {self.norad_id or 'N/A'}) | "
+            f"FSK config ({self.modulation_subtype}): {self.satellite_name} (NORAD {self.norad_id or 'N/A'}) | "
             f"TX: {self.transmitter_description} ({self.transmitter_mode}) | "
             f"{self.baudrate}bd, dev={self.deviation}Hz, {self.framing} | src: {self.config_source}"
         )
@@ -475,7 +509,7 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         self.stats_lock = threading.Lock()
 
         logger.info(
-            f"GMSK decoder initialized for session {session_id}, VFO {vfo}: {self.baudrate} baud, deviation={self.deviation} Hz"
+            f"FSK decoder ({self.modulation_subtype}) initialized for session {session_id}, VFO {vfo}: {self.baudrate} baud, deviation={self.deviation} Hz"
         )
 
     def _get_vfo_state(self):
@@ -517,7 +551,7 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         return filtered[::decimation_factor]
 
     def _should_accept_packet(self, payload, callsigns):
-        """GMSK requires valid callsigns"""
+        """FSK-family decoders require valid callsigns"""
         if not callsigns or not callsigns.get("from") or not callsigns.get("to"):
             logger.debug("Packet rejected: no valid callsigns found")
             return False
@@ -525,11 +559,12 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
 
     def _get_decoder_type(self):
         """Return decoder type string"""
-        return "gmsk"
+        return "fsk"
 
     def _get_decoder_specific_metadata(self):
-        """Return GMSK-specific metadata"""
+        """Return FSK-specific metadata"""
         return {
+            "modulation_subtype": self.modulation_subtype,
             "deviation": self.deviation,
             "batch_interval": self.batch_interval,
         }
@@ -543,15 +578,16 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         return f"{self.baudrate}baud, {abs(self.deviation)}Hz dev"
 
     def _get_demodulator_params_metadata(self):
-        """Return GMSK demodulator parameters"""
+        """Return FSK demodulator parameters"""
         return {
+            "modulation_subtype": self.modulation_subtype,
             "deviation_hz": self.deviation,
             "clock_recovery_bandwidth": 0.06,
             "clock_recovery_limit": 0.004,
         }
 
     def _get_payload_protocol(self):
-        """GMSK uses AX.25 for ax25/usp framing, proprietary otherwise"""
+        """FSK uses AX.25 for ax25/usp framing, proprietary otherwise"""
         if self.framing in ["ax25", "usp"]:
             return "ax25"
         return "proprietary"
@@ -583,7 +619,8 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         msg = {
             "type": "decoder-status",
             "status": status.value,
-            "decoder_type": "gmsk",
+            "decoder_type": "fsk",
+            "modulation_subtype": self.modulation_subtype,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
@@ -600,7 +637,8 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         """Send statistics update to UI"""
         msg = {
             "type": "decoder-stats",
-            "decoder_type": "gmsk",
+            "decoder_type": "fsk",
+            "modulation_subtype": self.modulation_subtype,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
@@ -619,7 +657,7 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
 
     def run(self):
         """Main thread loop - processes IQ samples continuously"""
-        logger.info(f"GMSK decoder started for {self.session_id}")
+        logger.info(f"FSK decoder ({self.modulation_subtype}) started for {self.session_id}")
         self._send_status_update(DecoderStatus.LISTENING)
 
         chunks_received = 0
@@ -685,13 +723,13 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
                             else ""
                         )
                         logger.info(
-                            f"GMSK init: {self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps) | "
+                            f"FSK init ({self.modulation_subtype}): {self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps) | "
                             f"SDR={self.sdr_sample_rate/1e6:.2f}MS/s, VFO_BW={vfo_bandwidth/1e3:.0f}kHz, dec={decimation}, out={self.sample_rate/1e6:.2f}MS/s | "
                             f"VFO={vfo_center/1e6:.3f}MHz, SDR_ctr={sdr_center/1e6:.3f}MHz, ofs={offset_freq_init/1e3:.1f}kHz{tx_info}"
                         )
 
                         # Initialize flowgraph
-                        self.flowgraph = GMSKFlowgraph(
+                        self.flowgraph = FSKFlowgraph(
                             sample_rate=self.sample_rate,
                             callback=self._on_packet_decoded,
                             status_callback=self._on_flowgraph_status,
@@ -701,6 +739,7 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
                             dc_block=True,
                             batch_interval=self.batch_interval,
                             framing=self.framing,
+                            modulation_subtype=self.modulation_subtype,
                         )
                         flowgraph_started = True
 
@@ -743,7 +782,7 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
                     pass
 
         except Exception as e:
-            logger.error(f"GMSK decoder error: {e}")
+            logger.error(f"FSK decoder error: {e}")
             logger.exception(e)
             with self.stats_lock:
                 self.stats["errors"] += 1
@@ -753,13 +792,15 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         finally:
             # Flush any remaining samples
             if flowgraph_started and self.flowgraph:
-                logger.info("Flushing remaining samples from GMSK flowgraph")
+                logger.info(
+                    f"Flushing remaining samples from FSK flowgraph ({self.modulation_subtype})"
+                )
                 try:
                     self.flowgraph.flush_buffer()
                 except Exception as e:
                     logger.error(f"Error flushing buffer: {e}")
 
-        logger.info(f"GMSK decoder stopped for {self.session_id}")
+        logger.info(f"FSK decoder ({self.modulation_subtype}) stopped for {self.session_id}")
 
     def stop(self):
         """Stop the decoder thread"""
@@ -769,7 +810,8 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
         msg = {
             "type": "decoder-status",
             "status": "closed",
-            "decoder_type": "gmsk",
+            "decoder_type": "fsk",
+            "modulation_subtype": self.modulation_subtype,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
@@ -780,3 +822,9 @@ class GMSKDecoder(BaseDecoder, threading.Thread):
                 self.stats["data_messages_out"] += 1
         except queue.Full:
             pass
+
+
+# Backward compatibility aliases
+GMSKDecoder = FSKDecoder
+GMSKFlowgraph = FSKFlowgraph
+GMSKMessageHandler = FSKMessageHandler

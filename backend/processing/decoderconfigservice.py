@@ -40,13 +40,13 @@ class DecoderConfigService:
     Usage:
         config_service = DecoderConfigService()
         config = config_service.get_config(
-            decoder_type='gmsk',
+            decoder_type='fsk',  # or 'gmsk', 'gfsk'
             satellite={'norad_id': 12345, 'name': 'MySat-1'},
-            transmitter={'baud': 9600, 'deviation': 5000, 'description': 'GMSK G3RUH'},
+            transmitter={'baud': 9600, 'deviation': 5000, 'description': 'FSK G3RUH'},
             overrides={'framing': 'ax25'}  # Optional manual overrides
         )
         # Pass config to decoder
-        decoder = GMSKDecoder(..., config=config)
+        decoder = FSKDecoder(..., config=config, modulation_subtype="FSK")
     """
 
     def __init__(self):
@@ -267,8 +267,19 @@ class DecoderConfigService:
         # Smart defaults based on decoder type and baudrate
         if decoder_type == "afsk":
             return 500 if baudrate == 1200 else 2400  # Bell 202 or G3RUH
-        elif decoder_type in ["gmsk", "gfsk"]:
-            return 5000  # Common for 9600 baud GMSK/GFSK
+        elif decoder_type in ["fsk", "gmsk", "gfsk"]:
+            # FSK-family decoders REQUIRE deviation (cannot be None)
+            # Return smart defaults based on baudrate
+            if baudrate <= 1200:
+                return 600  # Low baudrate: narrow deviation
+            elif baudrate <= 2400:
+                return 1200  # 2400 baud
+            elif baudrate <= 4800:
+                return 2400  # 4800 baud
+            elif baudrate <= 9600:
+                return 5000  # 9600 baud (most common)
+            else:
+                return int(baudrate * 0.5)  # High baudrate: ~50% of baudrate
         elif decoder_type == "bpsk":
             return None  # BPSK doesn't use deviation
 

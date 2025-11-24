@@ -264,7 +264,9 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
     # This VFO wants a decoder (decoder_class is already set from registry)
 
     # Check if the same decoder is already running for this VFO
-    if current_decoder and isinstance(current_decoder, decoder_class):
+    # Use type() for exact match, not isinstance() which returns True for subclasses
+    # This ensures switching between FSKDecoder, GFSKDecoder, etc. triggers a restart
+    if current_decoder and type(current_decoder) is decoder_class:
         if not force_restart:
             # Same decoder already running for this VFO, do nothing
             logger.debug(

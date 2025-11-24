@@ -153,19 +153,19 @@ const VFOMarkersContainer = ({
         return null;
     }, [decoderOutputs, getDecoderInfoForVFO]);
 
-    // Helper function to get AX.25 packet decoder outputs for a VFO (BPSK/GMSK/GFSK/AFSK)
+    // Helper function to get AX.25 packet decoder outputs for a VFO (BPSK/FSK/GMSK/GFSK/AFSK)
     const getPacketDecoderOutputsForVFO = useCallback((vfoNumber) => {
         // Find decoder info first
         const decoderInfo = getDecoderInfoForVFO(vfoNumber);
-        if (!decoderInfo || !['bpsk', 'gmsk', 'gfsk', 'afsk'].includes(decoderInfo.decoder_type)) {
+        if (!decoderInfo || !['bpsk', 'fsk', 'gmsk', 'gfsk', 'afsk'].includes(decoderInfo.decoder_type)) {
             return null;
         }
 
         // Filter all outputs for this VFO and session
-        // Note: Match any of bpsk/gmsk/gfsk/afsk since they're related protocols (all use AX.25)
+        // Note: Match any of bpsk/fsk/gmsk/gfsk/afsk since they're related protocols (all use AX.25)
         const outputs = decoderOutputs?.filter(
             out => out.session_id === decoderInfo.session_id &&
-                   ['bpsk', 'gmsk', 'gfsk', 'afsk'].includes(out.decoder_type) &&
+                   ['bpsk', 'fsk', 'gmsk', 'gfsk', 'afsk'].includes(out.decoder_type) &&
                    out.vfo === vfoNumber
         );
 
@@ -437,7 +437,7 @@ const VFOMarkersContainer = ({
             // Get morse output text if this VFO has a morse decoder
             const morseText = getMorseOutputForVFO(parseInt(markerIdx));
 
-            // Get packet decoder outputs info if this VFO has a packet decoder (BPSK/GMSK/GFSK/AFSK)
+            // Get packet decoder outputs info if this VFO has a packet decoder (BPSK/FSK/GMSK/GFSK/AFSK)
             const packetOutputs = getPacketDecoderOutputsForVFO(parseInt(markerIdx));
 
             // Check if this VFO is currently streaming audio

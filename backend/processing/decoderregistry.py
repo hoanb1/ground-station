@@ -20,10 +20,13 @@ from typing import List, Optional, Type
 # Import decoder classes
 from demodulators.afskdecoder import AFSKDecoder
 from demodulators.bpskdecoder import BPSKDecoder
+from demodulators.fskdecoder import FSKDecoder
 from demodulators.gfskdecoder import GFSKDecoder
-from demodulators.gmskdecoder import GMSKDecoder
 from demodulators.morsedecoder import MorseDecoder
 from demodulators.sstvdecoder import SSTVDecoder
+
+# Backward compatibility alias
+GMSKDecoder = FSKDecoder
 
 # Try to import LoRa decoder (optional, requires gr-lora_sdr)
 try:
@@ -109,19 +112,29 @@ class DecoderRegistry:
                 supports_transmitter_config=False,
                 description="Morse code (CW) decoder",
             ),
-            "gmsk": DecoderCapabilities(
-                name="gmsk",
-                decoder_class=GMSKDecoder,
+            "fsk": DecoderCapabilities(
+                name="fsk",
+                decoder_class=FSKDecoder,
                 needs_raw_iq=True,  # Works on raw IQ samples
                 required_demodulator=None,  # No demodulator needed
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
-                description="Gaussian Minimum Shift Keying decoder",
+                description="Frequency Shift Keying decoder (FSK/GFSK/GMSK)",
+            ),
+            "gmsk": DecoderCapabilities(
+                name="gmsk",
+                decoder_class=GMSKDecoder,  # Alias to FSKDecoder
+                needs_raw_iq=True,  # Works on raw IQ samples
+                required_demodulator=None,  # No demodulator needed
+                demodulator_mode=None,
+                default_bandwidth=20000,  # 20 kHz typical
+                supports_transmitter_config=True,
+                description="Gaussian Minimum Shift Keying decoder (alias to FSK)",
             ),
             "gfsk": DecoderCapabilities(
                 name="gfsk",
-                decoder_class=GFSKDecoder,
+                decoder_class=GFSKDecoder,  # Extends FSKDecoder with modulation_subtype="GFSK"
                 needs_raw_iq=True,  # Works on raw IQ samples
                 required_demodulator=None,  # No demodulator needed
                 demodulator_mode=None,
