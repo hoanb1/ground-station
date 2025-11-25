@@ -18,10 +18,11 @@ sleep 2
 export GR_BUFFER_TYPE=${GR_BUFFER_TYPE:-vmcirc_mmap_tmpfile}
 echo "Using GNU Radio buffer type: $GR_BUFFER_TYPE"
 
-# Create GNU Radio preferences to use mmap-based buffers
-mkdir -p /root/.gnuradio/prefs
-cat > /root/.gnuradio/prefs/vmcircbuf_default_factory << 'EOF'
-gr_vmcircbuf_mmap_tmpfile_factory
+# Create GNU Radio config to use mmap-based buffers
+mkdir -p /root/.gnuradio
+cat > /root/.gnuradio/config.conf << 'EOF'
+[vmcircbuf]
+default_factory = gr_vmcircbuf_mmap_tmpfile_factory
 EOF
 echo "Configured GNU Radio to use mmap-based circular buffers"
 
