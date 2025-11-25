@@ -101,6 +101,7 @@ jobs:
             docker run -d \
               --platform linux/amd64 \
               --shm-size=512m \
+              --ipc=host \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
@@ -117,6 +118,7 @@ jobs:
             docker run -d \
               --platform linux/arm64 \
               --shm-size=512m \
+              --ipc=host \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
