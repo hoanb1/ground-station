@@ -10,6 +10,7 @@ import uvicorn  # noqa: E402
 
 from common.arguments import arguments  # noqa: E402
 from common.logger import get_logger_config, logger  # noqa: E402
+from demodulators.shm_cleanup import start_cleanup_thread  # noqa: E402
 from handlers.socket import register_socketio_handlers  # noqa: E402
 from server.shutdown import cleanup_everything, signal_handler  # noqa: E402
 from server.startup import app, init_db, sio, socket_app  # noqa: E402
@@ -33,6 +34,10 @@ def main() -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     configure_process_names()
+
+    # Start shared memory cleanup thread (for GNU Radio orphaned segments)
+    logger.info("Starting shared memory cleanup thread...")
+    start_cleanup_thread(cleanup_interval=30)
 
     # Register other routes
     register_webrtc_routes(app)
