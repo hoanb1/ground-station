@@ -108,6 +108,7 @@ jobs:
               --privileged \
               -v /path/to/data:/app/backend/data \
               -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+              -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
             ```
 
@@ -123,6 +124,7 @@ jobs:
               --privileged \
               -v /path/to/data:/app/backend/data \
               -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+              -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
             ```
 

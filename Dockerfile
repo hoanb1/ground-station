@@ -404,6 +404,8 @@ ENV PYTHONPATH=/app
 ENV STATIC_FILES_DIR=/app/frontend/dist
 ENV UHD_IMAGES_DIR=/app/backend/data/uhd_images
 ENV UHD_CONFIG_DIR=/app/backend/data/uhd_config
+# Configure GNU Radio to use mmap-based buffers to prevent shared memory exhaustion
+ENV GR_BUFFER_TYPE=vmcirc_mmap_tmpfile
 
 # Expose the port the app runs on
 EXPOSE 7000
