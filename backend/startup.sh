@@ -14,6 +14,10 @@ sleep 2
 /opt/sdrplay_api/sdrplay_apiService &
 sleep 2
 
+# Configure GNU Radio buffer type (defaults to vmcirc_mmap_tmpfile to prevent shmget exhaustion)
+export GR_BUFFER_TYPE=${GR_BUFFER_TYPE:-vmcirc_mmap_tmpfile}
+echo "Using GNU Radio buffer type: $GR_BUFFER_TYPE"
+
 # Set UHD images directory (defaults to /app/backend/data/uhd_images if not set)
 export UHD_IMAGES_DIR=${UHD_IMAGES_DIR:-/app/backend/data/uhd_images}
 echo "Using UHD images directory: $UHD_IMAGES_DIR"
