@@ -1,4 +1,4 @@
-# Ground Station - Shared Memory Cleanup Utility
+# Ground Station - Shared Memory Monitor Utility
 # Developed by Claude (Anthropic AI) for the Ground Station project
 #
 # This program is free software: you can redistribute it and/or modify
@@ -14,52 +14,53 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
-# Utility to clean up orphaned shared memory segments created by GNU Radio.
+# Utility to monitor shared memory usage by GNU Radio.
 #
-# GNU Radio creates shared memory segments for circular buffers between blocks.
-# Even with proper cleanup (tb.stop(), disconnect_all(), del), these segments
-# can persist in the kernel, eventually hitting the system limit (shmmni).
+# GNU Radio creates shared memory segments (or mmap files) for circular buffers
+# between blocks. This utility monitors segment count and usage to help detect
+# memory issues.
 #
-# This utility runs a background thread that periodically removes orphaned
-# segments (those with nattch=0, meaning no processes are attached).
+# With vmcirc_mmap_tmpfile configured, segments should remain low/stable.
+# With vmcirc_sysv_shm (shmget), segments accumulate and require cleanup.
 
 import logging
 import subprocess
 import threading
 import time
 
-logger = logging.getLogger("shm_cleanup")
+logger = logging.getLogger("shm_monitor")
 
 
-class SharedMemoryCleanup:
-    """Background thread that periodically cleans up orphaned shared memory segments."""
+class SharedMemoryMonitor:
+    """Background thread that periodically monitors shared memory usage."""
 
-    def __init__(self, cleanup_interval=30):
+    def __init__(self, monitor_interval=30):
         """
-        Initialize the cleanup thread.
+        Initialize the monitor thread.
 
         Args:
-            cleanup_interval: Seconds between cleanup runs (default: 30)
+            monitor_interval: Seconds between monitoring checks (default: 30)
         """
-        self.cleanup_interval = cleanup_interval
+        self.monitor_interval = monitor_interval
         self.running = False
         self.thread = None
-        self._cleanup_count = 0
         self._last_segment_count = 0
+        self._peak_segment_count = 0
+        self._orphaned_segments_cleaned = 0
 
     def start(self):
-        """Start the cleanup thread."""
+        """Start the monitor thread."""
         if self.running:
-            logger.warning("Cleanup thread already running")
+            logger.warning("Monitor thread already running")
             return
 
         self.running = True
-        self.thread = threading.Thread(target=self._cleanup_loop, daemon=True, name="SHM-Cleanup")
+        self.thread = threading.Thread(target=self._monitor_loop, daemon=True, name="SHM-Monitor")
         self.thread.start()
-        logger.info(f"Started shared memory cleanup thread (interval: {self.cleanup_interval}s)")
+        logger.info(f"Started shared memory monitor thread (interval: {self.monitor_interval}s)")
 
     def stop(self):
-        """Stop the cleanup thread."""
+        """Stop the monitor thread."""
         if not self.running:
             return
 
@@ -67,31 +68,45 @@ class SharedMemoryCleanup:
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=5)
         logger.info(
-            f"Stopped shared memory cleanup thread (cleaned {self._cleanup_count} segments total)"
+            f"Stopped shared memory monitor (peak: {self._peak_segment_count} segments, "
+            f"cleaned: {self._orphaned_segments_cleaned} orphaned)"
         )
 
-    def _cleanup_loop(self):
-        """Main cleanup loop."""
+    def _monitor_loop(self):
+        """Main monitoring loop."""
         while self.running:
             try:
-                cleaned = self._cleanup_orphaned_segments()
-                if cleaned > 0:
-                    self._cleanup_count += cleaned
-                    logger.info(
-                        f"Cleaned {cleaned} orphaned shared memory segments (total: {self._cleanup_count})"
-                    )
-
-                # Log current segment usage periodically
+                # Get current segment count
                 segment_count = self._get_segment_count()
+                orphaned_count = self._get_orphaned_count()
+
+                # Track peak usage
+                if segment_count > self._peak_segment_count:
+                    self._peak_segment_count = segment_count
+
+                # Log if count changed significantly or if there are orphaned segments
                 if segment_count != self._last_segment_count:
-                    logger.debug(f"Current shared memory segments: {segment_count}")
+                    if orphaned_count > 0:
+                        logger.warning(
+                            f"Shared memory: {segment_count} segments "
+                            f"({orphaned_count} orphaned, peak: {self._peak_segment_count})"
+                        )
+                        # Optionally clean up orphaned segments if using shmget
+                        cleaned = self._cleanup_orphaned_segments()
+                        if cleaned > 0:
+                            self._orphaned_segments_cleaned += cleaned
+                            logger.info(f"Cleaned {cleaned} orphaned segments")
+                    else:
+                        logger.info(
+                            f"Shared memory: {segment_count} segments (peak: {self._peak_segment_count})"
+                        )
                     self._last_segment_count = segment_count
 
             except Exception as e:
-                logger.error(f"Error in cleanup loop: {e}")
+                logger.error(f"Error in monitor loop: {e}")
 
             # Sleep in short intervals to allow quick shutdown
-            for _ in range(self.cleanup_interval * 2):
+            for _ in range(self.monitor_interval * 2):
                 if not self.running:
                     break
                 time.sleep(0.5)
@@ -162,34 +177,54 @@ class SharedMemoryCleanup:
             pass
         return 0
 
+    def _get_orphaned_count(self):
+        """Get count of orphaned shared memory segments (nattch=0)."""
+        try:
+            result = subprocess.run(
+                ["sh", "-c", "ipcs -m | awk 'NR>3 && $6==0' | wc -l"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return int(result.stdout.strip())
+        except Exception:
+            pass
+        return 0
+
 
 # Global singleton instance
-_cleanup_instance = None
-_cleanup_lock = threading.Lock()
+_monitor_instance = None
+_monitor_lock = threading.Lock()
 
 
-def start_cleanup_thread(cleanup_interval=30):
+def start_monitor_thread(monitor_interval=30):
     """
-    Start the global shared memory cleanup thread.
+    Start the global shared memory monitor thread.
 
     Args:
-        cleanup_interval: Seconds between cleanup runs (default: 30)
+        monitor_interval: Seconds between monitoring checks (default: 30)
     """
-    global _cleanup_instance
+    global _monitor_instance
 
-    with _cleanup_lock:
-        if _cleanup_instance is None:
-            _cleanup_instance = SharedMemoryCleanup(cleanup_interval=cleanup_interval)
-            _cleanup_instance.start()
+    with _monitor_lock:
+        if _monitor_instance is None:
+            _monitor_instance = SharedMemoryMonitor(monitor_interval=monitor_interval)
+            _monitor_instance.start()
         else:
-            logger.debug("Cleanup thread already started")
+            logger.debug("Monitor thread already started")
 
 
-def stop_cleanup_thread():
-    """Stop the global shared memory cleanup thread."""
-    global _cleanup_instance
+def stop_monitor_thread():
+    """Stop the global shared memory monitor thread."""
+    global _monitor_instance
 
-    with _cleanup_lock:
-        if _cleanup_instance is not None:
-            _cleanup_instance.stop()
-            _cleanup_instance = None
+    with _monitor_lock:
+        if _monitor_instance is not None:
+            _monitor_instance.stop()
+            _monitor_instance = None
+
+
+# Backwards compatibility aliases
+start_cleanup_thread = start_monitor_thread
+stop_cleanup_thread = stop_monitor_thread

@@ -35,9 +35,9 @@ def main() -> None:
 
     configure_process_names()
 
-    # Start shared memory cleanup thread (for GNU Radio orphaned segments)
-    logger.info("Starting shared memory cleanup thread...")
-    start_cleanup_thread(cleanup_interval=30)
+    # Start shared memory monitor thread (for GNU Radio segment tracking)
+    logger.info("Starting shared memory monitor thread...")
+    start_cleanup_thread(monitor_interval=30)
 
     # Register other routes
     register_webrtc_routes(app)

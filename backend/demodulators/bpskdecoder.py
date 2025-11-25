@@ -68,15 +68,20 @@ from enum import Enum
 from typing import Any, Dict
 
 import numpy as np
-from gnuradio import blocks, gr
-from satellites.components.deframers.ax25_deframer import ax25_deframer
-from satellites.components.deframers.ccsds_rs_deframer import ccsds_rs_deframer
-from satellites.components.demodulators.bpsk_demodulator import bpsk_demodulator
-from scipy import signal
 
-from demodulators.basedecoder import BaseDecoder
-from telemetry.parser import TelemetryParser
-from vfos.state import VFOManager
+# Configure GNU Radio to use mmap-based buffers instead of shmget
+# This prevents shared memory segment exhaustion
+os.environ.setdefault("GR_BUFFER_TYPE", "vmcirc_mmap_tmpfile")
+
+from gnuradio import blocks, gr  # noqa: E402
+from satellites.components.deframers.ax25_deframer import ax25_deframer  # noqa: E402
+from satellites.components.deframers.ccsds_rs_deframer import ccsds_rs_deframer  # noqa: E402
+from satellites.components.demodulators.bpsk_demodulator import bpsk_demodulator  # noqa: E402
+from scipy import signal  # noqa: E402
+
+from demodulators.basedecoder import BaseDecoder  # noqa: E402
+from telemetry.parser import TelemetryParser  # noqa: E402
+from vfos.state import VFOManager  # noqa: E402
 
 logger = logging.getLogger("bpskdecoder")
 

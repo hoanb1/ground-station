@@ -25,12 +25,17 @@ import time
 from enum import Enum
 
 import numpy as np
-from gnuradio import blocks, gr
-from scipy import signal
 
-from demodulators.basedecoder import BaseDecoder
-from telemetry.parser import TelemetryParser
-from vfos.state import VFOManager
+# Configure GNU Radio to use mmap-based buffers instead of shmget
+# This prevents shared memory segment exhaustion
+os.environ.setdefault("GR_BUFFER_TYPE", "vmcirc_mmap_tmpfile")
+
+from gnuradio import blocks, gr  # noqa: E402
+from scipy import signal  # noqa: E402
+
+from demodulators.basedecoder import BaseDecoder  # noqa: E402
+from telemetry.parser import TelemetryParser  # noqa: E402
+from vfos.state import VFOManager  # noqa: E402
 
 logger = logging.getLogger("loradecoder")
 
