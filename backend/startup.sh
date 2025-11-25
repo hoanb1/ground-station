@@ -66,6 +66,8 @@ else
     echo "Warning: LibreSDR FPGA image not found at /usr/local/share/uhd/images/libresdr_b210.bin"
 fi
 
+
+
 # Show a list of UHD images
 echo "UHD FPGA images in $UHD_IMAGES_DIR:"
 ls -lh "$UHD_IMAGES_DIR"/*.bin 2>/dev/null || echo "No UHD images found yet in $UHD_IMAGES_DIR"
