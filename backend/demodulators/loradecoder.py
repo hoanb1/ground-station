@@ -275,6 +275,11 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
         }
         self.telemetry_parser = TelemetryParser()
 
+        # Signal power measurement (from BaseDecoder)
+        self.power_measurements = []
+        self.max_power_history = 100
+        self.current_power_dbfs = None
+
         # LoRa-specific attributes
         self.sample_rate = None  # VFO bandwidth sample rate (after decimation)
         self.sdr_sample_rate = None  # Full SDR sample rate
@@ -385,6 +390,9 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
             ),
         }
 
+        # Add power measurements if available
+        config_info.update(self._get_power_statistics())
+
         # Merge with any additional info passed in
         if info:
             config_info.update(info)
@@ -486,6 +494,11 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
                     translated = self._frequency_translate(
                         samples, offset_freq, self.sdr_sample_rate
                     )
+
+                    # Measure signal power AFTER frequency translation, BEFORE decimation
+                    # This gives the most accurate raw signal strength
+                    power_dbfs = self._measure_signal_power(translated)
+                    self._update_power_measurement(power_dbfs)
 
                     # Step 2: Decimate to VFO bandwidth
                     decimation = int(self.sdr_sample_rate / vfo_bandwidth)

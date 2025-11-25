@@ -182,6 +182,33 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                             label="Sample Rate"
                             value={signal.sample_rate_hz ? `${(signal.sample_rate_hz / 1000).toFixed(2)} kS/s` : '-'}
                         />
+                        {signal.signal_power_dbfs !== undefined && (
+                            <>
+                                <Divider sx={{ my: 1 }} />
+                                <InfoRow
+                                    label="Signal Power"
+                                    value={`${signal.signal_power_dbfs.toFixed(1)} dBFS`}
+                                />
+                                {signal.signal_power_avg_dbfs !== undefined && (
+                                    <InfoRow
+                                        label="Avg Power"
+                                        value={`${signal.signal_power_avg_dbfs.toFixed(1)} dBFS`}
+                                    />
+                                )}
+                                {signal.signal_power_max_dbfs !== undefined && (
+                                    <InfoRow
+                                        label="Peak Power"
+                                        value={`${signal.signal_power_max_dbfs.toFixed(1)} dBFS`}
+                                    />
+                                )}
+                                {signal.signal_power_min_dbfs !== undefined && (
+                                    <InfoRow
+                                        label="Min Power"
+                                        value={`${signal.signal_power_min_dbfs.toFixed(1)} dBFS`}
+                                    />
+                                )}
+                            </>
+                        )}
                     </InfoSection>
 
                     {/* Validation Status */}

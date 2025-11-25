@@ -508,6 +508,11 @@ class FSKDecoder(BaseDecoder, threading.Thread):
         }
         self.stats_lock = threading.Lock()
 
+        # Signal power measurement (from BaseDecoder)
+        self.power_measurements = []
+        self.max_power_history = 100
+        self.current_power_dbfs = None
+
         logger.info(
             f"FSK decoder ({self.modulation_subtype}) initialized for session {session_id}, VFO {vfo}: {self.baudrate} baud, deviation={self.deviation} Hz"
         )
@@ -612,6 +617,9 @@ class FSKDecoder(BaseDecoder, threading.Thread):
             ),
         }
 
+        # Add power measurements if available
+        config_info.update(self._get_power_statistics())
+
         # Merge with any additional info passed in
         if info:
             config_info.update(info)
@@ -635,6 +643,15 @@ class FSKDecoder(BaseDecoder, threading.Thread):
 
     def _send_stats_update(self):
         """Send statistics update to UI"""
+        stats_data = {
+            "packets_decoded": self.packet_count,
+            "baudrate": self.baudrate,
+            "deviation": self.deviation,
+        }
+
+        # Add power statistics if available
+        stats_data.update(self._get_power_statistics())
+
         msg = {
             "type": "decoder-stats",
             "decoder_type": "fsk",
@@ -642,11 +659,7 @@ class FSKDecoder(BaseDecoder, threading.Thread):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
-            "stats": {
-                "packets_decoded": self.packet_count,
-                "baudrate": self.baudrate,
-                "deviation": self.deviation,
-            },
+            "stats": stats_data,
         }
         try:
             self.data_queue.put(msg, block=False)
@@ -751,6 +764,11 @@ class FSKDecoder(BaseDecoder, threading.Thread):
                     translated = self._frequency_translate(
                         samples, offset_freq, self.sdr_sample_rate
                     )
+
+                    # Measure signal power AFTER frequency translation, BEFORE decimation/AGC
+                    # This gives the most accurate raw signal strength
+                    power_dbfs = self._measure_signal_power(translated)
+                    self._update_power_measurement(power_dbfs)
 
                     # Step 2: Decimate to target sample rate
                     decimation = int(self.sdr_sample_rate / self.sample_rate)

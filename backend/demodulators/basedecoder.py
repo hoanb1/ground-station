@@ -25,6 +25,8 @@ import threading
 import time
 from typing import Any, Dict, Optional
 
+import numpy as np
+
 logger = logging.getLogger("basedecoder")
 
 # Load satellite callsign to NORAD ID lookup table
@@ -113,6 +115,81 @@ class BaseDecoder:
     sdr_center_freq: Optional[float]
     sample_rate: Optional[float]
     sdr_sample_rate: Optional[float]
+
+    # Signal power measurement (optional - initialized by subclass if needed)
+    power_measurements: list = []
+    max_power_history: int = 100
+    current_power_dbfs: Optional[float] = None
+
+    def _measure_signal_power(self, samples):
+        """
+        Measure signal power in dBFS (dB relative to full scale).
+
+        This method should be called after frequency translation but before
+        decimation/AGC to get the most accurate raw signal strength.
+
+        Args:
+            samples: Complex IQ samples (numpy array)
+
+        Returns:
+            float: Power in dBFS, or None if measurement fails
+        """
+        if samples is None or len(samples) == 0:
+            return None
+
+        try:
+            # Calculate instantaneous power: |I + jQ|^2 = I^2 + Q^2
+            power_linear = np.abs(samples) ** 2
+
+            # Calculate mean power
+            mean_power = np.mean(power_linear)
+
+            # Avoid log of zero
+            if mean_power <= 0:
+                return None
+
+            # Convert to dBFS (dB relative to full scale)
+            # Full scale for complex samples is 1.0, so 0 dBFS = power of 1.0
+            power_dbfs = 10 * np.log10(mean_power)
+
+            return power_dbfs
+
+        except Exception as e:
+            logger.debug(f"Error measuring signal power: {e}")
+            return None
+
+    def _update_power_measurement(self, power_dbfs):
+        """
+        Update power measurement history.
+
+        Call this after measuring power to update the current power
+        and maintain a rolling history of measurements.
+
+        Args:
+            power_dbfs: Power measurement in dBFS
+        """
+        if power_dbfs is not None:
+            self.current_power_dbfs = power_dbfs
+            self.power_measurements.append(power_dbfs)
+            # Keep only recent measurements
+            if len(self.power_measurements) > self.max_power_history:
+                self.power_measurements.pop(0)
+
+    def _get_power_statistics(self):
+        """
+        Get power statistics for inclusion in status messages.
+
+        Returns:
+            dict: Power statistics (current, avg, max, min) in dBFS
+        """
+        stats = {}
+        if self.current_power_dbfs is not None:
+            stats["signal_power_dbfs"] = round(self.current_power_dbfs, 1)
+        if len(self.power_measurements) > 0:
+            stats["signal_power_avg_dbfs"] = round(np.mean(self.power_measurements), 1)
+            stats["signal_power_max_dbfs"] = round(np.max(self.power_measurements), 1)
+            stats["signal_power_min_dbfs"] = round(np.min(self.power_measurements), 1)
+        return stats
 
     def _on_packet_decoded(
         self, payload: bytes, callsigns: Optional[Dict[str, str]] = None
@@ -369,16 +446,16 @@ class BaseDecoder:
 
     def _get_signal_metadata(self, vfo_state: Any) -> Dict[str, Any]:
         """
-        Get signal metadata.
+        Get signal metadata including power measurements.
 
         Args:
             vfo_state: VFO state object or None
 
         Returns:
-            dict: Signal metadata
+            dict: Signal metadata including frequency, sample rates, and power statistics
         """
         sdr_center = getattr(self, "sdr_center_freq", None)
-        return {
+        metadata = {
             "frequency_hz": vfo_state.center_freq if vfo_state else None,
             "frequency_mhz": vfo_state.center_freq / 1e6 if vfo_state else None,
             "sample_rate_hz": getattr(self, "sample_rate", None),
@@ -386,6 +463,11 @@ class BaseDecoder:
             "sdr_center_freq_hz": sdr_center,
             "sdr_center_freq_mhz": (sdr_center / 1e6 if sdr_center is not None else None),
         }
+
+        # Add power statistics if available
+        metadata.update(self._get_power_statistics())
+
+        return metadata
 
     def _get_vfo_metadata(self, vfo_state: Any) -> Dict[str, Any]:
         """
@@ -534,6 +616,10 @@ class BaseDecoder:
 
         # Add decoder config
         output_data["decoder_config"] = self._get_decoder_config_metadata()
+
+        # Add signal metadata (includes frequency, sample rates, and power measurements if available)
+        vfo_state = self._get_vfo_state()
+        output_data["signal"] = self._get_signal_metadata(vfo_state)
 
         msg: Dict[str, Any] = {
             "type": "decoder-output",
