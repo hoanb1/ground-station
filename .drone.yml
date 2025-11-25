@@ -69,7 +69,7 @@ steps:
       - docker rm -f ground-station-prod || true
 
       # Run the new container with the versioned image
-      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/data -e GS_ENVIRONMENT=$ENV_TYPE sgoudelis/ground-station:$FULL_VERSION
+      - docker run -d -p 0.0.0.0:7000:7000 --shm-size=512m --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/data -e GS_ENVIRONMENT=$ENV_TYPE sgoudelis/ground-station:$FULL_VERSION
 
       # Check that it's running
       - sleep 5

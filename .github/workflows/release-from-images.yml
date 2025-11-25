@@ -100,6 +100,7 @@ jobs:
             ```bash
             docker run -d \
               --platform linux/amd64 \
+              --shm-size=512m \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
@@ -114,6 +115,7 @@ jobs:
             ```bash
             docker run -d \
               --platform linux/arm64 \
+              --shm-size=512m \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
