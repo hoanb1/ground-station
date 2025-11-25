@@ -645,11 +645,24 @@ class ProcessLifecycleManager:
                             "decoder-progress",
                             "decoder-output",
                             "decoder-error",
+                            "decoder-stats",
                         ]:
                             # Decoder messages (SSTV, AFSK, Morse, GMSK, etc.)
-                            # Send to specific session only
                             session_id = data.get("session_id")
                             if session_id:
+                                # Store performance stats for PerformanceMonitor (decoder-stats only)
+                                if data_type == "decoder-stats" and "perf_stats" in data:
+                                    vfo = data.get("vfo")
+                                    if vfo is not None:
+                                        # Store stats in process_info for PerformanceMonitor to access
+                                        if "decoders" in process_info:
+                                            if session_id in process_info["decoders"]:
+                                                if vfo in process_info["decoders"][session_id]:
+                                                    process_info["decoders"][session_id][vfo][
+                                                        "stats"
+                                                    ] = data["perf_stats"]
+
+                                # Send to specific session only
                                 await self.sio.emit(
                                     SocketEvents.DECODER_DATA, data, room=session_id
                                 )

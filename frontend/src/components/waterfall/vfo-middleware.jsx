@@ -44,12 +44,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
 
     // Handle VFO property changes
     if (action.type === 'vfo/setVFOProperty') {
-        const { vfoNumber, updates, skipBackendSync } = action.payload;
-
-        // Skip backend sync if this update came from the backend (e.g., frequency-only tracking updates)
-        if (skipBackendSync) {
-            return result;
-        }
+        const { vfoNumber, updates } = action.payload;
 
         // Handle frequencyOffset changes for locked VFOs
         const updateKeys = Object.keys(updates);
@@ -72,7 +67,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                     store.dispatch(setVFOProperty({
                         vfoNumber: vfoNumber,
                         updates: { frequency: finalFrequency },
-                        skipBackendSync: false  // Send to backend for demodulation
                     }));
                 }
             }
@@ -224,7 +218,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                                 lockedTransmitterId: null,
                                 frequencyOffset: 0
                             },
-                            skipBackendSync: true  // No need to sync UI-only fields to backend
                         }));
 
                         console.log(`VFO ${vfoNum} unlocked due to satellite change`);
@@ -259,7 +252,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                                 lockedTransmitterId: null,
                                 frequencyOffset: 0
                             },
-                            skipBackendSync: true
                         }));
 
                         console.warn(`VFO ${vfoNum} unlocked: transmitter ID ${vfo.lockedTransmitterId} not found in current transmitter list`);
@@ -273,11 +265,16 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
 
                         // Check if frequency has changed (to avoid unnecessary updates)
                         if (vfo.frequency !== finalFrequency) {
-                            store.dispatch(setVFOProperty({
-                                vfoNumber: vfoNum,
-                                updates: { frequency: finalFrequency },
-                                skipBackendSync: false
-                            }));
+                            // Only update frequency for active VFOs
+                            // Inactive VFOs don't need backend updates since they're not demodulating
+                            const isVfoActive = state.vfo.vfoActive[vfoNum];
+
+                            if (isVfoActive) {
+                                store.dispatch(setVFOProperty({
+                                    vfoNumber: vfoNum,
+                                    updates: { frequency: finalFrequency },
+                                }));
+                            }
 
                             const offsetStr = offset !== 0 ? ` (offset: ${offset >= 0 ? '+' : ''}${(offset / 1e3).toFixed(1)} kHz)` : '';
                         }
@@ -311,7 +308,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                             mode: normalizedMode || 'FM',
                             frequencyOffset: 0  // Reset offset when locking
                         },
-                        skipBackendSync: false  // Send to backend
                     }));
 
                     console.log(`VFO ${vfoNumber} locked to transmitter "${transmitter.description}" at ${(transmitter.downlink_observed_freq / 1e6).toFixed(6)} MHz`);
@@ -324,7 +320,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                     updates: {
                         frequencyOffset: 0  // Reset offset when unlocking
                     },
-                    skipBackendSync: true  // No need to send offset to backend
                 }));
 
                 console.log(`VFO ${vfoNumber} unlocked, offset reset to 0`);

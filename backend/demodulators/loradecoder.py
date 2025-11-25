@@ -20,11 +20,20 @@
 import logging
 import os
 import queue
-import threading
 import time
 from enum import Enum
+from typing import Any, Dict
 
 import numpy as np
+import psutil
+
+# Add setproctitle import for process naming
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
 
 # Configure GNU Radio to use mmap-based buffers instead of shmget
 # This prevents shared memory segment exhaustion
@@ -33,7 +42,7 @@ os.environ.setdefault("GR_BUFFER_TYPE", "vmcirc_mmap_tmpfile")
 from gnuradio import blocks, gr  # noqa: E402
 from scipy import signal  # noqa: E402
 
-from demodulators.basedecoder import BaseDecoder  # noqa: E402
+from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 from vfos.state import VFOManager  # noqa: E402
 
@@ -65,7 +74,12 @@ class DecoderStatus(Enum):
 class LoRaMessageSink(gr.sync_block):
     """Custom GNU Radio sink block to receive decoded LoRa messages"""
 
-    def __init__(self, callback):
+    def __init__(
+        self,
+        callback,
+        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_restart_threshold=1000,  # Restart when segments exceed this
+    ):
         gr.sync_block.__init__(self, name="lora_message_sink", in_sig=None, out_sig=None)
         self.callback = callback
         self.message_port_register_in(gr.pmt.intern("in"))
@@ -247,7 +261,7 @@ class LoRaFlowgraph(gr.top_block):
             self.callback(payload)
 
 
-class LoRaDecoder(BaseDecoder, threading.Thread):
+class LoRaDecoder(BaseDecoderProcess):
     """Real-time LoRa decoder using GNU Radio gr-lora_sdr"""
 
     def __init__(
@@ -258,40 +272,39 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
         config,  # Pre-resolved DecoderConfig from DecoderConfigService (contains all params + metadata)
         output_dir="data/decoded",
         vfo=None,
+        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
         if not LORA_SDR_AVAILABLE:
             logger.error("gr-lora_sdr not available - LoRa decoder cannot be initialized")
             raise RuntimeError("gr-lora_sdr not available")
 
-        threading.Thread.__init__(self, daemon=True, name=f"LoRaDecoder-{session_id}")
+        # Initialize base process (handles multiprocessing setup)
+        super().__init__(
+            iq_queue=iq_queue,
+            data_queue=data_queue,
+            session_id=session_id,
+            config=config,
+            output_dir=output_dir,
+            vfo=vfo,
+            shm_monitor_interval=shm_monitor_interval,
+            shm_restart_threshold=shm_restart_threshold,
+        )
 
-        # BaseDecoder required attributes
-        self.iq_queue = iq_queue
-        self.data_queue = data_queue
-        self.session_id = session_id
-        self.output_dir = output_dir
-        self.vfo = vfo
-        self.packet_count = 0
-        self.stats_lock = threading.Lock()
-        self.stats = {
-            "packets_decoded": 0,
-            "errors": 0,
-            "data_messages_out": 0,
-        }
-        self.telemetry_parser = TelemetryParser()
+        # LoRa-specific attributes
+        self.sample_rate = None  # VFO bandwidth sample rate (after decimation)
+        self.sdr_sample_rate = None  # Full SDR sample rate
+        self.sdr_center_freq = None  # SDR center frequency
+        self.decimation_filter = None  # Filter for decimation
 
         # Signal power measurement (from BaseDecoder)
         self.power_measurements = []
         self.max_power_history = 100
         self.current_power_dbfs = None
 
-        # LoRa-specific attributes
-        self.sample_rate = None  # VFO bandwidth sample rate (after decimation)
-        self.sdr_sample_rate = None  # Full SDR sample rate
-        self.running = True
-        self.vfo_manager = VFOManager()
-        self.sdr_center_freq = None  # SDR center frequency
-        self.decimation_filter = None  # Filter for decimation
+        logger.debug(
+            f"LoRaDecoder initialized: packet_count=0, SHM threshold={shm_restart_threshold}"
+        )
 
         # Extract LoRa parameters from config (no defaults - enable auto-detection)
         self.sf = config.sf  # None = auto-detect
@@ -312,18 +325,63 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
         self.transmitter_mode = (config.transmitter or {}).get("mode") or "LoRa"
         self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
 
+        # Log debug if downlink frequency not available (not a warning - expected for manual VFO mode)
+        if not self.transmitter_downlink_freq:
+            logger.debug("Transmitter downlink frequency not available in config (manual VFO mode)")
+            logger.debug(f"Config metadata: {config.to_dict()}")
+
+        # Build smart parameter summary - only show non-None optional params
+        param_parts = []
+        if self.sf is not None:
+            param_parts.append(f"SF{self.sf}")
+        else:
+            param_parts.append("SF=auto")
+
+        if self.bw is not None:
+            param_parts.append(f"BW{self.bw/1000:.0f}kHz")
+        else:
+            param_parts.append("BW=auto")
+
+        if self.cr is not None:
+            param_parts.append(f"CR4/{self.cr+4}")
+        else:
+            param_parts.append("CR=auto")
+
+        if self.sync_word and self.sync_word != [0, 0]:
+            if isinstance(self.sync_word, list):
+                sync_hex = "0x" + "".join(f"{b:02X}" for b in self.sync_word)
+            else:
+                sync_hex = f"0x{self.sync_word:X}"
+            param_parts.append(f"sync={sync_hex}")
+
+        params_str = ", ".join(param_parts)
+
+        # Build satellite info (compact format)
+        sat_info = f"{self.satellite_name}" if self.satellite_name else "Unknown"
+        if self.norad_id:
+            sat_info += f" (NORAD {self.norad_id})"
+
+        # Build transmitter info (compact format)
+        tx_info = (
+            f"TX: {self.transmitter_description}" if self.transmitter_description else "TX: Unknown"
+        )
+        if self.transmitter_downlink_freq:
+            tx_info += f" @ {self.transmitter_downlink_freq/1e6:.3f}MHz"
+
+        # Single consolidated initialization log with all relevant parameters
+        logger.info(
+            f"LoRa decoder initialized: session={session_id}, VFO {vfo} | {sat_info} | {tx_info} | {params_str} | "
+            f"src: {self.config_source}"
+        )
+
         os.makedirs(self.output_dir, exist_ok=True)
 
         # GNU Radio flowgraph (will be initialized when we know sample rate)
         self.flowgraph = None
 
-        logger.info(f"LoRa decoder initialized for session {session_id}, VFO {vfo}")
-        if self.sf is None or self.bw is None or self.cr is None:
-            logger.info("LoRa auto-detection enabled - will scan common parameters")
-        else:
-            logger.info(
-                f"LoRa parameters: SF{self.sf}, BW{self.bw/1000:.0f}kHz, CR4/{self.cr+4}, sync_word={self.sync_word}"
-            )
+    def _get_decoder_type_for_init(self) -> str:
+        """Return decoder type for process naming."""
+        return "LoRa"
 
     def _frequency_translate(self, samples, offset_freq, sample_rate):
         """Translate frequency by offset (shift signal in frequency domain)."""
@@ -368,7 +426,7 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
         # - Telemetry parsing
         # - File saving (binary + JSON metadata)
         # - UI message construction and sending
-        BaseDecoder._on_packet_decoded(self, payload, callsigns=None)
+        BaseDecoderProcess._on_packet_decoded(self, payload, callsigns=None)
 
         # Send status update (LoRa-specific)
         self._send_status_update(
@@ -416,24 +474,98 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
         except queue.Full:
             logger.warning("Data queue full, dropping status update")
 
+    def _send_stats_update(self):
+        """Send statistics update to UI and performance monitor"""
+        # UI-friendly stats
+        ui_stats = {
+            "packets_decoded": self.packet_count,
+            "spreading_factor": self.sf,  # LoRa uses self.sf, not self.spreading_factor
+            "coding_rate": self.cr,  # LoRa uses self.cr, not self.coding_rate
+            "bandwidth": self.bw,  # LoRa uses self.bw, not self.bandwidth
+        }
+
+        # Full performance stats for monitoring (thread-safe copy)
+        with self.stats_lock:
+            perf_stats = self.stats.copy()
+
+        msg = {
+            "type": "decoder-stats",
+            "decoder_type": "lora",
+            "session_id": self.session_id,
+            "vfo": self.vfo,
+            "timestamp": time.time(),
+            "stats": ui_stats,  # UI-friendly stats
+            "perf_stats": perf_stats,  # Full performance stats for PerformanceMonitor
+        }
+        try:
+            self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
+        except queue.Full:
+            pass
+
     def run(self):
         """Main thread loop"""
-        logger.info(f"LoRa decoder started for {self.session_id}")
+        # Set process name for visibility in system monitoring tools
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle(f"Ground Station - LoRa Decoder (VFO {self.vfo})")
+
+        # Initialize components in subprocess (CRITICAL!)
+        self.telemetry_parser = TelemetryParser()
+        self.vfo_manager = VFOManager()
+
+        # Initialize stats in subprocess
+        self.stats: Dict[str, Any] = {
+            "iq_chunks_in": 0,
+            "samples_in": 0,
+            "data_messages_out": 0,
+            "queue_timeouts": 0,
+            "packets_decoded": 0,
+            "last_activity": None,
+            "errors": 0,
+            "cpu_percent": 0.0,
+            "memory_mb": 0.0,
+            "memory_percent": 0.0,
+        }
+
         self._send_status_update(DecoderStatus.LISTENING)
 
         chunks_received = 0
         samples_buffer = np.array([], dtype=np.complex64)
+        last_stats_time = time.time()  # Track time for periodic stats updates
         # Buffer enough samples for gr-lora_sdr processing
         # frame_sync needs at least 8200 samples, plus margin for packet length
         # For SF11/250kHz, a packet can be 200-500ms
         buffer_duration = 2.0  # seconds - longer buffer for larger SF
         process_interval = 1.0  # Process every 1 second (more samples per batch)
 
+        # CPU and memory monitoring
+        process = psutil.Process()
+        last_cpu_check = time.time()
+        cpu_check_interval = 0.5  # Update CPU usage every 0.5 seconds
+
         try:
-            while self.running:
+            while self.running.value == 1:  # Changed from self.running
+                # Update CPU and memory usage periodically
+                current_time = time.time()
+                if current_time - last_cpu_check >= cpu_check_interval:
+                    try:
+                        cpu_percent = process.cpu_percent()
+                        mem_info = process.memory_info()
+                        memory_mb = mem_info.rss / (1024 * 1024)
+                        memory_percent = process.memory_percent()
+
+                        with self.stats_lock:
+                            self.stats["cpu_percent"] = cpu_percent
+                            self.stats["memory_mb"] = memory_mb
+                            self.stats["memory_percent"] = memory_percent
+                        last_cpu_check = current_time
+                    except Exception as e:
+                        logger.debug(f"Error updating CPU/memory usage: {e}")
+
                 # Read IQ samples from iq_queue
                 try:
-                    iq_message = self.iq_queue.get(timeout=0.1)
+                    iq_message = self.iq_queue.get(timeout=0.05)  # 50ms timeout
 
                     # Extract IQ samples and metadata from message
                     samples = iq_message.get("samples")
@@ -517,7 +649,7 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
                     # Process when we have enough samples
                     if len(samples_buffer) >= process_samples:
                         # Process the buffered samples (only log every 20th time to reduce spam)
-                        if chunks_received % 20 == 0:
+                        if chunks_received % 10 == 0:
                             params_str = ""
                             if self.sf is not None and self.bw is not None:
                                 params_str = f" (SF{self.sf}, BW{self.bw/1000:.0f}kHz)"
@@ -605,11 +737,19 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
                             samples_buffer = np.array([], dtype=np.complex64)
 
                     chunks_received += 1
+
+                    # Monitor shared memory every 100 chunks
                     if chunks_received % 100 == 0:
-                        pass  # Periodic stats update without logging
+                        self._monitor_shared_memory()
 
                 except queue.Empty:
                     pass
+
+                # Send stats periodically based on time (every 1 second) regardless of chunk rate
+                current_time = time.time()
+                if current_time - last_stats_time >= 1.0:
+                    self._send_stats_update()
+                    last_stats_time = current_time
 
         except Exception as e:
             logger.error(f"LoRa decoder error: {e}")
@@ -618,11 +758,12 @@ class LoRaDecoder(BaseDecoder, threading.Thread):
         except KeyboardInterrupt:
             pass
 
-        logger.info(f"LoRa decoder stopped for {self.session_id}")
+        logger.info(
+            f"LoRa decoder process stopped for {self.session_id}. "
+            f"Final SHM segments: {self.get_shm_segment_count()}"
+        )
 
-    def stop(self):
-        """Stop the decoder thread"""
-        self.running = False
+        # stop() method removed - now in BaseDecoderProcess
 
         # Send final status update
         msg = {

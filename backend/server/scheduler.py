@@ -1,5 +1,6 @@
 """Background task scheduler for the ground station."""
 
+import logging
 from typing import Optional
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -8,6 +9,9 @@ from apscheduler.triggers.interval import IntervalTrigger
 from common.logger import logger
 from db import AsyncSessionLocal
 from tlesync.logic import synchronize_satellite_data
+
+# Suppress apscheduler internal INFO logs (only show warnings and errors)
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 # Global scheduler instance
 scheduler: Optional[AsyncIOScheduler] = None
@@ -33,7 +37,6 @@ def start_scheduler(sio):
         logger.warning("Scheduler already started")
         return scheduler
 
-    logger.info("Starting background task scheduler...")
     scheduler = AsyncIOScheduler()
 
     # Schedule satellite data synchronization every 6 hours
@@ -47,10 +50,19 @@ def start_scheduler(sio):
     )
 
     scheduler.start()
-    logger.info("Background task scheduler started successfully")
-    logger.info("Scheduled jobs:")
-    for job in scheduler.get_jobs():
-        logger.info(f"  - {job.name} (ID: {job.id}, Next run: {job.next_run_time})")
+
+    # Consolidated startup log with job details
+    jobs = scheduler.get_jobs()
+    job_count = len(jobs)
+    logger.info(
+        f"Background task scheduler started: {job_count} job{'s' if job_count != 1 else ''} scheduled"
+    )
+    for job in jobs:
+        # Format next run time without microseconds for cleaner display
+        next_run = (
+            job.next_run_time.strftime("%Y-%m-%d %H:%M:%S %Z") if job.next_run_time else "N/A"
+        )
+        logger.info(f"  - {job.name} → next run: {next_run}")
 
     return scheduler
 

@@ -717,13 +717,22 @@ class PerformanceMonitor(threading.Thread):
                 decoder_instance = decoder_entry["instance"]
                 key = f"{session_id}_vfo{vfo_num}"
 
-                # Get stats snapshot (thread-safe)
-                # Check if decoder has stats (might be older decoder)
-                if not hasattr(decoder_instance, "stats_lock"):
-                    continue
+                # Get stats snapshot from stored stats (for multiprocessing-based decoders)
+                # Stats are sent via data_queue and stored in decoder_entry by processlifecycle.py
+                stats_snapshot = decoder_entry.get("stats", {})
 
-                with decoder_instance.stats_lock:
-                    stats_snapshot = decoder_instance.stats.copy()
+                # Fallback: If no stored stats (threading-based decoders), try direct access
+                if not stats_snapshot and hasattr(decoder_instance, "stats_lock"):
+                    try:
+                        with decoder_instance.stats_lock:
+                            stats_snapshot = decoder_instance.stats.copy()
+                    except Exception:
+                        # Lock access failed (expected for multiprocessing), use empty stats
+                        stats_snapshot = {}
+
+                # Skip if still no stats available
+                if not stats_snapshot:
+                    continue
 
                 # Get queue sizes - handle both audio_queue (SSTV, Morse) and iq_queue (BPSK, GMSK, LoRa)
                 input_queue_size = 0
@@ -775,8 +784,16 @@ class PerformanceMonitor(threading.Thread):
                 decoder_type = type(decoder_instance).__name__
                 decoder_name = vfo_num  # Using vfo_num as decoder name based on the key structure
 
-                # Check if this is an IQ-based decoder (BPSK, GMSK, LoRa)
-                is_iq_decoder = hasattr(decoder_instance, "iq_queue")
+                # Check if this is an IQ-based decoder by type name (not attribute check)
+                # IQ-based: BPSK, FSK, GFSK, GMSK, LoRa
+                # Audio-based: AFSK, SSTV, Morse
+                is_iq_decoder = decoder_type in [
+                    "BPSKDecoder",
+                    "FSKDecoder",
+                    "GFSKDecoder",
+                    "GMSKDecoder",
+                    "LoRaDecoder",
+                ]
 
                 if is_iq_decoder:
                     # IQ-based decoder receives from IQ broadcaster
@@ -820,6 +837,19 @@ class PerformanceMonitor(threading.Thread):
                     "rates": rates,
                     "connections": connections,
                 }
+
+                # Add shared memory metrics for multiprocessing-based decoders
+                if hasattr(decoder_instance, "get_shm_segment_count"):
+                    try:
+                        metrics_entry["shm_segments"] = decoder_instance.get_shm_segment_count()
+                    except Exception:
+                        metrics_entry["shm_segments"] = None
+
+                if hasattr(decoder_instance, "should_restart"):
+                    try:
+                        metrics_entry["restart_requested"] = decoder_instance.should_restart()
+                    except Exception:
+                        metrics_entry["restart_requested"] = False
 
                 # Check for audio broadcaster (legacy - no longer needed in metrics_entry since it's in broadcasters category)
                 # But keep it for backward compatibility if needed

@@ -59,14 +59,23 @@
 import argparse
 import gc
 import logging
+import multiprocessing
 import os
 import queue
-import threading
 import time
 from enum import Enum
 from typing import Any, Dict
 
 import numpy as np
+import psutil
+
+# Add setproctitle import for process naming
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
 
 # Configure GNU Radio to use mmap-based buffers instead of shmget
 # This prevents shared memory segment exhaustion
@@ -82,7 +91,7 @@ from satellites.components.deframers.usp_deframer import usp_deframer  # noqa: E
 from satellites.components.demodulators.fsk_demodulator import fsk_demodulator  # noqa: E402
 from scipy import signal  # noqa: E402
 
-from demodulators.basedecoder import BaseDecoder  # noqa: E402
+from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 from vfos.state import VFOManager  # noqa: E402
 
@@ -215,14 +224,8 @@ class FSKFlowgraph(gr.top_block):
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
-        self.sample_lock = threading.Lock()
+        self.sample_lock = multiprocessing.Lock()
         self.current_mode = "decoding"  # Track current mode
-
-        logger.info(
-            f"FSK flowgraph initialized: {modulation_subtype} | "
-            f"{baudrate} baud, {sample_rate} sps, deviation={deviation} Hz, "
-            f"framing={framing}, batch_interval={batch_interval}s"
-        )
 
     def process_samples(self, samples):
         """
@@ -399,23 +402,30 @@ class FSKFlowgraph(gr.top_block):
     def flush_buffer(self):
         """Process any remaining samples in the buffer"""
         should_process = False
+        buffer_size = 0
         with self.sample_lock:
             if len(self.sample_buffer) > 0:
-                logger.info(f"Flushing {len(self.sample_buffer)} remaining samples")
+                buffer_size = len(self.sample_buffer)
                 should_process = True
         # CRITICAL: Call _process_buffer() OUTSIDE the lock to avoid blocking the entire app.
         # _process_buffer() runs GNU Radio flowgraph synchronously (tb.wait()) and sleeps 100ms,
         # which would freeze all threads trying to acquire sample_lock if called inside the lock.
         if should_process:
+            logger.info(
+                f"Flushing {buffer_size} remaining samples from FSK flowgraph ({self.modulation_subtype})"
+            )
             self._process_buffer()
 
 
-class FSKDecoder(BaseDecoder, threading.Thread):
-    """Real-time FSK-family decoder using GNU Radio
+class FSKDecoder(BaseDecoderProcess):
+    """Real-time FSK-family decoder using GNU Radio (multiprocessing-based)
 
     Handles FSK, GFSK, and GMSK modulations using gr-satellites fsk_demodulator.
     All three modulation types use the same demodulator - pulse shaping differences
     (rectangular vs Gaussian) are handled automatically by the timing recovery.
+
+    Runs as a separate process to isolate GNU Radio shared memory segments.
+    Monitors SHM usage and signals restart when threshold exceeded.
     """
 
     def __init__(
@@ -428,32 +438,38 @@ class FSKDecoder(BaseDecoder, threading.Thread):
         vfo=None,
         batch_interval=5.0,  # Batch processing interval in seconds
         modulation_subtype="FSK",  # 'FSK', 'GFSK', or 'GMSK' (metadata only)
+        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
-        super().__init__(daemon=True, name=f"FSKDecoder-{session_id}")
-        self.iq_queue = iq_queue
-        self.data_queue = data_queue
-        self.session_id = session_id
+        # Initialize base process (handles multiprocessing setup)
+        super().__init__(
+            iq_queue=iq_queue,
+            data_queue=data_queue,
+            session_id=session_id,
+            config=config,
+            output_dir=output_dir,
+            vfo=vfo,
+            shm_monitor_interval=shm_monitor_interval,
+            shm_restart_threshold=shm_restart_threshold,
+        )
+
+        # FSK-specific attributes
         self.sample_rate = None  # VFO bandwidth sample rate (after decimation)
         self.sdr_sample_rate = None  # Full SDR sample rate
-        self.running = True
-        self.output_dir = output_dir
-        self.vfo = vfo
-        self.vfo_manager = VFOManager()
         self.sdr_center_freq = None  # SDR center frequency
         self.decimation_filter = None  # Filter for decimation
-        self.packet_count = 0
         self.modulation_subtype = modulation_subtype  # FSK, GFSK, or GMSK
-        logger.info(f"FSKDecoder initialized ({modulation_subtype}): packet_count set to 0")
+        self.batch_interval = batch_interval
 
-        # Initialize telemetry parser
-        self.telemetry_parser = TelemetryParser()
-        logger.info(f"Telemetry parser initialized for FSK decoder ({modulation_subtype})")
+        # Note: packet_count, stats, stats_lock already initialized by BaseDecoderProcess
+        logger.debug(
+            f"FSKDecoder initialized ({modulation_subtype}): packet_count=0, SHM threshold={shm_restart_threshold}"
+        )
 
         # Extract all parameters from resolved config (including metadata)
         self.baudrate = config.baudrate
         self.framing = config.framing
         self.config_source = config.config_source
-        self.batch_interval = batch_interval
 
         # Deviation: Use config value or smart default based on baudrate
         # FSK demodulator REQUIRES a deviation value (cannot be None)
@@ -487,15 +503,51 @@ class FSKDecoder(BaseDecoder, threading.Thread):
         self.transmitter_mode = self.transmitter.get("mode") or "GMSK"
         self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
 
-        # Log warning if downlink frequency not available
+        # Log debug if downlink frequency not available (not a warning - expected for manual VFO mode)
         if not self.transmitter_downlink_freq:
-            logger.warning("Transmitter downlink frequency not available in config")
+            logger.debug("Transmitter downlink frequency not available in config (manual VFO mode)")
             logger.debug(f"Config metadata: {config.to_dict()}")
 
+        # Build smart parameter summary - only show non-None optional params
+        param_parts = [
+            f"{self.baudrate}bd",
+            f"dev={self.deviation}Hz",
+            f"{self.framing.upper()}",
+        ]
+
+        # Add optional parameters only if they're set
+        if config.af_carrier is not None:
+            param_parts.append(f"af_carrier={config.af_carrier}Hz")
+        if config.differential:
+            param_parts.append("differential")
+        if config.sf is not None:  # LoRa spreading factor
+            param_parts.append(f"sf={config.sf}")
+        if config.bw is not None:  # LoRa bandwidth
+            param_parts.append(f"bw={config.bw}")
+        if config.cr is not None:  # LoRa coding rate
+            param_parts.append(f"cr={config.cr}")
+        if config.sync_word is not None:
+            param_parts.append(f"sync=0x{config.sync_word:X}")
+        if config.packet_size is not None:
+            param_parts.append(f"pkt_sz={config.packet_size}")
+
+        params_str = ", ".join(param_parts)
+
+        # Build satellite info (compact format)
+        sat_info = f"{self.satellite_name}"
+        if self.norad_id:
+            sat_info += f" (NORAD {self.norad_id})"
+
+        # Build transmitter info (compact format)
+        tx_info = f"TX: {self.transmitter_description}"
+        if self.transmitter_downlink_freq:
+            tx_info += f" @ {self.transmitter_downlink_freq/1e6:.3f}MHz"
+
+        # Single consolidated initialization log with all relevant parameters
         logger.info(
-            f"FSK config ({self.modulation_subtype}): {self.satellite_name} (NORAD {self.norad_id or 'N/A'}) | "
-            f"TX: {self.transmitter_description} ({self.transmitter_mode}) | "
-            f"{self.baudrate}bd, dev={self.deviation}Hz, {self.framing} | src: {self.config_source}"
+            f"FSK decoder initialized ({self.modulation_subtype}): "
+            f"session={session_id}, VFO {vfo} | {sat_info} | {tx_info} | {params_str} | "
+            f"batch={self.batch_interval}s | src: {self.config_source}"
         )
 
         os.makedirs(self.output_dir, exist_ok=True)
@@ -503,26 +555,14 @@ class FSKDecoder(BaseDecoder, threading.Thread):
         # GNU Radio flowgraph (will be initialized when we know sample rate)
         self.flowgraph = None
 
-        # Performance monitoring stats
-        self.stats: Dict[str, Any] = {
-            "iq_chunks_in": 0,
-            "samples_in": 0,
-            "data_messages_out": 0,
-            "queue_timeouts": 0,
-            "packets_decoded": 0,
-            "last_activity": None,
-            "errors": 0,
-        }
-        self.stats_lock = threading.Lock()
-
         # Signal power measurement (from BaseDecoder)
         self.power_measurements = []
         self.max_power_history = 100
         self.current_power_dbfs = None
 
-        logger.info(
-            f"FSK decoder ({self.modulation_subtype}) initialized for session {session_id}, VFO {vfo}: {self.baudrate} baud, deviation={self.deviation} Hz"
-        )
+    def _get_decoder_type_for_init(self) -> str:
+        """Return decoder type for process naming."""
+        return "FSK"
 
     def _get_vfo_state(self):
         """Get VFO state for this decoder."""
@@ -649,15 +689,18 @@ class FSKDecoder(BaseDecoder, threading.Thread):
             logger.warning("Data queue full, dropping status update")
 
     def _send_stats_update(self):
-        """Send statistics update to UI"""
-        stats_data = {
+        """Send statistics update to UI and performance monitor"""
+        # UI-friendly stats
+        ui_stats = {
             "packets_decoded": self.packet_count,
             "baudrate": self.baudrate,
             "deviation": self.deviation,
         }
+        ui_stats.update(self._get_power_statistics())
 
-        # Add power statistics if available
-        stats_data.update(self._get_power_statistics())
+        # Full performance stats for monitoring (thread-safe copy)
+        with self.stats_lock:
+            perf_stats = self.stats.copy()
 
         msg = {
             "type": "decoder-stats",
@@ -666,7 +709,8 @@ class FSKDecoder(BaseDecoder, threading.Thread):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
-            "stats": stats_data,
+            "stats": ui_stats,  # UI-friendly stats
+            "perf_stats": perf_stats,  # Full performance stats for PerformanceMonitor
         }
         try:
             self.data_queue.put(msg, block=False)
@@ -676,18 +720,64 @@ class FSKDecoder(BaseDecoder, threading.Thread):
             pass
 
     def run(self):
-        """Main thread loop - processes IQ samples continuously"""
-        logger.info(f"FSK decoder ({self.modulation_subtype}) started for {self.session_id}")
+        """Main process loop - processes IQ samples continuously"""
+        # Set process name for visibility in system monitoring tools
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle(
+                f"Ground Station - {self.modulation_subtype} Decoder (VFO {self.vfo})"
+            )
+
+        # Initialize components in the subprocess
+        self.telemetry_parser = TelemetryParser()
+        self.vfo_manager = VFOManager()
+
+        # Initialize stats in subprocess
+        self.stats: Dict[str, Any] = {
+            "iq_chunks_in": 0,
+            "samples_in": 0,
+            "data_messages_out": 0,
+            "queue_timeouts": 0,
+            "packets_decoded": 0,
+            "last_activity": None,
+            "errors": 0,
+            "cpu_percent": 0.0,
+            "memory_mb": 0.0,
+            "memory_percent": 0.0,
+        }
+
         self._send_status_update(DecoderStatus.LISTENING)
 
         chunks_received = 0
         flowgraph_started = False
+        last_stats_time = time.time()  # Track time for periodic stats updates
+
+        # CPU and memory monitoring
+        process = psutil.Process()
+        last_cpu_check = time.time()
+        cpu_check_interval = 0.5  # Update CPU usage every 0.5 seconds
 
         try:
-            while self.running:
+            while self.running.value == 1:  # Changed from self.running
+                # Update CPU and memory usage periodically
+                current_time = time.time()
+                if current_time - last_cpu_check >= cpu_check_interval:
+                    try:
+                        cpu_percent = process.cpu_percent()
+                        mem_info = process.memory_info()
+                        memory_mb = mem_info.rss / (1024 * 1024)  # Convert bytes to MB
+                        memory_percent = process.memory_percent()
+
+                        with self.stats_lock:
+                            self.stats["cpu_percent"] = cpu_percent
+                            self.stats["memory_mb"] = memory_mb
+                            self.stats["memory_percent"] = memory_percent
+                        last_cpu_check = current_time
+                    except Exception as e:
+                        logger.debug(f"Error updating CPU/memory usage: {e}")
+
                 # Read IQ samples from iq_queue
                 try:
-                    iq_message = self.iq_queue.get(timeout=0.1)
+                    iq_message = self.iq_queue.get(timeout=0.05)  # 50ms timeout
 
                     # Update stats
                     with self.stats_lock:
@@ -736,19 +826,7 @@ class FSKDecoder(BaseDecoder, threading.Thread):
                         # Calculate offset frequency for logging
                         offset_freq_init = vfo_center - sdr_center
 
-                        # Consolidated initialization log
-                        tx_info = (
-                            f", TX={self.transmitter_downlink_freq/1e6:.3f}MHz"
-                            if self.transmitter_downlink_freq
-                            else ""
-                        )
-                        logger.info(
-                            f"FSK init ({self.modulation_subtype}): {self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps) | "
-                            f"SDR={self.sdr_sample_rate/1e6:.2f}MS/s, VFO_BW={vfo_bandwidth/1e3:.0f}kHz, dec={decimation}, out={self.sample_rate/1e6:.2f}MS/s | "
-                            f"VFO={vfo_center/1e6:.3f}MHz, SDR_ctr={sdr_center/1e6:.3f}MHz, ofs={offset_freq_init/1e3:.1f}kHz{tx_info}"
-                        )
-
-                        # Initialize flowgraph
+                        # Initialize flowgraph (before consolidated log to avoid duplicate messages)
                         self.flowgraph = FSKFlowgraph(
                             sample_rate=self.sample_rate,
                             callback=self._on_packet_decoded,
@@ -762,6 +840,20 @@ class FSKDecoder(BaseDecoder, threading.Thread):
                             modulation_subtype=self.modulation_subtype,
                         )
                         flowgraph_started = True
+
+                        # Consolidated initialization log (replaces "FSK decoder process started", "FSK init", and FSKFlowgraph init logs)
+                        tx_info = (
+                            f", TX={self.transmitter_downlink_freq/1e6:.3f}MHz"
+                            if self.transmitter_downlink_freq
+                            else ""
+                        )
+                        logger.info(
+                            f"FSK decoder started ({self.modulation_subtype}): session={self.session_id} | "
+                            f"{self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps), dev={self.deviation}Hz, {self.framing.upper()} | "
+                            f"SDR={self.sdr_sample_rate/1e6:.2f}MS/s@{sdr_center/1e6:.3f}MHz, "
+                            f"VFO={vfo_center/1e6:.3f}MHz (ofs={offset_freq_init/1e3:.1f}kHz, BW={vfo_bandwidth/1e3:.0f}kHz, dec={decimation}) | "
+                            f"batch={self.batch_interval}s{tx_info}"
+                        )
 
                     # Step 1: Frequency translation to put SIGNAL at baseband center
                     # CRITICAL: Use current VFO center frequency (where user/Doppler correction has tuned)
@@ -797,14 +889,20 @@ class FSKDecoder(BaseDecoder, threading.Thread):
                         )
 
                     chunks_received += 1
+
+                    # Monitor shared memory every 100 chunks
                     if chunks_received % 100 == 0:
-                        # Send periodic stats update
-                        self._send_stats_update()
+                        self._monitor_shared_memory()
 
                 except queue.Empty:
                     with self.stats_lock:
                         self.stats["queue_timeouts"] += 1
-                    pass
+
+                # Send stats periodically based on time (every 1 second) regardless of chunk rate
+                current_time = time.time()
+                if current_time - last_stats_time >= 1.0:
+                    self._send_stats_update()
+                    last_stats_time = current_time
 
         except Exception as e:
             logger.error(f"FSK decoder error: {e}")
@@ -817,33 +915,30 @@ class FSKDecoder(BaseDecoder, threading.Thread):
         finally:
             # Flush any remaining samples
             if flowgraph_started and self.flowgraph:
-                logger.info(
-                    f"Flushing remaining samples from FSK flowgraph ({self.modulation_subtype})"
-                )
                 try:
                     self.flowgraph.flush_buffer()
                 except Exception as e:
                     logger.error(f"Error flushing buffer: {e}")
 
-        logger.info(f"FSK decoder ({self.modulation_subtype}) stopped for {self.session_id}")
+        logger.info(
+            f"FSK decoder process ({self.modulation_subtype}) stopped for {self.session_id}. "
+            f"Final SHM segments: {self.get_shm_segment_count()}"
+        )
 
-    def stop(self):
-        """Stop the decoder thread"""
-        self.running = False
-
-        # Send final status update
+        # Send final status with restart flag if applicable
+        final_status = "restart_requested" if self.should_restart() else "closed"
         msg = {
             "type": "decoder-status",
-            "status": "closed",
+            "status": final_status,
             "decoder_type": "fsk",
             "modulation_subtype": self.modulation_subtype,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
+            "shm_segments": self.get_shm_segment_count(),
+            "restart_requested": self.should_restart(),
         }
         try:
             self.data_queue.put(msg, block=False)
-            with self.stats_lock:
-                self.stats["data_messages_out"] += 1
         except queue.Full:
             pass

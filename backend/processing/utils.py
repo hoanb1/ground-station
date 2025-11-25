@@ -356,7 +356,9 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             sdr_params = sdr_params_reply["data"]
 
             logger.debug(f"Got SDR parameters from SoapySDR server: {sdr_params}")
-            logger.info(sdr_params_reply["log"])
+            # Log each line from the probe separately
+            for log_line in sdr_params_reply["log"]:
+                logger.debug(log_line)
 
             # Common window functions
             window_function_names = list(window_functions.keys())

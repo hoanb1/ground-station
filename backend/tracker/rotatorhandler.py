@@ -59,13 +59,13 @@ class RotatorHandler:
                 self.tracker.azimuth_limits = (minaz, maxaz)
                 self.tracker.rotator_data["minaz"] = minaz
                 self.tracker.rotator_data["maxaz"] = maxaz
-                logger.info(f"Updated azimuth limits to: {self.tracker.azimuth_limits}")
+                logger.debug(f"Updated azimuth limits to: {self.tracker.azimuth_limits}")
 
             if minel is not None and maxel is not None:
                 self.tracker.elevation_limits = (minel, maxel)
                 self.tracker.rotator_data["minel"] = minel
                 self.tracker.rotator_data["maxel"] = maxel
-                logger.info(f"Updated elevation limits to: {self.tracker.elevation_limits}")
+                logger.debug(f"Updated elevation limits to: {self.tracker.elevation_limits}")
 
     async def connect_to_rotator(self):
         """Connect to the rotator hardware."""

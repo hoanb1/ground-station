@@ -177,7 +177,9 @@ class DecoderManager:
                     broadcaster_input_queue: multiprocessing.Queue = multiprocessing.Queue(
                         maxsize=10
                     )
-                    audio_broadcaster = AudioBroadcaster(broadcaster_input_queue)
+                    audio_broadcaster = AudioBroadcaster(
+                        broadcaster_input_queue, session_id=session_id, vfo_number=vfo_number
+                    )
                     audio_broadcaster.start()
 
                     # Get VFO center frequency from kwargs if provided
@@ -239,7 +241,8 @@ class DecoderManager:
                     subscription_key += f":vfo{vfo_number}"
 
                 # Subscribe to the broadcaster to get a dedicated IQ queue
-                iq_queue = iq_broadcaster.subscribe(subscription_key, maxsize=3)
+                # Use multiprocessing queue for process-based decoders (FSK, BPSK, LoRa, etc.)
+                iq_queue = iq_broadcaster.subscribe(subscription_key, maxsize=3, for_process=True)
 
                 # Resolve decoder configuration using DecoderConfigService
                 # This centralizes all parameter resolution logic
@@ -275,8 +278,9 @@ class DecoderManager:
                     return False
 
                 # Subscribe decoder to audio broadcaster
+                # Use multiprocessing queue for process-based decoders (AFSK, etc.)
                 decoder_audio_queue = audio_broadcaster.subscribe(
-                    f"decoder:{session_id}", maxsize=10
+                    f"decoder:{session_id}", maxsize=10, for_process=True
                 )
 
                 # If UI audio streaming requested, subscribe the caller's queue directly
@@ -439,7 +443,6 @@ class DecoderManager:
                 iq_broadcaster = process_info.get("iq_broadcaster")
                 if iq_broadcaster:
                     iq_broadcaster.unsubscribe(subscription_key)
-                    self.logger.info(f"Unsubscribed {decoder_name} from IQ broadcaster")
 
             # If we have an AudioBroadcaster, unsubscribe UI and decoder, then stop it
             if audio_broadcaster:
@@ -502,7 +505,11 @@ class DecoderManager:
                 if not decoders[session_id]:
                     del decoders[session_id]
 
-            self.logger.info(f"Stopped {decoder_name} for session {session_id} VFO {vfo_number}")
+            vfo_info = f" VFO {vfo_number}" if vfo_number else ""
+            iq_info = (
+                " (unsubscribed from IQ broadcaster)" if needs_raw_iq and subscription_key else ""
+            )
+            self.logger.info(f"Stopped {decoder_name} for session {session_id}{vfo_info}{iq_info}")
             return True
 
         except Exception as e:
@@ -548,3 +555,148 @@ class DecoderManager:
                     return vfo_entry.get("instance")
                 return vfo_entry
         return None
+
+    def check_and_restart_decoders(self):
+        """
+        Check all active decoders for restart requests and restart them if needed.
+
+        This should be called periodically (e.g., every 10 seconds) to monitor
+        decoder health and handle automatic restarts when SHM thresholds are exceeded.
+
+        Returns:
+            int: Number of decoders restarted
+        """
+        restarted_count = 0
+
+        for sdr_id, process_info in self.processes.items():
+            decoders = process_info.get("decoders", {})
+
+            for session_id, session_decoders in decoders.items():
+                for vfo_num, decoder_entry in list(session_decoders.items()):
+                    decoder_instance = decoder_entry.get("instance")
+
+                    if not decoder_instance:
+                        continue
+
+                    # Check if decoder is a multiprocessing-based decoder with restart support
+                    if not hasattr(decoder_instance, "should_restart"):
+                        continue
+
+                    # Check if restart is requested
+                    try:
+                        if decoder_instance.should_restart():
+                            shm_count = (
+                                decoder_instance.get_shm_segment_count()
+                                if hasattr(decoder_instance, "get_shm_segment_count")
+                                else "unknown"
+                            )
+                            self.logger.warning(
+                                f"Decoder {session_id} VFO{vfo_num} requests restart "
+                                f"(SHM segments: {shm_count})"
+                            )
+
+                            # Restart the decoder
+                            if self._restart_decoder(sdr_id, session_id, vfo_num, decoder_entry):
+                                restarted_count += 1
+                                self.logger.info(
+                                    f"Successfully restarted decoder {session_id} VFO{vfo_num}"
+                                )
+                            else:
+                                self.logger.error(
+                                    f"Failed to restart decoder {session_id} VFO{vfo_num}"
+                                )
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error checking restart status for decoder {session_id} VFO{vfo_num}: {e}"
+                        )
+
+        return restarted_count
+
+    def _restart_decoder(self, sdr_id, session_id, vfo_number, decoder_entry):
+        """
+        Restart a single decoder by stopping and re-creating it with the same configuration.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+            vfo_number: VFO number
+            decoder_entry: The decoder entry dict containing config
+
+        Returns:
+            bool: True if restart successful, False otherwise
+        """
+        try:
+            # Extract configuration from decoder entry
+            decoder_config = decoder_entry.get("config")
+            if not decoder_config:
+                self.logger.error(
+                    f"Cannot restart decoder {session_id} VFO{vfo_number}: no config found"
+                )
+                return False
+
+            # Get decoder class from registry
+            decoder_type = decoder_entry.get("decoder_type")
+            if not decoder_type:
+                self.logger.error(
+                    f"Cannot restart decoder {session_id} VFO{vfo_number}: no decoder type found"
+                )
+                return False
+
+            from processing.decoderregistry import decoder_registry
+
+            decoder_class = None
+            for name in decoder_registry.list_decoders():
+                cls = decoder_registry.get_decoder_class(name)
+                if cls.__name__ == decoder_type:
+                    decoder_class = cls
+                    break
+
+            if not decoder_class:
+                self.logger.error(
+                    f"Cannot restart decoder {session_id} VFO{vfo_number}: "
+                    f"decoder class {decoder_type} not found in registry"
+                )
+                return False
+
+            # Get data queue
+            process_info = self.processes.get(sdr_id)
+            if not process_info:
+                return False
+
+            data_queue = process_info.get("data_queue")
+            if not data_queue:
+                self.logger.error(f"No data queue found for SDR {sdr_id}")
+                return False
+
+            # Stop the existing decoder
+            self.logger.info(f"Stopping decoder {session_id} VFO{vfo_number} for restart...")
+            if not self.stop_decoder(sdr_id, session_id, vfo_number):
+                self.logger.warning(
+                    "Failed to stop decoder cleanly, proceeding with restart anyway"
+                )
+
+            # Small delay to ensure process cleanup
+            import time
+
+            time.sleep(0.5)
+
+            # Start new decoder with same configuration
+            self.logger.info(f"Starting new decoder {session_id} VFO{vfo_number}...")
+            return self.start_decoder(
+                sdr_id=sdr_id,
+                session_id=session_id,
+                decoder_class=decoder_class,
+                data_queue=data_queue,
+                vfo=vfo_number,
+                config=decoder_config,
+                # Preserve other parameters that might have been used
+                satellite=decoder_config.satellite if hasattr(decoder_config, "satellite") else {},
+                transmitter=(
+                    decoder_config.transmitter if hasattr(decoder_config, "transmitter") else {}
+                ),
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error restarting decoder {session_id} VFO{vfo_number}: {e}")
+            self.logger.exception(e)
+            return False

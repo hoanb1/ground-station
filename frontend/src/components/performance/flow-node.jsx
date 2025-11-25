@@ -223,11 +223,11 @@ export const ComponentNode = ({ data }) => {
                 elevation={1}
                 sx={{
                     p: 0,
-                    minWidth: (type === 'fft' || type === 'worker' || type === 'tracker') ? 380 : 280,
+                    minWidth: (type === 'fft' || type === 'worker' || type === 'tracker' || type === 'decoder') ? 380 : 280,
                     backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
                     border: 1,
-                    borderColor: (theme) => theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.08)' 
+                    borderColor: (theme) => theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08)'
                         : 'rgba(0, 0, 0, 0.08)',
                     borderRadius: 1.5,
                     overflow: 'hidden',
@@ -302,9 +302,9 @@ export const ComponentNode = ({ data }) => {
                 <Divider sx={{ opacity: 0.6 }} />
 
                 {/* Metrics - Two or Three column layout with dividers */}
-                <Box sx={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker') ? 'minmax(85px, 1fr) auto 90px auto minmax(85px, 1fr)' : '1fr auto 1fr', 
+                <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: (type === 'fft' || type === 'worker' || type === 'tracker' || type === 'decoder') ? 'minmax(85px, 1fr) auto 90px auto minmax(85px, 1fr)' : '1fr auto 1fr',
                     gap: 0.75,
                     p: 1,
                     backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
@@ -678,6 +678,16 @@ export const ComponentNode = ({ data }) => {
                             </Box>
                             {/* Vertical divider */}
                             <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
+                            {/* Middle column - CPU & Memory Bars */}
+                            <Box>
+                                <CpuMemoryBars
+                                    cpuPercent={component.stats?.cpu_percent}
+                                    memoryMb={component.stats?.memory_mb}
+                                    memoryPercent={component.stats?.memory_percent}
+                                />
+                            </Box>
+                            {/* Vertical divider */}
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -852,7 +862,7 @@ export const ComponentNode = ({ data }) => {
 
                     {/* Show errors if any - full width */}
                     {component.stats?.errors > 0 && (
-                        <Box sx={{ gridColumn: (type === 'fft' || type === 'worker' || type === 'tracker') ? '1 / 6' : '1 / 4' }}>
+                        <Box sx={{ gridColumn: (type === 'fft' || type === 'worker' || type === 'tracker' || type === 'decoder') ? '1 / 6' : '1 / 4' }}>
                             <Divider sx={{ my: 0.5 }} />
                             <MetricRow
                                 label="Errors"

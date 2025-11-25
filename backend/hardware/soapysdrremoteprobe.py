@@ -105,14 +105,13 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
     }
     temp_info: Dict[str, str] = {}
 
-    reply["log"].append(f"INFO: Connecting to SoapySDR device with details: {sdr_details}")
-
     try:
         # Build the device args string for connecting to the remote SoapySDR server
         hostname = sdr_details.get("host", "127.0.0.1")
         port = sdr_details.get("port", 55132)
         driver = sdr_details.get("driver", "")
         serial_number = sdr_details.get("serial", "")
+        device_name = sdr_details.get("name", "Unknown")
 
         # Format the device args for remote connection
         device_args = f"remote=tcp://{hostname}:{port},remote:driver={driver}"
@@ -123,12 +122,16 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
 
         # device_args += ",clock_source=external"
 
-        reply["log"].append(f"INFO: Device args: {device_args}")
-
         # Create the device instance
         sdr = SoapySDR.Device(device_args)
 
-        reply["log"].append(f"INFO: {sdr}")
+        # Extract device model from sdr string representation (e.g., "b200:B210")
+        sdr_str = str(sdr)
+        device_model = sdr_str.split(":")[1] if ":" in sdr_str else sdr_str
+
+        reply["log"].append(
+            f"INFO: Connected to {device_name} ({device_model}) at {hostname}:{port}"
+        )
 
         # Get channel (default to 0)
         channel = sdr_details.get("channel", 0)
@@ -201,15 +204,19 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
         try:
             # Get RX antennas
             antennas["rx"] = sdr.listAntennas(SOAPY_SDR_RX, channel)
-            reply["log"].append(f"INFO: RX Antennas: {antennas['rx']}")
 
             # Get TX antennas if available
             try:
                 antennas["tx"] = sdr.listAntennas(SOAPY_SDR_TX, channel)
-                reply["log"].append(f"INFO: TX Antennas: {antennas['tx']}")
             except Exception as e:
                 reply["log"].append(f"WARNING: Could not get TX antennas: {e}")
                 # This is not critical as we might only be interested in RX
+
+            # Consolidate antenna info
+            ant_info = f"RX:{','.join(antennas['rx'])}"
+            if antennas["tx"]:
+                ant_info += f" TX:{','.join(antennas['tx'])}"
+            reply["log"].append(f"INFO: Antennas: {ant_info}")
         except Exception as e:
             reply["log"].append(f"WARNING: Could not get antenna information: {e}")
             reply["log"].append(f"EXCEPTION: {str(e)}\n{e.__class__.__name__}: {str(e)}")
@@ -221,20 +228,19 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
             min_freq_rx = min([r.minimum() for r in rx_freq_ranges]) / 1e6  # Convert to MHz
             max_freq_rx = max([r.maximum() for r in rx_freq_ranges]) / 1e6  # Convert to MHz
             frequency_ranges["rx"] = {"min": min_freq_rx, "max": max_freq_rx}
-            reply["log"].append(f"INFO: RX Frequency Range: {min_freq_rx} MHz - {max_freq_rx} MHz")
 
             # Try to get a frequency range for TX (transmitting) if available
+            freq_info = f"RX:{min_freq_rx:.0f}-{max_freq_rx:.0f}MHz"
             try:
                 tx_freq_ranges = sdr.getFrequencyRange(SOAPY_SDR_TX, channel)
                 min_freq_tx = min([r.minimum() for r in tx_freq_ranges]) / 1e6  # Convert to MHz
                 max_freq_tx = max([r.maximum() for r in tx_freq_ranges]) / 1e6  # Convert to MHz
                 frequency_ranges["tx"] = {"min": min_freq_tx, "max": max_freq_tx}
-                reply["log"].append(
-                    f"INFO: TX Frequency Range: {min_freq_tx} MHz - {max_freq_tx} MHz"
-                )
-            except Exception as e:
-                reply["log"].append(f"INFO: Could not get TX frequency range: {e}")
-                # This is not critical as we might only be interested in RX
+                freq_info += f" TX:{min_freq_tx:.0f}-{max_freq_tx:.0f}MHz"
+            except Exception:
+                pass  # TX not critical
+
+            reply["log"].append(f"INFO: Frequency range: {freq_info}")
 
         except Exception as e:
             reply["log"].append(f"WARNING: Could not get frequency range information: {e}")
@@ -244,19 +250,18 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
         try:
             sensors = sdr.listSensors()
             clock_info["available_sensors"] = sensors
-            reply["log"].append(f"INFO: Available sensors: {sensors}")
         except Exception as e:
             reply["log"].append(f"INFO: Could not list sensors: {e}")
 
         # Check reference clock status and source
+        clock_status_parts = []
         try:
-
             # Check if the device has a ref_locked sensor
             if "ref_locked" in sensors:
                 try:
                     ref_locked = sdr.readSensor("ref_locked")
                     clock_info["ref_locked"] = ref_locked
-                    reply["log"].append(f"INFO: External reference clock locked: {ref_locked}")
+                    clock_status_parts.append(f"ref_lock={ref_locked}")
                 except Exception as e:
                     reply["log"].append(f"WARNING: Error reading ref_locked sensor: {e}")
 
@@ -265,18 +270,18 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
                 try:
                     clock_source = sdr.readSensor("clock_source")
                     clock_info["clock_source"] = clock_source
-                    reply["log"].append(f"INFO: Current clock source: {clock_source}")
-                except Exception as e:
-                    reply["log"].append(f"WARNING: Error reading clock_source sensor: {e}")
+                    clock_status_parts.append(f"clk_src={clock_source}")
+                except Exception:
+                    pass
 
             # Try to get clock source from device settings
             try:
                 clock_source = sdr.readSetting("clock_source")
                 if clock_info["clock_source"] is None:  # Only set if not already set from sensor
                     clock_info["clock_source"] = clock_source
-                reply["log"].append(f"INFO: Clock source from settings: {clock_source}")
-            except Exception as e:
-                reply["log"].append(f"INFO: Could not read clock_source setting: {e}")
+                    clock_status_parts.append(f"clk_src={clock_source}")
+            except Exception:
+                pass
 
             # Try to get available settings
             try:
@@ -291,11 +296,12 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
                                 else None
                             ),
                         }
-                reply["log"].append(
-                    f"INFO: Available clock-related settings: {list(clock_info['available_settings'].keys())}"
-                )
-            except Exception as e:
-                reply["log"].append(f"INFO: Could not get setting info: {e}")
+            except Exception:
+                pass
+
+            # Only log if we have clock status info
+            if clock_status_parts:
+                reply["log"].append(f"INFO: Clock: {', '.join(clock_status_parts)}")
 
         except Exception as e:
             reply["log"].append(f"WARNING: Could not get reference clock information: {e}")

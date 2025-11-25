@@ -13,12 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 
 import logging
+import multiprocessing
 import queue
 import threading
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 
 class IQBroadcaster(threading.Thread):
@@ -60,7 +62,9 @@ class IQBroadcaster(threading.Thread):
         }
         self.stats_lock = threading.Lock()
 
-    def subscribe(self, session_id: str, maxsize: int = 50) -> "queue.Queue[Any]":
+    def subscribe(
+        self, session_id: str, maxsize: int = 50, for_process: bool = False
+    ) -> Union[queue.Queue[Any], multiprocessing.Queue[Any]]:
         """
         Create a new subscriber queue for a session.
 
@@ -69,21 +73,35 @@ class IQBroadcaster(threading.Thread):
             maxsize: Maximum size of the subscriber queue (default: 50)
                     If the demodulator can't keep up and the queue fills,
                     new samples will be dropped for that subscriber.
+            for_process: If True, creates multiprocessing.Queue for Process subscribers.
+                        Use this when subscriber is a multiprocessing.Process rather than
+                        a threading.Thread. Default: False (threading queue)
 
         Returns:
-            queue.Queue: A new queue that will receive copies of IQ samples
+            Queue that will receive copies of IQ samples (threading or multiprocessing)
         """
         with self.lock:
             if session_id not in self.subscribers:
-                subscriber_queue: "queue.Queue[Any]" = queue.Queue(maxsize=maxsize)
+                # Create appropriate queue type based on subscriber needs
+                subscriber_queue: Union[queue.Queue[Any], multiprocessing.Queue[Any]]
+                if for_process:
+                    subscriber_queue = multiprocessing.Queue(maxsize=maxsize)
+                    queue_type = "multiprocessing"
+                else:
+                    subscriber_queue = queue.Queue(maxsize=maxsize)
+                    queue_type = "threading"
+
                 self.subscribers[session_id] = {
                     "queue": subscriber_queue,
                     "maxsize": maxsize,
+                    "is_process_queue": for_process,
                     "delivered": 0,
                     "dropped": 0,
                 }
-                self.logger.info(f"Subscribed session {session_id}")
-            result: "queue.Queue[Any]" = self.subscribers[session_id]["queue"]
+                self.logger.info(f"Subscribed session {session_id} (queue: {queue_type})")
+            result: Union[queue.Queue[Any], multiprocessing.Queue[Any]] = self.subscribers[
+                session_id
+            ]["queue"]
             return result
 
     def unsubscribe(self, session_id: str):
@@ -163,22 +181,36 @@ class IQBroadcaster(threading.Thread):
                     dead_subscribers = []
                     for session_id, subscriber_info in self.subscribers.items():
                         subscriber_queue = subscriber_info["queue"]
+                        is_process_queue = subscriber_info.get("is_process_queue", False)
+
                         try:
-                            # Non-blocking put - drop sample if queue is full
-                            # This prevents slow demodulators from blocking others
-                            subscriber_queue.put_nowait(iq_message)
+                            # Handle both threading and multiprocessing queues
+                            if is_process_queue:
+                                # Multiprocessing queue - use block=False
+                                subscriber_queue.put(iq_message, block=False)
+                            else:
+                                # Threading queue - use put_nowait()
+                                subscriber_queue.put_nowait(iq_message)
+
                             subscriber_info["delivered"] += 1
                             with self.stats_lock:
                                 self.stats["messages_broadcast"] += 1
-                        except queue.Full:
-                            # Subscriber can't keep up - drop this sample
-                            subscriber_info["dropped"] += 1
-                            with self.stats_lock:
-                                self.stats["messages_dropped"] += 1
-                        except Exception as e:
-                            # Mark subscriber for removal if there's an error
-                            self.logger.warning(f"Error broadcasting to session {session_id}: {e}")
-                            dead_subscribers.append(session_id)
+
+                        except (queue.Full, Exception) as e:
+                            # Handle full queue for both types
+                            if isinstance(e, queue.Full) or (
+                                is_process_queue and "full" in str(e).lower()
+                            ):
+                                # Subscriber can't keep up - drop this sample
+                                subscriber_info["dropped"] += 1
+                                with self.stats_lock:
+                                    self.stats["messages_dropped"] += 1
+                            else:
+                                # Mark subscriber for removal if there's an error
+                                self.logger.warning(
+                                    f"Error broadcasting to session {session_id}: {e}"
+                                )
+                                dead_subscribers.append(session_id)
 
                     # Clean up dead subscribers
                     for session_id in dead_subscribers:

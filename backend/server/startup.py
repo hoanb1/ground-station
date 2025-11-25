@@ -93,7 +93,7 @@ async def lifespan(fastapiapp: FastAPI):
 
     # Start performance monitoring
     process_manager.start_monitoring()
-    logger.info("Performance monitoring started")
+    logger.info("Performance monitoring started (metrics emission every 2s)")
 
     try:
         yield
@@ -159,9 +159,7 @@ app.mount("/decoded", StaticFiles(directory=decoded_dir, html=True), name="decod
 async def get_version():
     """Return the current version information of the application."""
     try:
-        logger.info("Version request received")
         version_info = get_full_version_info()
-        logger.info(f"Returning version info: {version_info}")
         return version_info
     except Exception as e:
         logger.error(f"Error retrieving version information: {str(e)}")
@@ -201,7 +199,7 @@ async def init_db():
     ]
     for directory in data_dirs:
         os.makedirs(directory, exist_ok=True)
-        logger.info(f"Ensured directory exists: {directory}")
+        logger.debug(f"Ensured directory exists: {directory}")
 
     # Check if database exists by trying to query metadata
     database_existed = False
@@ -217,7 +215,6 @@ async def init_db():
         database_existed = False
 
     # Run Alembic migrations to ensure schema is up to date
-    logger.info("Running database migrations...")
     try:
         import concurrent.futures
 
@@ -228,7 +225,6 @@ async def init_db():
         with concurrent.futures.ThreadPoolExecutor() as executor:
             await loop.run_in_executor(executor, run_migrations)
 
-        logger.info("Database migrations completed successfully")
     except Exception as e:
         logger.error(f"Error running database migrations: {e}")
         logger.exception(e)
@@ -236,8 +232,8 @@ async def init_db():
 
     # If database didn't exist before, populate with initial data
     if not database_existed:
-        logger.info("New database detected. Populating with initial data...")
+        logger.info("Database initialized (new, populated with initial data)")
         await first_time_initialization()
         _needs_initial_sync = True
-
-    logger.info("Database initialized.")
+    else:
+        logger.info("Database initialized (existing, migrations applied)")

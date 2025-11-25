@@ -44,6 +44,9 @@ const initialState = {
     // Active decoder sessions (keyed by session_id)
     active: {},
 
+    // Current socket session ID (used to clean up stale decoders on reconnect)
+    currentSessionId: null,
+
     // Decoded output history (limited to last 100 items)
     outputs: [],
 
@@ -268,6 +271,37 @@ export const decodersSlice = createSlice({
         setShowDecoderPanel: (state, action) => {
             state.ui.showDecoderPanel = action.payload;
         },
+
+        // Set current session ID and clean up stale decoders
+        setCurrentSessionId: (state, action) => {
+            const newSessionId = action.payload;
+
+            // If session ID changed, clear all active decoders from old session
+            if (state.currentSessionId && state.currentSessionId !== newSessionId) {
+                console.log(`Session ID changed from ${state.currentSessionId} to ${newSessionId}, clearing stale decoders`);
+                state.active = {};
+            }
+
+            state.currentSessionId = newSessionId;
+        },
+
+        // Clean up stale decoders from old sessions (periodic cleanup)
+        cleanupStaleDecoders: (state) => {
+            if (!state.currentSessionId) {
+                return;
+            }
+
+            const staleDecoderKeys = Object.keys(state.active).filter(
+                key => state.active[key].session_id !== state.currentSessionId
+            );
+
+            if (staleDecoderKeys.length > 0) {
+                console.log(`Cleaning up ${staleDecoderKeys.length} stale decoder(s) from old sessions`);
+                staleDecoderKeys.forEach(key => {
+                    delete state.active[key];
+                });
+            }
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -325,6 +359,8 @@ export const {
     setShowGallery,
     toggleDecoderPanel,
     setShowDecoderPanel,
+    setCurrentSessionId,
+    cleanupStaleDecoders,
 } = decodersSlice.actions;
 
 // Selectors

@@ -39,7 +39,7 @@ class ProcessManager:
     """
 
     def __init__(self, sio=None):
-        self.logger = logging.getLogger("proc-manager")
+        self.logger = logging.getLogger("process-manager")
         self.sio = sio
         self.processes: Dict[str, Dict[str, Any]] = {}  # Map of sdr_id to process information
 
@@ -111,14 +111,13 @@ class ProcessManager:
             asyncio.get_running_loop()
             if self.sio and not self._metrics_emission_task:
                 self._metrics_emission_task = asyncio.create_task(self._emit_performance_metrics())
-                self.logger.info("Started performance metrics emission task")
+                self.logger.debug("Started performance metrics emission task")
         except RuntimeError:
             # No event loop running yet - this is okay, will be started later via start_monitoring()
             self.logger.debug("Event loop not running yet, metrics emission will be started later")
 
     async def _emit_performance_metrics(self):
         """Background task that reads metrics from monitor and emits to UI via WebSocket"""
-        self.logger.info("Performance metrics emission task started")
 
         while True:
             try:

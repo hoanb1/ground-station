@@ -70,7 +70,9 @@ import {
     decoderStatusChanged,
     decoderProgressUpdated,
     decoderOutputReceived,
-    decoderErrorOccurred
+    decoderErrorOccurred,
+    setCurrentSessionId,
+    cleanupStaleDecoders
 } from '../components/decoders/decoders-slice.jsx';
 import { updateMetrics } from '../components/performance/performance-slice.jsx';
 import ImageIcon from '@mui/icons-material/Image';
@@ -93,6 +95,15 @@ export const useSocketEventHandlers = (socket) => {
             // Update connection state
             dispatch(setConnecting(false));
             dispatch(setConnected(true));
+
+            // Update current session ID and clean up stale decoders from previous sessions
+            store.dispatch(setCurrentSessionId(socket.id));
+
+            // Clean up any stale decoder entries that survived persistence
+            // This handles the case where Redux persisted state has decoders from old sessions
+            setTimeout(() => {
+                store.dispatch(cleanupStaleDecoders());
+            }, 1000);
 
             // Load preferences first to ensure toast position is correct
             await store.dispatch(fetchPreferences({socket}));

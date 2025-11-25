@@ -73,7 +73,8 @@ const VFOMarkersContainer = ({
 
     const {
         active: activeDecoders,
-        outputs: decoderOutputs
+        outputs: decoderOutputs,
+        currentSessionId
     } = useSelector(state => state.decoders);
 
     const containerRef = useRef(null);
@@ -118,9 +119,17 @@ const VFOMarkersContainer = ({
 
     // Helper function to find decoder info for a VFO
     const getDecoderInfoForVFO = useCallback((vfoNumber) => {
-        // Find decoder sessions matching this VFO number, excluding closed decoders
+        // Only consider decoders from the current session to avoid showing stale decoders
+        // from previous sessions (backend restarts, reconnects, etc.)
+        if (!currentSessionId) {
+            return null;
+        }
+
+        // Find decoder sessions matching this VFO number AND current session, excluding closed decoders
         const decoderEntries = Object.values(activeDecoders).filter(
-            decoder => decoder.vfo === vfoNumber && decoder.status !== 'closed'
+            decoder => decoder.vfo === vfoNumber &&
+                      decoder.session_id === currentSessionId &&
+                      decoder.status !== 'closed'
         );
 
         // Return the most recent decoder (if multiple exist)
@@ -128,17 +137,18 @@ const VFOMarkersContainer = ({
             return decoderEntries.sort((a, b) => b.last_update - a.last_update)[0];
         }
         return null;
-    }, [activeDecoders]);
+    }, [activeDecoders, currentSessionId]);
 
     // Helper function to get morse decoder output text for a VFO
     const getMorseOutputForVFO = useCallback((vfoNumber) => {
-        // Find decoder info first
+        // Find decoder info first (already filtered by current session)
         const decoderInfo = getDecoderInfoForVFO(vfoNumber);
         if (!decoderInfo || decoderInfo.decoder_type !== 'morse') {
             return null;
         }
 
         // Find the output for this decoder session AND VFO
+        // Note: getDecoderInfoForVFO already ensures session_id matches currentSessionId
         const output = decoderOutputs?.find(
             out => out.session_id === decoderInfo.session_id &&
                    out.decoder_type === 'morse' &&
@@ -156,7 +166,7 @@ const VFOMarkersContainer = ({
 
     // Helper function to get AX.25 packet decoder outputs for a VFO (BPSK/FSK/GMSK/GFSK/AFSK)
     const getPacketDecoderOutputsForVFO = useCallback((vfoNumber) => {
-        // Find decoder info first
+        // Find decoder info first (already filtered by current session)
         const decoderInfo = getDecoderInfoForVFO(vfoNumber);
         if (!decoderInfo || !['bpsk', 'fsk', 'gmsk', 'gfsk', 'afsk'].includes(decoderInfo.decoder_type)) {
             return null;
@@ -164,6 +174,7 @@ const VFOMarkersContainer = ({
 
         // Filter all outputs for this VFO and session
         // Note: Match any of bpsk/fsk/gmsk/gfsk/afsk since they're related protocols (all use AX.25)
+        // getDecoderInfoForVFO already ensures session_id matches currentSessionId
         const outputs = decoderOutputs?.filter(
             out => out.session_id === decoderInfo.session_id &&
                    ['bpsk', 'fsk', 'gmsk', 'gfsk', 'afsk'].includes(out.decoder_type) &&

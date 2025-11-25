@@ -60,14 +60,23 @@
 #    - Automatic framing detection from satellite configuration
 
 import logging
+import multiprocessing
 import os
 import queue
-import threading
 import time
 from enum import Enum
 from typing import Any, Dict
 
 import numpy as np
+import psutil
+
+# Add setproctitle import for process naming
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
 
 # Configure GNU Radio to use mmap-based buffers instead of shmget
 # This prevents shared memory segment exhaustion
@@ -79,7 +88,7 @@ from satellites.components.deframers.ccsds_rs_deframer import ccsds_rs_deframer 
 from satellites.components.demodulators.bpsk_demodulator import bpsk_demodulator  # noqa: E402
 from scipy import signal  # noqa: E402
 
-from demodulators.basedecoder import BaseDecoder  # noqa: E402
+from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 from vfos.state import VFOManager  # noqa: E402
 
@@ -100,7 +109,12 @@ class DecoderStatus(Enum):
 class BPSKMessageHandler(gr.basic_block):
     """Message handler to receive PDU messages from HDLC deframer"""
 
-    def __init__(self, callback):
+    def __init__(
+        self,
+        callback,
+        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_restart_threshold=1000,  # Restart when segments exceed this
+    ):
         gr.basic_block.__init__(self, name="bpsk_message_handler", in_sig=None, out_sig=None)
         self.callback = callback
         self.message_port_register_in(gr.pmt.intern("in"))
@@ -220,14 +234,8 @@ class BPSKFlowgraph(gr.top_block):
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
-        self.sample_lock = threading.Lock()
+        self.sample_lock = multiprocessing.Lock()
         self.current_mode = "decoding"  # Track current mode
-
-        logger.info(
-            f"BPSK flowgraph initialized: "
-            f"{baudrate} baud, {sample_rate} sps, differential={differential}, "
-            f"framing={framing}, batch_interval={batch_interval}s"
-        )
 
     def process_samples(self, samples):
         """
@@ -414,14 +422,16 @@ class BPSKFlowgraph(gr.top_block):
     def flush_buffer(self):
         """Process any remaining samples in the buffer"""
         should_process = False
+        buffer_size = 0
         with self.sample_lock:
             if len(self.sample_buffer) > 0:
-                logger.info(f"Flushing {len(self.sample_buffer)} remaining samples")
+                buffer_size = len(self.sample_buffer)
                 should_process = True
         # CRITICAL: Call _process_buffer() OUTSIDE the lock to avoid blocking the entire app.
         # _process_buffer() runs GNU Radio flowgraph synchronously (tb.wait()) and sleeps 100ms,
         # which would freeze all threads trying to acquire sample_lock if called inside the lock.
         if should_process:
+            logger.info(f"Flushing {buffer_size} remaining samples from BPSK flowgraph")
             self._process_buffer()
 
     def _is_doka_signal(self):
@@ -439,8 +449,12 @@ class BPSKFlowgraph(gr.top_block):
             self.callback(payload, callsigns)
 
 
-class BPSKDecoder(BaseDecoder, threading.Thread):
-    """Real-time BPSK decoder using GNU Radio"""
+class BPSKDecoder(BaseDecoderProcess):
+    """Real-time BPSK decoder using GNU Radio (multiprocessing-based)
+
+    Runs as a separate process to isolate GNU Radio shared memory segments.
+    Monitors SHM usage and signals restart when threshold exceeded.
+    """
 
     def __init__(
         self,
@@ -452,24 +466,31 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
         vfo=None,
         batch_interval=5.0,  # Batch processing interval in seconds
         packet_size=256,  # Optional override for packet size
+        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
-        super().__init__(daemon=True, name=f"BPSKDecoder-{session_id}")
-        self.iq_queue = iq_queue
-        self.data_queue = data_queue
-        self.session_id = session_id
+        # Initialize base process (handles multiprocessing setup)
+        super().__init__(
+            iq_queue=iq_queue,
+            data_queue=data_queue,
+            session_id=session_id,
+            config=config,
+            output_dir=output_dir,
+            vfo=vfo,
+            shm_monitor_interval=shm_monitor_interval,
+            shm_restart_threshold=shm_restart_threshold,
+        )
+
+        # BPSK-specific attributes
         self.sample_rate = None  # VFO bandwidth sample rate (after decimation)
         self.sdr_sample_rate = None  # Full SDR sample rate
-        self.running = True
-        self.output_dir = output_dir
-        self.vfo = vfo
-        self.vfo_manager = VFOManager()
         self.sdr_center_freq = None  # SDR center frequency
         self.decimation_filter = None  # Filter for decimation
-        self.packet_count = 0
+        self.batch_interval = batch_interval
 
-        # Initialize telemetry parser
-        self.telemetry_parser = TelemetryParser()
-        logger.info("Telemetry parser initialized for BPSK decoder")
+        logger.debug(
+            f"BPSKDecoder initialized: packet_count=0, SHM threshold={shm_restart_threshold}"
+        )
 
         # Extract all parameters from resolved config (including metadata)
         self.baudrate = config.baudrate
@@ -477,7 +498,6 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
         self.framing = config.framing
         self.config_source = config.config_source
         self.packet_size = config.packet_size or packet_size
-        self.batch_interval = batch_interval
 
         # Extract satellite and transmitter metadata from config
         self.satellite = config.satellite or {}
@@ -490,15 +510,38 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
         self.transmitter_mode = self.transmitter.get("mode") or "BPSK"
         self.transmitter_downlink_freq = self.transmitter.get("downlink_low")
 
-        # Log warning if downlink frequency not available
+        # Log debug if downlink frequency not available (not a warning - expected for manual VFO mode)
         if not self.transmitter_downlink_freq:
-            logger.warning("Transmitter downlink frequency not available in config")
+            logger.debug("Transmitter downlink frequency not available in config (manual VFO mode)")
             logger.debug(f"Config metadata: {config.to_dict()}")
 
+        # Build smart parameter summary - only show non-None optional params
+        param_parts = [
+            f"{self.baudrate}bd",
+            f"{self.framing.upper()}",
+        ]
+
+        if self.differential:
+            param_parts.append("differential")
+        if self.packet_size:
+            param_parts.append(f"pkt_sz={self.packet_size}B")
+
+        params_str = ", ".join(param_parts)
+
+        # Build satellite info (compact format)
+        sat_info = f"{self.satellite_name}"
+        if self.norad_id:
+            sat_info += f" (NORAD {self.norad_id})"
+
+        # Build transmitter info (compact format)
+        tx_info = f"TX: {self.transmitter_description}"
+        if self.transmitter_downlink_freq:
+            tx_info += f" @ {self.transmitter_downlink_freq/1e6:.3f}MHz"
+
+        # Single consolidated initialization log with all relevant parameters
         logger.info(
-            f"BPSK config: {self.satellite_name} (NORAD {self.norad_id or 'N/A'}) | "
-            f"TX: {self.transmitter_description} ({self.transmitter_mode}) | "
-            f"{self.baudrate}bd, {self.framing}, diff={self.differential} | src: {self.config_source}"
+            f"BPSK decoder initialized: session={session_id}, VFO {vfo} | {sat_info} | {tx_info} | {params_str} | "
+            f"batch={self.batch_interval}s | src: {self.config_source}"
         )
 
         os.makedirs(self.output_dir, exist_ok=True)
@@ -516,16 +559,15 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
             "last_activity": None,
             "errors": 0,
         }
-        self.stats_lock = threading.Lock()
 
         # Signal power measurement (from BaseDecoder)
         self.power_measurements = []
         self.max_power_history = 100
         self.current_power_dbfs = None
 
-        logger.info(
-            f"BPSK decoder initialized for session {session_id}, VFO {vfo}: {self.baudrate} baud, differential={self.differential}, packet_size={self.packet_size} bytes"
-        )
+    def _get_decoder_type_for_init(self) -> str:
+        """Return decoder type for process naming."""
+        return "BPSK"
 
     def _get_vfo_state(self):
         """Get VFO state for this decoder."""
@@ -654,14 +696,17 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
             logger.warning("Data queue full, dropping status update")
 
     def _send_stats_update(self):
-        """Send statistics update to UI"""
-        stats_data = {
+        """Send statistics update to UI and performance monitor"""
+        # UI-friendly stats
+        ui_stats = {
             "packets_decoded": self.packet_count,
             "baudrate": self.baudrate,
         }
+        ui_stats.update(self._get_power_statistics())
 
-        # Add power statistics if available
-        stats_data.update(self._get_power_statistics())
+        # Full performance stats for monitoring (thread-safe copy)
+        with self.stats_lock:
+            perf_stats = self.stats.copy()
 
         msg = {
             "type": "decoder-stats",
@@ -669,7 +714,8 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
-            "stats": stats_data,
+            "stats": ui_stats,  # UI-friendly stats
+            "perf_stats": perf_stats,  # Full performance stats for PerformanceMonitor
         }
         try:
             self.data_queue.put(msg, block=False)
@@ -680,17 +726,64 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
 
     def run(self):
         """Main thread loop - processes IQ samples continuously"""
+        # Set process name for visibility in system monitoring tools
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle(f"Ground Station - BPSK Decoder (VFO {self.vfo})")
+
+        # Initialize components in subprocess (CRITICAL!)
+        self.telemetry_parser = TelemetryParser()
+        self.vfo_manager = VFOManager()
+
+        # Initialize stats in subprocess (update existing dict)
+        self.stats.update(
+            {
+                "iq_chunks_in": 0,
+                "samples_in": 0,
+                "data_messages_out": 0,
+                "queue_timeouts": 0,
+                "packets_decoded": 0,
+                "last_activity": None,
+                "errors": 0,
+                "cpu_percent": 0.0,
+                "memory_mb": 0.0,
+                "memory_percent": 0.0,
+            }
+        )
+
         logger.info(f"BPSK decoder started for {self.session_id}")
         self._send_status_update(DecoderStatus.LISTENING)
 
         chunks_received = 0
         flowgraph_started = False
+        last_stats_time = time.time()  # Track time for periodic stats updates
+
+        # CPU and memory monitoring
+        process = psutil.Process()
+        last_cpu_check = time.time()
+        cpu_check_interval = 0.5  # Update CPU usage every 0.5 seconds
 
         try:
-            while self.running:
+            while self.running.value == 1:  # Changed from self.running
+                # Update CPU and memory usage periodically
+                current_time = time.time()
+                if current_time - last_cpu_check >= cpu_check_interval:
+                    try:
+                        cpu_percent = process.cpu_percent()
+                        mem_info = process.memory_info()
+                        memory_mb = mem_info.rss / (1024 * 1024)
+                        memory_percent = process.memory_percent()
+
+                        with self.stats_lock:
+                            self.stats["cpu_percent"] = cpu_percent
+                            self.stats["memory_mb"] = memory_mb
+                            self.stats["memory_percent"] = memory_percent
+                        last_cpu_check = current_time
+                    except Exception as e:
+                        logger.debug(f"Error updating CPU/memory usage: {e}")
+
                 # Read IQ samples from iq_queue
                 try:
-                    iq_message = self.iq_queue.get(timeout=0.1)
+                    iq_message = self.iq_queue.get(timeout=0.05)  # 50ms timeout
 
                     # Update stats
                     with self.stats_lock:
@@ -736,14 +829,10 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
                             decimation, vfo_bandwidth, self.sdr_sample_rate
                         )
 
-                        logger.info(
-                            f"BPSK decoder: {self.baudrate} baud, target rate: {target_sample_rate/1e3:.2f}kS/s ({target_sps} sps), "
-                            f"SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, VFO BW: {vfo_bandwidth/1e3:.0f} kHz, "
-                            f"decimation: {decimation}, output rate: {self.sample_rate/1e6:.2f} MS/s, "
-                            f"VFO center: {vfo_center/1e6:.3f} MHz, SDR center: {sdr_center/1e6:.3f} MHz"
-                        )
+                        # Calculate offset frequency for logging
+                        offset_freq_init = vfo_center - sdr_center
 
-                        # Initialize flowgraph
+                        # Initialize flowgraph (before consolidated log to avoid duplicate messages)
                         # Note: We don't pass f_offset here since each batch creates new flowgraph
                         self.flowgraph = BPSKFlowgraph(
                             sample_rate=self.sample_rate,
@@ -756,8 +845,20 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
                             framing=self.framing,  # Pass framing protocol
                         )
                         flowgraph_started = True
+
+                        # Consolidated initialization log (replaces "BPSK decoder process started", "BPSK decoder", and "BPSK flowgraph initialized" logs)
+                        tx_info = (
+                            f", TX={self.transmitter_downlink_freq/1e6:.3f}MHz"
+                            if self.transmitter_downlink_freq
+                            else ""
+                        )
+                        diff_info = " (differential)" if self.differential else ""
                         logger.info(
-                            f"BPSK flowgraph initialized - ready to decode (VFO @ {vfo_center/1e6:.3f} MHz)"
+                            f"BPSK decoder started: session={self.session_id} | "
+                            f"{self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps){diff_info}, {self.framing.upper()}, pkt_sz={self.packet_size}B | "
+                            f"SDR={self.sdr_sample_rate/1e6:.2f}MS/s@{sdr_center/1e6:.3f}MHz, "
+                            f"VFO={vfo_center/1e6:.3f}MHz (ofs={offset_freq_init/1e3:.1f}kHz, BW={vfo_bandwidth/1e3:.0f}kHz, dec={decimation}) | "
+                            f"batch={self.batch_interval}s{tx_info}"
                         )
 
                     # Step 1: Frequency translation to put SIGNAL at baseband center
@@ -765,15 +866,6 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
                     # This tracks Doppler shifts in real-time during satellite passes
                     # VFO state is read on every IQ chunk (~100ms), providing continuous Doppler tracking
                     offset_freq = vfo_center - sdr_center
-                    if chunks_received == 0:
-                        logger.info(
-                            f"Translating signal from VFO center {vfo_center/1e6:.3f} MHz to baseband"
-                        )
-                        logger.info(f"Frequency translation: offset = {offset_freq/1e3:.1f} kHz")
-                        if self.transmitter_downlink_freq:
-                            logger.info(
-                                f"Transmitter downlink freq (reference): {self.transmitter_downlink_freq/1e6:.3f} MHz"
-                            )
                     translated = self._frequency_translate(
                         samples, offset_freq, self.sdr_sample_rate
                     )
@@ -803,14 +895,20 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
                         )
 
                     chunks_received += 1
+
+                    # Monitor shared memory every 100 chunks
                     if chunks_received % 100 == 0:
-                        # Send periodic stats update
-                        self._send_stats_update()
+                        self._monitor_shared_memory()
 
                 except queue.Empty:
                     with self.stats_lock:
                         self.stats["queue_timeouts"] += 1
-                    pass
+
+                # Send stats periodically based on time (every 1 second) regardless of chunk rate
+                current_time = time.time()
+                if current_time - last_stats_time >= 1.0:
+                    self._send_stats_update()
+                    last_stats_time = current_time
 
         except Exception as e:
             logger.error(f"BPSK decoder error: {e}")
@@ -829,11 +927,12 @@ class BPSKDecoder(BaseDecoder, threading.Thread):
                 except Exception as e:
                     logger.error(f"Error flushing buffer: {e}")
 
-        logger.info(f"BPSK decoder stopped for {self.session_id}")
+        logger.info(
+            f"BPSK decoder process stopped for {self.session_id}. "
+            f"Final SHM segments: {self.get_shm_segment_count()}"
+        )
 
-    def stop(self):
-        """Stop the decoder thread"""
-        self.running = False
+        # stop() method removed - now in BaseDecoderProcess
 
         # Send final status update
         msg = {
