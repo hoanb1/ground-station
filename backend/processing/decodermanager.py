@@ -436,7 +436,36 @@ class DecoderManager:
 
             decoder_name = type(decoder).__name__
             decoder.stop()
-            decoder.join(timeout=2.0)  # Wait up to 2 seconds
+
+            # Perform decoder process cleanup asynchronously to avoid blocking the main thread.
+            # Decoders run in separate processes and may take 1-2 seconds to shut down cleanly
+            # (flushing buffers, stopping GNU Radio flowgraphs, etc.). If we call decoder.join()
+            # synchronously here, the main event loop freezes, causing UI lag when users click
+            # "Stop Decoder". Instead, we delegate the join/terminate logic to a background thread
+            # that waits up to 5 seconds for graceful shutdown, then forcefully terminates if needed.
+            # This ensures responsive UI while still ensuring proper process cleanup.
+            def _async_decoder_cleanup():
+                """Background thread to wait for decoder process termination without blocking main thread."""
+                decoder.join(timeout=5.0)
+                if decoder.is_alive():
+                    self.logger.warning(
+                        f"{decoder_name} did not stop gracefully within 5s, terminating forcefully"
+                    )
+                    decoder.terminate()
+                    decoder.join(timeout=1.0)
+                    if decoder.is_alive():
+                        self.logger.error(f"{decoder_name} could not be terminated")
+                else:
+                    self.logger.debug(f"{decoder_name} process cleaned up successfully")
+
+            import threading
+
+            cleanup_thread = threading.Thread(
+                target=_async_decoder_cleanup,
+                name=f"cleanup-{decoder_name}-{session_id}",
+                daemon=True,
+            )
+            cleanup_thread.start()
 
             # If this was a raw IQ decoder, unsubscribe from IQ broadcaster
             if needs_raw_iq and subscription_key:
