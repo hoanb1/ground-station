@@ -35,7 +35,7 @@ import {
     getFrequencyBand,
     getBandColor,
 } from "../common/common.jsx";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import {useSocket} from "../common/socket.jsx";
 import {setTrackingStateInBackend} from "../target/target-slice.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';

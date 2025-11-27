@@ -3,7 +3,7 @@ import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Text
 import Button from "@mui/material/Button";
 import * as React from "react";
 import {useEffect, useState, useCallback} from "react";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import {
     DataGrid,
     GridActionsCellItem,

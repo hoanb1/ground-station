@@ -1,6 +1,6 @@
 import React from 'react';
 import {Box, Typography} from '@mui/material';
-import Grid2 from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import AddedItemsTable from './synchronize-added.jsx';
 import ModifiedItemsTable from './synchronize-modifed.jsx';
 import RemovedItemsTable from './synchronize-removed.jsx';
@@ -23,7 +23,7 @@ const SyncResultsTable = ({
 
     return (
         <Box sx={{mt: 2}}>
-            <Grid2
+            <Grid
                 container
                 spacing={{xs: 1, sm: 1, md: 1}}
                 sx={{
@@ -31,30 +31,30 @@ const SyncResultsTable = ({
                     justifyContent: 'flex-start'
                 }}
             >
-                <Grid2 size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
+                <Grid size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
                     <AddedItemsTable
                         newSatellitesCount={newSatellitesCount}
                         newTransmittersCount={newTransmittersCount}
                         syncState={syncState}
                     />
-                </Grid2>
+                </Grid>
 
-                <Grid2 size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
+                <Grid size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
                     <ModifiedItemsTable
                         modifiedSatellitesCount={modifiedSatellitesCount}
                         modifiedTransmittersCount={modifiedTransmittersCount}
                         syncState={syncState}
                     />
-                </Grid2>
+                </Grid>
 
-                <Grid2 size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
+                <Grid size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
                     <RemovedItemsTable
                         removedSatellitesCount={removedSatellitesCount}
                         removedTransmittersCount={removedTransmittersCount}
                         syncState={syncState}
                     />
-                </Grid2>
-            </Grid2>
+                </Grid>
+            </Grid>
         </Box>
     );
 };

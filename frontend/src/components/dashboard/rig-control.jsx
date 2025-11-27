@@ -46,7 +46,7 @@ import {
     preciseHumanizeFrequency,
     TitleBar
 } from "../common/common.jsx";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import {Box, Button, Divider, FormControl, IconButton, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import SatelliteList from "../target/satellite-dropdown.jsx";

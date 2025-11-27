@@ -33,7 +33,7 @@ import {
 import RadioIcon from '@mui/icons-material/Radio';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt';
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import React from "react";
 
 const TargetSatelliteTransmittersIsland = () => {

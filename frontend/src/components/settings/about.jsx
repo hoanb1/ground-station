@@ -41,7 +41,7 @@ import CodeIcon from '@mui/icons-material/Code';
 import StorageIcon from '@mui/icons-material/Storage';
 import WebIcon from '@mui/icons-material/Web';
 import InfoIcon from '@mui/icons-material/Info';
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import {
     Table,
     TableBody,

@@ -35,7 +35,7 @@ import {gridLayoutStoreName as overviewGridLayoutName} from '../overview/main-la
 import {gridLayoutStoreName as targetGridLayoutName} from '../target/main-layout.jsx';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import AntennaRotatorTable from "../hardware/rotator-table.jsx";
 import RigTable from "../hardware/rig-table.jsx";
 import {styled} from "@mui/material/styles";

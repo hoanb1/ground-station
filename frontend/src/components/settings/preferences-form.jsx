@@ -40,7 +40,7 @@ import {
     TextField,
     Typography
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import { useSocket } from "../common/socket.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { getAvailableThemes } from '../../themes/theme-configs.js';

@@ -5,7 +5,7 @@ import WakeLockStatus from "./wake-lock-icon.jsx";
 import {ThemeSwitcher} from "@toolpad/core/DashboardLayout";
 import Typography from "@mui/material/Typography";
 import PropTypes from "prop-types";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import RadioIcon from '@mui/icons-material/Radio';
 import LanIcon from '@mui/icons-material/Lan';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';

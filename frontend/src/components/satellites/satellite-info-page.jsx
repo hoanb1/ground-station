@@ -22,7 +22,7 @@ import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../comm
 import Button from "@mui/material/Button";
 import * as React from "react";
 import {useEffect, useState} from "react";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import {useDispatch, useSelector} from "react-redux";
 import {
     setClickedSatellite,

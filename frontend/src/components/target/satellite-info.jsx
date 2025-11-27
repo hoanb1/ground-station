@@ -51,7 +51,7 @@ import UpdateIcon from '@mui/icons-material/Update';
 import BusinessIcon from '@mui/icons-material/Business';
 import RadioIcon from '@mui/icons-material/Radio';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import React from "react";
 
 const TargetSatelliteInfoIsland = () => {

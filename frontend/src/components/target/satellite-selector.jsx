@@ -25,7 +25,7 @@ import {
     TextField,
     Divider,
 } from "@mui/material";
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
 import * as React from "react";
 import {useSocket} from "../common/socket.jsx";

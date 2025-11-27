@@ -21,7 +21,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {getClassNamesBasedOnGridEditing, TitleBar} from "./common.jsx";
 import { FormControl, InputLabel, MenuItem, Select, Button, CircularProgress, Slider, Stack, IconButton, Box, Typography } from "@mui/material";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import { v4 as uuidv4 } from 'uuid';
 import ReplayIcon from '@mui/icons-material/Replay';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';

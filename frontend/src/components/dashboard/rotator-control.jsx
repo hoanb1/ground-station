@@ -30,7 +30,7 @@ import {
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import { useTranslation } from 'react-i18next';
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import {Button, FormControl, IconButton, InputLabel, MenuItem, Select} from "@mui/material";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";

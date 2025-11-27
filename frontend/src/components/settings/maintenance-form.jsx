@@ -22,7 +22,7 @@ import {gridLayoutStoreName as targetGridLayoutName} from "../target/main-layout
 import {gridLayoutStoreName as waterfallGridLayoutName} from "../waterfall/main-layout.jsx";
 import Paper from "@mui/material/Paper";
 import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, Tab, Backdrop} from "@mui/material";
-import Grid from "@mui/material/Grid2";
+import Grid from "@mui/material/Grid";
 import React, {useState} from "react";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';

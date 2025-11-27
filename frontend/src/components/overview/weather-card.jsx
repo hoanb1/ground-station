@@ -26,7 +26,7 @@ import {
     Box, Typography, CircularProgress, Card, CardContent, Paper,
     Chip, Alert, Divider, useTheme
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import { getClassNamesBasedOnGridEditing, TitleBar } from "../common/common.jsx";
 import {
     Cloud as CloudIcon, CloudOff as CloudOffIcon, LocationOn as LocationOnIcon,
