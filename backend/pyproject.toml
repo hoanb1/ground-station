@@ -191,6 +191,8 @@ exclude = [
     "^build/",
     "^dist/",
     "^htmlcov/",
+    "^.*/tools/lora_TX\\.py$",
+    "^tools/.*\\.py$",
 ]
 explicit_package_bases = true
 mypy_path = "."
@@ -218,6 +220,10 @@ module = [
     "zeroconf.*",
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tools.*"
+ignore_errors = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
