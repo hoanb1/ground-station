@@ -103,13 +103,17 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
                 }
                 lastAllowedUpdateRef.current = now;
             }
+            // Create a typed view over the incoming ArrayBuffer and transfer its buffer
+            // to the worker to avoid structured-clone copying (zero-copy transfer).
             const floatArray = new Float32Array(binaryData);
             if (workerRef.current) {
+                // After this postMessage, floatArray.buffer becomes detached in the main thread.
+                // Do not reuse floatArray or its buffer hereafter.
                 workerRef.current.postMessage({
                     cmd: 'updateFFTData',
                     fft: floatArray,
                     immediate: true,
-                });
+                }, [floatArray.buffer]);
             }
         });
 

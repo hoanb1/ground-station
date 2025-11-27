@@ -32,6 +32,10 @@ let bandscopeCanvas = null;
 let dBAxisCanvas = null;
 let waterfallLeftMarginCanvas = null;
 let waterfallCtx = null;
+// Ring buffer canvas to avoid full-surface scroll blits each frame
+let ringCanvas = null;
+let ringCtx = null;
+let ringHeadY = 0; // points to the next row to write (newest row will be at ringHeadY after write-1)
 let bandscopeCtx = null;
 let dBAxisCtx = null;
 let waterFallLeftMarginCtx = null;
@@ -59,6 +63,8 @@ let renderWaterfallCount = 0;
 let vfoMarkers = [];
 let showRotatorDottedLines = true;
 let autoScalePreset = 'medium'; // 'strong', 'medium', 'weak'
+// Control whether we collect FFT frames for auto-scale history
+let collectAutoScaleHistory = true;
 
 // Store theme object
 let theme = {
@@ -109,6 +115,32 @@ let smoothingStrength = 0.9;
 // Cached smoothed data
 let smoothedFftData = new Array(1024).fill(-120);
 
+// Precomputed 256-entry RGB palette (r,g,b for indices 0..255)
+// Built from current colorMap and dbRange. Avoids per-pixel object allocation
+// and function calls inside the hot rendering loop.
+let palette = null; // Uint8Array of length 256*3
+let paletteDirty = true;
+
+function rebuildPalette() {
+    if (!dbRange || dbRange.length !== 2) return;
+    const [min, max] = dbRange;
+    const range = max - min;
+    // Protect against zero/negative range; fall back to a default to avoid NaN
+    const safeRange = range > 1e-6 ? range : 1;
+    const lut = new Uint8Array(256 * 3);
+    for (let i = 0; i < 256; i++) {
+        // Map i in [0..255] back to amplitude within dbRange
+        const amp = min + (i / 255) * safeRange;
+        const c = getColorForPower(amp, colorMap, dbRange);
+        const o = i * 3;
+        lut[o] = c.r | 0;
+        lut[o + 1] = c.g | 0;
+        lut[o + 2] = c.b | 0;
+    }
+    palette = lut;
+    paletteDirty = false;
+}
+
 
 // Main message handler
 self.onmessage = function(eventMessage) {
@@ -141,9 +173,9 @@ self.onmessage = function(eventMessage) {
                 willReadFrequently: false, // true breaks Webview on android and Hermit browser
             });
 
-            // Enable image smoothing (anti-aliasing)
-            waterfallCtx.imageSmoothingEnabled = true;
-            waterfallCtx.imageSmoothingQuality = 'high';
+            // Waterfall is pixel-accurate; disable smoothing for best performance
+            waterfallCtx.imageSmoothingEnabled = false;
+            // Note: imageSmoothingQuality is ignored when smoothing is disabled
             bandscopeCtx.imageSmoothingEnabled = true;
             bandscopeCtx.imageSmoothingQuality = 'high';
             dBAxisCtx.imageSmoothingEnabled = true;
@@ -156,9 +188,10 @@ self.onmessage = function(eventMessage) {
             break;
 
         case 'start':
-            // Reset auto-scale flag for new sessions
+            // Reset auto-scale flags/history for new sessions
             hasPerformedInitialAutoScale = false;
             waterfallHistory = []; // Clear any existing history
+            collectAutoScaleHistory = true;
 
             startRendering(eventMessage.data.fps || targetFPS);
             break;
@@ -198,8 +231,10 @@ self.onmessage = function(eventMessage) {
             fftHistory = smoothResult.fftHistory;
             smoothedFftData = smoothResult.smoothedFftData;
 
-            // Store FFT data in history for auto-scaling
-            waterfallHistory = storeFFTDataInHistory(eventMessage.data.fft, waterfallHistory, maxHistoryLength);
+            // Store FFT data in history for auto-scaling if collection is enabled
+            if (collectAutoScaleHistory) {
+                waterfallHistory = storeFFTDataInHistory(eventMessage.data.fft, waterfallHistory, maxHistoryLength);
+            }
 
             // Perform initial auto-scaling once we have enough data (3-5 frames)
             if (!hasPerformedInitialAutoScale && waterfallHistory.length >= 3) {
@@ -207,12 +242,18 @@ self.onmessage = function(eventMessage) {
                 const result = autoScaleDbRange(waterfallHistory, autoScalePreset);
                 if (result) {
                     dbRange = result.dbRange;
+                    // Palette depends on dbRange
+                    paletteDirty = true;
+                    rebuildPalette();
                     self.postMessage({
                         type: 'autoScaleResult',
                         data: result
                     });
                 }
                 hasPerformedInitialAutoScale = true;
+                // Stop collecting history after initial auto-scale to reduce overhead
+                waterfallHistory = [];
+                collectAutoScaleHistory = false;
             }
 
             // If we're set to immediate rendering, trigger a render now
@@ -232,6 +273,7 @@ self.onmessage = function(eventMessage) {
             // Also reset waterfall history for auto-scaling
             waterfallHistory = [];
             hasPerformedInitialAutoScale = false;
+            collectAutoScaleHistory = true;
 
             self.postMessage({
                 type: 'fftSizeUpdated',
@@ -268,25 +310,41 @@ self.onmessage = function(eventMessage) {
             // Update rendering configuration
             if (eventMessage.data.colorMap) {
                 colorMap = eventMessage.data.colorMap;
+                paletteDirty = true;
             }
             if (eventMessage.data.dbRange) {
                 dbRange = eventMessage.data.dbRange;
+                paletteDirty = true;
             }
             if (eventMessage.data.theme) {
                 theme = eventMessage.data.theme;
             }
+            // Rebuild palette if needed after config updates
+            if (paletteDirty) rebuildPalette();
             break;
 
         case 'autoScaleDbRange': {
-            // Trigger auto-scaling of dB range
+            // Trigger auto-scaling of dB range. If we don't have enough
+            // history yet, enable collection and wait for a few frames.
+            if (waterfallHistory.length < 3) {
+                hasPerformedInitialAutoScale = false;
+                collectAutoScaleHistory = true;
+                break;
+            }
+
             const result = autoScaleDbRange(waterfallHistory, autoScalePreset);
             if (result) {
                 dbRange = result.dbRange;
+                paletteDirty = true;
+                rebuildPalette();
                 self.postMessage({
                     type: 'autoScaleResult',
                     data: result
                 });
             }
+            // After manual auto-scale, stop collecting to reduce memory/CPU
+            waterfallHistory = [];
+            collectAutoScaleHistory = false;
             break;
         }
 
@@ -453,6 +511,21 @@ function setupCanvas(config) {
     waterfallCanvas.width = config.width;
     waterfallCanvas.height = config.height;
 
+    // Initialize or resize the ring buffer canvas to match
+    if (!ringCanvas) {
+        ringCanvas = new OffscreenCanvas(waterfallCanvas.width, waterfallCanvas.height);
+    } else if (ringCanvas.width !== waterfallCanvas.width || ringCanvas.height !== waterfallCanvas.height) {
+        ringCanvas.width = waterfallCanvas.width;
+        ringCanvas.height = waterfallCanvas.height;
+    }
+    ringCtx = ringCanvas.getContext('2d', {
+        alpha: true,
+        desynchronized: true,
+        willReadFrequently: false,
+    });
+    ringCtx.imageSmoothingEnabled = false;
+    ringHeadY = 0;
+
     // Initialize the imageData for faster rendering
     imageData = waterfallCtx.createImageData(waterfallCanvas.width, 1);
 
@@ -474,6 +547,16 @@ function setupCanvas(config) {
     // Clear the canvas
     waterfallCtx.fillStyle = theme.palette.background.default;
     waterfallCtx.fillRect(0, 0, waterfallCanvas.width, waterfallCanvas.height);
+
+    // Clear the ring canvas too
+    if (ringCtx) {
+        ringCtx.fillStyle = theme.palette.background.default;
+        ringCtx.fillRect(0, 0, ringCanvas.width, ringCanvas.height);
+    }
+
+    // Rebuild color palette for current settings
+    paletteDirty = true;
+    rebuildPalette();
 }
 
 function startRendering(fps) {
@@ -504,11 +587,29 @@ function renderWaterfall() {
     // Increment the counter for rate calculation
     renderWaterfallCount++;
 
-    // Move the current content down by 1 pixel
-    waterfallCtx.drawImage(waterfallCanvas, 0, 0, waterfallCanvas.width, waterfallCanvas.height - 1, 0, 1, waterfallCanvas.width, waterfallCanvas.height - 1);
+    // Move head UPWARD in ring space so that increasing visible Y corresponds
+    // to OLDER rows (newest at top, older below). Decrement BEFORE writing,
+    // so the row we write now becomes the new "top" row for composition.
+    const h = waterfallCanvas.height;
+    ringHeadY = (ringHeadY - 1 + h) % h;
 
-    // Render the new row of FFT data at the TOP instead of bottom
-    renderFFTRow(fftData);
+    // Render the new row of FFT data into the ring buffer at ringHeadY (new head)
+    renderFFTRowIntoRing(fftData, ringHeadY);
+
+    // Composite the ring buffer to the visible canvas with the NEWEST row at the TOP
+    // The newest row is at ringHeadY, so start composition there
+    const w = waterfallCanvas.width;
+    const topStart = ringHeadY; // row index in ring that should appear at y=0
+    const heightA = h - topStart;
+
+    // Segment A: from topStart..h-1 -> to y=0..heightA-1 (places newest row at the very top)
+    if (heightA > 0) {
+        waterfallCtx.drawImage(ringCanvas, 0, topStart, w, heightA, 0, 0, w, heightA);
+    }
+    // Segment B: from 0..topStart-1 -> to y=heightA..h-1
+    if (topStart > 0) {
+        waterfallCtx.drawImage(ringCanvas, 0, 0, w, topStart, 0, heightA, w, topStart);
+    }
 
     // Update the left margin column using module
     const marginResult = updateWaterfallLeftMarginModule({
@@ -529,7 +630,8 @@ function renderWaterfall() {
     throttledDrawBandscope();
 }
 
-function renderFFTRow(fftData) {
+// Renders a single FFT row into the ring buffer at the specified y index
+function renderFFTRowIntoRing(fftData, y) {
     if (!imageData) return;
 
     const data = imageData.data;
@@ -537,13 +639,13 @@ function renderFFTRow(fftData) {
     const range = max - min;
     const canvasWidth = waterfallCanvas.width;
 
-    // Clear the image data first
-    for (let i = 0; i < data.length; i += 4) {
-        data[i] = 0;     // R
-        data[i + 1] = 0; // G
-        data[i + 2] = 0; // B
-        data[i + 3] = 255; // A
+    // Note: No need to clear the image data here as we overwrite every pixel below
+
+    // Ensure palette exists for current colorMap/dbRange
+    if (paletteDirty || !palette) {
+        rebuildPalette();
     }
+    const safeRange = range > 1e-6 ? range : 1;
 
     if (fftData.length >= canvasWidth) {
         // More FFT bins than pixels - downsample
@@ -553,12 +655,15 @@ function renderFFTRow(fftData) {
             const fftIndex = Math.min(Math.floor(x * skipFactor), fftData.length - 1);
             const amplitude = fftData[fftIndex];
 
-            let color = getColorForPower(amplitude, colorMap, dbRange);
+            // Map amplitude to palette index [0..255]
+            let idx = ((amplitude - min) * 255 / safeRange) | 0;
+            if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
+            const po = idx * 3;
 
             const pixelIndex = x * 4;
-            data[pixelIndex] = color.r;
-            data[pixelIndex + 1] = color.g;
-            data[pixelIndex + 2] = color.b;
+            data[pixelIndex] = palette[po];
+            data[pixelIndex + 1] = palette[po + 1];
+            data[pixelIndex + 2] = palette[po + 2];
             data[pixelIndex + 3] = 255;
         }
     } else {
@@ -567,7 +672,10 @@ function renderFFTRow(fftData) {
 
         for (let i = 0; i < fftData.length; i++) {
             const amplitude = fftData[i];
-            let color = getColorForPower(amplitude, colorMap, dbRange);
+            // Map amplitude to palette index [0..255]
+            let idx = ((amplitude - min) * 255 / safeRange) | 0;
+            if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
+            const po = idx * 3;
 
             // Calculate the pixel range for this FFT bin
             const startX = Math.floor(i * stretchFactor);
@@ -576,16 +684,16 @@ function renderFFTRow(fftData) {
             // Fill all pixels in this range with the same color
             for (let x = startX; x < endX && x < canvasWidth; x++) {
                 const pixelIndex = x * 4;
-                data[pixelIndex] = color.r;
-                data[pixelIndex + 1] = color.g;
-                data[pixelIndex + 2] = color.b;
+                data[pixelIndex] = palette[po];
+                data[pixelIndex + 1] = palette[po + 1];
+                data[pixelIndex + 2] = palette[po + 2];
                 data[pixelIndex + 3] = 255;
             }
         }
     }
 
-    // Put the image data on the TOP row of the canvas
-    waterfallCtx.putImageData(imageData, 0, 0);
+    // Put the image data on the specified row of the ring canvas
+    ringCtx.putImageData(imageData, 0, y);
 }
 
 // Update FPS setting
