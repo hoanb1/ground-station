@@ -63,7 +63,7 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import SelectAllIcon from '@mui/icons-material/SelectAll';
 import DeselectIcon from '@mui/icons-material/Deselect';
-import DataObjectIcon from '@mui/icons-material/DataObject';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
@@ -809,7 +809,7 @@ export default function FileBrowser() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded' ? (
-                                                        <DataObjectIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                        <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
                                                     ) : (
                                                         <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                                                     )}
@@ -965,7 +965,7 @@ export default function FileBrowser() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded' ? (
-                                                        <DataObjectIcon
+                                                        <InsertDriveFileIcon
                                                             sx={{
                                                                 fontSize: 80,
                                                                 color: 'success.main',
@@ -1017,7 +1017,7 @@ export default function FileBrowser() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded' ? (
-                                                        <DataObjectIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                        <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
                                                     ) : (
                                                         <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                                                     )}
