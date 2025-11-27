@@ -49,7 +49,7 @@ import MainLayout from "./components/waterfall/main-layout.jsx";
 import {WakeLockProvider} from "./components/dashboard/wake-lock-provider.jsx";
 import { AudioProvider, useAudio } from "./components/dashboard/audio-provider.jsx";
 import SatelliteInfoPage from "./components/satellites/satellite-info-page.jsx";
-import FileBrowser from "./components/filebrowser/file-browser.jsx";
+import FilebrowserMain from "./components/filebrowser/filebrowser-main.jsx";
 
 
 const router = createBrowserRouter([
@@ -75,7 +75,7 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "filebrowser",
-                        Component: FileBrowser,
+                        Component: FilebrowserMain,
                     },
                     {
                         path: "satellite/:noradId",

@@ -122,7 +122,7 @@ function formatDuration(startTime, endTime) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-export default function FileBrowser() {
+export default function FilebrowserMain() {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { t } = useTranslation('filebrowser');
@@ -178,7 +178,6 @@ export default function FileBrowser() {
         filesLoading,
         filesError,
         page,
-        pageSize,
         total,
         sortBy,
         sortOrder,
@@ -187,6 +186,8 @@ export default function FileBrowser() {
         selectedItems,
         selectionMode,
     } = useSelector((state) => state.filebrowser);
+
+    const pageSize = 10; // Hardcoded - not persisted in Redux
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
