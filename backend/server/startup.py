@@ -58,7 +58,8 @@ async def lifespan(fastapiapp: FastAPI):
     """Custom lifespan for FastAPI."""
     logger.info("FastAPI lifespan startup...")
     start_tracker_process()
-    event_loop = asyncio.get_event_loop()
+    # In an async context, prefer get_running_loop() (get_event_loop() is deprecated when no loop set)
+    event_loop = asyncio.get_running_loop()
 
     # Start audio broadcaster
     audio_broadcaster.start()
@@ -221,7 +222,8 @@ async def init_db():
         from db.migrations import run_migrations
 
         # Run migrations in a thread pool to avoid event loop conflicts
-        loop = asyncio.get_event_loop()
+        # Use the currently running loop (compatible with Python 3.12+)
+        loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             await loop.run_in_executor(executor, run_migrations)
 

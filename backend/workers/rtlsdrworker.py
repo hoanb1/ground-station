@@ -17,13 +17,25 @@
 import json
 import logging
 import time
+import warnings
 from typing import Any, Dict
 
 import numpy as np
 import psutil
-import rtlsdr
 
-from workers.rtlsdrtcpclient import RtlSdrTcpClient
+# Suppress a very specific third-party warning emitted at import-time by pyrtlsdr
+# Context: pyrtlsdr (or its transitive imports) currently uses setuptools.pkg_resources,
+# which is deprecated and scheduled for removal. We keep Setuptools pinned (<81) to avoid
+# breakage, and we filter only this exact warning to keep logs clean until upstream fixes it.
+# Remove this filter once pyrtlsdr stops using pkg_resources.
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message=r"pkg_resources is deprecated as an API",
+)
+import rtlsdr  # noqa: E402 - import after warning filter by design
+
+from workers.rtlsdrtcpclient import RtlSdrTcpClient  # noqa: E402 - follows filtered import
 
 # Configure logging for the worker process
 logger = logging.getLogger("rtlsdr-worker")

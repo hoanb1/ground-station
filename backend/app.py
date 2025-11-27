@@ -10,8 +10,8 @@ import uvicorn  # noqa: E402
 
 from common.arguments import arguments  # noqa: E402
 from common.logger import get_logger_config, logger  # noqa: E402
-from demodulators.shm_cleanup import start_cleanup_thread  # noqa: E402
 from handlers.socket import register_socketio_handlers  # noqa: E402
+from server.shmmonitor import start_cleanup_thread  # noqa: E402
 from server.shutdown import cleanup_everything, signal_handler  # noqa: E402
 from server.startup import app, init_db, sio, socket_app  # noqa: E402
 from video.webrtc import register_webrtc_routes  # noqa: E402
@@ -44,8 +44,8 @@ def main() -> None:
     register_socketio_handlers(sio)
 
     logger.info("Configuring database connection...")
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(init_db())
+    # Use asyncio.run to create/manage a temporary event loop (Python 3.12+ friendly)
+    asyncio.run(init_db())
 
     # Note: Static files and API routes are already configured in startup.py
 
