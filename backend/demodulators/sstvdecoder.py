@@ -445,18 +445,35 @@ class SSTVDecoder(threading.Thread):
         mode = self.mode.value
         width = mode["width"]
         height = mode["height"]
+        color_mode = mode.get("color_mode", "GBR")
 
         image = Image.new("RGB", (width, height))
         pixel_data = image.load()
 
         for y in range(height):
             for x in range(width):
-                # GBR to RGB
-                pixel = (
-                    image_data[y][2][x],  # R
-                    image_data[y][0][x],  # G
-                    image_data[y][1][x],
-                )  # B
+                if color_mode == "YUV":
+                    # YUV to RGB conversion for Robot modes
+                    y_val = image_data[y][0][x]
+                    u_val = image_data[y][1][x] if len(image_data[y]) > 1 else 128
+                    v_val = (
+                        image_data[y][1][x] if len(image_data[y]) > 1 else 128
+                    )  # Robot uses same chrominance for U and V
+
+                    # YUV to RGB conversion (ITU-R BT.601)
+                    r = int(y_val + 1.402 * (v_val - 128))
+                    g = int(y_val - 0.344136 * (u_val - 128) - 0.714136 * (v_val - 128))
+                    b = int(y_val + 1.772 * (u_val - 128))
+
+                    # Clamp values
+                    pixel = (max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)))
+                else:
+                    # GBR to RGB for Martin and Scottie modes
+                    pixel = (
+                        image_data[y][2][x],  # R
+                        image_data[y][0][x],  # G
+                        image_data[y][1][x],  # B
+                    )
                 pixel_data[x, y] = pixel
 
         return image
