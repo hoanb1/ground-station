@@ -725,26 +725,30 @@ export default function FileBrowser() {
                     </Button>
                 </Box>
             ) : (
-                <Grid container spacing={2}>
+                <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: 2
+                }}>
                     {displayItems.map((item) => {
                         const isRecording = item.type === 'recording';
                         const key = isRecording ? item.name : item.filename;
                         const isSelected = selectedItems.includes(key);
 
                         return (
-                            <Grid item xs={12} sm={6} md={4} lg={3} key={key}>
-                                <Card
-                                    sx={{
-                                        cursor: 'pointer',
-                                        position: 'relative',
-                                        border: selectionMode && isSelected ? 2 : 0,
-                                        borderColor: 'primary.main',
-                                        '&:hover': {
-                                            boxShadow: 4,
-                                        },
-                                    }}
-                                    onClick={() => selectionMode ? handleToggleSelection(item) : handleShowDetails(item)}
-                                >
+                            <Card
+                                key={key}
+                                sx={{
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    border: selectionMode && isSelected ? 2 : 0,
+                                    borderColor: 'primary.main',
+                                    '&:hover': {
+                                        boxShadow: 4,
+                                    },
+                                }}
+                                onClick={() => selectionMode ? handleToggleSelection(item) : handleShowDetails(item)}
+                            >
                                     {item.image ? (
                                         <Box sx={{ position: 'relative' }}>
                                             <CardMedia
@@ -1233,10 +1237,9 @@ export default function FileBrowser() {
                                         </Tooltip>
                                     </CardActions>
                                 </Card>
-                            </Grid>
                         );
                     })}
-                </Grid>
+                </Box>
             )}
 
             {/* Pagination Controls */}

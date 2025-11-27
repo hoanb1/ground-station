@@ -111,7 +111,7 @@ const initialState = {
     filesLoading: false,
     filesError: null,
     page: 1,
-    pageSize: 8,
+    pageSize: 10,
     total: 0,
     sortBy: 'created',
     sortOrder: 'desc',
