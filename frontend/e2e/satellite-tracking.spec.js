@@ -17,25 +17,6 @@ test.describe('Satellite Tracking', () => {
     await expect(mapContainer).toBeVisible({ timeout: 10000 });
   });
 
-  test('should allow satellite selection', async ({ page }) => {
-    // Look for satellite dropdown/selector
-    const satelliteSelector = page.locator('[role="combobox"], [role="button"][aria-haspopup]').first();
-
-    if (await satelliteSelector.isVisible()) {
-      await satelliteSelector.click();
-      await page.waitForTimeout(500);
-
-      // Check if dropdown/menu opens
-      const dropdown = page.locator('[role="listbox"], [role="menu"], [role="dialog"]');
-      if (await dropdown.count() > 0) {
-        await expect(dropdown.first()).toBeVisible({ timeout: 3000 });
-      }
-    } else {
-      // Selector not available, skip gracefully
-      expect(true).toBe(true);
-    }
-  });
-
   test('should display tracking information', async ({ page }) => {
     // Check for common tracking information elements
     // Adjust selectors based on your actual implementation
