@@ -415,19 +415,15 @@ const MemoizedStyledDataGrid = React.memo(({
 
         if (selectedSatelliteId === params.row.norad_id) {
             return "satellite-cell-selected pointer-cursor";
-        } 
-        
-        // Handle different status values
-        switch (params.row.status) {
-            case 'alive':
-                return "satellite-cell-alive pointer-cursor";
-            case 'dead':
-                return "satellite-cell-dead pointer-cursor";
-            case 're-entered':
-                return "satellite-cell-reentered pointer-cursor";
-            default:
-                return "satellite-cell-unknown pointer-cursor";
         }
+
+        // Color rows based on elevation: green only if positive
+        const elevation = params.row.elevation;
+        if (elevation !== null && elevation !== undefined && elevation > 0) {
+            return "satellite-cell-alive pointer-cursor";
+        }
+
+        return "pointer-cursor";
     }, [selectedSatelliteId]);
 
     return (

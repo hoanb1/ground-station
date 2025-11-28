@@ -136,9 +136,9 @@ export default function IntegersTab({ packet, telemetry }) {
 
     return (
         <Box>
-            <Grid container spacing={3}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
                 {/* Uint16 Table */}
-                <Grid item xs={12} md={6}>
+                <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
                         As Uint16 (Little-Endian)
                     </Typography>
@@ -187,10 +187,10 @@ export default function IntegersTab({ packet, telemetry }) {
                             </TableBody>
                         </Table>
                     </TableContainer>
-                </Grid>
+                </Box>
 
                 {/* Uint32 Table */}
-                <Grid item xs={12} md={6}>
+                <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
                         As Uint32 (Little-Endian)
                     </Typography>
@@ -240,8 +240,8 @@ export default function IntegersTab({ packet, telemetry }) {
                             </TableBody>
                         </Table>
                     </TableContainer>
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
 
             {/* Info box */}
             <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>

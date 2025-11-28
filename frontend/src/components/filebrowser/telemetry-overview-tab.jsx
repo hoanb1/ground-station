@@ -182,66 +182,67 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                             label="Sample Rate"
                             value={signal.sample_rate_hz ? `${(signal.sample_rate_hz / 1000).toFixed(2)} kS/s` : '-'}
                         />
-                        {signal.signal_power_dbfs !== undefined && (
-                            <>
-                                <Divider sx={{ my: 1 }} />
+                    </InfoSection>
+
+                    {/* Signal Power */}
+                    {signal.signal_power_dbfs !== undefined && (
+                        <InfoSection title="Signal Power">
+                            <InfoRow
+                                label="Signal Power"
+                                value={`${signal.signal_power_dbfs.toFixed(1)} dBFS`}
+                            />
+                            {signal.signal_power_avg_dbfs !== undefined && (
                                 <InfoRow
-                                    label="Signal Power"
-                                    value={`${signal.signal_power_dbfs.toFixed(1)} dBFS`}
+                                    label="Avg Power"
+                                    value={`${signal.signal_power_avg_dbfs.toFixed(1)} dBFS`}
                                 />
-                                {signal.signal_power_avg_dbfs !== undefined && (
-                                    <InfoRow
-                                        label="Avg Power"
-                                        value={`${signal.signal_power_avg_dbfs.toFixed(1)} dBFS`}
-                                    />
-                                )}
-                                {signal.signal_power_max_dbfs !== undefined && (
-                                    <InfoRow
-                                        label="Peak Power"
-                                        value={`${signal.signal_power_max_dbfs.toFixed(1)} dBFS`}
-                                    />
-                                )}
-                                {signal.signal_power_min_dbfs !== undefined && (
-                                    <InfoRow
-                                        label="Min Power"
-                                        value={`${signal.signal_power_min_dbfs.toFixed(1)} dBFS`}
-                                    />
-                                )}
-                            </>
-                        )}
-                    </InfoSection>
-
-                    {/* Validation Status */}
-                    <InfoSection title="Validation">
-                        <Stack spacing={1}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    CRC-16 validated by HDLC deframer
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    Callsigns decoded correctly
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    Packet integrity confirmed
-                                </Typography>
-                            </Box>
-                        </Stack>
-
-                        <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
-                            <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                                ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.
-                            </Typography>
-                        </Box>
-                    </InfoSection>
+                            )}
+                            {signal.signal_power_max_dbfs !== undefined && (
+                                <InfoRow
+                                    label="Peak Power"
+                                    value={`${signal.signal_power_max_dbfs.toFixed(1)} dBFS`}
+                                />
+                            )}
+                            {signal.signal_power_min_dbfs !== undefined && (
+                                <InfoRow
+                                    label="Min Power"
+                                    value={`${signal.signal_power_min_dbfs.toFixed(1)} dBFS`}
+                                />
+                            )}
+                        </InfoSection>
+                    )}
                 </Box>
             </Box>
+
+            {/* Validation Status - Full Width */}
+            <InfoSection title="Validation">
+                <Stack spacing={1}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                        <Typography variant="body2">
+                            CRC-16 validated by HDLC deframer
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                        <Typography variant="body2">
+                            Callsigns decoded correctly
+                        </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                        <Typography variant="body2">
+                            Packet integrity confirmed
+                        </Typography>
+                    </Box>
+                </Stack>
+
+                <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
+                    <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
+                        ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.
+                    </Typography>
+                </Box>
+            </InfoSection>
 
             {/* File Information - Full Width */}
             <InfoSection title="File Information">
