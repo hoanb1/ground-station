@@ -269,6 +269,12 @@ loggers:
       - default
     propagate: no
 
+  decoderconfigservice:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

@@ -480,6 +480,7 @@ export const useSocketEventHandlers = (socket) => {
                         status: data.status,
                         mode: data.mode,
                         decoder_type: data.decoder_type,
+                        decoder_id: data.decoder_id,  // Track decoder instance ID for restart handling
                         vfo: data.vfo,
                         timestamp: data.timestamp,
                         progress: data.progress,

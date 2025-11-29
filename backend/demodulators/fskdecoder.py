@@ -520,14 +520,6 @@ class FSKDecoder(BaseDecoderProcess):
             param_parts.append(f"af_carrier={config.af_carrier}Hz")
         if config.differential:
             param_parts.append("differential")
-        if config.sf is not None:  # LoRa spreading factor
-            param_parts.append(f"sf={config.sf}")
-        if config.bw is not None:  # LoRa bandwidth
-            param_parts.append(f"bw={config.bw}")
-        if config.cr is not None:  # LoRa coding rate
-            param_parts.append(f"cr={config.cr}")
-        if config.sync_word is not None:
-            param_parts.append(f"sync=0x{config.sync_word:X}")
         if config.packet_size is not None:
             param_parts.append(f"pkt_sz={config.packet_size}")
 
@@ -676,6 +668,7 @@ class FSKDecoder(BaseDecoderProcess):
             "status": status.value,
             "decoder_type": "fsk",
             "modulation_subtype": self.modulation_subtype,
+            "decoder_id": self.decoder_id,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
@@ -932,6 +925,7 @@ class FSKDecoder(BaseDecoderProcess):
             "status": final_status,
             "decoder_type": "fsk",
             "modulation_subtype": self.modulation_subtype,
+            "decoder_id": self.decoder_id,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),

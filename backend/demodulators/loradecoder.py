@@ -106,7 +106,9 @@ class LoRaMessageSink(gr.sync_block):
                         cr = gr.pmt.to_long(
                             gr.pmt.dict_ref(meta, gr.pmt.intern("cr"), gr.pmt.from_long(0))
                         )
-                        logger.debug(f"LoRa header: pay_len={pay_len}, crc={has_crc}, cr={cr}")
+                        logger.info(
+                            f"LoRa valid header detected: payload_len={pay_len} bytes, CRC={has_crc}, coding_rate=4/{cr+4}"
+                        )
                     except Exception:
                         pass
 
@@ -141,6 +143,8 @@ class LoRaFlowgraph(gr.top_block):
         has_crc=True,
         impl_head=False,
         sync_word=None,
+        preamble_len=8,
+        fldro=False,
     ):
         """
         Initialize LoRa decoder flowgraph
@@ -154,6 +158,8 @@ class LoRaFlowgraph(gr.top_block):
             cr: Coding rate (1-4, corresponding to 4/5 through 4/8)
             has_crc: Whether packets have CRC
             impl_head: Implicit header mode
+            preamble_len: Preamble length (default: 8)
+            fldro: Low Data Rate Optimization (default: False)
         """
         if not LORA_SDR_AVAILABLE:
             raise RuntimeError("gr-lora_sdr not available - LoRa decoder cannot be initialized")
@@ -184,7 +190,7 @@ class LoRaFlowgraph(gr.top_block):
             impl_head=impl_head,
             sync_word=sync_word,
             os_factor=int(sample_rate / bw),  # Oversampling factor
-            preamble_len=8,  # Standard preamble length
+            preamble_len=preamble_len,
         )
 
         logger.debug(f"LoRa frame_sync configured with sync_word={sync_word} ([]=auto-detect)")
@@ -207,11 +213,11 @@ class LoRaFlowgraph(gr.top_block):
         # 6. Header decoder
         self.header_decoder = lora_sdr.header_decoder(
             impl_head=impl_head,
-            print_header=False,  # Disabled verbose header output
+            print_header=True,  # Disabled verbose header output
             cr=int(cr),
             pay_len=255,  # Maximum payload
             has_crc=has_crc,
-            ldro=False,  # Low data rate optimization
+            ldro=fldro,  # Low data rate optimization (FLDRO)
         )
 
         # 7. Dewhitening
@@ -328,6 +334,11 @@ class LoRaDecoder(BaseDecoderProcess):
         self.cr = config.cr if config.cr is not None else 1  # Default: CR 4/5
         # sync_word: Default to match TX example (converts to network ID)
         self.sync_word = config.sync_word if config.sync_word is not None else [8, 16]
+        # TinyGS compatibility parameters
+        self.preamble_len = (
+            config.preamble_len if config.preamble_len is not None else 8
+        )  # Default: 8
+        self.fldro = config.fldro if config.fldro is not None else False  # Default: False
 
         # BaseDecoder required metadata attributes
         self.baudrate = config.baudrate  # Not really used for LoRa, but required by BaseDecoder
@@ -459,6 +470,8 @@ class LoRaDecoder(BaseDecoderProcess):
             "bandwidth_khz": self.bw / 1000 if self.bw else None,
             "coding_rate": f"4/{self.cr + 4}" if self.cr is not None else None,
             "sync_word": self.sync_word,
+            "preamble_len": self.preamble_len,
+            "fldro": self.fldro,
             "framing": self.framing,
             "transmitter": self.transmitter_description,
             "transmitter_mode": self.transmitter_mode,
@@ -480,6 +493,7 @@ class LoRaDecoder(BaseDecoderProcess):
             "type": "decoder-status",
             "status": status.value,
             "decoder_type": "lora",
+            "decoder_id": self.decoder_id,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
@@ -711,6 +725,8 @@ class LoRaDecoder(BaseDecoderProcess):
                                             cr=cr,
                                             sync_word=self.sync_word,
                                             impl_head=impl_head,
+                                            preamble_len=self.preamble_len,
+                                            fldro=self.fldro,
                                         )
 
                                         # Process batch (blocking)
@@ -789,6 +805,7 @@ class LoRaDecoder(BaseDecoderProcess):
             "type": "decoder-status",
             "status": "closed",
             "decoder_type": "lora",
+            "decoder_id": self.decoder_id,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
@@ -812,6 +829,8 @@ class LoRaDecoder(BaseDecoderProcess):
             "bandwidth_khz": self.bw / 1000 if self.bw else None,
             "coding_rate": f"4/{self.cr + 4}" if self.cr is not None else None,
             "sync_word": self.sync_word,
+            "preamble_len": self.preamble_len,
+            "fldro": self.fldro,
         }
 
     def _get_filename_params(self) -> str:
@@ -848,6 +867,8 @@ class LoRaDecoder(BaseDecoderProcess):
             "coding_rate": self.cr,
             "coding_rate_string": f"4/{self.cr + 4}" if self.cr is not None else None,
             "sync_word": self.sync_word,
+            "preamble_len": self.preamble_len,
+            "fldro": self.fldro,
         }
 
     def _get_vfo_state(self):

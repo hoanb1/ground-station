@@ -71,27 +71,45 @@ export const decodersSlice = createSlice({
     reducers: {
         // Decoder status changed
         decoderStatusChanged: (state, action) => {
-            const { session_id, status, mode, decoder_type, vfo, timestamp, progress, info } = action.payload;
+            const { session_id, status, mode, decoder_type, decoder_id, vfo, timestamp, progress, info } = action.payload;
 
             // Create unique key combining session_id and VFO number
             const decoderKey = vfo ? `${session_id}_vfo${vfo}` : session_id;
 
             if (status === 'idle' || status === 'error' || status === 'closed') {
-                // Remove from active decoders when idle, error, or closed
-                if (state.active[decoderKey]) {
-                    delete state.active[decoderKey];
+                // Only remove from active decoders if the decoder_id matches
+                // This prevents stale "closed" messages from old decoder instances
+                // from clearing the status of newly restarted decoders
+                const existing = state.active[decoderKey];
+                if (existing) {
+                    // If decoder_id is provided, only delete if it matches
+                    // If no decoder_id (legacy), delete anyway for backward compatibility
+                    if (!decoder_id || existing.decoder_id === decoder_id) {
+                        delete state.active[decoderKey];
+                    } else {
+                        console.log(`Ignoring stale ${status} status from old decoder instance (${decoder_id} vs ${existing.decoder_id})`);
+                    }
                 }
             } else {
                 // Update or create active decoder entry
                 if (!state.active[decoderKey]) {
                     state.active[decoderKey] = {
                         decoder_type,
+                        decoder_id,  // Track decoder instance ID
                         session_id,
                         vfo,
                         started_at: timestamp,
                         progress: null,
                         info: null,  // Initialize info field
                     };
+                } else {
+                    // Update decoder_id and decoder_type if provided (handles decoder restarts and type changes)
+                    if (decoder_id) {
+                        state.active[decoderKey].decoder_id = decoder_id;
+                    }
+                    if (decoder_type) {
+                        state.active[decoderKey].decoder_type = decoder_type;
+                    }
                 }
 
                 state.active[decoderKey].status = status;

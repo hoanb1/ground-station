@@ -54,6 +54,8 @@ class DecoderConfig:
     bw: Optional[int] = None  # Bandwidth (125000, 250000, 500000)
     cr: Optional[int] = None  # Coding rate (1-4, corresponding to 4/5 through 4/8)
     sync_word: Optional[list] = None  # Sync word ([0, 0] for auto-detect)
+    preamble_len: Optional[int] = None  # Preamble length (default: 8)
+    fldro: Optional[bool] = None  # Low Data Rate Optimization (default: False)
 
     # Weather satellite specific parameters (SatDump)
     pipeline: Optional[str] = None  # SatDump pipeline name (e.g., 'noaa_apt', 'meteor_m2-x_lrpt')
@@ -93,6 +95,8 @@ class DecoderConfig:
             and self.bw == other.bw
             and self.cr == other.cr
             and self.sync_word == other.sync_word
+            and self.preamble_len == other.preamble_len
+            and self.fldro == other.fldro
             and self.pipeline == other.pipeline
             and self.target_sample_rate == other.target_sample_rate
         )
@@ -110,6 +114,8 @@ class DecoderConfig:
                 self.bw,
                 self.cr,
                 tuple(self.sync_word) if self.sync_word else None,
+                self.preamble_len,
+                self.fldro,
                 self.pipeline,
                 self.target_sample_rate,
             )
@@ -128,6 +134,8 @@ class DecoderConfig:
             "bw": self.bw,
             "cr": self.cr,
             "sync_word": self.sync_word,
+            "preamble_len": self.preamble_len,
+            "fldro": self.fldro,
             "pipeline": self.pipeline,
             "target_sample_rate": self.target_sample_rate,
             "packet_size": self.packet_size,

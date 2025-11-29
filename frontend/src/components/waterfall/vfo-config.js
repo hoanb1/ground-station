@@ -683,6 +683,137 @@ export const normalizeTransmitterMode = (mode) => {
 };
 
 /**
+ * Decoder parameter definitions
+ * Structure: { decoder_paramName: { options, default, label, description, type } }
+ */
+export const DECODER_PARAMETERS = {
+    // LoRa Parameters
+    lora_sf: {
+        label: 'Spreading Factor',
+        description: 'Higher SF = longer range but slower data rate',
+        type: 'select',
+        default: 7,
+        options: [
+            { value: 7, label: 'SF7', tooltip: 'Fastest, shortest range' },
+            { value: 8, label: 'SF8' },
+            { value: 9, label: 'SF9' },
+            { value: 10, label: 'SF10' },
+            { value: 11, label: 'SF11' },
+            { value: 12, label: 'SF12', tooltip: 'Slowest, longest range' }
+        ]
+    },
+    lora_bw: {
+        label: 'Bandwidth',
+        description: 'Signal bandwidth in Hz',
+        type: 'select',
+        default: 125000,
+        options: [
+            { value: 62500, label: '62.5 kHz' },
+            { value: 125000, label: '125 kHz' },
+            { value: 250000, label: '250 kHz' },
+            { value: 500000, label: '500 kHz' }
+        ]
+    },
+    lora_cr: {
+        label: 'Coding Rate',
+        description: 'Forward error correction ratio',
+        type: 'select',
+        default: 1,
+        options: [
+            { value: 1, label: '4/5', tooltip: 'Least overhead, fastest' },
+            { value: 2, label: '4/6' },
+            { value: 3, label: '4/7' },
+            { value: 4, label: '4/8', tooltip: 'Most overhead, most robust' }
+        ]
+    },
+    lora_sync_word: {
+        label: 'Sync Word',
+        description: 'Network identifier for packet filtering',
+        type: 'select',
+        default: [0x08, 0x10],
+        options: [
+            { value: [0x12], label: '0x12 (LoRaWAN Public)' },
+            { value: [0x34], label: '0x34 (LoRaWAN Private)' },
+            { value: [0x08, 0x10], label: '0x08 0x10 (TinyGS)' },
+            { value: [], label: 'Auto-detect' }
+        ],
+        // Custom comparator for array values
+        compare: (a, b) => JSON.stringify(a) === JSON.stringify(b)
+    },
+    lora_preamble_len: {
+        label: 'Preamble Length',
+        description: 'Number of preamble symbols',
+        type: 'select',
+        default: 8,
+        options: [
+            { value: 6, label: '6' },
+            { value: 8, label: '8' },
+            { value: 12, label: '12' },
+            { value: 16, label: '16' }
+        ]
+    },
+    lora_fldro: {
+        label: 'Low Data Rate Optimization',
+        description: 'Enable for SF11/SF12 with BW < 500kHz',
+        type: 'switch',
+        default: false
+    },
+
+    // TODO: Add FSK/GMSK/GFSK/BPSK/Weather parameters when needed
+};
+
+/**
+ * Get parameter definitions for a specific decoder
+ * @param {string} decoder - Decoder name (e.g., 'lora', 'fsk')
+ * @returns {Object} Parameter definitions for this decoder
+ */
+export const getDecoderParameters = (decoder) => {
+    const prefix = `${decoder}_`;
+    return Object.entries(DECODER_PARAMETERS)
+        .filter(([key]) => key.startsWith(prefix))
+        .reduce((acc, [key, value]) => {
+            acc[key] = value;
+            return acc;
+        }, {});
+};
+
+/**
+ * Get default parameters for a specific decoder
+ * @param {string} decoder - Decoder name
+ * @returns {Object} Default parameter values
+ */
+export const getDecoderDefaultParameters = (decoder) => {
+    const params = getDecoderParameters(decoder);
+    return Object.entries(params).reduce((acc, [key, param]) => {
+        acc[key] = param.default;
+        return acc;
+    }, {});
+};
+
+/**
+ * Map frontend parameter names to backend names
+ * Frontend uses prefixed flat keys (lora_sf), backend uses unprefixed names (sf)
+ *
+ * @param {string} decoder - Decoder name (e.g., 'lora')
+ * @param {Object} parameters - Frontend parameters object
+ * @returns {Object} Backend-compatible parameters
+ */
+export const mapParametersToBackend = (decoder, parameters) => {
+    if (decoder === 'lora') {
+        return {
+            sf: parameters.lora_sf,
+            bw: parameters.lora_bw,
+            cr: parameters.lora_cr,
+            sync_word: parameters.lora_sync_word,
+            preamble_len: parameters.lora_preamble_len,
+            fldro: parameters.lora_fldro
+        };
+    }
+    // Add other decoder mappings as needed (FSK, BPSK, etc.)
+    return {};
+};
+
+/**
  * Get default VFO configuration object
  * Use this when initializing new VFOs
  *
@@ -699,5 +830,30 @@ export const getDefaultVFOConfig = () => {
         transcriptionEnabled: false,
         transcriptionModel: 'small.en',
         transcriptionLanguage: 'en',
+
+        // Decoder-specific parameters (flat object, prefixed by decoder type)
+        parameters: {
+            // LoRa parameters (defaults from TinyGS)
+            lora_sf: 7,                    // Spreading Factor (7-12)
+            lora_bw: 125000,               // Bandwidth in Hz
+            lora_cr: 1,                    // Coding Rate (1=4/5, 2=4/6, 3=4/7, 4=4/8)
+            lora_sync_word: [0x08, 0x10],  // Sync word (TinyGS default)
+            lora_preamble_len: 8,          // Preamble length
+            lora_fldro: false,             // Low Data Rate Optimization
+
+            // FSK/GMSK/GFSK parameters (future - TODO)
+            // fsk_baudrate: 9600,
+            // fsk_deviation: 5000,
+            // fsk_framing: 'ax25',
+
+            // BPSK parameters (future - TODO)
+            // bpsk_baudrate: 9600,
+            // bpsk_differential: false,
+            // bpsk_framing: 'ax25',
+
+            // Weather parameters (future - TODO)
+            // weather_pipeline: 'noaa_apt',
+            // weather_sample_rate: 48000,
+        }
     };
 };

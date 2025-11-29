@@ -23,10 +23,16 @@ from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
 from db.models import Satellites, Transmitters
 from handlers.entities.sdr import handle_vfo_demodulator_state
+from processing.decoderregistry import decoder_registry
 from processing.processmanager import process_manager
 from server.startup import audio_queue
 from session.tracker import session_tracker
 from vfos.state import VFOManager
+
+# Module-level cache for decoder parameter overrides from UI
+# Key format: "{session_id}_{vfo_number}"
+# Value: Dict of decoder-specific parameters (e.g., {"sf": 7, "bw": 125000, ...})
+_decoder_param_overrides_cache: Dict[str, Dict[str, Any]] = {}
 
 
 async def update_vfo_parameters(
@@ -56,6 +62,38 @@ async def update_vfo_parameters(
     old_vfo_state = vfomanager.get_vfo_state(sid, vfo_id) if vfo_id > 0 else None
     old_locked_transmitter_id = old_vfo_state.locked_transmitter_id if old_vfo_state else None
 
+    # Extract decoder-specific parameters from incoming data (if present)
+    # These are sent from the UI when user changes decoder parameters
+    # Format: { sf: 7, bw: 125000, cr: 1, sync_word: [0x08, 0x10], preamble_len: 8, fldro: false }
+    decoder_param_overrides = {}
+    decoder_param_keys = [
+        "sf",
+        "bw",
+        "cr",
+        "sync_word",
+        "preamble_len",
+        "fldro",  # LoRa
+        "baudrate",
+        "deviation",
+        "framing",
+        "differential",  # FSK/BPSK/etc (future)
+        "af_carrier",
+        "pipeline",
+        "target_sample_rate",  # Other decoders (future)
+    ]
+
+    for key in decoder_param_keys:
+        if key in data:
+            decoder_param_overrides[key] = data[key]
+
+    # Only update cache if we actually have decoder parameter overrides
+    # Otherwise, preserve existing cached overrides (don't overwrite with empty dict)
+    if decoder_param_overrides:
+        logger.debug(f"Decoder parameter overrides from UI: {decoder_param_overrides}")
+        # Store overrides in cache for use by handle_vfo_decoder_state and check_decoder_params_changed
+        _decoder_param_overrides_cache[f"{sid}_{vfo_id}"] = decoder_param_overrides
+
+    # Update VFO state
     vfomanager.update_vfo_state(
         session_id=sid,
         vfo_id=vfo_id,
@@ -91,8 +129,6 @@ async def update_vfo_parameters(
         # as these decoders handle demodulation internally
         if "active" in data or "mode" in data:
             # Check if decoder needs raw IQ using decoder registry
-            from processing.decoderregistry import decoder_registry
-
             # If switching to a raw IQ decoder, stop any existing audio demodulator
             if decoder_registry.is_raw_iq_decoder(vfo_state.decoder):
                 # Get SDR ID from SessionTracker
@@ -100,8 +136,6 @@ async def update_vfo_parameters(
                 if sdr_id:
                     # Check if there's an active demodulator for this VFO
                     # and stop it since raw IQ decoders don't need audio demodulators
-                    from processing.processmanager import process_manager
-
                     process_info = process_manager.processes.get(sdr_id)
                     if process_info:
                         demod_entry = process_info.get("demodulators", {}).get(sid, {})
@@ -125,12 +159,36 @@ async def update_vfo_parameters(
 
         # Handle locked_transmitter_id changes - restart decoder to pick up new transmitter settings
         # Only restart if the VALUE actually changed (not just present in update)
+        transmitter_changed = False
         if "locked_transmitter_id" in data and vfo_state.decoder != "none":
             new_locked_transmitter_id = data.get("locked_transmitter_id")
             if old_locked_transmitter_id != new_locked_transmitter_id:
+                transmitter_changed = True
                 logger.info(
                     f"Locked transmitter changed for VFO {vfo_id} (from {old_locked_transmitter_id} to {new_locked_transmitter_id}) "
                     f"with active decoder {vfo_state.decoder} - restarting decoder"
+                )
+                await handle_vfo_decoder_state(vfo_state, sid, logger, force_restart=True)
+
+        # Check if decoder parameters changed (requires restart)
+        # This handles cases where modulation parameters change (e.g., LoRa SF/BW/CR)
+        # without changing the transmitter or decoder type
+        # Only check if decoder params were actually included in this update (optimization)
+        if (
+            not transmitter_changed
+            and vfo_state.decoder != "none"
+            and vfo_state.active
+            and decoder_param_overrides
+        ):
+            params_changed = await check_decoder_params_changed(
+                sdr_id=session_tracker.get_session_sdr(sid),
+                session_id=sid,
+                vfo_state=vfo_state,
+                logger=logger,
+            )
+            if params_changed:
+                logger.info(
+                    f"Decoder parameters changed for VFO {vfo_id} with decoder {vfo_state.decoder} - restarting decoder"
                 )
                 await handle_vfo_decoder_state(vfo_state, sid, logger, force_restart=True)
 
@@ -212,6 +270,139 @@ async def toggle_transcription(
     }
 
 
+async def check_decoder_params_changed(sdr_id, session_id, vfo_state, logger):
+    """
+    Check if decoder parameters have changed compared to the currently running decoder.
+
+    Compares the new configuration (generated from current VFO state) with the
+    stored configuration in the running decoder to detect parameter changes that
+    require a decoder restart.
+
+    Args:
+        sdr_id: SDR device identifier
+        session_id: Session identifier
+        vfo_state: Current VFO state
+        logger: Logger instance
+
+    Returns:
+        bool: True if parameters changed and restart is needed, False otherwise
+    """
+    if not sdr_id:
+        return False
+
+    vfo_number = vfo_state.vfo_number
+    decoder_name = vfo_state.decoder
+
+    # Get current decoder instance and stored config
+    current_decoder = process_manager.get_active_decoder(sdr_id, session_id, vfo_number)
+    if not current_decoder:
+        # No decoder running, no need to restart
+        return False
+
+    # Get the stored decoder entry which contains the config
+    process_info = process_manager.processes.get(sdr_id)
+    if not process_info:
+        return False
+
+    decoders_dict = process_info.get("decoders", {})
+    session_decoders = decoders_dict.get(session_id, {})
+    decoder_entry = session_decoders.get(vfo_number)
+
+    if not decoder_entry or not isinstance(decoder_entry, dict):
+        return False
+
+    old_config = decoder_entry.get("config")
+    if not old_config:
+        # No stored config, can't compare
+        return False
+
+    # Get list of parameters that trigger restart for this decoder type
+    restart_params = decoder_registry.get_restart_params(decoder_name)
+    if not restart_params:
+        # No restart parameters defined for this decoder
+        return False
+
+    # Generate new config from current VFO state
+    # We need satellite and transmitter info to regenerate config
+    transmitter_info = None
+    satellite_info = None
+
+    if vfo_state.locked_transmitter_id:
+        async with AsyncSessionLocal() as db_session:
+            result = await db_session.execute(
+                select(Transmitters).where(Transmitters.id == vfo_state.locked_transmitter_id)
+            )
+            transmitter_record = result.scalar_one_or_none()
+
+            if transmitter_record:
+                transmitter_info = {
+                    "id": transmitter_record.id,
+                    "description": transmitter_record.description,
+                    "mode": transmitter_record.mode,
+                    "baud": transmitter_record.baud,
+                    "downlink_low": transmitter_record.downlink_low,
+                    "downlink_high": transmitter_record.downlink_high,
+                    "center_frequency": vfo_state.center_freq,
+                    "bandwidth": vfo_state.bandwidth,
+                    "norad_cat_id": transmitter_record.norad_cat_id,
+                }
+
+                # Fetch satellite info
+                sat_result = await db_session.execute(
+                    select(Satellites).where(Satellites.norad_id == transmitter_record.norad_cat_id)
+                )
+                satellite_record = sat_result.scalar_one_or_none()
+
+                if satellite_record:
+                    satellite_info = {
+                        "norad_id": satellite_record.norad_id,
+                        "name": satellite_record.name,
+                        "alternative_name": satellite_record.alternative_name,
+                        "status": satellite_record.status,
+                        "image": satellite_record.image,
+                    }
+
+    # If no transmitter found, use placeholders (same as in handle_vfo_decoder_state)
+    if not transmitter_info:
+        transmitter_info = {
+            "description": f"VFO {vfo_number} Signal",
+            "mode": decoder_name.upper(),
+            "center_frequency": vfo_state.center_freq,
+            "bandwidth": vfo_state.bandwidth,
+        }
+
+    # Generate new config using DecoderConfigService
+    from processing.decoderconfigservice import decoder_config_service
+
+    # Get decoder parameter overrides from cache (if any)
+    override_key = f"{session_id}_{vfo_state.vfo_number}"
+    decoder_param_overrides = _decoder_param_overrides_cache.get(override_key, {})
+
+    new_config = decoder_config_service.get_config(
+        decoder_type=decoder_name,
+        satellite=satellite_info,
+        transmitter=transmitter_info,
+        vfo_freq=vfo_state.center_freq,
+        overrides=decoder_param_overrides,  # UI parameter overrides
+    )
+
+    # Compare only the parameters that trigger restart
+    for param in restart_params:
+        old_value = getattr(old_config, param, None)
+        new_value = getattr(new_config, param, None)
+
+        # Handle list comparisons (e.g., sync_word)
+        if isinstance(old_value, list) and isinstance(new_value, list):
+            if old_value != new_value:
+                logger.info(f"Decoder parameter '{param}' changed: {old_value} -> {new_value}")
+                return True
+        elif old_value != new_value:
+            logger.info(f"Decoder parameter '{param}' changed: {old_value} -> {new_value}")
+            return True
+
+    return False
+
+
 async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=False):
     """
     Start or stop decoder for a specific VFO based on its decoder setting.
@@ -239,8 +430,6 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
     requested_decoder = vfo_state.decoder
 
     # Use decoder registry to get decoder class
-    from processing.decoderregistry import decoder_registry
-
     decoder_class = decoder_registry.get_decoder_class(requested_decoder)
 
     # Get current decoder state for this specific VFO
@@ -298,6 +487,10 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
 
         data_queue = process_info["data_queue"]
 
+        # Get decoder parameter overrides from cache (if any)
+        override_key = f"{session_id}_{vfo_number}"
+        decoder_param_overrides = _decoder_param_overrides_cache.get(override_key, {})
+
         # Prepare decoder kwargs
         decoder_kwargs = {
             "sdr_id": sdr_id,
@@ -308,6 +501,7 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
             "output_dir": "data/decoded",
             "vfo_center_freq": vfo_state.center_freq,  # Pass VFO frequency for internal FM demod
             "vfo": vfo_state.vfo_number,  # Pass VFO number for status updates
+            "decoder_param_overrides": decoder_param_overrides,  # UI parameter overrides
         }
 
         # For decoders that support transmitter configuration, pass transmitter dict if available

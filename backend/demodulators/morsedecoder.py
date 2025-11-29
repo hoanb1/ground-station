@@ -24,6 +24,7 @@ import os
 import queue
 import threading
 import time
+import uuid
 from collections import deque
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -118,6 +119,10 @@ class MorseDecoder(threading.Thread):
         bandwidth=500,  # Bandwidth for tone detection (Hz)
     ):
         super().__init__(daemon=True, name=f"MorseDecoder-{session_id}")
+
+        # Generate unique decoder instance ID for tracking across restarts
+        self.decoder_id = str(uuid.uuid4())
+
         self.audio_queue = audio_queue
         self.data_queue = data_queue
         self.session_id = session_id
@@ -418,6 +423,7 @@ class MorseDecoder(threading.Thread):
         """Send status update to UI"""
         msg = {
             "type": "decoder-status",
+            "decoder_id": self.decoder_id,
             "status": status.value,
             "decoder_type": "morse",
             "session_id": self.session_id,
@@ -594,6 +600,7 @@ class MorseDecoder(threading.Thread):
         # Send final status update
         msg = {
             "type": "decoder-status",
+            "decoder_id": self.decoder_id,
             "status": "closed",
             "decoder_type": "morse",
             "session_id": self.session_id,

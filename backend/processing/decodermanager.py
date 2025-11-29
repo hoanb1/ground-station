@@ -249,19 +249,27 @@ class DecoderManager:
                 satellite = kwargs.get("satellite", {})
                 transmitter = kwargs.get("transmitter", {})
                 vfo_center_freq = kwargs.get("vfo_center_freq")
+                decoder_param_overrides = kwargs.get("decoder_param_overrides", {})
 
                 decoder_config = decoder_config_service.get_config(
                     decoder_type=decoder_name,
                     satellite=satellite,
                     transmitter=transmitter,
                     vfo_freq=vfo_center_freq,  # Pass VFO freq for weather pipeline detection
+                    overrides=decoder_param_overrides,  # UI parameter overrides
                 )
 
                 # Filter out internal parameters before passing to decoder
                 decoder_kwargs = {
                     k: v
                     for k, v in kwargs.items()
-                    if k not in ["vfo_center_freq", "satellite", "transmitter"]
+                    if k
+                    not in [
+                        "vfo_center_freq",
+                        "satellite",
+                        "transmitter",
+                        "decoder_param_overrides",
+                    ]
                 }
 
                 # Add resolved config parameters
@@ -300,19 +308,27 @@ class DecoderManager:
                 satellite = kwargs.get("satellite", {})
                 transmitter = kwargs.get("transmitter", {})
                 vfo_center_freq = kwargs.get("vfo_center_freq")
+                decoder_param_overrides = kwargs.get("decoder_param_overrides", {})
 
                 decoder_config = decoder_config_service.get_config(
                     decoder_type=decoder_name,
                     satellite=satellite,
                     transmitter=transmitter,
                     vfo_freq=vfo_center_freq,  # Pass VFO freq for weather pipeline detection
+                    overrides=decoder_param_overrides,  # UI parameter overrides
                 )
 
                 # Filter out internal parameters before passing to decoder
                 decoder_kwargs = {
                     k: v
                     for k, v in kwargs.items()
-                    if k not in ["vfo_center_freq", "satellite", "transmitter"]
+                    if k
+                    not in [
+                        "vfo_center_freq",
+                        "satellite",
+                        "transmitter",
+                        "decoder_param_overrides",
+                    ]
                 }
 
                 # Add resolved config parameters

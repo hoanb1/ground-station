@@ -1,6 +1,6 @@
 import { updateVFOParameters, setVFOProperty } from './vfo-slice.jsx';
 import { flushAudioBuffers } from '../dashboard/audio-service.js';
-import { normalizeTransmitterMode } from './vfo-config.js';
+import { normalizeTransmitterMode, mapParametersToBackend } from './vfo-config.js';
 
 // You might want to pass the socket as a parameter or get it differently
 let socketInstance = null;
@@ -14,11 +14,20 @@ export const setSocketForMiddleware = (socket) => {
 const filterUIOnlyFields = (vfoState) => {
     // frequencyOffset is UI-only (used for doppler offset calculations)
     // lockedTransmitterId is now sent to backend as locked_transmitter_id
-    const { frequencyOffset, lockedTransmitterId, ...backendFields } = vfoState;
+    // parameters is frontend-only (mapped to decoder-specific fields below)
+    const { frequencyOffset, lockedTransmitterId, parameters, ...backendFields } = vfoState;
 
     // Convert camelCase to snake_case for backend
     if (lockedTransmitterId !== undefined) {
         backendFields.locked_transmitter_id = lockedTransmitterId;
+    }
+
+    // Map decoder parameters from frontend format to backend format
+    // Frontend: { parameters: { lora_sf: 7, lora_bw: 125000, ... } }
+    // Backend: { sf: 7, bw: 125000, ... }
+    if (parameters && vfoState.decoder && vfoState.decoder !== 'none') {
+        const decoderParams = mapParametersToBackend(vfoState.decoder, parameters);
+        Object.assign(backendFields, decoderParams);
     }
 
     return backendFields;

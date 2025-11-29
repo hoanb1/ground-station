@@ -407,6 +407,7 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
             msg = {
                 "type": "decoder-status",
                 "decoder_type": "weather",
+                "decoder_id": self.decoder_id,
                 "session_id": self.session_id,
                 "vfo": self.vfo,
                 "timestamp": time.time(),
@@ -525,6 +526,7 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
             "type": "decoder-status",
             "status": status.value,
             "decoder_type": "weather",
+            "decoder_id": self.decoder_id,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
@@ -780,6 +782,7 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
             "type": "decoder-status",
             "status": "closed",
             "decoder_type": "weather",
+            "decoder_id": self.decoder_id,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),

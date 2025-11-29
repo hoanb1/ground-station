@@ -23,18 +23,10 @@ from demodulators.bpskdecoder import BPSKDecoder
 from demodulators.fskdecoder import FSKDecoder
 from demodulators.gfskdecoder import GFSKDecoder
 from demodulators.gmskdecoder import GMSKDecoder
+from demodulators.loradecoder import LoRaDecoder
 from demodulators.morsedecoder import MorseDecoder
 from demodulators.satdumpweatherdecoder import SatDumpWeatherDecoder
 from demodulators.sstvdecoder import SSTVDecoder
-
-# Try to import LoRa decoder (optional, requires gr-lora_sdr)
-try:
-    from demodulators.loradecoder import LoRaDecoder
-
-    LORA_AVAILABLE = True
-except ImportError:
-    LoRaDecoder = None
-    LORA_AVAILABLE = False
 
 
 @dataclass
@@ -48,6 +40,9 @@ class DecoderCapabilities:
     demodulator_mode: Optional[str]  # Specific mode for demodulator (e.g., "cw" for Morse)
     default_bandwidth: int  # Default bandwidth in Hz
     supports_transmitter_config: bool  # True = can use locked transmitter settings
+    restart_on_params: List[
+        str
+    ]  # List of DecoderConfig parameter names that trigger decoder restart
     description: str
 
     @property
@@ -89,6 +84,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=12500,  # 12.5 kHz for AFSK
                 supports_transmitter_config=True,
+                restart_on_params=[],  # TODO: Add AFSK-specific parameters
                 description="Audio Frequency Shift Keying decoder (APRS, packet radio)",
             ),
             "sstv": DecoderCapabilities(
@@ -99,6 +95,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=12500,  # 12.5 kHz for SSTV
                 supports_transmitter_config=False,
+                restart_on_params=[],  # TODO: Add SSTV-specific parameters
                 description="Slow-scan television image decoder",
             ),
             "morse": DecoderCapabilities(
@@ -109,6 +106,7 @@ class DecoderRegistry:
                 demodulator_mode="cw",  # CW mode specifically
                 default_bandwidth=2500,  # 2.5 kHz for CW
                 supports_transmitter_config=False,
+                restart_on_params=[],  # TODO: Add Morse-specific parameters
                 description="Morse code (CW) decoder",
             ),
             "fsk": DecoderCapabilities(
@@ -119,6 +117,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
+                restart_on_params=[],  # TODO: Add FSK-specific parameters (baudrate, deviation, framing)
                 description="Frequency Shift Keying decoder (FSK/GFSK/GMSK)",
             ),
             "gmsk": DecoderCapabilities(
@@ -129,6 +128,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
+                restart_on_params=[],  # TODO: Add GMSK-specific parameters (baudrate, deviation, framing)
                 description="Gaussian Minimum Shift Keying decoder (alias to FSK)",
             ),
             "gfsk": DecoderCapabilities(
@@ -139,6 +139,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
+                restart_on_params=[],  # TODO: Add GFSK-specific parameters (baudrate, deviation, framing)
                 description="Gaussian Frequency Shift Keying decoder",
             ),
             "bpsk": DecoderCapabilities(
@@ -149,6 +150,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
+                restart_on_params=[],  # TODO: Add BPSK-specific parameters (baudrate, differential, framing)
                 description="Binary Phase Shift Keying decoder",
             ),
             "weather": DecoderCapabilities(
@@ -159,13 +161,10 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=40000,  # 40 kHz default (APT)
                 supports_transmitter_config=True,
+                restart_on_params=[],  # TODO: Add weather-specific parameters (pipeline, target_sample_rate)
                 description="Weather satellite decoder using SatDump (NOAA, Meteor, GOES, etc.)",
             ),
-        }
-
-        # Add LoRa decoder only if gr-lora_sdr is available
-        if LORA_AVAILABLE:
-            self._decoders["lora"] = DecoderCapabilities(
+            "lora": DecoderCapabilities(
                 name="lora",
                 decoder_class=LoRaDecoder,
                 needs_raw_iq=True,  # Works on raw IQ samples
@@ -173,8 +172,10 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=125000,  # 125 kHz typical
                 supports_transmitter_config=False,
+                restart_on_params=["sf", "bw", "cr", "sync_word", "preamble_len", "fldro"],
                 description="LoRa chirp spread spectrum decoder",
-            )
+            ),
+        }
 
         self._initialized = True
 
@@ -223,6 +224,11 @@ class DecoderRegistry:
     def exists(self, decoder_name: str) -> bool:
         """Check if a decoder exists in the registry"""
         return decoder_name in self._decoders
+
+    def get_restart_params(self, decoder_name: str) -> List[str]:
+        """Get list of parameter names that trigger decoder restart"""
+        caps = self.get_capabilities(decoder_name)
+        return caps.restart_on_params if caps else []
 
 
 # Singleton instance

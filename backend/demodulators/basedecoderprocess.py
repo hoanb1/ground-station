@@ -19,6 +19,7 @@
 import logging
 import multiprocessing
 import subprocess
+import uuid
 from typing import Any, Dict
 
 from demodulators.basedecoder import BaseDecoder
@@ -75,6 +76,9 @@ class BaseDecoderProcess(BaseDecoder, multiprocessing.Process):
         """
         # Get decoder type from subclass for process naming
         decoder_type = self._get_decoder_type_for_init()
+
+        # Generate unique decoder instance ID for tracking across restarts
+        self.decoder_id = str(uuid.uuid4())
 
         # Initialize multiprocessing.Process
         multiprocessing.Process.__init__(

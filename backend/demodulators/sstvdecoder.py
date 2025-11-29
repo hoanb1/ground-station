@@ -26,6 +26,7 @@ import os
 import queue
 import threading
 import time
+import uuid
 from enum import Enum
 from typing import Any, Dict
 
@@ -207,6 +208,10 @@ class SSTVDecoder(threading.Thread):
         vfo=None,
     ):
         super().__init__(daemon=True, name=f"SSTVDecoder-{session_id}")
+
+        # Generate unique decoder instance ID for tracking across restarts
+        self.decoder_id = str(uuid.uuid4())
+
         self.audio_queue = audio_queue
         self.data_queue = data_queue
         self.session_id = session_id
@@ -481,6 +486,7 @@ class SSTVDecoder(threading.Thread):
     def _send_status_update(self, status, mode_name=None):
         msg = {
             "type": "decoder-status",
+            "decoder_id": self.decoder_id,
             "status": status.value,
             "mode": mode_name,
             "decoder_type": "sstv",
@@ -800,6 +806,7 @@ class SSTVDecoder(threading.Thread):
         # Send final status update indicating decoder is closing
         msg = {
             "type": "decoder-status",
+            "decoder_id": self.decoder_id,
             "status": "closed",
             "mode": None,
             "decoder_type": "sstv",

@@ -31,6 +31,7 @@ import VolumeUp from '@mui/icons-material/VolumeUp';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import CloseIcon from '@mui/icons-material/Close';
+import SettingsIcon from '@mui/icons-material/Settings';
 // import TranscribeIcon from '@mui/icons-material/Transcribe';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
@@ -38,7 +39,8 @@ import {SquelchIcon} from "../common/dataurl-icons.jsx";
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import TransmittersTable from '../satellites/transmitters-table.jsx';
-import { isLockedBandwidth, getEffectiveMode, getDecoderConfig } from './vfo-config.js';
+import { isLockedBandwidth, getEffectiveMode, getDecoderConfig, getDecoderParameters } from './vfo-config.js';
+import DecoderParamsDialog from './decoder-params-dialog.jsx';
 
 const BANDWIDTHS = {
     "500": "500 Hz",
@@ -85,6 +87,8 @@ const VfoAccordion = ({
     const squelchSliderRef = React.useRef(null);
     const volumeSliderRef = React.useRef(null);
     const [transmittersDialogOpen, setTransmittersDialogOpen] = React.useState(false);
+    const [decoderParamsDialogOpen, setDecoderParamsDialogOpen] = React.useState(false);
+    const [decoderParamsVfoIndex, setDecoderParamsVfoIndex] = React.useState(null);
 
     // Get doppler-corrected transmitters from Redux state (includes alive field)
     const transmitters = useSelector(state => state.targetSatTrack.rigData.transmitters || []);
@@ -93,6 +97,26 @@ const VfoAccordion = ({
     const satelliteDetails = useSelector(state => state.targetSatTrack.satelliteData?.details || null);
     const satelliteTransmitters = useSelector(state => state.targetSatTrack.satelliteData?.transmitters || []);
     const targetSatelliteName = satelliteDetails?.name || '';
+
+    // Format decoder parameters into short notation
+    const formatDecoderParamsSummary = (vfoIndex) => {
+        const vfo = vfoMarkers[vfoIndex];
+        if (!vfo || !vfo.decoder || vfo.decoder === 'none') return '';
+
+        const decoder = vfo.decoder;
+        const params = vfo.parameters || {};
+
+        if (decoder === 'lora') {
+            const sf = params.lora_sf ?? 7;
+            const bw = params.lora_bw ?? 125000;
+            const cr = params.lora_cr ?? 1;
+            const bwKhz = bw / 1000;
+            return `SF${sf} BW${bwKhz}kHz CR4/${cr + 4}`;
+        }
+
+        // Add other decoders here in the future
+        return 'Configure...';
+    };
 
     // Combine details and transmitters for the TransmittersTable component
     const targetSatelliteData = satelliteDetails ? {
@@ -751,6 +775,46 @@ const VfoAccordion = ({
                                 <ToggleButton value="afsk">{t('vfo.decoders_modes.afsk', 'AFSK')}</ToggleButton>
                                 <ToggleButton value="weather">{t('vfo.decoders_modes.weather', 'Weather')}</ToggleButton>
                             </ToggleButtonGroup>
+
+                            {/* Decoder Parameters Link - Click to open dialog */}
+                            {vfoMarkers[vfoIndex]?.decoder && vfoMarkers[vfoIndex].decoder !== 'none' && (
+                                <Box sx={{ mt: 1.5, width: '100%' }}>
+                                    <Link
+                                        component="button"
+                                        variant="body2"
+                                        onClick={() => {
+                                            setDecoderParamsVfoIndex(vfoIndex);
+                                            setDecoderParamsDialogOpen(true);
+                                        }}
+                                        sx={{
+                                            width: '100%',
+                                            fontSize: '0.875rem',
+                                            color: 'text.primary',
+                                            textDecoration: 'none',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: 1,
+                                            py: 1,
+                                            px: 2,
+                                            borderRadius: 1,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                            },
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        <SettingsIcon sx={{ fontSize: '1rem', color: 'primary.main' }} />
+                                        <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary', flex: 1 }}>
+                                            {formatDecoderParamsSummary(vfoIndex)}
+                                        </Box>
+                                    </Link>
+                                </Box>
+                            )}
                         </Box>
 
                         <Box sx={{ mt: 2 }}>
@@ -832,7 +896,6 @@ const VfoAccordion = ({
                             </ToggleButtonGroup>
                         </Box>
 
-
                     </Box>
                 ))}
             </AccordionDetails>
@@ -865,6 +928,16 @@ const VfoAccordion = ({
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Decoder Parameters Dialog */}
+            <DecoderParamsDialog
+                open={decoderParamsDialogOpen}
+                onClose={() => setDecoderParamsDialogOpen(false)}
+                vfoIndex={decoderParamsVfoIndex}
+                vfoMarkers={vfoMarkers}
+                vfoActive={vfoActive}
+                onVFOPropertyChange={onVFOPropertyChange}
+            />
         </Accordion>
     );
 };

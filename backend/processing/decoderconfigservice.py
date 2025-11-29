@@ -130,7 +130,7 @@ class DecoderConfigService:
         detected_config.satellite = satellite if satellite else None
         detected_config.transmitter = transmitter if transmitter else None
 
-        self.logger.info(f"Resolved {decoder_type.upper()} config: {detected_config.to_dict()}")
+        self.logger.debug(f"Resolved {decoder_type.upper()} config: {detected_config.to_dict()}")
         return detected_config
 
     def _resolve_baudrate(self, transmitter: Dict, overrides: Dict) -> int:
@@ -335,6 +335,20 @@ class DecoderConfigService:
         if "differential" in overrides:
             config.differential = overrides["differential"]
 
+        # LoRa-specific overrides
+        if "sf" in overrides:
+            config.sf = overrides["sf"]
+        if "bw" in overrides:
+            config.bw = overrides["bw"]
+        if "cr" in overrides:
+            config.cr = overrides["cr"]
+        if "sync_word" in overrides:
+            config.sync_word = overrides["sync_word"]
+        if "preamble_len" in overrides:
+            config.preamble_len = overrides["preamble_len"]
+        if "fldro" in overrides:
+            config.fldro = overrides["fldro"]
+
         config.config_source = "manual"
         return config
 
@@ -375,7 +389,7 @@ class DecoderConfigService:
         config.satellite = satellite
         config.transmitter = transmitter
 
-        self.logger.info(
+        self.logger.debug(
             f"Resolved weather satellite config: pipeline={config.pipeline}, "
             f"sample_rate={config.target_sample_rate}Hz"
         )
