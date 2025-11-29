@@ -55,6 +55,12 @@ class DecoderConfig:
     cr: Optional[int] = None  # Coding rate (1-4, corresponding to 4/5 through 4/8)
     sync_word: Optional[list] = None  # Sync word ([0, 0] for auto-detect)
 
+    # Weather satellite specific parameters (SatDump)
+    pipeline: Optional[str] = None  # SatDump pipeline name (e.g., 'noaa_apt', 'meteor_m2-x_lrpt')
+    target_sample_rate: Optional[int] = (
+        None  # Target sample rate for pipeline (e.g., 48000 for APT)
+    )
+
     # Optional metadata
     packet_size: Optional[int] = None  # Expected packet size in bytes
 
@@ -87,6 +93,8 @@ class DecoderConfig:
             and self.bw == other.bw
             and self.cr == other.cr
             and self.sync_word == other.sync_word
+            and self.pipeline == other.pipeline
+            and self.target_sample_rate == other.target_sample_rate
         )
 
     def __hash__(self):
@@ -102,6 +110,8 @@ class DecoderConfig:
                 self.bw,
                 self.cr,
                 tuple(self.sync_word) if self.sync_word else None,
+                self.pipeline,
+                self.target_sample_rate,
             )
         )
 
@@ -118,6 +128,8 @@ class DecoderConfig:
             "bw": self.bw,
             "cr": self.cr,
             "sync_word": self.sync_word,
+            "pipeline": self.pipeline,
+            "target_sample_rate": self.target_sample_rate,
             "packet_size": self.packet_size,
             "satellite": self.satellite,
             "transmitter": self.transmitter,

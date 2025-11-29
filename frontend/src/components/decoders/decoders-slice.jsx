@@ -104,16 +104,20 @@ export const decodersSlice = createSlice({
                     state.active[decoderKey].progress = progress;
                 }
 
-                // Update info if provided (decoder configuration: baudrate, framing, etc.)
+                // Merge info if provided (decoder configuration: baudrate, framing, etc.)
+                // Use merge instead of replace to preserve fields from decoder-progress messages
                 if (info !== undefined) {
-                    state.active[decoderKey].info = info;
+                    state.active[decoderKey].info = {
+                        ...state.active[decoderKey].info,
+                        ...info
+                    };
                 }
             }
         },
 
         // Progress update
         decoderProgressUpdated: (state, action) => {
-            const { session_id, vfo, progress, timestamp } = action.payload;
+            const { session_id, vfo, progress, timestamp, info } = action.payload;
 
             // Create unique key combining session_id and VFO number
             const decoderKey = vfo ? `${session_id}_vfo${vfo}` : session_id;
@@ -121,6 +125,14 @@ export const decodersSlice = createSlice({
             if (state.active[decoderKey]) {
                 state.active[decoderKey].progress = progress;
                 state.active[decoderKey].last_update = timestamp;
+
+                // Merge info if provided (e.g., SatDump status: sync_status, snr_db, frames)
+                if (info !== undefined) {
+                    state.active[decoderKey].info = {
+                        ...state.active[decoderKey].info,
+                        ...info
+                    };
+                }
             }
         },
 

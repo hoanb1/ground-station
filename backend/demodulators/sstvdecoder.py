@@ -526,12 +526,10 @@ class SSTVDecoder(threading.Thread):
         msg = {
             "type": "decoder-progress",
             "progress": progress,
-            "current_line": current_line,
-            "total_lines": total_lines,
-            "mode": mode_name,
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
+            "info": {"current_line": current_line, "total_lines": total_lines, "mode": mode_name},
         }
         logger.info(f"Sending progress update: {progress}% (line {current_line}/{total_lines})")
         try:

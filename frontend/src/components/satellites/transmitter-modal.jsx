@@ -89,6 +89,8 @@ const MODE_OPTIONS = [
     {name: "SSTV", value: "SSTV"},
     {name: "USB", value: "USB"},
     {name: "WSJT", value: "WSJT"},
+    {name: "GGAK", value: "GGAK"},
+    {name: "PGS", value: "PGS"},
 ];
 
 

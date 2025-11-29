@@ -277,6 +277,31 @@ export const canvasDrawingUtils = {
                     ctx.fillStyle = '#ffffff';
                     ctx.textAlign = 'center';
                     ctx.fillText(decoderText, centerX, secondaryLabelTop + 12);
+                } else if (decoderType === 'weather') {
+                    // Weather decoder-specific label format
+                    const syncStatus = decoderInfo.info?.sync_status || 'nosync';
+                    const transmitterMode = decoderInfo.info?.transmitter || 'UNKNOWN';
+                    const snrDb = decoderInfo.info?.snr_db !== null && decoderInfo.info?.snr_db !== undefined
+                        ? decoderInfo.info.snr_db.toFixed(1)
+                        : '0.0';
+
+                    const decoderText = `${syncStatus.toUpperCase()} | ${transmitterMode.toUpperCase()} | SNR ${snrDb} dB`;
+
+                    ctx.font = '10px Monospace';
+                    const decoderTextMetrics = ctx.measureText(decoderText);
+                    const decoderLabelWidth = decoderTextMetrics.width + 8;
+                    const decoderLabelHeight = 16;
+
+                    // Draw background
+                    ctx.fillStyle = `${color}${opacity}`;
+                    ctx.beginPath();
+                    ctx.roundRect(centerX - decoderLabelWidth / 2, secondaryLabelTop, decoderLabelWidth, decoderLabelHeight, 2);
+                    ctx.fill();
+
+                    // Draw text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(decoderText, centerX, secondaryLabelTop + 12);
                 } else {
                     // Standard decoder label (status/progress/mode)
                     const parts = [];
@@ -285,8 +310,10 @@ export const canvasDrawingUtils = {
                     if (shouldShowDecoderStatus(decoderType) && decoderInfo.status) {
                         parts.push(decoderInfo.status);
                     }
-                    if (shouldShowDecoderMode(decoderType) && decoderInfo.mode) {
-                        parts.push(decoderInfo.mode);
+                    // Mode can be in top-level (legacy) or info field (standardized)
+                    const mode = decoderInfo.info?.mode || decoderInfo.mode;
+                    if (shouldShowDecoderMode(decoderType) && mode) {
+                        parts.push(mode);
                     }
                     if (shouldShowDecoderProgress(decoderType) &&
                         decoderInfo.progress !== null &&

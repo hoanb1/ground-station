@@ -673,6 +673,24 @@ const VfoAccordion = ({
                                                 }
                                             } else if (newValue === 'afsk') {
                                                 updates.bandwidth = 3300; // 3.3 kHz for AFSK
+                                            } else if (newValue === 'weather') {
+                                                // Get locked transmitter for weather satellite bandwidth calculation
+                                                const currentVFO = vfoMarkers[vfoIndex];
+                                                const lockedTransmitter = currentVFO?.lockedTransmitterId
+                                                    ? transmitters.find(tx => tx.id === currentVFO.lockedTransmitterId)
+                                                    : null;
+
+                                                if (lockedTransmitter) {
+                                                    // Use calculateBandwidth from vfo-config.js
+                                                    const decoderConfig = getDecoderConfig('weather');
+                                                    if (decoderConfig && decoderConfig.calculateBandwidth) {
+                                                        updates.bandwidth = decoderConfig.calculateBandwidth(lockedTransmitter);
+                                                    } else {
+                                                        updates.bandwidth = 40000; // Fallback to default (APT)
+                                                    }
+                                                } else {
+                                                    updates.bandwidth = 40000; // Default to APT bandwidth (40 kHz)
+                                                }
                                             }
 
                                             onVFOPropertyChange(vfoIndex, updates);
@@ -731,6 +749,7 @@ const VfoAccordion = ({
                                 <ToggleButton value="gfsk">{t('vfo.decoders_modes.gfsk', 'GFSK')}</ToggleButton>
                                 <ToggleButton value="bpsk">{t('vfo.decoders_modes.bpsk', 'BPSK')}</ToggleButton>
                                 <ToggleButton value="afsk">{t('vfo.decoders_modes.afsk', 'AFSK')}</ToggleButton>
+                                <ToggleButton value="weather">{t('vfo.decoders_modes.weather', 'Weather')}</ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
 

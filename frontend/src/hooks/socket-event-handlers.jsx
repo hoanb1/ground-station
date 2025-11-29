@@ -492,7 +492,8 @@ export const useSocketEventHandlers = (socket) => {
                         session_id: data.session_id,
                         vfo: data.vfo,
                         progress: data.progress,
-                        timestamp: data.timestamp
+                        timestamp: data.timestamp,
+                        info: data.info
                     }));
                     break;
 

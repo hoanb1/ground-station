@@ -538,6 +538,14 @@ const VFOMarkersContainer = ({
                             ? `SF${sf} BW${bw} CR${cr}`
                             : 'DETECTING';
                         secondaryLabelText = `${status.toUpperCase()} | ${loraParams}`;
+                    } else if (decoderType === 'weather') {
+                        const syncStatus = decoderInfo.info?.sync_status || 'nosync';
+                        const transmitterMode = decoderInfo.info?.transmitter || 'UNKNOWN';
+                        const snrDb = decoderInfo.info?.snr_db !== null && decoderInfo.info?.snr_db !== undefined
+                            ? decoderInfo.info.snr_db.toFixed(1)
+                            : '0.0';
+
+                        secondaryLabelText = `${syncStatus.toUpperCase()} | ${transmitterMode.toUpperCase()} | SNR ${snrDb} dB`;
                     } else {
                         // For other decoder types, construct the label
                         const parts = [decoderType.toUpperCase()];

@@ -263,6 +263,12 @@ loggers:
       - default
     propagate: no
 
+  demodulator-manager:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

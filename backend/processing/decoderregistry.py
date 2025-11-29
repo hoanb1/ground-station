@@ -24,6 +24,7 @@ from demodulators.fskdecoder import FSKDecoder
 from demodulators.gfskdecoder import GFSKDecoder
 from demodulators.gmskdecoder import GMSKDecoder
 from demodulators.morsedecoder import MorseDecoder
+from demodulators.satdumpweatherdecoder import SatDumpWeatherDecoder
 from demodulators.sstvdecoder import SSTVDecoder
 
 # Try to import LoRa decoder (optional, requires gr-lora_sdr)
@@ -149,6 +150,16 @@ class DecoderRegistry:
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
                 description="Binary Phase Shift Keying decoder",
+            ),
+            "weather": DecoderCapabilities(
+                name="weather",
+                decoder_class=SatDumpWeatherDecoder,
+                needs_raw_iq=True,  # Works on raw IQ samples
+                required_demodulator=None,  # No demodulator needed
+                demodulator_mode=None,
+                default_bandwidth=40000,  # 40 kHz default (APT)
+                supports_transmitter_config=True,
+                description="Weather satellite decoder using SatDump (NOAA, Meteor, GOES, etc.)",
             ),
         }
 
