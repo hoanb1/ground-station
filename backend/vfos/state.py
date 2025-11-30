@@ -96,8 +96,8 @@ class VFOManager:
             vfo_state.bandwidth = bandwidth
 
         # update modulation
-        if modulation != "none":
-            vfo_state.modulation = modulation
+        # Always update - modulation is a required field that defaults to "none"
+        vfo_state.modulation = modulation
 
         # check if active
         if active is not None:
@@ -132,17 +132,12 @@ class VFOManager:
             vfo_state.transcription_language = transcription_language
 
         # check decoder setting
-        if decoder != "none":
-            vfo_state.decoder = decoder
-        else:
-            vfo_state.decoder = "none"
+        # Always update - decoder is a required field that defaults to "none"
+        vfo_state.decoder = decoder
 
         # check locked transmitter ID
-        # locked_transmitter_id is always a string: either a transmitter ID or "none"
-        if locked_transmitter_id != "none":
-            vfo_state.locked_transmitter_id = locked_transmitter_id
-        else:
-            vfo_state.locked_transmitter_id = "none"
+        # Always update - locked_transmitter_id is a required field that defaults to "none"
+        vfo_state.locked_transmitter_id = locked_transmitter_id
 
         # logger.info(f"vfo states for session {session_id}: {session_vfos}")
 
