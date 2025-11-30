@@ -142,6 +142,8 @@ class VFOManager:
         # locked_transmitter_id is always a string: either a transmitter ID or "none"
         if locked_transmitter_id != "none":
             vfo_state.locked_transmitter_id = locked_transmitter_id
+        else:
+            vfo_state.locked_transmitter_id = "none"
 
         # logger.info(f"vfo states for session {session_id}: {session_vfos}")
 
