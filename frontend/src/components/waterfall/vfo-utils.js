@@ -48,13 +48,13 @@ export const canvasDrawingUtils = {
         ctx.stroke();
     },
 
-    drawVFOEdges: (ctx, mode, leftEdgeX, rightEdgeX, height, color, opacity, lineWidth) => {
+    drawVFOEdges: (ctx, mode, leftEdgeX, rightEdgeX, height, color, opacity, lineWidth, decoder = 'none') => {
         ctx.beginPath();
         ctx.strokeStyle = `${color}${opacity}`;
         ctx.lineWidth = lineWidth;
         ctx.setLineDash([4, 4]);
 
-        const bandwidthType = getBandwidthType(mode);
+        const bandwidthType = getBandwidthType(mode, decoder);
 
         if (bandwidthType === 'single-sided-upper') {
             // USB, CW - only right edge
@@ -407,7 +407,8 @@ export const calculateBandwidthChange = (currentBandwidth, freqDelta, dragMode, 
 export const calculateVFOFrequencyBounds = (marker, startFreq, freqRange, actualWidth) => {
     const bandwidth = marker.bandwidth || 3000;
     const mode = marker.mode || 'FM';
-    const bandwidthType = getBandwidthType(mode);
+    const decoder = marker.decoder || 'none';
+    const bandwidthType = getBandwidthType(mode, decoder);
 
     let markerLowFreq, markerHighFreq, leftEdgeX, rightEdgeX;
 
@@ -465,7 +466,8 @@ export const generateVFOLabelText = (marker, mode, bandwidth, formatFrequency) =
         displayMode = demodConfig ? demodConfig.displayName : mode;
     }
     const modeText = ` [${displayMode}]`;
-    const bwText = formatBandwidthLabel(mode, bandwidth);
+    const decoder = marker.decoder || 'none';
+    const bwText = formatBandwidthLabel(mode, bandwidth, decoder);
     return `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
 };
 

@@ -24,7 +24,7 @@ class VFOState:
     transcription_language: str = "en"  # Language code for transcription
     decoder: str = "none"  # Decoder type: none, sstv, afsk, gmsk, gfsk, bpsk, lora, morse
     locked_transmitter_id: Optional[str] = (
-        None  # Transmitter ID locked to this VFO (source of truth for baud, freq, etc.)
+        "none"  # Transmitter ID locked to this VFO (none = unlocked)
     )
 
 
@@ -138,7 +138,9 @@ class VFOManager:
             vfo_state.decoder = decoder
 
         # check locked transmitter ID
-        if locked_transmitter_id is not None:
+        # Only update if explicitly provided (not the sentinel value)
+        # locked_transmitter_id is always a string: either a transmitter ID or "none"
+        if locked_transmitter_id != "none":
             vfo_state.locked_transmitter_id = locked_transmitter_id
 
         # logger.info(f"vfo states for session {session_id}: {session_vfos}")

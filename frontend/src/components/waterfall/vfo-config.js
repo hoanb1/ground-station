@@ -32,7 +32,7 @@
 export const DEMODULATORS = {
     NONE: {
         internalName: 'none',
-        displayName: 'None',
+        displayName: 'none',
         description: 'No demodulation - center line only',
         defaultBandwidth: 1000, // 1 kHz minimal
         minBandwidth: 100,
@@ -41,7 +41,6 @@ export const DEMODULATORS = {
         showBothEdges: false,
         allowLeftEdgeDrag: false,
         allowRightEdgeDrag: false,
-        centerLineOnly: true, // only draw center line, no sidebands
         bandwidthLabel: (bw) => '', // no bandwidth label for center-only
         lockedBandwidth: true, // bandwidth cannot be changed by user
     },
@@ -56,7 +55,6 @@ export const DEMODULATORS = {
         showBothEdges: true, // show both left and right edges on waterfall
         allowLeftEdgeDrag: true,
         allowRightEdgeDrag: true,
-        centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`, // show as ±5kHz
         lockedBandwidth: false, // bandwidth can be changed by user
     },
@@ -71,7 +69,6 @@ export const DEMODULATORS = {
         showBothEdges: true,
         allowLeftEdgeDrag: true,
         allowRightEdgeDrag: true,
-        centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
         lockedBandwidth: false, // bandwidth can be changed by user
     },
@@ -86,7 +83,6 @@ export const DEMODULATORS = {
         showBothEdges: true,
         allowLeftEdgeDrag: true,
         allowRightEdgeDrag: true,
-        centerLineOnly: false,
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
         lockedBandwidth: false, // bandwidth can be changed by user
     },
@@ -101,7 +97,6 @@ export const DEMODULATORS = {
         showBothEdges: false,
         allowLeftEdgeDrag: false,
         allowRightEdgeDrag: true,
-        centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
         lockedBandwidth: false, // bandwidth can be changed by user
     },
@@ -116,7 +111,6 @@ export const DEMODULATORS = {
         showBothEdges: false,
         allowLeftEdgeDrag: true,
         allowRightEdgeDrag: false,
-        centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
         lockedBandwidth: false, // bandwidth can be changed by user
     },
@@ -131,7 +125,6 @@ export const DEMODULATORS = {
         showBothEdges: false,
         allowLeftEdgeDrag: false,
         allowRightEdgeDrag: true,
-        centerLineOnly: false,
         bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
         lockedBandwidth: false, // bandwidth can be changed by user
     },
@@ -144,11 +137,8 @@ export const DEMODULATORS = {
 export const DECODERS = {
     none: {
         internalName: 'none',
-        displayName: 'None',
-        description: 'No decoder - audio pass-through',
-        requiresDemodulator: null, // can work with any demodulator
-        overrideDemodulator: null, // doesn't override demodulator mode
-        centerLineOnly: false, // doesn't force center-only, respects demodulator setting
+        displayName: 'none',
+        description: 'No decoder',
         hasStatusDisplay: false,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -158,23 +148,22 @@ export const DECODERS = {
         internalName: 'sstv',
         displayName: 'SSTV',
         description: 'Slow Scan Television decoder',
-        requiresDemodulator: 'FM', // requires FM demodulation
-        overrideDemodulator: 'FM', // force FM mode when active
-        centerLineOnly: false,
         hasStatusDisplay: true, // shows decoder status (e.g., "detecting", "decoding")
         hasProgressDisplay: true, // shows percentage progress
         hasTextOutput: false, // no text output, outputs images
         hasModeDisplay: true, // shows SSTV mode (e.g., "Martin M1", "Scottie S1")
         defaultBandwidth: 3300, // 3.3 kHz for SSTV (audio content ~1200-2300 Hz)
+        bandwidthType: 'double-sided',
+        showBothEdges: true,
+        allowLeftEdgeDrag: true,
+        allowRightEdgeDrag: true,
+        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
         lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     morse: {
         internalName: 'morse',
         displayName: 'Morse',
         description: 'Morse code (CW) decoder',
-        requiresDemodulator: 'CW', // requires CW/SSB demodulation
-        overrideDemodulator: 'CW', // force CW mode when active
-        centerLineOnly: false,
         hasStatusDisplay: false, // no status, always listening
         hasProgressDisplay: false, // no progress bar
         hasTextOutput: true, // outputs decoded text
@@ -184,42 +173,49 @@ export const DECODERS = {
         textPlaceholder: 'listening', // what to show when no text yet
         defaultBandwidth: 2500, // 2.5 kHz for Morse decoder (narrowband)
         lockedBandwidth: false, // allows demodulator's lock setting to apply
+        // Bandwidth display override - render like CW mode (single-sided-upper)
+        bandwidthType: 'single-sided-upper',
+        showBothEdges: false,
+        allowLeftEdgeDrag: false,
+        allowRightEdgeDrag: true,
+        bandwidthLabel: (bw) => `${(bw / 1000).toFixed(1)}kHz`,
     },
     apt: {
         internalName: 'apt',
         displayName: 'APT',
         description: 'Automatic Picture Transmission (NOAA weather satellites)',
-        requiresDemodulator: 'FM',
-        overrideDemodulator: 'FM',
-        centerLineOnly: false,
         hasStatusDisplay: true,
         hasProgressDisplay: true,
         hasTextOutput: false,
         hasModeDisplay: false,
         defaultBandwidth: 40000, // 40 kHz for APT (NOAA APT signal bandwidth)
+        bandwidthType: 'double-sided',
+        showBothEdges: true,
+        allowLeftEdgeDrag: true,
+        allowRightEdgeDrag: true,
+        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
         lockedBandwidth: false, // allows demodulator's lock setting to apply
     },
     lora: {
         internalName: 'lora',
         displayName: 'LoRa',
         description: 'LoRa decoder (processes raw IQ, no demodulator)',
-        requiresDemodulator: null, // raw IQ decoder
-        overrideDemodulator: 'none', // disable audio demodulator
-        centerLineOnly: true, // only show center line for raw IQ
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
         hasModeDisplay: true, // shows LoRa parameters (SF, BW, CR)
         defaultBandwidth: 500000, // 500 kHz for LoRa (auto-detects 125/250/500 kHz signals)
+        bandwidthType: 'center-only', // only show center line for raw IQ
+        showBothEdges: false,
+        allowLeftEdgeDrag: false,
+        allowRightEdgeDrag: false,
+        bandwidthLabel: (bw) => '',
         lockedBandwidth: true, // bandwidth is determined by LoRa parameters, not user-adjustable
     },
     gmsk: {
         internalName: 'gmsk',
         displayName: 'GMSK',
         description: 'GMSK decoder (Gaussian MSK, processes raw IQ, no demodulator)',
-        requiresDemodulator: null, // raw IQ decoder
-        overrideDemodulator: 'none', // disable audio demodulator
-        centerLineOnly: false, // show sidebands representing actual bandwidth
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -244,9 +240,6 @@ export const DECODERS = {
         internalName: 'gfsk',
         displayName: 'GFSK',
         description: 'GFSK decoder (Gaussian FSK, processes raw IQ, no demodulator)',
-        requiresDemodulator: null, // raw IQ decoder
-        overrideDemodulator: 'none', // disable audio demodulator
-        centerLineOnly: false, // show sidebands representing actual bandwidth
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -271,9 +264,6 @@ export const DECODERS = {
         internalName: 'fsk',
         displayName: 'FSK',
         description: 'FSK decoder (Frequency Shift Keying, processes raw IQ, no demodulator)',
-        requiresDemodulator: null, // raw IQ decoder
-        overrideDemodulator: 'none', // disable audio demodulator
-        centerLineOnly: false, // show sidebands representing actual bandwidth
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -298,9 +288,6 @@ export const DECODERS = {
         internalName: 'bpsk',
         displayName: 'BPSK',
         description: 'BPSK decoder with AX.25 support (processes raw IQ, no demodulator)',
-        requiresDemodulator: null, // raw IQ decoder
-        overrideDemodulator: 'none', // disable audio demodulator
-        centerLineOnly: false, // show sidebands representing actual bandwidth
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -325,23 +312,22 @@ export const DECODERS = {
         internalName: 'afsk',
         displayName: 'AFSK',
         description: 'Audio FSK decoder (APRS, packet radio - requires FM demodulator)',
-        requiresDemodulator: 'FM', // requires FM demodulation
-        overrideDemodulator: 'FM', // force FM mode when active
-        centerLineOnly: false,
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
         hasModeDisplay: false,
         defaultBandwidth: 12500, // 12.5 kHz for AFSK (typical FM channel bandwidth)
+        bandwidthType: 'double-sided',
+        showBothEdges: true,
+        allowLeftEdgeDrag: true,
+        allowRightEdgeDrag: true,
+        bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
         lockedBandwidth: false, // allows user adjustment (FM carrier bandwidth)
     },
     weather: {
         internalName: 'weather',
         displayName: 'Weather',
         description: 'Weather satellite decoder (SatDump: NOAA, Meteor, GOES, etc.)',
-        requiresDemodulator: null, // raw IQ decoder (like GMSK/BPSK)
-        overrideDemodulator: 'none', // disable audio demodulator
-        centerLineOnly: true, // center line only - bandwidth handled internally by decoder
         hasStatusDisplay: true, // shows decoder status (sync, locked, etc.)
         hasProgressDisplay: true, // shows frame count progress
         hasTextOutput: false, // outputs images, not text
@@ -387,11 +373,13 @@ export const DECODERS = {
 
 /**
  * Helper function to get demodulator configuration
- * @param {string} mode - Demodulator internal name (e.g., 'FM', 'USB')
+ * @param {string} mode - Demodulator internal name (e.g., 'FM', 'USB', 'none')
  * @returns {Object|null} Demodulator config or null if not found
  */
 export const getDemodulatorConfig = (mode) => {
-    return DEMODULATORS[mode] || null;
+    // Normalize 'none' to 'NONE' for lookup (frontend uses lowercase, config uses uppercase key)
+    const modeKey = mode === 'none' ? 'NONE' : mode;
+    return DEMODULATORS[modeKey] || null;
 };
 
 /**
@@ -401,36 +389,6 @@ export const getDemodulatorConfig = (mode) => {
  */
 export const getDecoderConfig = (decoder) => {
     return DECODERS[decoder] || DECODERS.none;
-};
-
-/**
- * Determine the effective demodulator mode for a VFO
- * Takes into account decoder overrides
- *
- * @param {string} vfoMode - The VFO's configured demodulator mode
- * @param {string} decoder - The VFO's decoder setting
- * @param {Object|null} activeDecoderInfo - Active decoder info from Redux (if decoder is running)
- * @returns {string} The effective demodulator mode to use
- */
-export const getEffectiveMode = (vfoMode, decoder, activeDecoderInfo = null) => {
-    // If there's an active decoder session, check if it overrides the mode
-    if (activeDecoderInfo && activeDecoderInfo.decoder_type) {
-        const decoderConfig = getDecoderConfig(activeDecoderInfo.decoder_type);
-        if (decoderConfig.overrideDemodulator) {
-            return decoderConfig.overrideDemodulator;
-        }
-    }
-
-    // If decoder is set but not yet active, check if it overrides the mode
-    if (decoder && decoder !== 'none') {
-        const decoderConfig = getDecoderConfig(decoder);
-        if (decoderConfig.overrideDemodulator) {
-            return decoderConfig.overrideDemodulator;
-        }
-    }
-
-    // No override, use the VFO's configured mode
-    return vfoMode;
 };
 
 /**
@@ -459,11 +417,20 @@ export const getBandwidthConfig = (mode) => {
 
 /**
  * Check if a mode should show both edges (left and right)
+ * Considers decoder overrides
  *
  * @param {string} mode - Demodulator mode
+ * @param {string} decoder - Decoder name (optional)
  * @returns {boolean} True if both edges should be shown
  */
-export const shouldShowBothEdges = (mode) => {
+export const shouldShowBothEdges = (mode, decoder = 'none') => {
+    // Check decoder override first
+    const decoderConfig = getDecoderConfig(decoder);
+    if (decoderConfig && decoderConfig.showBothEdges !== undefined) {
+        return decoderConfig.showBothEdges;
+    }
+    
+    // Fall back to demodulator config
     const demodConfig = getDemodulatorConfig(mode);
     return demodConfig ? demodConfig.showBothEdges : false;
 };
@@ -477,15 +444,15 @@ export const shouldShowBothEdges = (mode) => {
  * @returns {boolean} True if only center line should be shown
  */
 export const isCenterLineOnly = (mode, decoder) => {
-    // Check demodulator config
-    const demodConfig = getDemodulatorConfig(mode);
-    if (demodConfig && demodConfig.centerLineOnly) {
-        return true;
+    // If decoder is active (not 'none'), ONLY check decoder config
+    if (decoder && decoder !== 'none') {
+        const decoderConfig = getDecoderConfig(decoder);
+        return decoderConfig && decoderConfig.bandwidthType === 'center-only';
     }
 
-    // Check decoder config
-    const decoderConfig = getDecoderConfig(decoder);
-    if (decoderConfig && decoderConfig.centerLineOnly) {
+    // No decoder active - check demodulator bandwidthType
+    const demodConfig = getDemodulatorConfig(mode);
+    if (demodConfig && demodConfig.bandwidthType === 'center-only') {
         return true;
     }
 
@@ -494,22 +461,40 @@ export const isCenterLineOnly = (mode, decoder) => {
 
 /**
  * Check if left edge can be dragged for a mode
+ * Considers decoder overrides
  *
  * @param {string} mode - Demodulator mode
+ * @param {string} decoder - Decoder name (optional)
  * @returns {boolean} True if left edge is draggable
  */
-export const canDragLeftEdge = (mode) => {
+export const canDragLeftEdge = (mode, decoder = 'none') => {
+    // Check decoder override first
+    const decoderConfig = getDecoderConfig(decoder);
+    if (decoderConfig && decoderConfig.allowLeftEdgeDrag !== undefined) {
+        return decoderConfig.allowLeftEdgeDrag;
+    }
+    
+    // Fall back to demodulator config
     const demodConfig = getDemodulatorConfig(mode);
     return demodConfig ? demodConfig.allowLeftEdgeDrag : false;
 };
 
 /**
  * Check if right edge can be dragged for a mode
+ * Considers decoder overrides
  *
  * @param {string} mode - Demodulator mode
+ * @param {string} decoder - Decoder name (optional)
  * @returns {boolean} True if right edge is draggable
  */
-export const canDragRightEdge = (mode) => {
+export const canDragRightEdge = (mode, decoder = 'none') => {
+    // Check decoder override first
+    const decoderConfig = getDecoderConfig(decoder);
+    if (decoderConfig && decoderConfig.allowRightEdgeDrag !== undefined) {
+        return decoderConfig.allowRightEdgeDrag;
+    }
+    
+    // Fall back to demodulator config
     const demodConfig = getDemodulatorConfig(mode);
     return demodConfig ? demodConfig.allowRightEdgeDrag : false;
 };
@@ -540,23 +525,41 @@ export const isLockedBandwidth = (mode, decoder) => {
 
 /**
  * Get the bandwidth type for a mode
+ * Considers decoder overrides
  *
  * @param {string} mode - Demodulator mode
- * @returns {string} 'double-sided', 'single-sided-upper', or 'single-sided-lower'
+ * @param {string} decoder - Decoder name (optional)
+ * @returns {string} 'double-sided', 'single-sided-upper', 'single-sided-lower', or 'center-only'
  */
-export const getBandwidthType = (mode) => {
+export const getBandwidthType = (mode, decoder = 'none') => {
+    // Check decoder override first
+    const decoderConfig = getDecoderConfig(decoder);
+    if (decoderConfig && decoderConfig.bandwidthType) {
+        return decoderConfig.bandwidthType;
+    }
+    
+    // Fall back to demodulator config
     const demodConfig = getDemodulatorConfig(mode);
     return demodConfig ? demodConfig.bandwidthType : 'double-sided';
 };
 
 /**
  * Format bandwidth label for display
+ * Considers decoder overrides
  *
  * @param {string} mode - Demodulator mode
  * @param {number} bandwidth - Bandwidth in Hz
+ * @param {string} decoder - Decoder name (optional)
  * @returns {string} Formatted bandwidth label
  */
-export const formatBandwidthLabel = (mode, bandwidth) => {
+export const formatBandwidthLabel = (mode, bandwidth, decoder = 'none') => {
+    // Check decoder override first
+    const decoderConfig = getDecoderConfig(decoder);
+    if (decoderConfig && decoderConfig.bandwidthLabel) {
+        return decoderConfig.bandwidthLabel(bandwidth);
+    }
+    
+    // Fall back to demodulator config
     const demodConfig = getDemodulatorConfig(mode);
     if (!demodConfig || !demodConfig.bandwidthLabel) {
         // Fallback formatting

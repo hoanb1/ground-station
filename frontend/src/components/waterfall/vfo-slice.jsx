@@ -19,9 +19,9 @@
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getDefaultVFOConfig, DEMODULATORS, getDemodulatorConfig, getDecoderConfig, getEffectiveMode } from './vfo-config.js';
+import { getDefaultVFOConfig, DEMODULATORS, getDemodulatorConfig, getDecoderConfig } from './vfo-config.js';
 
-export const updateVFOParameters = createAsyncThunk(
+export const backendUpdateVFOParameters = createAsyncThunk(
     'vfo/updateVFOParameters',
     async ({socket, vfoNumber, updates}, {rejectWithValue}) => {
         return new Promise((resolve, reject) => {
@@ -46,7 +46,7 @@ const createDefaultVFO = (name) => {
         name,
         frequency: null,
         color: null,
-        lockedTransmitterId: null,
+        lockedTransmitterId: 'none',
         frequencyOffset: 0,
         ...defaults
     };
@@ -116,9 +116,8 @@ export const vfoSlice = createSlice({
                 const decoderChanged = updates.hasOwnProperty('decoder');
 
                 if (modeChanged || decoderChanged) {
-                    // Determine the effective mode (considering decoder overrides)
-                    const effectiveMode = getEffectiveMode(vfo.mode, vfo.decoder);
-                    const demodConfig = getDemodulatorConfig(effectiveMode);
+                    // Use the VFO's configured mode directly
+                    const demodConfig = getDemodulatorConfig(vfo.mode);
 
                     if (demodConfig && demodConfig.defaultBandwidth) {
                         vfo.bandwidth = demodConfig.defaultBandwidth;
@@ -203,10 +202,10 @@ export const vfoSlice = createSlice({
                     // When loading state from backend/storage, ensure that audio demod (mode) and
                     // data decoder are not both active simultaneously. This prevents the UI bug where
                     // both toggle groups appear selected on page load, requiring manual "none" click to unstick.
-                    // If a decoder is active (not 'none'), force audio demod to 'NONE'
+                    // If a decoder is active (not 'none'), force audio demod to 'none'
                     const currentDecoder = state.vfoMarkers[vfoNum].decoder;
                     if (currentDecoder && currentDecoder !== 'none') {
-                        state.vfoMarkers[vfoNum].mode = 'NONE';
+                        state.vfoMarkers[vfoNum].mode = 'none';
                     }
 
                     // Update active state
@@ -222,13 +221,13 @@ export const vfoSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            .addCase(updateVFOParameters.pending, (state) => {
+            .addCase(backendUpdateVFOParameters.pending, (state) => {
                 state.errorMessage = null;
             })
-            .addCase(updateVFOParameters.fulfilled, (state, action) => {
+            .addCase(backendUpdateVFOParameters.fulfilled, (state, action) => {
                 // Successfully updated VFO parameters
             })
-            .addCase(updateVFOParameters.rejected, (state, action) => {
+            .addCase(backendUpdateVFOParameters.rejected, (state, action) => {
                 state.errorMessage = action.payload;
             });
     }

@@ -127,6 +127,7 @@ class ConsumerManager:
                     if vfo_number is not None:
                         log_msg += f" VFO {vfo_number}"
                     self.logger.info(log_msg)
+
                     # Stop using the appropriate method based on storage key
                     if storage_key == "recorders":
                         self._stop_consumer(sdr_id, session_id, storage_key)
@@ -146,8 +147,8 @@ class ConsumerManager:
 
         try:
             # Get the IQ broadcaster from the process info
-            broadcaster = process_info.get("iq_broadcaster")
-            if not broadcaster:
+            iq_broadcaster = process_info.get("iq_broadcaster")
+            if not iq_broadcaster:
                 self.logger.error(f"No IQ broadcaster found for device {sdr_id}")
                 return False
 
@@ -158,7 +159,7 @@ class ConsumerManager:
                 subscription_key = f"{subscription_prefix}:{session_id}"
 
             # Subscribe to the broadcaster to get a dedicated queue
-            subscriber_queue = broadcaster.subscribe(subscription_key, maxsize=3)
+            subscriber_queue = iq_broadcaster.subscribe(subscription_key, maxsize=3)
 
             # Add vfo_number to kwargs for multi-VFO support
             if vfo_number is not None:

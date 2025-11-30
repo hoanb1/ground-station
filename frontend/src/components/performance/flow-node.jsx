@@ -91,6 +91,8 @@ const MetricRow = ({ label, value, unit }) => (
 );
 
 const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
+    const hasCpu = cpuPercent !== null && cpuPercent !== undefined;
+    const hasMemory = memoryMb !== undefined && memoryPercent !== undefined;
     const cappedCpuPercent = Math.min(cpuPercent || 0, 100);
     const cappedMemPercent = Math.min(memoryPercent || 0, 100);
 
@@ -106,42 +108,55 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
         return '#ef5350'; // Softer red
     };
 
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'center', height: '100%', gap: 0.25 }}>
-            {/* CPU Bar */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
-                    CPU
-                </Typography>
-                <Box sx={{
-                    flex: 1,
-                    width: '24px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-end',
-                    backgroundColor: (theme) => theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : 'rgba(0, 0, 0, 0.04)',
-                    borderRadius: 1,
-                    position: 'relative',
-                    minHeight: '50px',
-                    overflow: 'hidden',
-                }}>
-                    <Box sx={{
-                        width: '100%',
-                        height: `${cappedCpuPercent}%`,
-                        backgroundColor: getCpuColor(cappedCpuPercent),
-                        borderRadius: '0 0 4px 4px',
-                        transition: 'height 0.3s ease, background-color 0.3s ease',
-                    }} />
-                </Box>
-                <Typography variant="caption" sx={{ mt: 0.4, fontWeight: 500, fontSize: '0.68rem', fontFamily: 'monospace', minWidth: '45px', textAlign: 'center' }}>
-                    {cappedCpuPercent.toFixed(1)}%
+    // If no metrics available, show placeholder
+    if (!hasCpu && !hasMemory) {
+        return (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '80px' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.5, fontSize: '0.65rem' }}>
+                    No metrics
                 </Typography>
             </Box>
+        );
+    }
 
-            {/* Memory Bar */}
-            {memoryMb !== undefined && memoryPercent !== undefined && (
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'center', height: '100%', gap: 0.25 }}>
+            {/* CPU Bar - only show if available */}
+            {hasCpu && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
+                        CPU
+                    </Typography>
+                    <Box sx={{
+                        flex: 1,
+                        width: '24px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'flex-end',
+                        backgroundColor: (theme) => theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.05)'
+                            : 'rgba(0, 0, 0, 0.04)',
+                        borderRadius: 1,
+                        position: 'relative',
+                        minHeight: '50px',
+                        overflow: 'hidden',
+                    }}>
+                        <Box sx={{
+                            width: '100%',
+                            height: `${cappedCpuPercent}%`,
+                            backgroundColor: getCpuColor(cappedCpuPercent),
+                            borderRadius: '0 0 4px 4px',
+                            transition: 'height 0.3s ease, background-color 0.3s ease',
+                        }} />
+                    </Box>
+                    <Typography variant="caption" sx={{ mt: 0.4, fontWeight: 500, fontSize: '0.68rem', fontFamily: 'monospace', minWidth: '45px', textAlign: 'center' }}>
+                        {cappedCpuPercent.toFixed(1)}%
+                    </Typography>
+                </Box>
+            )}
+
+            {/* Memory Bar - only show if available */}
+            {hasMemory && (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
                         MEM
@@ -152,8 +167,8 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'flex-end',
-                        backgroundColor: (theme) => theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.05)' 
+                        backgroundColor: (theme) => theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.05)'
                             : 'rgba(0, 0, 0, 0.04)',
                         borderRadius: 1,
                         position: 'relative',

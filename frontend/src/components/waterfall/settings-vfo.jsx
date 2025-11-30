@@ -39,7 +39,7 @@ import {SquelchIcon} from "../common/dataurl-icons.jsx";
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import TransmittersTable from '../satellites/transmitters-table.jsx';
-import { isLockedBandwidth, getEffectiveMode, getDecoderConfig, getDecoderParameters } from './vfo-config.js';
+import { isLockedBandwidth, getDecoderConfig, getDecoderParameters, normalizeTransmitterMode } from './vfo-config.js';
 import DecoderParamsDialog from './decoder-params-dialog.jsx';
 
 const BANDWIDTHS = {
@@ -279,7 +279,7 @@ const VfoAccordion = ({
                                 <FormControl fullWidth size="small" disabled={!vfoActive[vfoIndex]}
                                              variant="filled">
                                     <InputLabel id={`vfo-${vfoIndex}-lock-transmitter-label`}>
-                                        {vfoMarkers[vfoIndex]?.lockedTransmitterId ? (
+                                        {vfoMarkers[vfoIndex]?.lockedTransmitterId && vfoMarkers[vfoIndex]?.lockedTransmitterId !== 'none' ? (
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <LockIcon fontSize="small" />
                                                 {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
@@ -296,15 +296,32 @@ const VfoAccordion = ({
                                         labelId={`vfo-${vfoIndex}-lock-transmitter-label`}
                                         value={(() => {
                                             const currentValue = vfoMarkers[vfoIndex]?.lockedTransmitterId;
-                                            if (!currentValue) return 'none';
+                                            if (!currentValue || currentValue === 'none') return 'none';
                                             // Check if the current value exists in the transmitters list
                                             const exists = transmitters.some(tx => tx.id === currentValue);
                                             return exists ? currentValue : 'none';
                                         })()}
                                         label={t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
                                         onChange={(e) => {
-                                            const transmitterId = e.target.value === 'none' ? null : e.target.value;
-                                            onVFOPropertyChange(vfoIndex, { lockedTransmitterId: transmitterId });
+                                            const transmitterId = e.target.value === 'none' ? 'none' : e.target.value;
+
+                                            if (transmitterId !== 'none') {
+                                                // Locking to a transmitter - set frequency and lock, but don't change mode
+                                                const transmitter = transmitters.find(tx => tx.id === transmitterId);
+                                                if (transmitter) {
+                                                    onVFOPropertyChange(vfoIndex, {
+                                                        lockedTransmitterId: transmitterId,
+                                                        frequency: transmitter.downlink_observed_freq,
+                                                        frequencyOffset: 0
+                                                    });
+                                                }
+                                            } else {
+                                                // Unlocking - just clear the lock and reset offset
+                                                onVFOPropertyChange(vfoIndex, {
+                                                    lockedTransmitterId: 'none',
+                                                    frequencyOffset: 0
+                                                });
+                                            }
                                         }}
                                         sx={{ fontSize: '0.875rem' }}
                                     >
@@ -455,7 +472,7 @@ const VfoAccordion = ({
                             */}
                         </Box>
 
-                        {vfoMarkers[vfoIndex]?.lockedTransmitterId && (
+                        {vfoMarkers[vfoIndex]?.lockedTransmitterId && vfoMarkers[vfoIndex]?.lockedTransmitterId !== 'none' && (
                             <Alert
                                 severity="info"
                                 icon={<LockIcon fontSize="small" />}
@@ -590,15 +607,12 @@ const VfoAccordion = ({
                             <ToggleButtonGroup
                                 value={vfoMarkers[vfoIndex]?.mode || 'none'}
                                 exclusive
-                                disabled={!vfoActive[vfoIndex] || ['gmsk', 'gfsk', 'lora', 'bpsk'].includes(vfoMarkers[vfoIndex]?.decoder)}
+                                disabled={!vfoActive[vfoIndex]}
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
-                                        // When selecting an audio demod mode (not NONE), clear decoder
-                                        if (newValue !== 'NONE') {
-                                            onVFOPropertyChange(vfoIndex, { mode: newValue, decoder: 'none' });
-                                        } else {
-                                            onVFOPropertyChange(vfoIndex, { mode: newValue });
-                                        }
+                                        // When selecting an audio demod mode, clear decoder
+                                        // (mode and decoder are mutually exclusive)
+                                        onVFOPropertyChange(vfoIndex, { mode: newValue, decoder: 'none' });
                                     }
                                 }}
                                 sx={{
@@ -642,7 +656,7 @@ const VfoAccordion = ({
                                     }
                                 }}
                             >
-                                <ToggleButton value="NONE">{t('vfo.modes.none')}</ToggleButton>
+                                <ToggleButton value="none">{t('vfo.modes.none')}</ToggleButton>
                                 <ToggleButton value="AM">{t('vfo.modes.am')}</ToggleButton>
                                 <ToggleButton value="FM">{t('vfo.modes.fm')}</ToggleButton>
                                 <ToggleButton value="FM_STEREO">{t('vfo.modes.fm_stereo', 'FM Stereo')}</ToggleButton>
@@ -665,9 +679,10 @@ const VfoAccordion = ({
                                 disabled={!vfoActive[vfoIndex]}
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
-                                        // When selecting a decoder (not none), set audio demod to NONE and appropriate bandwidth
+                                        // When selecting a decoder (not none), set audio demod to NONE
+                                        // Backend will start appropriate internal demodulator as needed
                                         if (newValue !== 'none') {
-                                            const updates = { decoder: newValue, mode: 'NONE' };
+                                            const updates = { decoder: newValue, mode: 'none' };
 
                                             // Set bandwidth based on decoder type (using vfo-config.js defaults)
                                             if (newValue === 'sstv') {
@@ -827,10 +842,7 @@ const VfoAccordion = ({
                                 disabled={
                                     !vfoActive[vfoIndex] ||
                                     isLockedBandwidth(
-                                        getEffectiveMode(
-                                            vfoMarkers[vfoIndex]?.mode,
-                                            vfoMarkers[vfoIndex]?.decoder
-                                        ),
+                                        vfoMarkers[vfoIndex]?.mode,
                                         vfoMarkers[vfoIndex]?.decoder
                                     )
                                 }

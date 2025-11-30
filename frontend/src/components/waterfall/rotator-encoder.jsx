@@ -29,7 +29,7 @@ const RotaryEncoder = ({
     const isVFOActive = vfoNumber && vfoActive[vfoNumber];
     const stepSize = currentVFO?.stepSize || 1000; // Default 1kHz step
     const currentFrequency = currentVFO?.frequency || 0;
-    const isLocked = currentVFO?.lockedTransmitterId !== null;
+    const isLocked = currentVFO?.lockedTransmitterId && currentVFO?.lockedTransmitterId !== 'none';
     const currentOffset = currentVFO?.frequencyOffset || 0;
 
     // Get the locked transmitter if VFO is locked

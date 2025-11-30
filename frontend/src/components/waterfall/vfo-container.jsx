@@ -44,7 +44,7 @@ import {
     useVFODragState
 } from './vfo-events.jsx';
 import {
-    getEffectiveMode,
+
     getBandwidthConfig,
     canDragLeftEdge,
     canDragRightEdge,
@@ -398,13 +398,11 @@ const VFOMarkersContainer = ({
             const marker = vfoMarkers[markerIdx];
             const isSelected = parseInt(markerIdx) === selectedVFO;
 
-            // Get effective mode using centralized config (handles decoder overrides)
+            // Get decoder info for this VFO
             const decoderInfo = getDecoderInfoForVFO(parseInt(markerIdx));
-            const effectiveMode = getEffectiveMode(marker.mode, marker.decoder, decoderInfo);
-
-            // Use the utility function for calculations (with effective mode)
-            const markerWithEffectiveMode = { ...marker, mode: effectiveMode };
-            const bounds = calculateVFOFrequencyBounds(markerWithEffectiveMode, startFreq, freqRange, actualWidth);
+            
+            // Use the VFO's configured mode directly
+            const bounds = calculateVFOFrequencyBounds(marker, startFreq, freqRange, actualWidth);
 
             // Skip if the marker is outside the visible range
             if (bounds.markerHighFreq < startFreq || bounds.markerLowFreq > endFreq) {
@@ -424,7 +422,7 @@ const VFOMarkersContainer = ({
             }
             canvasDrawingUtils.drawVFOLine(ctx, centerX, height, marker.color, lineOpacity, isSelected ? 2 : 1.5);
             if (!centerOnly) {
-                canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1);
+                canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1, marker.decoder);
             }
 
             // Draw edge handles based on mode configuration and bandwidth lock state (skip for center-only mode)
@@ -433,18 +431,18 @@ const VFOMarkersContainer = ({
                 const edgeHandleYPosition = edgeHandleYOffset;
                 const edgeHandleWidth = isSelected ? 14 : 6;
 
-                if (canDragRightEdge(mode)) {
+                if (canDragRightEdge(mode, marker.decoder)) {
                     canvasDrawingUtils.drawVFOHandle(ctx, rightEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
                 }
 
-                if (canDragLeftEdge(mode)) {
+                if (canDragLeftEdge(mode, marker.decoder)) {
                     canvasDrawingUtils.drawVFOHandle(ctx, leftEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
                 }
             }
 
             // Draw frequency label
             const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);
-            const isLocked = marker.lockedTransmitterId !== null;
+            const isLocked = marker.lockedTransmitterId && marker.lockedTransmitterId !== 'none';
 
             // Get morse output text if this VFO has a morse decoder
             const morseText = getMorseOutputForVFO(parseInt(markerIdx));
@@ -482,11 +480,8 @@ const VFOMarkersContainer = ({
 
             // Get effective mode using centralized config (handles decoder overrides)
             const decoderInfo = getDecoderInfoForVFO(parseInt(key));
-            const effectiveMode = getEffectiveMode(marker.mode, marker.decoder, decoderInfo);
-
-            // Use the utility function for calculations (with effective mode)
-            const markerWithEffectiveMode = { ...marker, mode: effectiveMode };
-            const bounds = calculateVFOFrequencyBounds(markerWithEffectiveMode, startFreq, freqRange, actualWidth);
+            // Use the VFO's configured mode directly
+            const bounds = calculateVFOFrequencyBounds(marker, startFreq, freqRange, actualWidth);
             const { leftEdgeX, rightEdgeX, centerX, mode, bandwidth } = bounds;
 
             // Check label (y between 0-20px with enlarged touch area) - treat as body drag
@@ -500,7 +495,7 @@ const VFOMarkersContainer = ({
                     ctx.font = 'bold 12px Monospace';
                     const textMetrics = ctx.measureText(labelText);
                     // Always add extra width for speaker icon (shown as muted or active) and lock icon if locked
-                    const isLocked = marker.lockedTransmitterId !== null;
+                    const isLocked = marker.lockedTransmitterId && marker.lockedTransmitterId !== 'none';
                     const iconWidth = getVFOLabelIconWidth(isLocked);
                     const labelWidth = textMetrics.width + 10 + iconWidth;
 
@@ -577,14 +572,14 @@ const VFOMarkersContainer = ({
             // Only allow edge dragging if bandwidth is not locked
             const bandwidthLocked = isLockedBandwidth(mode, marker.decoder);
 
-            if (!bandwidthLocked && canDragRightEdge(mode)) {
+            if (!bandwidthLocked && canDragRightEdge(mode, marker.decoder)) {
                 // Check right edge with updated Y position
                 if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - rightEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'rightEdge' };
                 }
             }
 
-            if (!bandwidthLocked && canDragLeftEdge(mode)) {
+            if (!bandwidthLocked && canDragLeftEdge(mode, marker.decoder)) {
                 // Check left edge with updated Y position
                 if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - leftEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'leftEdge' };

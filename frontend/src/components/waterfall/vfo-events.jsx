@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect } from 'react';
 import { calculateBandwidthChange } from './vfo-utils.js';
-import { getEffectiveMode, getBandwidthConfig } from './vfo-config.js';
+import { getBandwidthConfig } from './vfo-config.js';
 
 /**
  * Custom hook for VFO drag operations
@@ -52,10 +52,8 @@ export const useVFODragHandlers = ({
             const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
             updateVFOProperty(parseInt(activeMarker), { frequency: limitedFreq });
         } else {
-            // Get effective mode and bandwidth limits for this VFO
-            const decoderInfo = getDecoderInfoForVFO ? getDecoderInfoForVFO(parseInt(activeMarker)) : null;
-            const effectiveMode = getEffectiveMode(marker.mode, marker.decoder, decoderInfo);
-            const bandwidthConfig = getBandwidthConfig(effectiveMode);
+            // Get bandwidth limits for this VFO's configured mode
+            const bandwidthConfig = getBandwidthConfig(marker.mode);
 
             const currentBandwidth = marker.bandwidth || bandwidthConfig.default;
             const limitedBandwidth = calculateBandwidthChange(

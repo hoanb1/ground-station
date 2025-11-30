@@ -1,6 +1,6 @@
-import { updateVFOParameters, setVFOProperty } from './vfo-slice.jsx';
+import { backendUpdateVFOParameters, setVFOProperty } from './vfo-slice.jsx';
 import { flushAudioBuffers } from '../dashboard/audio-service.js';
-import { normalizeTransmitterMode, mapParametersToBackend } from './vfo-config.js';
+import { mapParametersToBackend } from './vfo-config.js';
 
 // You might want to pass the socket as a parameter or get it differently
 let socketInstance = null;
@@ -18,6 +18,9 @@ const filterUIOnlyFields = (vfoState) => {
     const { frequencyOffset, lockedTransmitterId, parameters, ...backendFields } = vfoState;
 
     // Convert camelCase to snake_case for backend
+    // Only include locked_transmitter_id if it was present in the input (not undefined)
+    // This prevents partial updates (like frequency-only) from overwriting the lock state
+    // Send 'none' string as-is to backend
     if (lockedTransmitterId !== undefined) {
         backendFields.locked_transmitter_id = lockedTransmitterId;
     }
@@ -63,7 +66,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
             // Check if this VFO is locked to a transmitter
             const vfoState = state.vfo.vfoMarkers[vfoNumber];
 
-            if (vfoState && vfoState.lockedTransmitterId) {
+            if (vfoState && vfoState.lockedTransmitterId && vfoState.lockedTransmitterId !== 'none') {
                 // VFO is locked - immediately calculate and send new frequency with offset
                 const transmitters = state.targetSatTrack.rigData.transmitters || [];
                 const transmitter = transmitters.find(tx => tx.id === vfoState.lockedTransmitterId);
@@ -94,7 +97,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         const backendUpdates = filterUIOnlyFields(updates);
 
         // Dispatch async thunk to update backend with complete state
-        store.dispatch(updateVFOParameters({
+        store.dispatch(backendUpdateVFOParameters({
             socket,
             vfoNumber,
             updates: {
@@ -115,16 +118,30 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         flushAudioBuffers();
 
         if (selectedVFO === null) {
-            store.dispatch(updateVFOParameters({
+            // Deselect all VFOs - vfoNumber: 0 is special case for backend
+            store.dispatch(backendUpdateVFOParameters({
                 socket,
                 vfoNumber: 0,
-                updates: { selected: false }
+                updates: { 
+                    vfoNumber: 0,
+                    selected: false 
+                }
             }));
         } else {
-            store.dispatch(updateVFOParameters({
+            // Send complete VFO state when selecting to ensure backend has all parameters
+            const vfoState = state.vfo.vfoMarkers[selectedVFO];
+            const vfoActiveState = state.vfo.vfoActive[selectedVFO];
+            const backendVfoState = filterUIOnlyFields(vfoState);
+            
+            store.dispatch(backendUpdateVFOParameters({
                 socket,
                 vfoNumber: selectedVFO,
-                updates: { selected: true }
+                updates: {
+                    vfoNumber: selectedVFO,
+                    ...backendVfoState,
+                    active: vfoActiveState,
+                    selected: true
+                }
             }));
         }
     }
@@ -139,7 +156,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         const backendVfoState = filterUIOnlyFields(vfoState);
 
         // Send complete VFO state when activating to ensure backend has all parameters
-        store.dispatch(updateVFOParameters({
+        store.dispatch(backendUpdateVFOParameters({
             socket,
             vfoNumber,
             updates: {
@@ -155,10 +172,24 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     if (action.type === 'vfo/setVfoInactive') {
         const vfoNumber = action.payload;
 
-        store.dispatch(updateVFOParameters({
+        // Clear lock state when deactivating to prevent stale state issues
+        // This ensures clean activation later without triggering unnecessary decoder restarts
+        store.dispatch(setVFOProperty({
+            vfoNumber: vfoNumber,
+            updates: {
+                lockedTransmitterId: 'none',
+                frequencyOffset: 0
+            }
+        }));
+
+        // Send complete VFO state when deactivating to ensure backend has all parameters
+        store.dispatch(backendUpdateVFOParameters({
             socket,
             vfoNumber,
-            updates: { active: false }
+            updates: {
+                active: false,
+                locked_transmitter_id: 'none'
+            }
         }));
     }
 
@@ -181,7 +212,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                 // Filter out UI-only fields before sending to backend
                 const backendVfoState = filterUIOnlyFields(vfoState);
 
-                store.dispatch(updateVFOParameters({
+                store.dispatch(backendUpdateVFOParameters({
                     socket,
                     vfoNumber: vfoNum,
                     updates: {
@@ -220,11 +251,11 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                     const vfoNum = parseInt(vfoNumber);
                     const vfo = vfoMarkers[vfoNum];
 
-                    if (vfo.lockedTransmitterId) {
+                    if (vfo.lockedTransmitterId && vfo.lockedTransmitterId !== 'none') {
                         store.dispatch(setVFOProperty({
                             vfoNumber: vfoNum,
                             updates: {
-                                lockedTransmitterId: null,
+                                lockedTransmitterId: 'none',
                                 frequencyOffset: 0
                             },
                         }));
@@ -247,18 +278,17 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                 const vfo = vfoMarkers[vfoNum];
 
                 // Only update if VFO is locked to a transmitter
-                if (vfo.lockedTransmitterId) {
+                if (vfo.lockedTransmitterId && vfo.lockedTransmitterId !== 'none') {
                     // Find the transmitter this VFO is locked to
                     const transmitter = rigData.transmitters.find(tx => tx.id === vfo.lockedTransmitterId);
 
-                    // OPTION 3: Defensive validation - unlock VFO if transmitter not found
                     // This handles edge cases where transmitter data becomes unavailable for reasons other
                     // than satellite changes (e.g., transmitter disabled, data corruption, etc.)
                     if (!transmitter) {
                         store.dispatch(setVFOProperty({
                             vfoNumber: vfoNum,
                             updates: {
-                                lockedTransmitterId: null,
+                                lockedTransmitterId: 'none',
                                 frequencyOffset: 0
                             },
                         }));
@@ -292,51 +322,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
             });
         }
     }
-
-    // Handle VFO lock to transmitter - set initial frequency and mode, reset offset when unlocking
-    if (action.type === 'vfo/setVFOProperty') {
-        const { vfoNumber, updates } = action.payload;
-
-        // Check if lockedTransmitterId was just changed
-        if (updates.lockedTransmitterId !== undefined) {
-            const transmitterId = updates.lockedTransmitterId;
-
-            if (transmitterId) {
-                // VFO was just locked to a transmitter
-                const transmitters = state.targetSatTrack.rigData.transmitters || [];
-                const transmitter = transmitters.find(tx => tx.id === transmitterId);
-
-                if (transmitter) {
-                    // Set initial frequency and mode, reset offset
-                    const normalizedMode = normalizeTransmitterMode(transmitter.mode);
-
-                    store.dispatch(setVFOProperty({
-                        vfoNumber: vfoNumber,
-                        updates: {
-                            frequency: transmitter.downlink_observed_freq,
-                            mode: normalizedMode || 'FM',
-                            frequencyOffset: 0  // Reset offset when locking
-                        },
-                    }));
-
-                    console.log(`VFO ${vfoNumber} locked to transmitter "${transmitter.description}" at ${(transmitter.downlink_observed_freq / 1e6).toFixed(6)} MHz`);
-                }
-            } else {
-                // VFO was just unlocked (transmitterId is null)
-                // Reset frequency offset
-                store.dispatch(setVFOProperty({
-                    vfoNumber: vfoNumber,
-                    updates: {
-                        frequencyOffset: 0  // Reset offset when unlocking
-                    },
-                }));
-
-                console.log(`VFO ${vfoNumber} unlocked, offset reset to 0`);
-            }
-        }
-    }
-
-    // I can add more actions here based on type
 
     return result;
 };
