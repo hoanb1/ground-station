@@ -147,7 +147,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
     } = useSelector((state) => state.vfo);
 
     const {
-        availableTransmitters,
+        rigData,
     } = useSelector((state) => state.targetSatTrack);
 
     const {
@@ -356,7 +356,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
             return;
         }
 
-        const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
+        const selectedTransmitterMetadata = (rigData?.transmitters || []).find(t => t.id === event.target.value);
         if (!selectedTransmitterMetadata) {
             return;
         }
@@ -396,8 +396,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
     }
 
     function getProperTransmitterId() {
-        if (availableTransmitters.length > 0 && selectedTransmitterId) {
-            if (availableTransmitters.find(t => t.id === selectedTransmitterId)) {
+        const transmitters = rigData?.transmitters || [];
+        if (transmitters.length > 0 && selectedTransmitterId) {
+            if (transmitters.find(t => t.id === selectedTransmitterId)) {
                 return selectedTransmitterId;
             } else {
                 return "none";
@@ -723,7 +724,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                             dispatch(updateCenterFrequency(newFrequency));
                         }
                     }}
-                    availableTransmitters={availableTransmitters}
+                    availableTransmitters={rigData?.transmitters || []}
                     getProperTransmitterId={getProperTransmitterId}
                     onTransmitterChange={handleTransmitterChange}
                     selectedOffsetMode={selectedOffsetMode}
