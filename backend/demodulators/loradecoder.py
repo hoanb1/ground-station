@@ -676,6 +676,12 @@ class LoRaDecoder(BaseDecoderProcess):
                     # Add to buffer
                     samples_buffer = np.concatenate([samples_buffer, decimated])
 
+                    # Update stats
+                    with self.stats_lock:
+                        self.stats["iq_chunks_in"] += 1
+                        self.stats["samples_in"] += len(samples)
+                        self.stats["last_activity"] = time.time()
+
                     # Process when we have enough samples
                     if len(samples_buffer) >= process_samples:
                         # Process the buffered samples (only log every 20th time to reduce spam)
