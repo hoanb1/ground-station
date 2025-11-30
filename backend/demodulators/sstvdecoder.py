@@ -366,8 +366,24 @@ class SSTVDecoder(threading.Thread):
         width = mode["width"]
         channels = mode["chan_count"]
         chan_sync = mode["chan_sync"]
+        color_mode = mode.get("color_mode", "GBR")
 
-        image_data = [[[0 for i in range(width)] for j in range(channels)] for k in range(height)]
+        # Robot 36 uses half-resolution chrominance
+        is_robot = color_mode == "YUV"
+        uv_width = width // 2 if is_robot else width
+
+        # Build image_data structure with proper dimensions for each channel
+        if is_robot:
+            # Robot 36: Y channel full width, UV channel half width
+            image_data = [
+                [[0 for i in range(width if j == 0 else uv_width)] for j in range(channels)]
+                for k in range(height)
+            ]
+        else:
+            # Martin/Scottie: all channels full width
+            image_data = [
+                [[0 for i in range(width)] for j in range(channels)] for k in range(height)
+            ]
 
         seq_start = image_start
 
@@ -385,8 +401,21 @@ class SSTVDecoder(threading.Thread):
         scan_time = mode["scan_time"]
         chan_time = sep_pulse + scan_time
 
-        # Channel offsets differ between Martin and Scottie modes
-        if chan_sync == 0:  # Martin modes: sync on Green (channel 0)
+        # Channel offsets differ between Martin, Scottie, and Robot modes
+        if is_robot:  # Robot 36: Y channel, then half-res UV
+            # Robot 36 sequence: [Y(full), UV(half)] with sync before Y
+            # After Y channel, there's a separator porch before UV
+            half_scan_time = mode.get("half_scan_time", scan_time / 2)
+            sep_porch = mode.get("sep_porch", 0.0015)
+            chan_offsets = [
+                sync_pulse + sync_porch,  # Y channel (0)
+                sync_pulse + sync_porch + chan_time + sep_porch,  # UV channel (1)
+            ]
+            # Calculate pixel time for half-resolution UV channel
+            uv_pixel_time = half_scan_time / uv_width
+            uv_centre_window_time = (uv_pixel_time * window_factor) / 2
+            uv_pixel_window = round(uv_centre_window_time * 2 * self.sample_rate)
+        elif chan_sync == 0:  # Martin modes: sync on Green (channel 0)
             # Martin sequence: [Green, Blue, Red] with sync before Green
             chan_offsets = [
                 sync_pulse + sync_porch,  # Green (0)
@@ -425,13 +454,22 @@ class SSTVDecoder(threading.Thread):
                         logger.info(f"End of audio at line {line}")
                         return image_data
 
-                for px in range(width):
+                # Use appropriate width and timing for this channel
+                chan_width = uv_width if (is_robot and chan == 1) else width
+                chan_pixel_time = uv_pixel_time if (is_robot and chan == 1) else pixel_time
+                chan_centre_window = (
+                    uv_centre_window_time if (is_robot and chan == 1) else centre_window_time
+                )
+                chan_pixel_window = uv_pixel_window if (is_robot and chan == 1) else pixel_window
+
+                for px in range(chan_width):
                     chan_offset = chan_offsets[chan]
                     px_pos = round(
                         seq_start
-                        + (chan_offset + px * pixel_time - centre_window_time) * self.sample_rate
+                        + (chan_offset + px * chan_pixel_time - chan_centre_window)
+                        * self.sample_rate
                     )
-                    px_end = px_pos + pixel_window
+                    px_end = px_pos + chan_pixel_window
 
                     if px_end >= len(self.audio_buffer):
                         logger.info(f"End of audio at line {line}")
@@ -458,17 +496,63 @@ class SSTVDecoder(threading.Thread):
         for y in range(height):
             for x in range(width):
                 if color_mode == "YUV":
-                    # YUV to RGB conversion for Robot modes
+                    # Robot 36 Y, R-Y, B-Y encoding
+                    # Even lines: Y + R-Y chrominance (for Red)
+                    # Odd lines: Y + B-Y chrominance (for Blue)
+                    # Green is derived from both
                     y_val = image_data[y][0][x]
-                    u_val = image_data[y][1][x] if len(image_data[y]) > 1 else 128
-                    v_val = (
-                        image_data[y][1][x] if len(image_data[y]) > 1 else 128
-                    )  # Robot uses same chrominance for U and V
 
-                    # YUV to RGB conversion (ITU-R BT.601)
-                    r = int(y_val + 1.402 * (v_val - 128))
-                    g = int(y_val - 0.344136 * (u_val - 128) - 0.714136 * (v_val - 128))
-                    b = int(y_val + 1.772 * (u_val - 128))
+                    # Interpolate chrominance from half-resolution channel
+                    uv_x = x // 2
+                    chroma_val = (
+                        image_data[y][1][uv_x]
+                        if len(image_data[y]) > 1 and uv_x < len(image_data[y][1])
+                        else 128
+                    )
+
+                    # Robot 36 alternates R-Y and B-Y on consecutive lines
+                    # We need to interpolate missing chrominance from adjacent lines
+                    if y % 2 == 0:  # Even line has R-Y
+                        r_y = chroma_val - 128
+                        # Get B-Y from next line (or previous if last line)
+                        if (
+                            y + 1 < height
+                            and len(image_data[y + 1]) > 1
+                            and uv_x < len(image_data[y + 1][1])
+                        ):
+                            b_y = image_data[y + 1][1][uv_x] - 128
+                        elif (
+                            y > 0
+                            and len(image_data[y - 1]) > 1
+                            and uv_x < len(image_data[y - 1][1])
+                        ):
+                            b_y = image_data[y - 1][1][uv_x] - 128
+                        else:
+                            b_y = 0
+                    else:  # Odd line has B-Y
+                        b_y = chroma_val - 128
+                        # Get R-Y from previous line
+                        if (
+                            y > 0
+                            and len(image_data[y - 1]) > 1
+                            and uv_x < len(image_data[y - 1][1])
+                        ):
+                            r_y = image_data[y - 1][1][uv_x] - 128
+                        elif (
+                            y + 1 < height
+                            and len(image_data[y + 1]) > 1
+                            and uv_x < len(image_data[y + 1][1])
+                        ):
+                            r_y = image_data[y + 1][1][uv_x] - 128
+                        else:
+                            r_y = 0
+
+                    # Convert Y, R-Y, B-Y to RGB
+                    # Robot 36 uses scaled chrominance for more vibrant colors
+                    # Standard conversion with typical SSTV gain factor
+                    r = int(y_val + 1.6 * r_y)
+                    b = int(y_val + 1.6 * b_y)
+                    g = int(y_val - 0.51 * 1.6 * r_y - 0.19 * 1.6 * b_y)
 
                     # Clamp values
                     pixel = (max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)))
