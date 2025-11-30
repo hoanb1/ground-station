@@ -23,9 +23,7 @@ class VFOState:
     transcription_model: str = "small.en"  # Whisper model to use
     transcription_language: str = "en"  # Language code for transcription
     decoder: str = "none"  # Decoder type: none, sstv, afsk, gmsk, gfsk, bpsk, lora, morse
-    locked_transmitter_id: Optional[str] = (
-        "none"  # Transmitter ID locked to this VFO (none = unlocked)
-    )
+    locked_transmitter_id: str = "none"
 
 
 class VFOManager:
@@ -60,7 +58,7 @@ class VFOManager:
         vfo_id: int,
         center_freq: Optional[int] = None,
         bandwidth: Optional[int] = None,
-        modulation: Optional[str] = None,
+        modulation: str = "none",
         active: Optional[bool] = None,
         selected: Optional[bool] = None,
         volume: Optional[int] = None,
@@ -68,8 +66,8 @@ class VFOManager:
         transcription_enabled: Optional[bool] = None,
         transcription_model: Optional[str] = None,
         transcription_language: Optional[str] = None,
-        decoder: Optional[str] = None,
-        locked_transmitter_id: Optional[str] = None,
+        decoder: str = "none",
+        locked_transmitter_id: str = "none",
     ) -> None:
 
         assert session_id is not None, "session_id is required"
@@ -98,7 +96,7 @@ class VFOManager:
             vfo_state.bandwidth = bandwidth
 
         # update modulation
-        if modulation is not None:
+        if modulation != "none":
             vfo_state.modulation = modulation
 
         # check if active
@@ -134,11 +132,12 @@ class VFOManager:
             vfo_state.transcription_language = transcription_language
 
         # check decoder setting
-        if decoder is not None:
+        if decoder != "none":
             vfo_state.decoder = decoder
+        else:
+            vfo_state.decoder = "none"
 
         # check locked transmitter ID
-        # Only update if explicitly provided (not the sentinel value)
         # locked_transmitter_id is always a string: either a transmitter ID or "none"
         if locked_transmitter_id != "none":
             vfo_state.locked_transmitter_id = locked_transmitter_id
