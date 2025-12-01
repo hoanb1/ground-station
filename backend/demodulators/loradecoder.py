@@ -823,15 +823,31 @@ class LoRaDecoder(BaseDecoderProcess):
                         samples_count = len(samples_buffer)
                         flow_rate_sps = samples_count / time_elapsed if time_elapsed > 0 else 0
 
-                        # Process the buffered samples (only log every 10th time to reduce spam)
-                        if chunks_received % 10 == 0:
-                            params_str = ""
-                            if self.sf is not None and self.bw is not None:
-                                params_str = f" (SF{self.sf}, BW{self.bw/1000:.0f}kHz)"
-                            logger.debug(
-                                f"Processing {len(samples_buffer)} samples ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s){params_str} | "
-                                f"VFO: {vfo_center:.0f}Hz, BW={vfo_bandwidth:.0f}Hz"
-                            )
+                        # Log batch processing stats (consistent with FSK/BPSK decoders)
+                        # Build comprehensive LoRa parameter string
+                        sf_str = f"SF{self.sf}" if self.sf is not None else "SF=auto"
+                        bw_str = f"BW{self.bw/1000:.0f}kHz" if self.bw is not None else "BW=auto"
+                        cr_str = f"CR4/{self.cr+4}" if self.cr is not None else "CR=auto"
+
+                        # Format sync word for compact display
+                        if self.sync_word:
+                            if isinstance(self.sync_word, list):
+                                sync_str = f"sync=[{','.join(f'{b:02X}' for b in self.sync_word)}]"
+                            else:
+                                sync_str = f"sync={self.sync_word:02X}"
+                        else:
+                            sync_str = "sync=auto"
+
+                        ldro_str = "LDRO" if self.fldro else ""
+                        extra_params = f"pre={self.preamble_len}, {sync_str}"
+                        if ldro_str:
+                            extra_params += f", {ldro_str}"
+
+                        logger.info(
+                            f"Batch: {len(samples_buffer)} samp ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s) | "
+                            f"LoRa: {sf_str}, {bw_str}, {cr_str}, {extra_params} | "
+                            f"VFO: {vfo_center:.0f}Hz, BW={vfo_bandwidth:.0f}Hz"
+                        )
 
                         # Update tracking for next batch
                         last_process_time = current_time
