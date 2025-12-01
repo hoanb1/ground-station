@@ -101,7 +101,7 @@ class AFSKMessageHandler(gr.basic_block):
     def __init__(
         self,
         callback,
-        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_monitor_interval=10,  # Check SHM every 60 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
         gr.basic_block.__init__(self, name="afsk_message_handler", in_sig=None, out_sig=None)
@@ -395,7 +395,7 @@ class AFSKDecoder(BaseDecoderProcess):
         output_dir="data/decoded",
         vfo=None,
         batch_interval=5.0,  # Batch processing interval in seconds
-        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_monitor_interval=10,  # Check SHM every 60 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
         # AFSK uses audio_queue, not iq_queue - pass audio_queue as iq_queue for compatibility

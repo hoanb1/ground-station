@@ -112,7 +112,7 @@ class BPSKMessageHandler(gr.basic_block):
     def __init__(
         self,
         callback,
-        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_monitor_interval=10,  # Check SHM every 60 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
         gr.basic_block.__init__(self, name="bpsk_message_handler", in_sig=None, out_sig=None)
@@ -466,7 +466,7 @@ class BPSKDecoder(BaseDecoderProcess):
         vfo=None,
         batch_interval=5.0,  # Batch processing interval in seconds
         packet_size=256,  # Optional override for packet size
-        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_monitor_interval=10,  # Check SHM every 60 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
         # Initialize base process (handles multiprocessing setup)

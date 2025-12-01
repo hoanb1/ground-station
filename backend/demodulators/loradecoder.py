@@ -77,7 +77,7 @@ class LoRaMessageSink(gr.sync_block):
     def __init__(
         self,
         callback,
-        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_monitor_interval=10,  # Check SHM every 60 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
         gr.sync_block.__init__(self, name="lora_message_sink", in_sig=None, out_sig=None)
@@ -294,7 +294,7 @@ class LoRaDecoder(BaseDecoderProcess):
         config,  # Pre-resolved DecoderConfig from DecoderConfigService (contains all params + metadata)
         output_dir="data/decoded",
         vfo=None,
-        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_monitor_interval=10,  # Check SHM every 60 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
         if not LORA_SDR_AVAILABLE:

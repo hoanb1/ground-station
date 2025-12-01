@@ -19,6 +19,7 @@
 import logging
 import multiprocessing
 import subprocess
+import time
 import uuid
 from typing import Any, Dict
 
@@ -56,8 +57,8 @@ class BaseDecoderProcess(BaseDecoder, multiprocessing.Process):
         config,
         output_dir="data/decoded",
         vfo=None,
-        shm_monitor_interval=60,
-        shm_restart_threshold=1000,
+        shm_monitor_interval=10,
+        shm_restart_threshold=200,
         **kwargs,
     ):
         """
@@ -70,7 +71,7 @@ class BaseDecoderProcess(BaseDecoder, multiprocessing.Process):
             config: DecoderConfig object with satellite/transmitter metadata
             output_dir: Directory for decoded output files
             vfo: VFO number (for multi-VFO mode)
-            shm_monitor_interval: Seconds between SHM checks (default: 60)
+            shm_monitor_interval: Seconds between SHM checks (default: 10)
             shm_restart_threshold: SHM segment count to trigger restart (default: 1000)
             **kwargs: Additional parameters for BaseDecoder
         """
@@ -195,7 +196,6 @@ class BaseDecoderProcess(BaseDecoder, multiprocessing.Process):
         Call this periodically from run() loop (e.g., every 100 chunks).
         Checks SHM segments at configured interval and signals restart if needed.
         """
-        import time
 
         current_time = time.time()
 
@@ -205,7 +205,8 @@ class BaseDecoderProcess(BaseDecoder, multiprocessing.Process):
 
             segment_count = self._check_shared_memory()
 
-            if segment_count > self.shm_restart_threshold:
+            # Only request restart if not already requested (prevent spam)
+            if segment_count > self.shm_restart_threshold and self.restart_requested.value == 0:
                 self.request_restart(
                     f"SHM segments exceeded threshold: {segment_count} > {self.shm_restart_threshold}"
                 )
@@ -230,14 +231,32 @@ class BaseDecoderProcess(BaseDecoder, multiprocessing.Process):
         """
         Signal that this decoder needs to be restarted.
 
-        Sets the restart flag and stops the run loop.
-        The parent process (DecoderManager) should detect this and restart.
+        Sets the restart flag, sends message to parent via data_queue, and stops the run loop.
+        The parent process (ProcessLifecycleManager) will detect the message and restart immediately.
 
         Args:
             reason: Human-readable reason for restart request
         """
         logger.info(f"{self.name}: Restart requested - {reason}")
         self.restart_requested.value = 1
+
+        # Send restart request message to parent via data_queue for immediate handling
+        if hasattr(self, "data_queue") and self.data_queue:
+            try:
+                restart_msg = {
+                    "type": "decoder-restart-request",
+                    "session_id": self.session_id,
+                    "vfo": self.vfo,  # Use self.vfo (set in __init__)
+                    "reason": reason,
+                    "shm_count": (
+                        self._shm_segment_count if hasattr(self, "_shm_segment_count") else None
+                    ),
+                }
+                self.data_queue.put_nowait(restart_msg)
+                logger.debug(f"{self.name}: Sent restart request message to parent")
+            except Exception as e:
+                logger.warning(f"{self.name}: Failed to send restart request message: {e}")
+
         self.running.value = 0
 
     def should_restart(self) -> bool:

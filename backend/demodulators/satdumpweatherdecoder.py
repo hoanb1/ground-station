@@ -110,7 +110,7 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
         config,  # Pre-resolved DecoderConfig with pipeline + target_sample_rate
         output_dir="data/weather",
         vfo=None,
-        shm_monitor_interval=60,
+        shm_monitor_interval=10,
         shm_restart_threshold=1000,
     ):
         # Initialize base process

@@ -554,6 +554,56 @@ class ProcessLifecycleManager:
 
         self.logger.info(f"Sent configuration update to SDR process for device {sdr_id}")
 
+    async def _restart_decoder_async(self, sdr_id, session_id, vfo_number, reason):
+        """
+        Asynchronously restart a decoder that requested restart.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+            vfo_number: VFO number
+            reason: Reason for restart
+        """
+        try:
+            self.logger.info(
+                f"Handling decoder restart request for {session_id} VFO{vfo_number}: {reason}"
+            )
+
+            # Get decoder entry to preserve configuration
+            if sdr_id not in self.processes:
+                self.logger.error(f"Cannot restart decoder: SDR {sdr_id} not found")
+                return
+
+            process_info = self.processes[sdr_id]
+            decoders = process_info.get("decoders", {})
+
+            if session_id not in decoders or vfo_number not in decoders[session_id]:
+                self.logger.error(f"Cannot restart decoder: {session_id} VFO{vfo_number} not found")
+                return
+
+            decoder_entry = decoders[session_id][vfo_number]
+
+            # Use DecoderManager's restart method
+            # Run in executor to avoid blocking the event loop
+            loop = asyncio.get_event_loop()
+            success = await loop.run_in_executor(
+                None,
+                self.decoder_manager._restart_decoder,
+                sdr_id,
+                session_id,
+                vfo_number,
+                decoder_entry,
+            )
+
+            if success:
+                self.logger.info(f"Successfully restarted decoder {session_id} VFO{vfo_number}")
+            else:
+                self.logger.error(f"Failed to restart decoder {session_id} VFO{vfo_number}")
+
+        except Exception as e:
+            self.logger.error(f"Error restarting decoder {session_id} VFO{vfo_number}: {e}")
+            self.logger.exception(e)
+
     async def _monitor_data_queue(self, sdr_id):
         """
         Monitor the data queue for a specific device
@@ -639,6 +689,30 @@ class ProcessLifecycleManager:
 
                             # Exit the loop
                             break
+
+                        elif data_type == "decoder-restart-request":
+                            # Decoder has requested restart (e.g., SHM threshold exceeded)
+                            session_id = data.get("session_id")
+                            vfo_number = data.get("vfo")
+                            reason = data.get("reason", "unknown")
+                            shm_count = data.get("shm_count", "unknown")
+
+                            if session_id and vfo_number is not None:
+                                self.logger.warning(
+                                    f"Decoder {session_id} VFO{vfo_number} requests restart: {reason} "
+                                    f"(SHM segments: {shm_count})"
+                                )
+
+                                # Restart the decoder asynchronously without blocking the queue monitor
+                                asyncio.create_task(
+                                    self._restart_decoder_async(
+                                        sdr_id, session_id, vfo_number, reason
+                                    )
+                                )
+                            else:
+                                self.logger.error(
+                                    f"Decoder restart request missing session_id or vfo: {data}"
+                                )
 
                         elif data_type in [
                             "decoder-status",

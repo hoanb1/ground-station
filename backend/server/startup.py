@@ -90,7 +90,7 @@ async def lifespan(fastapiapp: FastAPI):
         asyncio.create_task(run_initial_sync(sio))
 
     # Start the background task scheduler
-    start_scheduler(sio)
+    start_scheduler(sio, process_manager)
 
     # Start performance monitoring
     process_manager.start_monitoring()

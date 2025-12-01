@@ -438,7 +438,7 @@ class FSKDecoder(BaseDecoderProcess):
         vfo=None,
         batch_interval=5.0,  # Batch processing interval in seconds
         modulation_subtype="FSK",  # 'FSK', 'GFSK', or 'GMSK' (metadata only)
-        shm_monitor_interval=60,  # Check SHM every 60 seconds
+        shm_monitor_interval=10,  # Check SHM every 10 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
         # Initialize base process (handles multiprocessing setup)
@@ -463,7 +463,8 @@ class FSKDecoder(BaseDecoderProcess):
 
         # Note: packet_count, stats, stats_lock already initialized by BaseDecoderProcess
         logger.debug(
-            f"FSKDecoder initialized ({modulation_subtype}): packet_count=0, SHM threshold={shm_restart_threshold}"
+            f"FSKDecoder initialized ({modulation_subtype}): packet_count=0, "
+            f"SHM threshold={shm_restart_threshold}, monitor interval={shm_monitor_interval}s"
         )
 
         # Extract all parameters from resolved config (including metadata)

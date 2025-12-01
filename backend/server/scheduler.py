@@ -29,7 +29,18 @@ async def sync_satellite_data_job(sio):
         logger.exception(e)
 
 
-def start_scheduler(sio):
+def check_and_restart_decoders_job(process_manager):
+    """Job to check decoder health and restart if needed."""
+    try:
+        restarted = process_manager.decoder_manager.check_and_restart_decoders()
+        if restarted > 0:
+            logger.info(f"Decoder health check: {restarted} decoder(s) restarted")
+    except Exception as e:
+        logger.error(f"Error during decoder health check: {e}")
+        logger.exception(e)
+
+
+def start_scheduler(sio, process_manager):
     """Initialize and start the background task scheduler."""
     global scheduler
 
@@ -46,6 +57,18 @@ def start_scheduler(sio):
         args=[sio],
         id="sync_satellite_data",
         name="Synchronize satellite data",
+        replace_existing=True,
+    )
+
+    # Schedule decoder health check every 60 seconds as a safety net
+    # Primary restart mechanism is event-driven via data_queue (immediate response)
+    # This is a backup in case message delivery fails
+    scheduler.add_job(
+        check_and_restart_decoders_job,
+        trigger=IntervalTrigger(seconds=60),
+        args=[process_manager],
+        id="check_restart_decoders",
+        name="Check and restart decoders (fallback)",
         replace_existing=True,
     )
 
