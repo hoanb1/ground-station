@@ -90,7 +90,6 @@ from scipy import signal  # noqa: E402
 
 from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
-from vfos.state import VFOManager  # noqa: E402
 
 logger = logging.getLogger("bpskdecoder")
 
@@ -589,14 +588,20 @@ class BPSKDecoder(BaseDecoderProcess):
         self.max_power_history = 100
         self.current_power_dbfs = None
 
+        # Cached VFO state (populated from IQ messages)
+        self.cached_vfo_state = None
+
     def _get_decoder_type_for_init(self) -> str:
         """Return decoder type for process naming."""
         return "BPSK"
 
     def _get_vfo_state(self):
-        """Get VFO state for this decoder."""
-        if self.vfo is not None:
-            return self.vfo_manager.get_vfo_state(self.session_id, self.vfo)
+        """Get cached VFO state for metadata purposes."""
+        # Create a simple namespace object from cached dict for backward compatibility
+        if self.cached_vfo_state:
+            from types import SimpleNamespace
+
+            return SimpleNamespace(**self.cached_vfo_state)
         return None
 
     def _frequency_translate(self, samples, offset_freq, sample_rate):
@@ -757,7 +762,6 @@ class BPSKDecoder(BaseDecoderProcess):
 
         # Initialize components in subprocess (CRITICAL!)
         self.telemetry_parser = TelemetryParser()
-        self.vfo_manager = VFOManager()
 
         # Initialize stats in subprocess (update existing dict)
         self.stats.update(
@@ -827,13 +831,18 @@ class BPSKDecoder(BaseDecoderProcess):
                     with self.stats_lock:
                         self.stats["samples_in"] += len(samples)
 
-                    # Get VFO parameters
-                    vfo_state = self._get_vfo_state()
-                    if not vfo_state or not vfo_state.active:
+                    # Get VFO parameters from IQ message (added by IQBroadcaster)
+                    vfo_states = iq_message.get("vfo_states", {})
+                    vfo_state_dict = vfo_states.get(self.vfo)
+
+                    if not vfo_state_dict or not vfo_state_dict.get("active", False):
                         continue  # VFO not active, skip
 
-                    vfo_center = vfo_state.center_freq
-                    vfo_bandwidth = vfo_state.bandwidth
+                    # Cache VFO state for metadata purposes
+                    self.cached_vfo_state = vfo_state_dict
+
+                    vfo_center = vfo_state_dict.get("center_freq", 0)
+                    vfo_bandwidth = vfo_state_dict.get("bandwidth", 10000)
 
                     # Initialize on first message
                     if self.sdr_sample_rate is None:

@@ -44,7 +44,6 @@ from scipy import signal  # noqa: E402
 
 from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
-from vfos.state import VFOManager  # noqa: E402
 
 logger = logging.getLogger("loradecoder")
 
@@ -465,6 +464,9 @@ class LoRaDecoder(BaseDecoderProcess):
         )  # Default: 8
         self.fldro = config.fldro if config.fldro is not None else False  # Default: False
 
+        # Cached VFO state (populated from IQ messages)
+        self.cached_vfo_state = None
+
         # BaseDecoder required metadata attributes
         self.baudrate = config.baudrate  # Not really used for LoRa, but required by BaseDecoder
         self.framing = "lora"  # LoRa uses its own framing (preamble + header + payload + CRC)
@@ -668,7 +670,6 @@ class LoRaDecoder(BaseDecoderProcess):
 
         # Initialize components in subprocess (CRITICAL!)
         self.telemetry_parser = TelemetryParser()
-        self.vfo_manager = VFOManager()
 
         # Initialize stats in subprocess
         self.stats: Dict[str, Any] = {
@@ -738,13 +739,18 @@ class LoRaDecoder(BaseDecoderProcess):
                     if samples is None or len(samples) == 0:
                         continue
 
-                    # Get VFO parameters
-                    vfo_state = self._get_vfo_state()
-                    if not vfo_state or not vfo_state.active:
+                    # Get VFO parameters from IQ message (added by IQBroadcaster)
+                    vfo_states = iq_message.get("vfo_states", {})
+                    vfo_state_dict = vfo_states.get(self.vfo)
+
+                    if not vfo_state_dict or not vfo_state_dict.get("active", False):
                         continue  # VFO not active, skip
 
-                    vfo_center = vfo_state.center_freq
-                    vfo_bandwidth = vfo_state.bandwidth
+                    # Cache VFO state for metadata purposes
+                    self.cached_vfo_state = vfo_state_dict
+
+                    vfo_center = vfo_state_dict.get("center_freq", 0)
+                    vfo_bandwidth = vfo_state_dict.get("bandwidth", 10000)
 
                     # Initialize on first message
                     if self.sdr_sample_rate is None:
@@ -1038,9 +1044,12 @@ class LoRaDecoder(BaseDecoderProcess):
         }
 
     def _get_vfo_state(self):
-        """Get VFO state for this decoder."""
-        if self.vfo is not None:
-            return self.vfo_manager.get_vfo_state(self.session_id, self.vfo)
+        """Get cached VFO state for metadata purposes."""
+        # Create a simple namespace object from cached dict for backward compatibility
+        if self.cached_vfo_state:
+            from types import SimpleNamespace
+
+            return SimpleNamespace(**self.cached_vfo_state)
         return None
 
     def _get_payload_protocol(self) -> str:

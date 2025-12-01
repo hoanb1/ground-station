@@ -18,9 +18,13 @@ from __future__ import annotations
 import logging
 import multiprocessing
 import queue
+import re
 import threading
 import time
+from dataclasses import asdict
 from typing import Any, Dict, Union
+
+from vfos.state import VFOManager
 
 
 class IQBroadcaster(threading.Thread):
@@ -50,6 +54,9 @@ class IQBroadcaster(threading.Thread):
         self.running = True
         self.lock = threading.Lock()
         self.logger = logging.getLogger("iq-broadcaster")
+
+        # VFO state manager for injecting VFO states into IQ messages
+        self.vfo_manager = VFOManager()
 
         # Performance monitoring stats
         self.stats: Dict[str, Any] = {
@@ -148,6 +155,64 @@ class IQBroadcaster(threading.Thread):
                         f"Flushed {flushed_count} items from queue for session {session_id}"
                     )
 
+    def _extract_session_id(self, subscription_key: str) -> str:
+        """
+        Extract session_id from subscription key.
+
+        Subscription keys have format:
+        - "decoder:{session_id}:vfo{N}" for decoders
+        - "recorder:{session_id}" for recorders
+        - "demodulator:{session_id}:vfo{N}" for audio demodulators
+
+        Args:
+            subscription_key: Subscription key string
+
+        Returns:
+            Session ID or empty string if not found
+        """
+        # Pattern to extract session_id from various subscription key formats
+        # Matches: "prefix:{session_id}" or "prefix:{session_id}:suffix"
+        match = re.match(r"[^:]+:([^:]+)", subscription_key)
+        if match:
+            return match.group(1)
+        return ""
+
+    def _enrich_iq_message_with_vfo_states(
+        self, iq_message: Dict[str, Any], session_id: str
+    ) -> Dict[str, Any]:
+        """
+        Add VFO states to IQ message for the given session.
+
+        Fetches all VFO states for the session from VFOManager and adds them
+        to the IQ message. Each decoder can then extract its specific VFO state.
+
+        Args:
+            iq_message: Original IQ message from SDR worker
+            session_id: Session ID to fetch VFO states for
+
+        Returns:
+            Enriched IQ message with vfo_states dict added
+        """
+        try:
+            # Get all VFO states for this session (returns dict of {vfo_number: VFOState})
+            vfo_states = self.vfo_manager.get_all_vfo_states(session_id)
+
+            # Convert VFOState dataclasses to dicts for serialization
+            vfo_states_dict = {}
+            for vfo_number, vfo_state in vfo_states.items():
+                vfo_states_dict[vfo_number] = asdict(vfo_state)
+
+            # Add to IQ message
+            iq_message["vfo_states"] = vfo_states_dict
+
+        except Exception as e:
+            # If we fail to get VFO states, log but don't crash the broadcaster
+            # The decoder will handle missing vfo_states gracefully
+            self.logger.debug(f"Failed to get VFO states for session {session_id}: {e}")
+            iq_message["vfo_states"] = {}
+
+        return iq_message
+
     def run(self):
         """
         Main broadcaster loop.
@@ -179,18 +244,30 @@ class IQBroadcaster(threading.Thread):
                 # Broadcast to all subscribers
                 with self.lock:
                     dead_subscribers = []
-                    for session_id, subscriber_info in self.subscribers.items():
+                    for subscription_key, subscriber_info in self.subscribers.items():
                         subscriber_queue = subscriber_info["queue"]
                         is_process_queue = subscriber_info.get("is_process_queue", False)
+
+                        # Extract session_id from subscription key and enrich message with VFO states
+                        session_id = self._extract_session_id(subscription_key)
+                        if session_id:
+                            # Create enriched message with VFO states for this specific session
+                            enriched_message = self._enrich_iq_message_with_vfo_states(
+                                iq_message.copy(), session_id
+                            )
+                        else:
+                            # Fallback if we can't extract session_id (shouldn't happen)
+                            enriched_message = iq_message.copy()
+                            enriched_message["vfo_states"] = {}
 
                         try:
                             # Handle both threading and multiprocessing queues
                             if is_process_queue:
                                 # Multiprocessing queue - use block=False
-                                subscriber_queue.put(iq_message, block=False)
+                                subscriber_queue.put(enriched_message, block=False)
                             else:
                                 # Threading queue - use put_nowait()
-                                subscriber_queue.put_nowait(iq_message)
+                                subscriber_queue.put_nowait(enriched_message)
 
                             subscriber_info["delivered"] += 1
                             with self.stats_lock:
@@ -208,14 +285,14 @@ class IQBroadcaster(threading.Thread):
                             else:
                                 # Mark subscriber for removal if there's an error
                                 self.logger.warning(
-                                    f"Error broadcasting to session {session_id}: {e}"
+                                    f"Error broadcasting to {subscription_key}: {e}"
                                 )
-                                dead_subscribers.append(session_id)
+                                dead_subscribers.append(subscription_key)
 
                     # Clean up dead subscribers
-                    for session_id in dead_subscribers:
-                        del self.subscribers[session_id]
-                        self.logger.info(f"Removed dead subscriber {session_id}")
+                    for dead_key in dead_subscribers:
+                        del self.subscribers[dead_key]
+                        self.logger.info(f"Removed dead subscriber {dead_key}")
 
             except Exception as e:
                 if self.running:
