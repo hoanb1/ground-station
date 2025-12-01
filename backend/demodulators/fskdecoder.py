@@ -648,7 +648,7 @@ class FSKDecoder(BaseDecoderProcess):
             "deviation_hz": self.deviation,
             "framing": self.framing,  # "ax25" or "usp"
             "transmitter": self.transmitter_description,
-            "transmitter_mode": self.transmitter_mode,
+            "transmitter_mode": self.modulation_subtype,  # Use actual modulation (GFSK/GMSK/FSK)
             "transmitter_downlink_mhz": (
                 round(self.transmitter_downlink_freq / 1e6, 3)
                 if self.transmitter_downlink_freq
