@@ -237,6 +237,10 @@ class BPSKFlowgraph(gr.top_block):
         self.sample_lock = multiprocessing.Lock()
         self.current_mode = "decoding"  # Track current mode
 
+        # Flow rate tracking
+        self.last_batch_time = time.time()
+        self.last_batch_samples = 0
+
     def process_samples(self, samples):
         """
         Process IQ samples through the flowgraph
@@ -288,6 +292,16 @@ class BPSKFlowgraph(gr.top_block):
                 self.sample_buffer = self.sample_buffer[-tail_samples:]
             else:
                 self.sample_buffer = np.array([], dtype=np.complex64)
+
+        # Calculate flow rate (samples per second)
+        current_time = time.time()
+        time_elapsed = current_time - self.last_batch_time
+        samples_count = len(samples_to_process)
+        flow_rate_sps = samples_count / time_elapsed if time_elapsed > 0 else 0
+
+        # Update tracking variables for next batch
+        self.last_batch_time = current_time
+        self.last_batch_samples = samples_count
 
         tb = None
         try:
@@ -351,7 +365,7 @@ class BPSKFlowgraph(gr.top_block):
                 frame_info = "AX25(G3RUH)"
 
             logger.info(
-                f"Batch: {len(samples_to_process)} samp ({self.batch_interval}s) | "
+                f"Batch: {len(samples_to_process)} samp ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s) | "
                 f"BPSK: {self.baudrate}bd, {self.sample_rate:.0f}sps, diff={self.differential} | "
                 f"Frame: {frame_info}"
             )

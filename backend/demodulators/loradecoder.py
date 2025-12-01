@@ -567,6 +567,10 @@ class LoRaDecoder(BaseDecoderProcess):
         # frame_sync needs at least 8200 samples, plus margin for packet length
         # For SF11/250kHz, a packet can be 200-500ms
         process_interval = 3.0  # Process every 3 seconds (more samples per batch)
+
+        # Flow rate tracking
+        last_process_time = time.time()
+        # last_process_samples = 0
         buffer_duration = process_interval + 1.0  # Buffer more than process interval for overlap
 
         # CPU and memory monitoring
@@ -684,12 +688,24 @@ class LoRaDecoder(BaseDecoderProcess):
 
                     # Process when we have enough samples
                     if len(samples_buffer) >= process_samples:
-                        # Process the buffered samples (only log every 20th time to reduce spam)
+                        # Calculate flow rate
+                        current_time = time.time()
+                        time_elapsed = current_time - last_process_time
+                        samples_count = len(samples_buffer)
+                        flow_rate_sps = samples_count / time_elapsed if time_elapsed > 0 else 0
+
+                        # Process the buffered samples (only log every 10th time to reduce spam)
                         if chunks_received % 10 == 0:
                             params_str = ""
                             if self.sf is not None and self.bw is not None:
                                 params_str = f" (SF{self.sf}, BW{self.bw/1000:.0f}kHz)"
-                            logger.debug(f"Processing {len(samples_buffer)} samples{params_str}")
+                            logger.debug(
+                                f"Processing {len(samples_buffer)} samples ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s){params_str}"
+                            )
+
+                        # Update tracking for next batch
+                        last_process_time = current_time
+                        # last_process_samples = samples_count
 
                         # Auto-detection logic: try multiple parameters if not specified
                         # If parameters are locked in (either from config or found), only try those
