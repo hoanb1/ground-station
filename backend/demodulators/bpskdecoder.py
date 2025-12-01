@@ -241,11 +241,12 @@ class BPSKFlowgraph(gr.top_block):
         self.last_batch_time = time.time()
         self.last_batch_samples = 0
 
-        # VFO state (updated by decoder main loop)
-        self.vfo_center = 0
-        self.vfo_bandwidth = 0
+        # VFO state tracking for batch logging
+        # Store VFO values that correspond to the buffered samples
+        self.batch_vfo_center = 0
+        self.batch_vfo_bandwidth = 0
 
-    def process_samples(self, samples):
+    def process_samples(self, samples, vfo_center, vfo_bandwidth):
         """
         Process IQ samples through the flowgraph
 
@@ -254,12 +255,17 @@ class BPSKFlowgraph(gr.top_block):
 
         Args:
             samples: numpy array of complex64 samples
+            vfo_center: VFO center frequency used for DSP processing these samples
+            vfo_bandwidth: VFO bandwidth used for DSP processing these samples
         """
         should_process = False
         buffer_size = 0
         with self.sample_lock:
             self.sample_buffer = np.concatenate([self.sample_buffer, samples])
             buffer_size = len(self.sample_buffer)
+            # Store the most recent VFO values (these will be logged in batch)
+            self.batch_vfo_center = vfo_center
+            self.batch_vfo_bandwidth = vfo_bandwidth
 
             # Process when we have enough samples (batch_interval seconds worth)
             # Balance between decode latency and signal lock time
@@ -371,7 +377,7 @@ class BPSKFlowgraph(gr.top_block):
             logger.info(
                 f"Batch: {len(samples_to_process)} samp ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s) | "
                 f"BPSK: {self.baudrate}bd, {self.sample_rate:.0f}sps, diff={self.differential} | "
-                f"Frame: {frame_info} | VFO: {self.vfo_center:.0f}Hz, BW={self.vfo_bandwidth:.0f}Hz"
+                f"Frame: {frame_info} | VFO: {self.batch_vfo_center:.0f}Hz, BW={self.batch_vfo_bandwidth:.0f}Hz"
             )
 
             # Create message handler for this batch
@@ -902,10 +908,8 @@ class BPSKDecoder(BaseDecoderProcess):
 
                     # Process samples through flowgraph
                     if flowgraph_started and self.flowgraph is not None:
-                        # Pass VFO state to flowgraph for logging
-                        self.flowgraph.vfo_center = vfo_center
-                        self.flowgraph.vfo_bandwidth = vfo_bandwidth
-                        self.flowgraph.process_samples(decimated)
+                        # Pass VFO state that was used for DSP processing
+                        self.flowgraph.process_samples(decimated, vfo_center, vfo_bandwidth)
 
                     # Send periodic status updates
                     if chunks_received % 50 == 0:
