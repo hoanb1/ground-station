@@ -829,7 +829,8 @@ class LoRaDecoder(BaseDecoderProcess):
                             if self.sf is not None and self.bw is not None:
                                 params_str = f" (SF{self.sf}, BW{self.bw/1000:.0f}kHz)"
                             logger.debug(
-                                f"Processing {len(samples_buffer)} samples ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s){params_str}"
+                                f"Processing {len(samples_buffer)} samples ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s){params_str} | "
+                                f"VFO: {vfo_center:.0f}Hz, BW={vfo_bandwidth:.0f}Hz"
                             )
 
                         # Update tracking for next batch

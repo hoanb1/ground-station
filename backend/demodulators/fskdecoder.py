@@ -349,10 +349,15 @@ class FSKFlowgraph(gr.top_block):
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
                 frame_info = "AX25(G3RUH)"
 
+            # Get current VFO state for logging
+            vfo_state = self._get_vfo_state()
+            vfo_center_hz = vfo_state.center_freq if vfo_state else 0
+            vfo_bw_hz = vfo_state.bandwidth if vfo_state else 0
+
             self.logger.info(
                 f"Batch: {len(samples_to_process)} samp ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s) | "
                 f"FSK: {self.baudrate}bd, {self.sample_rate:.0f}sps, dev={self.deviation} | "
-                f"Frame: {frame_info}"
+                f"Frame: {frame_info} | VFO: {vfo_center_hz:.0f}Hz, BW={vfo_bw_hz:.0f}Hz"
             )
             # Create message handler for this batch
             msg_handler = FSKMessageHandler(self.callback, logger=self.logger)
