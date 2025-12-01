@@ -95,8 +95,6 @@ from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 from vfos.state import VFOManager  # noqa: E402
 
-logger = logging.getLogger("fskdecoder")
-
 
 class DecoderStatus(Enum):
     """Decoder status values."""
@@ -112,9 +110,10 @@ class DecoderStatus(Enum):
 class FSKMessageHandler(gr.basic_block):
     """Message handler to receive PDU messages from HDLC deframer"""
 
-    def __init__(self, callback):
+    def __init__(self, callback, logger=None):
         gr.basic_block.__init__(self, name="fsk_message_handler", in_sig=None, out_sig=None)
         self.callback = callback
+        self.logger = logger or logging.getLogger("fskdecoder")
         self.message_port_register_in(gr.pmt.intern("in"))
         self.set_msg_handler(gr.pmt.intern("in"), self.handle_msg)
         self.packets_decoded = 0
@@ -150,7 +149,7 @@ class FSKMessageHandler(gr.basic_block):
                             "to": f"{dest_call}-{dest_ssid}",
                         }
                 except Exception as parse_err:
-                    logger.debug(f"Could not parse callsigns: {parse_err}")
+                    self.logger.debug(f"Could not parse callsigns: {parse_err}")
 
                 # Add HDLC flags for compatibility
                 packet_with_flags = bytes([0x7E]) + packet_data + bytes([0x7E])
@@ -158,10 +157,10 @@ class FSKMessageHandler(gr.basic_block):
                 if self.callback:
                     self.callback(packet_with_flags, callsigns)
             else:
-                logger.warning(f"Unexpected packet data type: {type(packet_data)}")
+                self.logger.warning(f"Unexpected packet data type: {type(packet_data)}")
 
         except Exception as e:
-            logger.error(f"Error handling message: {e}")
+            self.logger.error(f"Error handling message: {e}")
             import traceback
 
             traceback.print_exc()
@@ -189,6 +188,7 @@ class FSKFlowgraph(gr.top_block):
         batch_interval=5.0,
         framing="ax25",  # 'ax25', 'usp', 'geoscan', 'doka'
         modulation_subtype="FSK",  # 'FSK', 'GFSK', or 'GMSK' (metadata only)
+        logger=None,
     ):
         """
         Initialize FSK-family decoder flowgraph using gr-satellites FSK demodulator
@@ -206,6 +206,7 @@ class FSKFlowgraph(gr.top_block):
             batch_interval: Batch processing interval in seconds (default: 5.0)
             framing: Framing protocol - 'ax25' (G3RUH), 'usp' (USP FEC), 'geoscan', 'doka'
             modulation_subtype: 'FSK', 'GFSK', or 'GMSK' (metadata only, for logging)
+            logger: Logger instance to use for logging
         """
         super().__init__("FSK Decoder")
 
@@ -221,6 +222,7 @@ class FSKFlowgraph(gr.top_block):
         self.clk_limit = clk_limit
         self.framing = framing
         self.modulation_subtype = modulation_subtype
+        self.logger = logger or logging.getLogger("fskdecoder")
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
@@ -333,13 +335,13 @@ class FSKFlowgraph(gr.top_block):
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
                 frame_info = "AX25(G3RUH)"
 
-            logger.info(
+            self.logger.info(
                 f"Batch: {len(samples_to_process)} samp ({self.batch_interval}s) | "
                 f"FSK: {self.baudrate}bd, {self.sample_rate:.0f}sps, dev={self.deviation} | "
                 f"Frame: {frame_info}"
             )
             # Create message handler for this batch
-            msg_handler = FSKMessageHandler(self.callback)
+            msg_handler = FSKMessageHandler(self.callback, logger=self.logger)
 
             # Build flowgraph
             tb.connect(source, demod, deframer)
@@ -356,7 +358,7 @@ class FSKFlowgraph(gr.top_block):
                 pass
 
         except Exception as e:
-            logger.error(f"Error processing buffer: {e}")
+            self.logger.error(f"Error processing buffer: {e}")
             import traceback
 
             traceback.print_exc()
@@ -411,7 +413,7 @@ class FSKFlowgraph(gr.top_block):
         # _process_buffer() runs GNU Radio flowgraph synchronously (tb.wait()) and sleeps 100ms,
         # which would freeze all threads trying to acquire sample_lock if called inside the lock.
         if should_process:
-            logger.info(
+            self.logger.info(
                 f"Flushing {buffer_size} remaining samples from FSK flowgraph ({self.modulation_subtype})"
             )
             self._process_buffer()
@@ -461,8 +463,11 @@ class FSKDecoder(BaseDecoderProcess):
         self.modulation_subtype = modulation_subtype  # FSK, GFSK, or GMSK
         self.batch_interval = batch_interval
 
+        # Initialize logger with modulation subtype for proper identification
+        self.logger = logging.getLogger(f"{modulation_subtype.lower()}decoder")
+
         # Note: packet_count, stats, stats_lock already initialized by BaseDecoderProcess
-        logger.debug(
+        self.logger.debug(
             f"FSKDecoder initialized ({modulation_subtype}): packet_count=0, "
             f"SHM threshold={shm_restart_threshold}, monitor interval={shm_monitor_interval}s"
         )
@@ -488,7 +493,7 @@ class FSKDecoder(BaseDecoderProcess):
                 self.deviation = 5000  # 9600 baud (most common)
             else:
                 self.deviation = int(self.baudrate * 0.5)  # High baudrate: ~50% of baudrate
-            logger.warning(
+            self.logger.warning(
                 f"Deviation not specified in config, using smart default: {self.deviation} Hz "
                 f"(baudrate={self.baudrate})"
             )
@@ -506,8 +511,10 @@ class FSKDecoder(BaseDecoderProcess):
 
         # Log debug if downlink frequency not available (not a warning - expected for manual VFO mode)
         if not self.transmitter_downlink_freq:
-            logger.debug("Transmitter downlink frequency not available in config (manual VFO mode)")
-            logger.debug(f"Config metadata: {config.to_dict()}")
+            self.logger.debug(
+                "Transmitter downlink frequency not available in config (manual VFO mode)"
+            )
+            self.logger.debug(f"Config metadata: {config.to_dict()}")
 
         # Build smart parameter summary - only show non-None optional params
         param_parts = [
@@ -537,7 +544,7 @@ class FSKDecoder(BaseDecoderProcess):
             tx_info += f" @ {self.transmitter_downlink_freq/1e6:.3f}MHz"
 
         # Single consolidated initialization log with all relevant parameters
-        logger.info(
+        self.logger.info(
             f"FSK decoder initialized ({self.modulation_subtype}): "
             f"session={session_id}, VFO {vfo} | {sat_info} | {tx_info} | {params_str} | "
             f"batch={self.batch_interval}s | src: {self.config_source}"
@@ -598,13 +605,13 @@ class FSKDecoder(BaseDecoderProcess):
     def _should_accept_packet(self, payload, callsigns):
         """FSK-family decoders require valid callsigns"""
         if not callsigns or not callsigns.get("from") or not callsigns.get("to"):
-            logger.debug("Packet rejected: no valid callsigns found")
+            self.logger.debug("Packet rejected: no valid callsigns found")
             return False
         return True
 
     def _get_decoder_type(self):
-        """Return decoder type string"""
-        return "fsk"
+        """Return decoder type string based on modulation subtype"""
+        return self.modulation_subtype.lower()
 
     def _get_decoder_specific_metadata(self):
         """Return FSK-specific metadata"""
@@ -667,7 +674,7 @@ class FSKDecoder(BaseDecoderProcess):
         msg = {
             "type": "decoder-status",
             "status": status.value,
-            "decoder_type": "fsk",
+            "decoder_type": self.modulation_subtype.lower(),
             "modulation_subtype": self.modulation_subtype,
             "decoder_id": self.decoder_id,
             "session_id": self.session_id,
@@ -680,7 +687,7 @@ class FSKDecoder(BaseDecoderProcess):
             with self.stats_lock:
                 self.stats["data_messages_out"] += 1
         except queue.Full:
-            logger.warning("Data queue full, dropping status update")
+            self.logger.warning("Data queue full, dropping status update")
 
     def _send_stats_update(self):
         """Send statistics update to UI and performance monitor"""
@@ -698,7 +705,7 @@ class FSKDecoder(BaseDecoderProcess):
 
         msg = {
             "type": "decoder-stats",
-            "decoder_type": "fsk",
+            "decoder_type": self.modulation_subtype.lower(),
             "modulation_subtype": self.modulation_subtype,
             "session_id": self.session_id,
             "vfo": self.vfo,
@@ -767,7 +774,7 @@ class FSKDecoder(BaseDecoderProcess):
                             self.stats["memory_percent"] = memory_percent
                         last_cpu_check = current_time
                     except Exception as e:
-                        logger.debug(f"Error updating CPU/memory usage: {e}")
+                        self.logger.debug(f"Error updating CPU/memory usage: {e}")
 
                 # Read IQ samples from iq_queue
                 try:
@@ -832,6 +839,7 @@ class FSKDecoder(BaseDecoderProcess):
                             batch_interval=self.batch_interval,
                             framing=self.framing,
                             modulation_subtype=self.modulation_subtype,
+                            logger=self.logger,
                         )
                         flowgraph_started = True
 
@@ -841,7 +849,7 @@ class FSKDecoder(BaseDecoderProcess):
                             if self.transmitter_downlink_freq
                             else ""
                         )
-                        logger.info(
+                        self.logger.info(
                             f"FSK decoder started ({self.modulation_subtype}): session={self.session_id} | "
                             f"{self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps), dev={self.deviation}Hz, {self.framing.upper()} | "
                             f"SDR={self.sdr_sample_rate/1e6:.2f}MS/s@{sdr_center/1e6:.3f}MHz, "
@@ -899,8 +907,8 @@ class FSKDecoder(BaseDecoderProcess):
                     last_stats_time = current_time
 
         except Exception as e:
-            logger.error(f"FSK decoder error: {e}")
-            logger.exception(e)
+            self.logger.error(f"FSK decoder error: {e}")
+            self.logger.exception(e)
             with self.stats_lock:
                 self.stats["errors"] += 1
             self._send_status_update(DecoderStatus.ERROR)
@@ -912,9 +920,9 @@ class FSKDecoder(BaseDecoderProcess):
                 try:
                     self.flowgraph.flush_buffer()
                 except Exception as e:
-                    logger.error(f"Error flushing buffer: {e}")
+                    self.logger.error(f"Error flushing buffer: {e}")
 
-        logger.info(
+        self.logger.info(
             f"FSK decoder process ({self.modulation_subtype}) stopped for {self.session_id}. "
             f"Final SHM segments: {self.get_shm_segment_count()}"
         )
@@ -924,7 +932,7 @@ class FSKDecoder(BaseDecoderProcess):
         msg = {
             "type": "decoder-status",
             "status": final_status,
-            "decoder_type": "fsk",
+            "decoder_type": self.modulation_subtype.lower(),
             "modulation_subtype": self.modulation_subtype,
             "decoder_id": self.decoder_id,
             "session_id": self.session_id,
