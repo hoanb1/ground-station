@@ -101,21 +101,76 @@ class LoRaMessageSink(gr.sync_block):
                 except UnicodeDecodeError as e:
                     # PMT contains raw bytes that can't be decoded as UTF-8
                     logger.debug(f"UTF-8 decode error at position {e.start}: {e.reason}")
+                    logger.debug(
+                        f"PMT is_blob: {gr.pmt.is_blob(msg)}, is_symbol: {gr.pmt.is_symbol(msg)}"
+                    )
+                    logger.debug(
+                        f"PMT is_pair: {gr.pmt.is_pair(msg)}, is_u8vector: {gr.pmt.is_u8vector(msg)}"
+                    )
+
+                    # Try different extraction methods
                     try:
-                        # Try to get raw bytes from PMT blob if available
+                        # Try blob extraction
                         if gr.pmt.is_blob(msg):
                             payload = bytes(gr.pmt.blob_data(msg))
                             logger.debug(f"Extracted {len(payload)} bytes from blob")
-                            logger.debug(f"First 50 bytes (hex): {payload[:50].hex()}")
-                            logger.debug(f"First 50 bytes (repr): {payload[:50]!r}")
-                        else:
+                            logger.debug(f"Payload (hex): {payload.hex()}")
+                            logger.debug(f"Payload (repr): {payload!r}")
+                        # Try u8vector extraction
+                        elif gr.pmt.is_u8vector(msg):
+                            payload = bytes(gr.pmt.u8vector_elements(msg))
+                            logger.debug(f"Extracted {len(payload)} bytes from u8vector")
+                            logger.debug(f"Payload (hex): {payload.hex()}")
+                            logger.debug(f"Payload (repr): {payload!r}")
+                        # Try pair (header + payload)
+                        elif gr.pmt.is_pair(msg):
+                            car = gr.pmt.car(msg)
+                            cdr = gr.pmt.cdr(msg)
                             logger.debug(
-                                f"PMT type check - is_blob: {gr.pmt.is_blob(msg)}, is_symbol: {gr.pmt.is_symbol(msg)}, is_string: {gr.pmt.is_string(msg)}"
+                                f"PMT is pair - car type: {type(car)}, cdr type: {type(cdr)}"
                             )
-                            logger.debug("Cannot decode packet - skipping")
+                            logger.debug(
+                                f"Car is_dict: {gr.pmt.is_dict(car)}, Cdr is_u8vector: {gr.pmt.is_u8vector(cdr)}"
+                            )
+
+                            # Try to extract header metadata
+                            if gr.pmt.is_dict(car):
+                                logger.debug("Header metadata found:")
+                                try:
+                                    pay_len = gr.pmt.to_long(
+                                        gr.pmt.dict_ref(
+                                            car, gr.pmt.intern("pay_len"), gr.pmt.from_long(-1)
+                                        )
+                                    )
+                                    has_crc = gr.pmt.to_bool(
+                                        gr.pmt.dict_ref(car, gr.pmt.intern("crc"), gr.pmt.PMT_F)
+                                    )
+                                    cr = gr.pmt.to_long(
+                                        gr.pmt.dict_ref(
+                                            car, gr.pmt.intern("cr"), gr.pmt.from_long(-1)
+                                        )
+                                    )
+                                    logger.debug(f"  pay_len={pay_len}, crc={has_crc}, cr={cr}")
+                                except Exception as e3:
+                                    logger.debug(f"  Could not parse header dict: {e3}")
+
+                            # Try to extract payload
+                            if gr.pmt.is_u8vector(cdr):
+                                payload = bytes(gr.pmt.u8vector_elements(cdr))
+                                logger.debug(f"Extracted {len(payload)} bytes from pair cdr")
+                                logger.debug(f"Payload (hex): {payload.hex()}")
+                                logger.debug(f"Payload (repr): {payload!r}")
+                            else:
+                                logger.debug("Cannot extract payload from pair cdr")
+                                return
+                        else:
+                            logger.debug("Unknown PMT type - cannot extract payload")
                             return
                     except Exception as e2:
-                        logger.debug(f"Could not extract blob data: {e2}")
+                        logger.debug(f"Could not extract data: {e2}")
+                        import traceback
+
+                        logger.debug(traceback.format_exc())
                         return
                 except UnicodeEncodeError as e:
                     # If we got payload_str but latin-1 encoding failed
