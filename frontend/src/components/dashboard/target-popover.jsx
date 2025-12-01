@@ -315,7 +315,7 @@ const SatelliteInfoPopover = () => {
                 }}>
                     {/* Status Banner with Satellite Name */}
                     <Box sx={{
-                        mb: 2,
+                        mb: 1,
                         p: 1.5,
                         borderRadius: 1,
                         backgroundColor: statusInfo.backgroundColor,
@@ -369,7 +369,7 @@ const SatelliteInfoPopover = () => {
                         <>
                             {/* Position Information */}
                             <Box sx={{
-                                mb: 2,
+                                mb: 1,
                                 p: 1.5,
                                 borderRadius: 1,
                                 backgroundColor: 'action.hover'
@@ -488,7 +488,7 @@ const SatelliteInfoPopover = () => {
 
                     {/* Active Pass Timeline - show when there's an active pass, otherwise show placeholder */}
                     {satelliteData.details.norad_id && (
-                        <Box sx={{ mb: 2, height: '150px' }}>
+                        <Box sx={{ mb: 1, height: '150px' }}>
                             {showTimeline ? (
                                 <SatellitePassTimeline
                                     singlePassMode={true}
