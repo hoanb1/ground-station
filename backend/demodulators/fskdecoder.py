@@ -233,6 +233,10 @@ class FSKFlowgraph(gr.top_block):
         self.last_batch_time = time.time()
         self.last_batch_samples = 0
 
+        # VFO state (updated by decoder main loop)
+        self.vfo_center = 0
+        self.vfo_bandwidth = 0
+
     def process_samples(self, samples):
         """
         Process IQ samples through the flowgraph
@@ -349,15 +353,10 @@ class FSKFlowgraph(gr.top_block):
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
                 frame_info = "AX25(G3RUH)"
 
-            # Get current VFO state for logging
-            vfo_state = self._get_vfo_state()
-            vfo_center_hz = vfo_state.center_freq if vfo_state else 0
-            vfo_bw_hz = vfo_state.bandwidth if vfo_state else 0
-
             self.logger.info(
                 f"Batch: {len(samples_to_process)} samp ({time_elapsed:.1f}s, {flow_rate_sps/1e3:.1f}kS/s) | "
                 f"FSK: {self.baudrate}bd, {self.sample_rate:.0f}sps, dev={self.deviation} | "
-                f"Frame: {frame_info} | VFO: {vfo_center_hz:.0f}Hz, BW={vfo_bw_hz:.0f}Hz"
+                f"Frame: {frame_info} | VFO: {self.vfo_center:.0f}Hz, BW={self.vfo_bandwidth:.0f}Hz"
             )
             # Create message handler for this batch
             msg_handler = FSKMessageHandler(self.callback, logger=self.logger)
@@ -898,6 +897,9 @@ class FSKDecoder(BaseDecoderProcess):
 
                     # Process samples through flowgraph
                     if flowgraph_started and self.flowgraph is not None:
+                        # Pass VFO state to flowgraph for logging
+                        self.flowgraph.vfo_center = vfo_center
+                        self.flowgraph.vfo_bandwidth = vfo_bandwidth
                         self.flowgraph.process_samples(decimated)
 
                     # Send periodic status updates
