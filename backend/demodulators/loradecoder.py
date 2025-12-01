@@ -108,6 +108,12 @@ class LoRaMessageSink(gr.sync_block):
                         logger.debug(f"Used fallback byte extraction (Unicode error: {e})")
                     except Exception as e2:
                         logger.debug(f"Skipping corrupted packet: {e2}")
+                        logger.debug(f"Raw PMT message: {gr.pmt.write_string(msg)}")
+                        logger.debug(f"Payload string repr: {payload_str!r}")
+                        logger.debug(f"Payload string length: {len(payload_str)}")
+                        logger.debug(
+                            f"First 100 chars as hex: {' '.join(f'{ord(c):02x}' for c in payload_str[:100])}"
+                        )
                         return
 
                 # Single consolidated log for successful decode
