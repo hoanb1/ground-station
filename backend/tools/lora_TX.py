@@ -12,12 +12,33 @@
 # Author: Tapparel Joachim@EPFL,TCL
 # GNU Radio version: 3.10.9.2
 
+import logging
 import signal
 import sys
+from enum import IntEnum
 
 import gnuradio.lora_sdr as lora_sdr
 import pmt
 from gnuradio import blocks, gr, soapy
+
+logger = logging.getLogger(__name__)
+
+
+class CodingRate(IntEnum):
+    """LoRa coding rate enumeration"""
+
+    CR_4_5 = 1
+    CR_4_6 = 2
+    CR_4_7 = 3
+    CR_4_8 = 4
+
+    def __str__(self):
+        return {
+            1: "4/5",
+            2: "4/6",
+            3: "4/7",
+            4: "4/8",
+        }[self.value]
 
 
 class lora_TX(gr.top_block):
@@ -34,9 +55,16 @@ class lora_TX(gr.top_block):
         self.impl_head = impl_head = False
         self.has_crc = has_crc = True
         self.frame_period = frame_period = 2000
-        self.cr = cr = 1
+        self.cr = cr = CodingRate.CR_4_5
         self.center_freq = center_freq = 437.4e6
         self.TX_gain = TX_gain = 50
+
+        logger.info(
+            f"LoRa TX Configuration - Frequency: {center_freq/1e6:.2f} MHz, "
+            f"SF: {sf}, BW: {bw/1000:.0f} kHz, CR: {CodingRate(cr)}, "
+            f"CRC: {has_crc}, Implicit Header: {impl_head}, "
+            f"TX Gain: {TX_gain} dB, Sample Rate: {samp_rate/1e6:.2f} Msps"
+        )
 
         ##################################################
         # Blocks
@@ -59,7 +87,7 @@ class lora_TX(gr.top_block):
         self.lora_sdr_whitening_0 = lora_sdr.whitening(False, False, ",", "packet_len")
         self.lora_sdr_payload_id_inc_0 = lora_sdr.payload_id_inc(":")
         self.lora_sdr_modulate_0 = lora_sdr.modulate(
-            sf, samp_rate, bw, [8, 16], (int(20 * 2**sf * samp_rate / bw)), 8
+            sf, samp_rate, bw, [0x34], (int(20 * 2**sf * samp_rate / bw)), 8
         )
         self.lora_sdr_modulate_0.set_min_output_buffer(10000000)
         self.lora_sdr_interleaver_0 = lora_sdr.interleaver(cr, sf, 0, 125000)
@@ -158,6 +186,7 @@ class lora_TX(gr.top_block):
 
 
 def main(top_block_cls=lora_TX, options=None):
+    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
     tb = top_block_cls()
 
     def sig_handler(sig=None, frame=None):

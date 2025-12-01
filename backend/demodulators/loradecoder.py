@@ -88,12 +88,36 @@ class LoRaMessageSink(gr.sync_block):
     def handle_msg(self, msg):
         """Handle incoming LoRa message"""
         try:
-            # Extract message data
-            if gr.pmt.is_pair(msg):
+            # The crc_verif block sends payload as a string PMT containing raw bytes
+            if gr.pmt.is_symbol(msg) or gr.pmt.is_string(msg):
+                # Extract raw bytes from PMT
+                # Problem: C++ sends std::string with raw bytes, Python interprets as Unicode
+                # Solution: Handle both valid ASCII/UTF-8 and binary data gracefully
+                try:
+                    payload_str = gr.pmt.symbol_to_string(msg)
+                    # Try latin-1 encoding first (maps Unicode 0-255 to bytes 1:1)
+                    payload = payload_str.encode("latin-1")
+                except (UnicodeDecodeError, UnicodeEncodeError) as e:
+                    # If latin-1 fails, the string has characters > U+00FF
+                    # This happens when C++ raw bytes are misinterpreted as UTF-8
+                    # Fallback: extract bytes by character ordinal, skipping invalid ones
+                    try:
+                        payload_str = gr.pmt.symbol_to_string(msg)
+                        # Manual byte extraction: take only chars in valid byte range
+                        payload = bytes(ord(c) & 0xFF for c in payload_str)
+                        logger.debug(f"Used fallback byte extraction (Unicode error: {e})")
+                    except Exception as e2:
+                        logger.debug(f"Skipping corrupted packet: {e2}")
+                        return
+
+                # Single consolidated log for successful decode
+                logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
+                self.callback(payload)
+            elif gr.pmt.is_pair(msg):
+                # Check if this is a pair with header metadata
                 meta = gr.pmt.car(msg)
                 data = gr.pmt.cdr(msg)
 
-                # Check if this is header metadata (dict) or payload data (u8vector)
                 if gr.pmt.is_dict(meta):
                     # Extract header info from metadata
                     try:
@@ -112,16 +136,23 @@ class LoRaMessageSink(gr.sync_block):
                     except Exception:
                         pass
 
-                # Convert PMT to bytes
+                # Check if data part is payload
                 if gr.pmt.is_u8vector(data):
                     payload = bytes(gr.pmt.u8vector_elements(data))
                     logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload[:50]!r}")
+                    self.callback(payload)
+                elif gr.pmt.is_symbol(data) or gr.pmt.is_string(data):
+                    payload_str = gr.pmt.symbol_to_string(data)
+                    payload = payload_str.encode("latin-1")
+                    logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
                     self.callback(payload)
             elif gr.pmt.is_u8vector(msg):
                 # Direct u8vector (no metadata)
                 payload = bytes(gr.pmt.u8vector_elements(msg))
                 logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload[:50]!r}")
                 self.callback(payload)
+            else:
+                logger.debug(f"Unhandled PMT message type: {gr.pmt.write_string(msg)}")
         except Exception as e:
             logger.error(f"Error handling LoRa message: {e}")
             import traceback
@@ -130,10 +161,11 @@ class LoRaMessageSink(gr.sync_block):
 
 
 class LoRaFlowgraph(gr.top_block):
-    """GNU Radio flowgraph for LoRa decoding using gr-lora_sdr blocks"""
+    """GNU Radio flowgraph for LoRa decoding using gr-lora_sdr blocks with batch processing"""
 
     def __init__(
         self,
+        samples,
         sample_rate,
         center_freq,
         callback,
@@ -147,9 +179,10 @@ class LoRaFlowgraph(gr.top_block):
         fldro=False,
     ):
         """
-        Initialize LoRa decoder flowgraph
+        Initialize LoRa decoder flowgraph for batch processing
 
         Args:
+            samples: Complex sample array to process (numpy array)
             sample_rate: Input sample rate (Hz)
             center_freq: Center frequency (Hz)
             callback: Function to call when packet is decoded
@@ -171,9 +204,10 @@ class LoRaFlowgraph(gr.top_block):
         self.callback = callback
         self.soft_decoding = False  # Match gr-lora_sdr examples
 
-        # Create vector source - we'll create new flowgraphs for each batch
-        # This is the most reliable approach for batch processing
-        self.vector_source = blocks.vector_source_c([], repeat=False)
+        # Use GNU Radio's built-in vector source (handles backpressure correctly)
+        # repeat=False means it will output all samples once and then signal done
+        self.vector_source = blocks.vector_source_c(samples.tolist(), repeat=False)
+        self.num_samples = len(samples)  # Store for timing calculation
 
         # Set sync word: empty list [] for auto-detection, or specific value like [0x12]
         if sync_word is None:
@@ -193,8 +227,6 @@ class LoRaFlowgraph(gr.top_block):
             preamble_len=preamble_len,
         )
 
-        logger.debug(f"LoRa frame_sync configured with sync_word={sync_word} ([]=auto-detect)")
-
         # 2. FFT demodulation
         self.fft_demod = lora_sdr.fft_demod(
             soft_decoding=self.soft_decoding,
@@ -211,28 +243,39 @@ class LoRaFlowgraph(gr.top_block):
         self.hamming_dec = lora_sdr.hamming_dec(self.soft_decoding)
 
         # 6. Header decoder
+        # Parameters: (impl_head, cr, pay_len, has_crc, ldro, print_header)
         self.header_decoder = lora_sdr.header_decoder(
-            impl_head=impl_head,
-            print_header=True,  # Disabled verbose header output
-            cr=int(cr),
-            pay_len=255,  # Maximum payload
-            has_crc=has_crc,
-            ldro=fldro,  # Low data rate optimization (FLDRO)
+            impl_head,  # impl_head: use implicit header mode
+            int(cr),  # cr: coding rate
+            255,  # pay_len: maximum payload length
+            has_crc,  # has_crc: payload has CRC
+            fldro,  # ldro: low data rate optimization
+            False,  # print_header: disable C++ stdout (we log in Python)
         )
 
         # 7. Dewhitening
         self.dewhitening = lora_sdr.dewhitening()
 
         # 8. CRC verification
+        # Parameters: (print_rx_msg, output_crc_check)
+        # print_rx_msg: 0=NONE, 1=ASCII, 2=HEX - MUST be non-zero to publish messages!
+        # output_crc_check: True=only output valid CRC packets, False=output all
         self.crc_verif = lora_sdr.crc_verif(
-            0,  # output_crc_ok (0 = output all packets, 1 = valid only)
-            True,  # print_rx_err (print CRC errors for debugging)
+            0,  # print_rx_msg: 0=NONE (disable C++ stdout, we handle logging in Python)
+            False,  # output_crc_check: False=output all packets regardless of CRC
         )
 
         # Message sink to receive decoded packets
         self.msg_sink = LoRaMessageSink(self._on_packet_decoded)
 
-        # Connect the receiver chain
+        # File sink to capture stream output (for debugging)
+        import tempfile
+
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False)
+        self.file_sink = blocks.file_sink(gr.sizeof_char, self.temp_file.name)
+        self.file_sink.set_unbuffered(True)
+
+        # Connect the receiver chain (stream connections)
         self.connect((self.vector_source, 0), (self.frame_sync, 0))
         self.connect((self.frame_sync, 0), (self.fft_demod, 0))
         self.connect((self.fft_demod, 0), (self.gray_mapping, 0))
@@ -241,38 +284,42 @@ class LoRaFlowgraph(gr.top_block):
         self.connect((self.hamming_dec, 0), (self.header_decoder, 0))
         self.connect((self.header_decoder, 0), (self.dewhitening, 0))
         self.connect((self.dewhitening, 0), (self.crc_verif, 0))
+        self.connect((self.crc_verif, 0), (self.file_sink, 0))
 
-        # Connect message port from CRC verif to our message sink
+        # Connect message ports
+        # CRITICAL: header_decoder must send frame_info back to frame_sync!
+        # This feedback tells frame_sync the header parameters for payload processing
+        self.msg_connect((self.header_decoder, "frame_info"), (self.frame_sync, "frame_info"))
+
+        # Connect crc_verif output messages to our handler
         self.msg_connect((self.crc_verif, "msg"), (self.msg_sink, "in"))
 
-        logger.debug(f"LoRa flowgraph initialized: SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}")
-
-    def process_batch(self, samples):
-        """Process a batch of samples with timeout"""
+    def process_batch(self):
+        """
+        Process the batch of samples using start/stop with intelligent timeout.
+        Waits for VectorSource to finish or timeout after 3 seconds of processing.
+        """
         try:
-            # Set the data for the entire batch
-            self.vector_source.set_data(samples.tolist())
-
-            # Start the flowgraph
+            # Start the flowgraph in a separate thread
             self.start()
 
-            # Calculate expected processing time based on sample count and rate
-            # Add extra time for GNU Radio processing overhead and message delivery
-            expected_time = len(samples) / self.sample_rate
-            processing_time = expected_time + 2.0  # Add 2 seconds margin for message delivery
-
             # Wait for processing to complete
-            time.sleep(processing_time)
+            # For 2.5M samples at 500kS/s = 5 seconds of signal data
+            # Real-time processing should take ~5s, add small margin
+            processing_time = self.num_samples / self.sample_rate  # Signal duration in seconds
+            wait_time = processing_time + 0.5  # Add 500ms margin for processing overhead
+            time.sleep(wait_time)
 
-            # Stop gracefully
-            try:
-                self.stop()
-                self.wait()
-            except Exception as e:
-                logger.debug(f"Exception during flowgraph stop: {e}")
+            # Stop the flowgraph
+            self.stop()
+            self.wait()
 
+            # Give message thread time to deliver any pending messages
+            time.sleep(0.1)  # 100ms is sufficient for message delivery
+
+            # Batch processing complete (debug logging removed for cleaner output)
         except Exception as e:
-            logger.error(f"Error processing batch: {e}")
+            logger.error(f"Error during flowgraph processing: {e}")
             import traceback
 
             traceback.print_exc()
@@ -342,7 +389,7 @@ class LoRaDecoder(BaseDecoderProcess):
 
         # BaseDecoder required metadata attributes
         self.baudrate = config.baudrate  # Not really used for LoRa, but required by BaseDecoder
-        self.framing = config.framing
+        self.framing = "lora"  # LoRa uses its own framing (preamble + header + payload + CRC)
         self.config_source = config.config_source
         self.satellite = config.satellite or {}
         self.transmitter = config.transmitter or {}
@@ -453,9 +500,10 @@ class LoRaDecoder(BaseDecoderProcess):
         # - Telemetry parsing
         # - File saving (binary + JSON metadata)
         # - UI message construction and sending
+        # Note: BaseDecoder will log "LORA transmission decoded" which we suppress by not duplicating here
         BaseDecoderProcess._on_packet_decoded(self, payload, callsigns=None)
 
-        # Send status update (LoRa-specific)
+        # Send status update (LoRa-specific) - no log needed, already logged above
         self._send_status_update(
             DecoderStatus.COMPLETED,
             {"packet_number": self.packet_count, "packet_length": len(payload)},
@@ -565,21 +613,24 @@ class LoRaDecoder(BaseDecoderProcess):
         last_stats_time = time.time()  # Track time for periodic stats updates
         # Buffer enough samples for gr-lora_sdr processing
         # frame_sync needs at least 8200 samples, plus margin for packet length
-        # For SF11/250kHz, a packet can be 200-500ms
-        process_interval = 3.0  # Process every 3 seconds (more samples per batch)
+        # For SF7/125kHz, a packet is ~50-150ms, for SF11/250kHz it can be 200-500ms
+        process_interval = 3.0  # Process every 3 seconds (fast response)
 
         # Flow rate tracking
         last_process_time = time.time()
         # last_process_samples = 0
-        buffer_duration = process_interval + 1.0  # Buffer more than process interval for overlap
+        buffer_duration = process_interval + 1.0  # Buffer 1s extra for packet boundaries
 
         # CPU and memory monitoring
         process = psutil.Process()
         last_cpu_check = time.time()
         cpu_check_interval = 0.5  # Update CPU usage every 0.5 seconds
 
+        # Track parameters to avoid unnecessary flowgraph recreation
+        current_params = None  # Track (sf, bw, cr) to detect parameter changes
+
         try:
-            while self.running.value == 1:  # Changed from self.running
+            while self.running.value == 1:
                 # Update CPU and memory usage periodically
                 current_time = time.time()
                 if current_time - last_cpu_check >= cpu_check_interval:
@@ -732,60 +783,55 @@ class LoRaDecoder(BaseDecoderProcess):
                                     f"Auto-detection: trying SF{sfs_to_try[0]}, BW{bws_to_try[0]/1000:.0f}kHz, CR4/{crs_to_try[0]+4}"
                                 )
 
-                        for bw in bws_to_try:
-                            for sf in sfs_to_try:
-                                for cr in crs_to_try:
-                                    # Only try explicit header mode (implicit is rare)
-                                    for impl_head in [False]:
-                                        # Create a new flowgraph for this batch
-                                        flowgraph = LoRaFlowgraph(
-                                            sample_rate=self.sample_rate,
-                                            center_freq=vfo_center,
-                                            callback=self._on_packet_decoded,
-                                            sf=sf,
-                                            bw=bw,
-                                            cr=cr,
-                                            sync_word=self.sync_word,
-                                            impl_head=impl_head,
-                                            preamble_len=self.preamble_len,
-                                            fldro=self.fldro,
-                                        )
+                        # Determine parameters to use
+                        sf = sfs_to_try[0]
+                        bw = bws_to_try[0]
+                        cr = crs_to_try[0]
+                        impl_head = False
+                        params = (sf, bw, cr, impl_head)
 
-                                        # Process batch (blocking)
-                                        flowgraph.process_batch(samples_buffer)
+                        # Log parameter changes
+                        if current_params is not None and current_params != params:
+                            logger.info(
+                                f"Parameters changed to SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}"
+                            )
+                        current_params = params
 
-                                        # Cleanup
-                                        del flowgraph
+                        # Create new flowgraph for this batch
+                        flowgraph = LoRaFlowgraph(
+                            samples=samples_buffer,
+                            sample_rate=self.sample_rate,
+                            center_freq=vfo_center,
+                            callback=self._on_packet_decoded,
+                            sf=sf,
+                            bw=bw,
+                            cr=cr,
+                            sync_word=self.sync_word,
+                            impl_head=impl_head,
+                            preamble_len=self.preamble_len,
+                            fldro=self.fldro,
+                        )
 
-                                        # If we decoded a packet, lock in the parameters
-                                        if self.packet_count > 0:
-                                            if sf != self.sf or cr != self.cr or bw != self.bw:
-                                                logger.info(
-                                                    f"Auto-detected working parameters! SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}, impl_head={impl_head}"
-                                                )
-                                                self.sf = sf
-                                                self.bw = bw
-                                                self.cr = cr
-                                            break
+                        # Process batch - this blocks until completion, ensuring message delivery
+                        flowgraph.process_batch()
 
-                                    if self.packet_count > 0:
-                                        break  # Exit impl_head loop
+                        # Clean up flowgraph
+                        del flowgraph
 
-                                if self.packet_count > 0:
-                                    break  # Exit CR loop
+                        # If we decoded a packet, lock in the parameters
+                        if self.packet_count > 0:
+                            if sf != self.sf or cr != self.cr or bw != self.bw:
+                                logger.info(
+                                    f"Auto-detected working parameters! SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}, impl_head={impl_head}"
+                                )
+                                self.sf = sf
+                                self.bw = bw
+                                self.cr = cr
 
-                                if self.packet_count > 0:
-                                    break  # Exit CR loop
-
-                            if self.packet_count > 0:
-                                break  # Exit SF loop
-
-                            if self.packet_count > 0:
-                                break  # Exit BW loop
-
-                        # Keep overlap for packet boundaries (last 0.5s)
+                        # Keep overlap for packet boundaries
+                        # SF7 packet is ~50-150ms, SF11 can be 200-500ms, so 0.5s is safe
                         if self.sample_rate is not None:
-                            overlap_samples = int(self.sample_rate * 0.5)
+                            overlap_samples = int(self.sample_rate * 0.5)  # 500ms overlap
                             if len(samples_buffer) > overlap_samples:
                                 samples_buffer = samples_buffer[-overlap_samples:]
                             else:
@@ -813,6 +859,9 @@ class LoRaDecoder(BaseDecoderProcess):
             logger.exception(e)
             self._send_status_update(DecoderStatus.ERROR)
         except KeyboardInterrupt:
+            pass
+        finally:
+            # No persistent flowgraph to clean up - each batch creates/destroys its own
             pass
 
         logger.info(
@@ -898,3 +947,36 @@ class LoRaDecoder(BaseDecoderProcess):
         if self.vfo is not None:
             return self.vfo_manager.get_vfo_state(self.session_id, self.vfo)
         return None
+
+    def _get_payload_protocol(self) -> str:
+        """Return payload protocol for LoRa."""
+        return "lora"
+
+    def _get_decoder_config_metadata(self) -> dict:
+        """Return comprehensive LoRa decoder configuration metadata."""
+        # Format sync word for display
+        if self.sync_word:
+            if isinstance(self.sync_word, list):
+                sync_word_display = "[" + ",".join(f"0x{b:02X}" for b in self.sync_word) + "]"
+            else:
+                sync_word_display = f"0x{self.sync_word:02X}"
+        else:
+            sync_word_display = None
+
+        return {
+            "source": self.config_source,
+            "framing": "lora",
+            "payload_protocol": "lora",
+            "modulation": "LoRa",
+            "spreading_factor": self.sf,
+            "bandwidth_hz": self.bw,
+            "bandwidth_khz": self.bw / 1000 if self.bw else None,
+            "coding_rate": self.cr,
+            "coding_rate_string": f"4/{self.cr + 4}" if self.cr is not None else None,
+            "sync_word": self.sync_word,
+            "sync_word_display": sync_word_display,
+            "preamble_length": self.preamble_len,
+            "low_data_rate_optimization": self.fldro,
+            "has_crc": True,  # Always true for our configuration
+            "implicit_header": False,  # Always false for our configuration
+        }

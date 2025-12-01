@@ -735,8 +735,8 @@ export const DECODER_PARAMETERS = {
         type: 'select',
         default: [0x08, 0x10],
         options: [
-            { value: [0x12], label: '0x12 (LoRaWAN Public)' },
-            { value: [0x34], label: '0x34 (LoRaWAN Private)' },
+            { value: [0x12], label: '0x12 (LoRaWAN Private)' },
+            { value: [0x34], label: '0x34 (LoRaWAN Public)' },
             { value: [0x08, 0x10], label: '0x08 0x10 (TinyGS)' },
             { value: [], label: 'Auto-detect' }
         ],

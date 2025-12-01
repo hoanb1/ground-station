@@ -28,7 +28,7 @@ import subprocess
 import threading
 import time
 
-logger = logging.getLogger("shm_monitor")
+logger = logging.getLogger("shm-monitor")
 
 
 class SharedMemoryMonitor:

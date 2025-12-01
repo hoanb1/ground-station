@@ -34,6 +34,57 @@ import { deleteOutputByFilename } from '../decoders/decoders-slice';
 import { useSocket } from '../common/socket.jsx';
 import { toast } from 'react-toastify';
 
+// Humanize timestamp to show relative time (e.g., "5m 32s ago")
+const humanizePastTime = (timestamp) => {
+    const now = Date.now();
+    const diffInSeconds = Math.floor((now - timestamp) / 1000);
+
+    if (diffInSeconds < 60) {
+        return `${diffInSeconds}s ago`;
+    }
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const remainingSeconds = diffInSeconds % 60;
+
+    if (diffInMinutes < 60) {
+        return `${diffInMinutes}m ${remainingSeconds}s ago`;
+    }
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const remainingMinutes = diffInMinutes % 60;
+
+    if (diffInHours < 24) {
+        return `${diffInHours}h ${remainingMinutes}m ago`;
+    }
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    const remainingHours = diffInHours % 24;
+
+    return `${diffInDays}d ${remainingHours}h ago`;
+};
+
+// Time formatter component that updates without causing re-renders
+const TimeFormatter = React.memo(function TimeFormatter({ value }) {
+    const [, setForceUpdate] = useState(0);
+
+    // Force component to update every 10 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setForceUpdate(prev => prev + 1);
+        }, 10000); // 10 seconds
+        return () => clearInterval(interval);
+    }, []);
+
+    const timeString = new Date(value).toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+
+    return <span>{humanizePastTime(value)} ({timeString})</span>;
+});
+
 const DecodedPacketsDrawer = () => {
     const theme = useTheme();
     const dispatch = useDispatch();
@@ -62,24 +113,26 @@ const DecodedPacketsDrawer = () => {
     // Convert outputs to table rows (limit to 100 most recent)
     const rows = useMemo(() => {
         return outputs
-            .filter(output =>
-                output.output?.callsigns?.from &&
-                output.output?.callsigns?.to
-            )
+            .filter(output => output.type === 'decoder-output')
             .slice(-100) // Take last 100 entries
             .map(output => {
-                const fromCallsign = output.output.callsigns.from;
+                const isLora = output.decoder_type === 'lora';
+
+                // For LoRa: use packet metadata, for others: use callsigns
+                const fromCallsign = isLora ? '-' : (output.output.callsigns?.from || '-');
+                const toCallsign = isLora ? '-' : (output.output.callsigns?.to || '-');
+
                 // Use identified NORAD ID from backend lookup, then configured satellite
-                const noradId = output.output.callsigns.identified_norad_id || output.output.satellite?.norad_id;
-                const satelliteName = output.output.callsigns.identified_satellite || output.output.satellite?.name || '-';
+                const noradId = output.output.callsigns?.identified_norad_id || output.output.satellite?.norad_id;
+                const satelliteName = output.output.callsigns?.identified_satellite || output.output.satellite?.name || '-';
 
                 return {
                     id: output.id,
-                    timestamp: new Date(output.timestamp * 1000),
+                    timestamp: output.timestamp * 1000, // Store as milliseconds for TimeFormatter
                     satelliteName: satelliteName,
                     noradId: noradId,
                     from: fromCallsign,
-                    to: output.output.callsigns.to,
+                    to: toCallsign,
                     decoderType: output.decoder_type,
                     parser: output.output.telemetry?.parser || '-',
                     packetLength: output.output.packet_length,
@@ -156,32 +209,9 @@ const DecodedPacketsDrawer = () => {
         {
             field: 'timestamp',
             headerName: 'Time',
-            minWidth: 100,
-            flex: 1,
-            valueFormatter: (value) => {
-                return value.toLocaleTimeString('en-US', {
-                    hour12: false,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-            }
-        },
-        {
-            field: 'satelliteName',
-            headerName: 'Satellite',
-            minWidth: 120,
+            minWidth: 180,
             flex: 1.5,
-            renderCell: (params) => (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <span>{params.value}</span>
-                    {params.row.noradId && (
-                        <span style={{ color: 'text.disabled' }}>
-                            ({params.row.noradId})
-                        </span>
-                    )}
-                </Box>
-            )
+            renderCell: (params) => <TimeFormatter value={params.value} />
         },
         {
             field: 'from',
