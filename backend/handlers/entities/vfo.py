@@ -50,7 +50,7 @@ async def update_vfo_parameters(
     Returns:
         Dictionary with success status
     """
-    logger.debug(f"Updating VFO parameters, data: {data}")
+    logger.info(f"Updating VFO parameters, data: {data}")
 
     if not data:
         return {"success": False, "error": "No data provided"}
