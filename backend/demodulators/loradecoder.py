@@ -93,27 +93,44 @@ class LoRaMessageSink(gr.sync_block):
                 # Extract raw bytes from PMT
                 # Problem: C++ sends std::string with raw bytes, Python interprets as Unicode
                 # Solution: Handle both valid ASCII/UTF-8 and binary data gracefully
+                payload_str = None
                 try:
                     payload_str = gr.pmt.symbol_to_string(msg)
                     # Try latin-1 encoding first (maps Unicode 0-255 to bytes 1:1)
                     payload = payload_str.encode("latin-1")
-                except (UnicodeDecodeError, UnicodeEncodeError) as e:
-                    # If latin-1 fails, the string has characters > U+00FF
-                    # This happens when C++ raw bytes are misinterpreted as UTF-8
-                    # Fallback: extract bytes by character ordinal, skipping invalid ones
+                except UnicodeDecodeError as e:
+                    # PMT contains raw bytes that can't be decoded as UTF-8
+                    logger.debug(f"UTF-8 decode error at position {e.start}: {e.reason}")
                     try:
-                        payload_str = gr.pmt.symbol_to_string(msg)
-                        # Manual byte extraction: take only chars in valid byte range
-                        payload = bytes(ord(c) & 0xFF for c in payload_str)
-                        logger.debug(f"Used fallback byte extraction (Unicode error: {e})")
+                        # Try to get raw bytes from PMT blob if available
+                        if gr.pmt.is_blob(msg):
+                            payload = bytes(gr.pmt.blob_data(msg))
+                            logger.debug(f"Extracted {len(payload)} bytes from blob")
+                            logger.debug(f"First 50 bytes (hex): {payload[:50].hex()}")
+                            logger.debug(f"First 50 bytes (repr): {payload[:50]!r}")
+                        else:
+                            logger.debug(
+                                f"PMT type check - is_blob: {gr.pmt.is_blob(msg)}, is_symbol: {gr.pmt.is_symbol(msg)}, is_string: {gr.pmt.is_string(msg)}"
+                            )
+                            logger.debug("Cannot decode packet - skipping")
+                            return
                     except Exception as e2:
-                        logger.debug(f"Skipping corrupted packet: {e2}")
-                        logger.debug(f"Raw PMT message: {gr.pmt.write_string(msg)}")
-                        logger.debug(f"Payload string repr: {payload_str!r}")
+                        logger.debug(f"Could not extract blob data: {e2}")
+                        return
+                except UnicodeEncodeError as e:
+                    # If we got payload_str but latin-1 encoding failed
+                    logger.debug(f"Latin-1 encode error: {e}")
+                    if payload_str:
                         logger.debug(f"Payload string length: {len(payload_str)}")
-                        logger.debug(
-                            f"First 100 chars as hex: {' '.join(f'{ord(c):02x}' for c in payload_str[:100])}"
-                        )
+                        # Manual byte extraction: take only chars in valid byte range
+                        try:
+                            payload = bytes(ord(c) & 0xFF for c in payload_str)
+                            logger.debug(f"Used fallback byte extraction, got {len(payload)} bytes")
+                            logger.debug(f"First 50 bytes (hex): {payload[:50].hex()}")
+                        except Exception as e3:
+                            logger.debug(f"Fallback extraction failed: {e3}")
+                            return
+                    else:
                         return
 
                 # Single consolidated log for successful decode
