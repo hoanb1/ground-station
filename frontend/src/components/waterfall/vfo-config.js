@@ -735,10 +735,10 @@ export const DECODER_PARAMETERS = {
         type: 'select',
         default: [0x08, 0x10],
         options: [
-            { value: [0x12], label: '0x12 (LoRaWAN Private)' },
-            { value: [0x34], label: '0x34 (LoRaWAN Public)' },
-            { value: [0x08, 0x10], label: '0x08 0x10 (TinyGS)' },
-            { value: [], label: 'Auto-detect' }
+            { value: [0x12], label: '0x12 (18) - LoRaWAN Private Networks' },
+            { value: [0x34], label: '0x34 (52) - LoRaWAN Public Networks' },
+            { value: [0x08, 0x10], label: '0x08 0x10 (8, 16) - TinyGS Satellite Network' },
+            { value: [], label: 'Auto-detect (accept all sync words)' }
         ],
         // Custom comparator for array values
         compare: (a, b) => JSON.stringify(a) === JSON.stringify(b)
