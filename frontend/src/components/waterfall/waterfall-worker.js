@@ -65,6 +65,8 @@ let showRotatorDottedLines = true;
 let autoScalePreset = 'medium'; // 'strong', 'medium', 'weak'
 // Control whether we collect FFT frames for auto-scale history
 let collectAutoScaleHistory = true;
+// Global offset to adjust the dB range for visual rescaling
+let DB_RANGE_OFFSET = 0;
 
 // Store theme object
 let theme = {
@@ -636,7 +638,10 @@ function renderFFTRowIntoRing(fftData, y) {
 
     const data = imageData.data;
     const [min, max] = dbRange;
-    const range = max - min;
+    // Apply the global offset to the range
+    const offsetMin = min + DB_RANGE_OFFSET;
+    const offsetMax = max + DB_RANGE_OFFSET;
+    const range = offsetMax - offsetMin;
     const canvasWidth = waterfallCanvas.width;
 
     // Note: No need to clear the image data here as we overwrite every pixel below
@@ -656,7 +661,7 @@ function renderFFTRowIntoRing(fftData, y) {
             const amplitude = fftData[fftIndex];
 
             // Map amplitude to palette index [0..255]
-            let idx = ((amplitude - min) * 255 / safeRange) | 0;
+            let idx = ((amplitude - offsetMin) * 255 / safeRange) | 0;
             if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
             const po = idx * 3;
 
@@ -673,7 +678,7 @@ function renderFFTRowIntoRing(fftData, y) {
         for (let i = 0; i < fftData.length; i++) {
             const amplitude = fftData[i];
             // Map amplitude to palette index [0..255]
-            let idx = ((amplitude - min) * 255 / safeRange) | 0;
+            let idx = ((amplitude - offsetMin) * 255 / safeRange) | 0;
             if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
             const po = idx * 3;
 

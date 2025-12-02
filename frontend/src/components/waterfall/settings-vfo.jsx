@@ -28,6 +28,7 @@ import {
 } from "@mui/material";
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import CloseIcon from '@mui/icons-material/Close';
@@ -97,6 +98,9 @@ const VfoAccordion = ({
     const satelliteDetails = useSelector(state => state.targetSatTrack.satelliteData?.details || null);
     const satelliteTransmitters = useSelector(state => state.targetSatTrack.satelliteData?.transmitters || []);
     const targetSatelliteName = satelliteDetails?.name || '';
+
+    // Get streaming VFO from Redux state
+    const streamingVFO = useSelector(state => state.vfo.streamingVFO);
 
     // Format decoder parameters into short notation
     const formatDecoderParamsSummary = (vfoIndex) => {
@@ -198,13 +202,24 @@ const VfoAccordion = ({
                             key={index}
                             label={
                                 <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-                                    {t('vfo.vfo_number', { number: index + 1 })}
-                                    {vfoMarkers[index + 1]?.lockedTransmitterId && (
+                                    {index + 1}
+                                    {vfoMarkers[index + 1]?.lockedTransmitterId && vfoMarkers[index + 1]?.lockedTransmitterId !== 'none' && (
                                         <LockIcon
                                             sx={{
                                                 position: 'absolute',
                                                 top: -4,
                                                 right: -8,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                            }}
+                                        />
+                                    )}
+                                    {streamingVFO === (index + 1) && (
+                                        <VolumeUpIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -4,
+                                                left: -8,
                                                 fontSize: '0.75rem',
                                                 pointerEvents: 'none',
                                             }}
