@@ -308,7 +308,12 @@ class SatelliteTracker:
 
                 # Update hardware positions
                 await self.rotator_handler.update_hardware_position()
-                await self.rig_handler.update_hardware_frequency()
+
+                # Update rig frequency (allow tracking to continue if rig fails)
+                try:
+                    await self.rig_handler.update_hardware_frequency()
+                except Exception as e:
+                    logger.warning(f"Rig communication failed, continuing tracking: {e}")
 
                 # Work on sky coordinates
                 skypoint = (
