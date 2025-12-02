@@ -807,44 +807,50 @@ const VfoAccordion = ({
                             </ToggleButtonGroup>
 
                             {/* Decoder Parameters Link - Click to open dialog */}
-                            {vfoMarkers[vfoIndex]?.decoder && vfoMarkers[vfoIndex].decoder !== 'none' && (
-                                <Box sx={{ mt: 1.5, width: '100%' }}>
-                                    <Link
-                                        component="button"
-                                        variant="body2"
-                                        onClick={() => {
-                                            setDecoderParamsVfoIndex(vfoIndex);
-                                            setDecoderParamsDialogOpen(true);
-                                        }}
-                                        sx={{
-                                            width: '100%',
-                                            fontSize: '0.875rem',
-                                            color: 'text.primary',
-                                            textDecoration: 'none',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: 1,
-                                            py: 1,
-                                            px: 2,
-                                            borderRadius: 1,
-                                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                                            transition: 'all 0.2s ease',
-                                            '&:hover': {
-                                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                borderColor: 'rgba(255, 255, 255, 0.2)',
-                                            },
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        <SettingsIcon sx={{ fontSize: '1rem', color: 'primary.main' }} />
-                                        <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary', flex: 1 }}>
-                                            {formatDecoderParamsSummary(vfoIndex)}
-                                        </Box>
-                                    </Link>
-                                </Box>
-                            )}
+                            <Box sx={{ mt: 1.5, width: '100%' }}>
+                                <Link
+                                    component="button"
+                                    variant="body2"
+                                    disabled={!vfoMarkers[vfoIndex]?.decoder || vfoMarkers[vfoIndex].decoder === 'none'}
+                                    onClick={() => {
+                                        setDecoderParamsVfoIndex(vfoIndex);
+                                        setDecoderParamsDialogOpen(true);
+                                    }}
+                                    sx={{
+                                        width: '100%',
+                                        fontSize: '0.875rem',
+                                        color: 'text.primary',
+                                        textDecoration: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 1,
+                                        py: 1,
+                                        px: 2,
+                                        borderRadius: 1,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        transition: 'all 0.2s ease',
+                                        '&:hover:not(.Mui-disabled)': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                        },
+                                        '&.Mui-disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                            borderColor: 'rgba(255, 255, 255, 0.05)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                            opacity: 0.5,
+                                            cursor: 'not-allowed',
+                                        },
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    <SettingsIcon sx={{ fontSize: '1rem', color: 'primary.main' }} />
+                                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary', flex: 1 }}>
+                                        {formatDecoderParamsSummary(vfoIndex) || 'Decoder Parameters'}
+                                    </Box>
+                                </Link>
+                            </Box>
                         </Box>
 
                         <Box sx={{ mt: 2 }}>
