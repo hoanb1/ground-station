@@ -66,6 +66,8 @@
     "altitude": "ΥΨΟΜΕΤΡΟ",
     "velocity": "ΤΑΧΥΤΗΤΑ",
     "frequency_bands": "ΖΩΝΕΣ ΣΥΧΝΟΤΗΤΩΝ",
+    "modulations": "ΔΙΑΜΟΡΦΩΣΕΙΣ",
+    "no_modulations": "Δεν εντοπίστηκαν διαμορφώσεις",
     "countries": "ΧΩΡΕΣ",
     "last_update": "ΤΕΛΕΥΤΑΙΑ ΕΝΗΜΕΡΩΣΗ",
     "unknown": "Αγνωστο",

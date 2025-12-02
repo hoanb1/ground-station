@@ -105,6 +105,25 @@ const OverviewSatelliteInfoCard = () => {
             .filter((v, i, a) => a.indexOf(v) === i)
         : [];
 
+    const modulations = satelliteData && satelliteData['transmitters']
+        ? Array.from(new Set(
+            satelliteData['transmitters'].flatMap(t => {
+                const keywords = ['FSK', 'GMSK', 'GFSK', 'BPSK', 'SSTV', 'AFSK', 'LORA'];
+                const found = [];
+                const mode = (t['mode'] || '').toUpperCase();
+                const description = (t['description'] || '').toUpperCase();
+
+                keywords.forEach(keyword => {
+                    if (mode.includes(keyword) || description.includes(keyword)) {
+                        found.push(keyword);
+                    }
+                });
+
+                return found;
+            })
+        ))
+        : [];
+
     const DataPoint = ({ icon: Icon, label, value, color = 'text.primary', unit = '' }) => (
         <Box sx={{ mb: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
@@ -340,7 +359,7 @@ const OverviewSatelliteInfoCard = () => {
 
                         {/* Communication Data */}
                         <Section title={t('satellite_info.communication')} icon={SettingsInputAntennaIcon}>
-                            <Box sx={{ mb: 0 }}>
+                            <Box sx={{ mb: 1 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 1, display: 'block' }}>
                                     {t('satellite_info.frequency_bands')}
                                 </Typography>
@@ -358,6 +377,32 @@ const OverviewSatelliteInfoCard = () => {
                                             }}
                                         />
                                     ))}
+                                </Box>
+                            </Box>
+                            <Box sx={{ mb: 0 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 1, display: 'block' }}>
+                                    {t('satellite_info.modulations')}
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {modulations.length > 0 ? (
+                                        modulations.map((modulation, index) => (
+                                            <Chip
+                                                key={index}
+                                                label={modulation}
+                                                size="small"
+                                                sx={{
+                                                    backgroundColor: 'primary.main',
+                                                    color: 'common.white',
+                                                    fontSize: '0.7rem',
+                                                    height: 24
+                                                }}
+                                            />
+                                        ))
+                                    ) : (
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                                            {t('satellite_info.no_modulations')}
+                                        </Typography>
+                                    )}
                                 </Box>
                             </Box>
                         </Section>

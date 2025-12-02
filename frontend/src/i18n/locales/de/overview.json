@@ -66,6 +66,8 @@
     "altitude": "HÖHE",
     "velocity": "GESCHWINDIGKEIT",
     "frequency_bands": "FREQUENZBÄNDER",
+    "modulations": "MODULATIONEN",
+    "no_modulations": "Keine Modulationen erkannt",
     "countries": "LÄNDER",
     "last_update": "LETZTE AKTUALISIERUNG",
     "unknown": "Unbekannt",

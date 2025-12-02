@@ -66,6 +66,8 @@
     "altitude": "HOOGTE",
     "velocity": "SNELHEID",
     "frequency_bands": "FREQUENTIEBANDEN",
+    "modulations": "MODULATIES",
+    "no_modulations": "Geen modulaties gedetecteerd",
     "countries": "LANDEN",
     "last_update": "LAATSTE UPDATE",
     "unknown": "Onbekend",
