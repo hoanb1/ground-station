@@ -75,8 +75,28 @@ class AX25Parser:
             parsed = cls.Frame.parse(packet_bytes)
 
             # Extract callsigns
-            destination = f"{parsed.addresses[0].callsign}-{parsed.addresses[0].ssid.ssid}"
-            source = f"{parsed.addresses[1].callsign}-{parsed.addresses[1].ssid.ssid}"
+            dest_call = parsed.addresses[0].callsign
+            src_call = parsed.addresses[1].callsign
+
+            # Validate callsigns: AX.25 callsigns must be alphanumeric ASCII + space/dash
+            # Valid examples: "W1AW  ", "ISS   ", "FOSSAT", "CQ    "
+            import re
+
+            if not re.match(r"^[A-Z0-9 -]{1,6}$", dest_call.strip()):
+                return {
+                    "success": False,
+                    "error": f"Invalid destination callsign: '{dest_call}' (not valid AX.25 format)",
+                    "error_type": "ValidationError",
+                }
+            if not re.match(r"^[A-Z0-9 -]{1,6}$", src_call.strip()):
+                return {
+                    "success": False,
+                    "error": f"Invalid source callsign: '{src_call}' (not valid AX.25 format)",
+                    "error_type": "ValidationError",
+                }
+
+            destination = f"{dest_call}-{parsed.addresses[0].ssid.ssid}"
+            source = f"{src_call}-{parsed.addresses[1].ssid.ssid}"
 
             # Check for repeaters (digipeaters)
             repeaters = []
@@ -96,9 +116,9 @@ class AX25Parser:
                 "payload_length": len(parsed.info),
                 "repeaters": repeaters if repeaters else None,
                 "raw": {
-                    "destination_callsign": parsed.addresses[0].callsign,
+                    "destination_callsign": dest_call,
                     "destination_ssid": parsed.addresses[0].ssid.ssid,
-                    "source_callsign": parsed.addresses[1].callsign,
+                    "source_callsign": src_call,
                     "source_ssid": parsed.addresses[1].ssid.ssid,
                 },
             }

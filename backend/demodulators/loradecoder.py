@@ -25,6 +25,7 @@ from enum import Enum
 from typing import Any, Dict
 
 import numpy as np
+import pmt
 import psutil
 
 # Add setproctitle import for process naming
@@ -90,106 +91,87 @@ class LoRaMessageSink(gr.sync_block):
             # The crc_verif block sends payload as a string PMT containing raw bytes
             if gr.pmt.is_symbol(msg) or gr.pmt.is_string(msg):
                 # Extract raw bytes from PMT
-                # Problem: C++ sends std::string with raw bytes, Python interprets as Unicode
-                # Solution: Handle both valid ASCII/UTF-8 and binary data gracefully
-                payload_str = None
+                # Problem: C++ sends std::string with raw bytes, Python's symbol_to_string() validates UTF-8
+                # Solution: Serialize PMT and extract raw bytes from serialized format
                 try:
-                    payload_str = gr.pmt.symbol_to_string(msg)
-                    # Try latin-1 encoding first (maps Unicode 0-255 to bytes 1:1)
-                    payload = payload_str.encode("latin-1")
-                except UnicodeDecodeError as e:
-                    # PMT contains raw bytes that can't be decoded as UTF-8
-                    logger.debug(f"UTF-8 decode error at position {e.start}: {e.reason}")
+                    # Method 1: Try to serialize the PMT to get raw bytes
+                    # PMT serialization format includes the data without UTF-8 validation
+                    serialized = pmt.serialize_str(msg)
+
+                    # Debug: log the serialized format to understand the structure
                     logger.debug(
-                        f"PMT is_blob: {gr.pmt.is_blob(msg)}, is_symbol: {gr.pmt.is_symbol(msg)}"
-                    )
-                    logger.debug(
-                        f"PMT is_pair: {gr.pmt.is_pair(msg)}, is_u8vector: {gr.pmt.is_u8vector(msg)}"
+                        f"Serialized PMT length: {len(serialized)}, first 10 bytes: {serialized[:10].hex()}"
                     )
 
-                    # Try different extraction methods
+                    # Parse PMT serialization format
+                    # Common formats observed:
+                    # Type 0x02 (symbol): 1 byte type + 2 bytes length (big-endian) + data
+                    # Type 0x70-0x73: 1 byte type + 4 bytes length + data
+
+                    if len(serialized) < 3:
+                        raise ValueError(f"Serialized PMT too short: {len(serialized)} bytes")
+
+                    type_tag = serialized[0]
+
+                    if type_tag == 0x02:
+                        # Symbol with 2-byte length header
+                        if len(serialized) < 3:
+                            raise ValueError("Invalid symbol format - too short")
+                        length = int.from_bytes(serialized[1:3], byteorder="big")
+                        payload = serialized[3 : 3 + length]
+                        logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
+                        self.callback(payload)
+                    elif type_tag in [0x70, 0x71, 0x72, 0x73]:
+                        # Symbol with 4-byte length header
+                        if len(serialized) < 5:
+                            raise ValueError("Invalid symbol format - too short")
+                        length = int.from_bytes(serialized[1:5], byteorder="big")
+                        payload = serialized[5 : 5 + length]
+                        logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
+                        self.callback(payload)
+                    else:
+                        raise ValueError(f"Unknown PMT type tag: 0x{type_tag:02x}")
+
+                except Exception as e:
+                    logger.debug(f"Failed to extract using serialize_str: {e}")
+                    # Method 2: Try alternative PMT types
                     try:
                         # Try blob extraction
                         if gr.pmt.is_blob(msg):
                             payload = bytes(gr.pmt.blob_data(msg))
-                            logger.debug(f"Extracted {len(payload)} bytes from blob")
-                            logger.debug(f"Payload (hex): {payload.hex()}")
-                            logger.debug(f"Payload (repr): {payload!r}")
+                            logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
+                            self.callback(payload)
                         # Try u8vector extraction
                         elif gr.pmt.is_u8vector(msg):
                             payload = bytes(gr.pmt.u8vector_elements(msg))
-                            logger.debug(f"Extracted {len(payload)} bytes from u8vector")
-                            logger.debug(f"Payload (hex): {payload.hex()}")
-                            logger.debug(f"Payload (repr): {payload!r}")
+                            logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
+                            self.callback(payload)
                         # Try pair (header + payload)
                         elif gr.pmt.is_pair(msg):
                             car = gr.pmt.car(msg)
                             cdr = gr.pmt.cdr(msg)
-                            logger.debug(
-                                f"PMT is pair - car type: {type(car)}, cdr type: {type(cdr)}"
-                            )
-                            logger.debug(
-                                f"Car is_dict: {gr.pmt.is_dict(car)}, Cdr is_u8vector: {gr.pmt.is_u8vector(cdr)}"
-                            )
 
-                            # Try to extract header metadata
-                            if gr.pmt.is_dict(car):
-                                logger.debug("Header metadata found:")
-                                try:
-                                    pay_len = gr.pmt.to_long(
-                                        gr.pmt.dict_ref(
-                                            car, gr.pmt.intern("pay_len"), gr.pmt.from_long(-1)
-                                        )
-                                    )
-                                    has_crc = gr.pmt.to_bool(
-                                        gr.pmt.dict_ref(car, gr.pmt.intern("crc"), gr.pmt.PMT_F)
-                                    )
-                                    cr = gr.pmt.to_long(
-                                        gr.pmt.dict_ref(
-                                            car, gr.pmt.intern("cr"), gr.pmt.from_long(-1)
-                                        )
-                                    )
-                                    logger.debug(f"  pay_len={pay_len}, crc={has_crc}, cr={cr}")
-                                except Exception as e3:
-                                    logger.debug(f"  Could not parse header dict: {e3}")
-
-                            # Try to extract payload
+                            # Try to extract payload from cdr
                             if gr.pmt.is_u8vector(cdr):
                                 payload = bytes(gr.pmt.u8vector_elements(cdr))
-                                logger.debug(f"Extracted {len(payload)} bytes from pair cdr")
-                                logger.debug(f"Payload (hex): {payload.hex()}")
-                                logger.debug(f"Payload (repr): {payload!r}")
+                                logger.info(
+                                    f"LoRa packet decoded: {len(payload)} bytes - {payload!r}"
+                                )
+                                self.callback(payload)
                             else:
                                 logger.debug("Cannot extract payload from pair cdr")
                                 return
                         else:
-                            logger.debug("Unknown PMT type - cannot extract payload")
+                            logger.warning(
+                                f"Unable to extract payload - PMT type cannot be decoded. Serialized (first 50 bytes): {serialized[:50].hex() if 'serialized' in locals() else 'N/A'}"
+                            )
                             return
                     except Exception as e2:
-                        logger.debug(f"Could not extract data: {e2}")
+                        logger.error(f"Could not extract data from PMT: {e2}")
                         import traceback
 
                         logger.debug(traceback.format_exc())
                         return
-                except UnicodeEncodeError as e:
-                    # If we got payload_str but latin-1 encoding failed
-                    logger.debug(f"Latin-1 encode error: {e}")
-                    if payload_str:
-                        logger.debug(f"Payload string length: {len(payload_str)}")
-                        # Manual byte extraction: take only chars in valid byte range
-                        try:
-                            payload = bytes(ord(c) & 0xFF for c in payload_str)
-                            logger.debug(f"Used fallback byte extraction, got {len(payload)} bytes")
-                            logger.debug(f"First 50 bytes (hex): {payload[:50].hex()}")
-                        except Exception as e3:
-                            logger.debug(f"Fallback extraction failed: {e3}")
-                            return
-                    else:
-                        return
-
-                # Single consolidated log for successful decode
-                logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
-                self.callback(payload)
             elif gr.pmt.is_pair(msg):
                 # Check if this is a pair with header metadata
                 meta = gr.pmt.car(msg)
