@@ -28,7 +28,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { alpha } from '@mui/material/styles';
 import { setPacketsDrawerOpen, setPacketsDrawerHeight } from './waterfall-slice';
-import { getDecoderDisplay, ModulationType } from '../../constants/modulations';
+import { getDecoderDisplay, getModulationDisplay, ModulationType } from '../../constants/modulations';
 import TelemetryViewerDialog from '../filebrowser/telemetry-viewer-dialog.jsx';
 import { deleteDecoded } from '../filebrowser/filebrowser-slice';
 import { deleteOutputByFilename } from '../decoders/decoders-slice';
