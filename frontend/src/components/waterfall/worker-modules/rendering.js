@@ -59,23 +59,29 @@ export function drawBandscope({
     bandscopeCtx.fillStyle = theme.palette.background.default;
     bandscopeCtx.fillRect(0, 0, width, height);
 
+    // Shift the dB range upward by 5 dB to move the line toward the bottom
+    const DB_SHIFT = 5;
     const [minDb, maxDb] = dbRange;
+    const shiftedMinDb = minDb + DB_SHIFT;
+    const shiftedMaxDb = maxDb + DB_SHIFT;
+    const shiftedDbRange = [shiftedMinDb, shiftedMaxDb];
 
-    // Draw dB marks and labels
+    // Draw dB marks and labels using shifted range
     bandscopeCtx.fillStyle = 'white';
     bandscopeCtx.font = '12px Monospace';
     bandscopeCtx.textAlign = 'right';
 
     // Calculate step size based on range
-    const dbRangeDiff = maxDb - minDb;
+    const dbRangeDiff = shiftedMaxDb - shiftedMinDb;
     const steps = Math.min(6, dbRangeDiff); // Maximum 10 steps
     const stepSize = Math.ceil(dbRangeDiff / steps);
 
-    for (let db = Math.ceil(minDb / stepSize) * stepSize; db <= maxDb; db += stepSize) {
-        const y = height - ((db - minDb) / (maxDb - minDb)) * height;
+    for (let db = Math.ceil(shiftedMinDb / stepSize) * stepSize; db <= shiftedMaxDb; db += stepSize) {
+        const y = height - ((db - shiftedMinDb) / (shiftedMaxDb - shiftedMinDb)) * height;
 
-        // Draw a horizontal dotted grid line
+        // Draw a horizontal dotted grid line with 1px thickness
         bandscopeCtx.strokeStyle = 'rgba(150, 150, 150, 0.4)';
+        bandscopeCtx.lineWidth = 1;
         bandscopeCtx.setLineDash([5, 5]);
         bandscopeCtx.beginPath();
         bandscopeCtx.moveTo(0, y);
@@ -84,24 +90,24 @@ export function drawBandscope({
         bandscopeCtx.setLineDash([]);
     }
 
-    // Draw the dB axis (y-axis)
+    // Draw the dB axis (y-axis) using shifted range
     drawDbAxis({
         dBAxisCtx,
         dBAxisCanvas,
         width,
         height,
         topPadding: 0,
-        dbRange,
+        dbRange: shiftedDbRange,
         theme
     });
 
-    // Draw the FFT data as a line graph using smoothed data
+    // Draw the FFT data as a line graph using smoothed data with shifted range
     drawFftLine({
         ctx: bandscopeCtx,
         fftData: smoothedFftData,
         width,
         height,
-        dbRange,
+        dbRange: shiftedDbRange,
         colorMap
     });
 }
@@ -160,6 +166,61 @@ export function drawDbAxis({
 }
 
 /**
+ * Efficiently downsample FFT data using averaging for smooth visualization
+ * @param {Array<number>} fftData - Full FFT data
+ * @param {number} targetPoints - Target number of points
+ * @returns {Array<{x: number, y: number}>} Downsampled points with x as fraction [0,1] and y as amplitude
+ */
+function downsampleFftData(fftData, targetPoints) {
+    const dataLength = fftData.length;
+
+    // If we have fewer or equal points than target, return all points
+    if (dataLength <= targetPoints) {
+        return fftData.map((amplitude, i) => ({
+            x: i / (dataLength - 1),
+            y: amplitude
+        }));
+    }
+
+    // Calculate how many input samples per output point
+    const binSize = dataLength / targetPoints;
+    const result = [];
+
+    // Use averaging with peak weighting for smooth but accurate representation
+    for (let i = 0; i < targetPoints; i++) {
+        const startIdx = Math.floor(i * binSize);
+        const endIdx = Math.floor((i + 1) * binSize);
+
+        let sum = 0;
+        let max = -Infinity;
+        let count = 0;
+
+        // Calculate average and find peak in this bin
+        for (let j = startIdx; j < endIdx && j < dataLength; j++) {
+            const val = fftData[j];
+            sum += val;
+            count++;
+            if (val > max) {
+                max = val;
+            }
+        }
+
+        // Weighted average: 70% average + 30% peak (preserves some peaks while smoothing)
+        const avg = sum / count;
+        const weightedValue = avg * 0.7 + max * 0.3;
+
+        // Use the center of the bin for x position
+        const centerIdx = (startIdx + endIdx) / 2;
+        result.push({
+            x: centerIdx / (dataLength - 1),
+            y: weightedValue
+        });
+    }
+
+    return result;
+}
+
+/**
  * Draw FFT line on bandscope
  * @param {Object} params - Parameters object
  * @param {CanvasRenderingContext2D} params.ctx - Canvas context
@@ -179,7 +240,13 @@ export function drawFftLine({
 }) {
     const [minDb, maxDb] = dbRange;
     const graphWidth = width;
-    const skipFactor = fftData.length / graphWidth;
+
+    // Adaptive target points: use width for small FFTs, cap at reasonable limit for large FFTs
+    // This prevents excessive point generation while maintaining visual quality
+    const targetPoints = Math.min(graphWidth, Math.max(512, fftData.length / 16));
+
+    // Downsample the FFT data efficiently
+    const downsampledPoints = downsampleFftData(fftData, targetPoints);
 
     // Generate line color based on a "hot" point in the colormap (e.g., 80% intensity)
     // This gives a color that's representative of the colormap
@@ -206,24 +273,49 @@ export function drawFftLine({
 
     // Set line style with generated color
     ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     ctx.beginPath();
 
-    // Draw the line path
-    for (let x = 0; x < graphWidth; x++) {
-        // Map canvas pixel to the appropriate FFT bin using scaling
-        const fftIndex = Math.min(Math.floor(x * skipFactor), fftData.length - 1);
-        const amplitude = fftData[fftIndex];
+    // Draw the line path using downsampled points with quadratic curves for smoothness
+    for (let i = 0; i < downsampledPoints.length; i++) {
+        const point = downsampledPoints[i];
+        const x = point.x * graphWidth;
+        const amplitude = point.y;
 
         // Normalize amplitude to canvas height using dB range
         const normalizedValue = Math.max(0, Math.min(1, (amplitude - minDb) / (maxDb - minDb)));
         const y = height - (normalizedValue * height);
 
-        if (x === 0) {
+        if (i === 0) {
             ctx.moveTo(x, y);
-        } else {
+        } else if (i === 1) {
             ctx.lineTo(x, y);
+        } else {
+            // Use quadratic curve for smooth interpolation between points
+            const prevPoint = downsampledPoints[i - 1];
+            const prevX = prevPoint.x * graphWidth;
+            const prevAmplitude = prevPoint.y;
+            const prevNormalizedValue = Math.max(0, Math.min(1, (prevAmplitude - minDb) / (maxDb - minDb)));
+            const prevY = height - (prevNormalizedValue * height);
+
+            // Control point is midway between previous and current point
+            const cpX = (prevX + x) / 2;
+            const cpY = (prevY + y) / 2;
+
+            ctx.quadraticCurveTo(prevX, prevY, cpX, cpY);
         }
+    }
+
+    // Final segment to last point
+    if (downsampledPoints.length > 2) {
+        const lastPoint = downsampledPoints[downsampledPoints.length - 1];
+        const x = lastPoint.x * graphWidth;
+        const amplitude = lastPoint.y;
+        const normalizedValue = Math.max(0, Math.min(1, (amplitude - minDb) / (maxDb - minDb)));
+        const y = height - (normalizedValue * height);
+        ctx.lineTo(x, y);
     }
 
     // Draw the line
