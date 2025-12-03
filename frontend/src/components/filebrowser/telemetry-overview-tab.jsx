@@ -18,6 +18,7 @@ import {
     useTheme,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { getDecoderDisplay, ModulationType } from '../../constants/modulations';
 
 function InfoSection({ title, children }) {
     const theme = useTheme();
@@ -218,7 +219,7 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
             <InfoSection title="Validation">
                 <Stack spacing={1}>
                     {/* Show validation info based on decoder type */}
-                    {decoder.type === 'lora' ? (
+                    {decoder.type === ModulationType.LORA ? (
                         <>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
@@ -275,8 +276,8 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
 
                 <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
                     <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                        {decoder.type === 'lora' ? (
-                            <>ℹ️ LoRa packets include PHY-layer CRC validation and Forward Error Correction (FEC). Invalid packets are automatically discarded by the LoRa decoder.</>
+                        {decoder.type === ModulationType.LORA ? (
+                            <>ℹ️ {getDecoderDisplay(decoder.type)} packets include PHY-layer CRC validation and Forward Error Correction (FEC). Invalid packets are automatically discarded by the {getDecoderDisplay(decoder.type)} decoder.</>
                         ) : (
                             <>ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.</>
                         )}

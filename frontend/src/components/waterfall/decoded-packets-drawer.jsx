@@ -28,6 +28,7 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { alpha } from '@mui/material/styles';
 import { setPacketsDrawerOpen, setPacketsDrawerHeight } from './waterfall-slice';
+import { getDecoderDisplay, ModulationType } from '../../constants/modulations';
 import TelemetryViewerDialog from '../filebrowser/telemetry-viewer-dialog.jsx';
 import { deleteDecoded } from '../filebrowser/filebrowser-slice';
 import { deleteOutputByFilename } from '../decoders/decoders-slice';
@@ -116,7 +117,7 @@ const DecodedPacketsDrawer = () => {
             .filter(output => output.type === 'decoder-output')
             .slice(-100) // Take last 100 entries
             .map(output => {
-                const isLora = output.decoder_type === 'lora';
+                const isLora = output.decoder_type === ModulationType.LORA;
 
                 // For LoRa: use packet metadata, for others: use callsigns
                 const fromCallsign = isLora ? '-' : (output.output.callsigns?.from || '-');
@@ -244,13 +245,12 @@ const DecodedPacketsDrawer = () => {
             headerAlign: 'center',
             renderCell: (params) => (
                 <Chip
-                    label={params.value}
+                    label={getDecoderDisplay(params.value)}
                     size="small"
                     sx={{
                         height: '20px',
                         fontSize: '0.65rem',
                         fontWeight: 600,
-                        textTransform: 'uppercase',
                         backgroundColor: alpha(theme.palette.primary.main, 0.15),
                         border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                         color: 'primary.main',
@@ -290,13 +290,12 @@ const DecodedPacketsDrawer = () => {
             headerAlign: 'center',
             renderCell: (params) => (
                 <Chip
-                    label={params.value}
+                    label={getModulationDisplay(params.value)}
                     size="small"
                     sx={{
                         height: '20px',
                         fontSize: '0.65rem',
                         fontWeight: 600,
-                        textTransform: 'uppercase',
                         backgroundColor: alpha(theme.palette.warning.main, 0.15),
                         border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
                         color: 'warning.main',
@@ -312,15 +311,14 @@ const DecodedPacketsDrawer = () => {
             align: 'center',
             headerAlign: 'center',
             renderCell: (params) => (
-                <Tooltip title={`Payload protocol: ${params.value}`}>
+                <Tooltip title={`Payload protocol: ${getModulationDisplay(params.value)}`}>
                     <Chip
-                        label={params.value}
+                        label={getModulationDisplay(params.value)}
                         size="small"
                         sx={{
                             height: '20px',
                             fontSize: '0.65rem',
                             fontWeight: 600,
-                            textTransform: 'uppercase',
                             backgroundColor: alpha(theme.palette.success.main, 0.15),
                             border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
                             color: 'success.main',

@@ -12,6 +12,7 @@ import UpdateIcon from '@mui/icons-material/Update';
 import SatelliteIcon from '@mui/icons-material/Satellite';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { getModulationDisplay } from '../../constants/modulations';
 import {
     Box,
     Typography,
@@ -115,7 +116,8 @@ const OverviewSatelliteInfoCard = () => {
 
                 keywords.forEach(keyword => {
                     if (mode.includes(keyword) || description.includes(keyword)) {
-                        found.push(keyword);
+                        // Use proper display name for modulation
+                        found.push(getModulationDisplay(keyword));
                     }
                 });
 

@@ -27,6 +27,8 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 
+from constants import get_modulation_display
+
 logger = logging.getLogger("basedecoder")
 
 # Load satellite callsign to NORAD ID lookup table
@@ -219,7 +221,8 @@ class BaseDecoder:
                 self.stats["packets_decoded"] = self.packet_count
 
             decoder_type = self._get_decoder_type()
-            logger.info(f"{decoder_type.upper()} transmission decoded: {len(payload)} bytes")
+            decoder_display = get_modulation_display(decoder_type)
+            logger.info(f"{decoder_display} transmission decoded: {len(payload)} bytes")
 
             # Log callsigns if available and perform NORAD ID lookup
             identified_norad_id = None
