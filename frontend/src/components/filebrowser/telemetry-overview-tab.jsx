@@ -217,29 +217,69 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
             {/* Validation Status - Full Width */}
             <InfoSection title="Validation">
                 <Stack spacing={1}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                        <Typography variant="body2">
-                            CRC-16 validated by HDLC deframer
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                        <Typography variant="body2">
-                            Callsigns decoded correctly
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                        <Typography variant="body2">
-                            Packet integrity confirmed
-                        </Typography>
-                    </Box>
+                    {/* Show validation info based on decoder type */}
+                    {decoder.type === 'lora' ? (
+                        <>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    LoRa CRC validated by PHY layer
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    Spreading Factor: SF{decoder.spreading_factor || metadata.demodulator_parameters?.spreading_factor}
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    Forward Error Correction: CR {decoder.coding_rate || metadata.decoder?.coding_rate || '4/5'}
+                                </Typography>
+                            </Box>
+                            {telemetry.success && telemetry.parser === 'ax25' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                    <Typography variant="body2">
+                                        AX.25 frame decoded successfully
+                                    </Typography>
+                                </Box>
+                            ) : null}
+                        </>
+                    ) : (
+                        <>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    CRC-16 validated by HDLC deframer
+                                </Typography>
+                            </Box>
+                            {telemetry.success && telemetry.parser === 'ax25' ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                    <Typography variant="body2">
+                                        AX.25 callsigns decoded correctly
+                                    </Typography>
+                                </Box>
+                            ) : null}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    Packet integrity confirmed
+                                </Typography>
+                            </Box>
+                        </>
+                    )}
                 </Stack>
 
                 <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
                     <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                        ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.
+                        {decoder.type === 'lora' ? (
+                            <>ℹ️ LoRa packets include PHY-layer CRC validation and Forward Error Correction (FEC). Invalid packets are automatically discarded by the LoRa decoder.</>
+                        ) : (
+                            <>ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.</>
+                        )}
                     </Typography>
                 </Box>
             </InfoSection>
