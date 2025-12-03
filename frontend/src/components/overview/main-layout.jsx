@@ -136,15 +136,6 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
-            "h": 3,
-            "x": 10,
-            "y": 0,
-            "i": "satselector",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
             "w": 12,
             "h": 9,
             "x": 0,
@@ -156,9 +147,9 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 14,
+            "h": 17,
             "x": 10,
-            "y": 3,
+            "y": 0,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
@@ -169,17 +160,8 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 2,
             "h": 17,
             "x": 0,
-            "y": 3,
-            "i": "map",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 3,
-            "x": 0,
             "y": 0,
-            "i": "satselector",
+            "i": "map",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
@@ -187,7 +169,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 2,
             "h": 9,
             "x": 0,
-            "y": 32,
+            "y": 29,
             "i": "passes",
             "minH": 7,
             "moved": false,
@@ -197,28 +179,19 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 2,
             "h": 14,
             "x": 0,
-            "y": 41,
+            "y": 38,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 2, "h": 12, "x": 0, "y": 20, "i": "satellite-group", "moved": false, "static": false}],
+        }, {"w": 2, "h": 12, "x": 0, "y": 17, "i": "satellite-group", "moved": false, "static": false}],
         "sm": [{
             "w": 6,
             "h": 17,
             "x": 0,
-            "y": 3,
-            "i": "map",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 6,
-            "h": 3,
-            "x": 0,
             "y": 0,
-            "i": "satselector",
+            "i": "map",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
@@ -226,7 +199,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 6,
             "h": 9,
             "x": 0,
-            "y": 30,
+            "y": 27,
             "i": "passes",
             "minH": 7,
             "moved": false,
@@ -236,13 +209,13 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 6,
             "h": 12,
             "x": 0,
-            "y": 39,
+            "y": 36,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 6, "h": 10, "x": 0, "y": 20, "i": "satellite-group", "moved": false, "static": false}],
+        }, {"w": 6, "h": 10, "x": 0, "y": 17, "i": "satellite-group", "moved": false, "static": false}],
         "xxs": [{
             "w": 2,
             "h": 17,
@@ -254,18 +227,9 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 3,
-            "x": 0,
-            "y": 17,
-            "i": "satselector",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
             "h": 9,
             "x": 0,
-            "y": 20,
+            "y": 17,
             "i": "passes",
             "minH": 7,
             "moved": false,
@@ -275,7 +239,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 2,
             "h": 14,
             "x": 0,
-            "y": 29,
+            "y": 26,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
@@ -292,15 +256,6 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 3,
-            "h": 3,
-            "x": 7,
-            "y": 0,
-            "i": "satselector",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
             "w": 10,
             "h": 9,
             "x": 0,
@@ -312,9 +267,9 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 3,
-            "h": 14,
+            "h": 17,
             "x": 7,
-            "y": 3,
+            "y": 0,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
@@ -369,9 +324,6 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
         <StyledIslandParent key="map">
             <SatelliteMapContainer handleSetTrackingOnBackend={handleSetTrackingOnBackend}/>
         </StyledIslandParent>,
-        <StyledIslandParentScrollbar key={"satselector"}>
-            <OverviewSatelliteGroupSelector/>
-        </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
             <NextPassesGroupIsland/>
         </StyledIslandParentNoScrollbar>,

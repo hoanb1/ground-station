@@ -23,7 +23,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { DataGrid, gridClasses } from "@mui/x-data-grid";
 import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
-import {Typography, Chip, Tooltip, Box} from "@mui/material";
+import {Typography, Chip, Tooltip, Box, FormControl, InputLabel, Select, MenuItem, ListSubheader} from "@mui/material";
 import {
     getClassNamesBasedOnGridEditing,
     humanizeDate,
@@ -33,10 +33,17 @@ import {
 import {
     setSelectedSatelliteId,
     setSatellitesTableColumnVisibility,
+    setSelectedSatGroupId,
+    fetchSatellitesByGroupId,
+    fetchSatelliteGroups,
 } from './overview-slice.jsx';
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
+import {useSocket} from "../common/socket.jsx";
+import { toast } from '../../utils/toast-with-timestamp.jsx';
+
+const SATELLITE_NUMBER_LIMIT = 200;
 
 // Create a separate component for the elevation cell that uses useStore
 const ElevationCell = React.memo(function ElevationCell({ noradId }) {
@@ -469,8 +476,11 @@ const MemoizedStyledDataGrid = React.memo(({
 const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const dispatch = useDispatch();
     const { t } = useTranslation('overview');
+    const { socket } = useSocket();
     const containerRef = useRef(null);
+    const dropdownRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
+    const [dropdownHeight, setDropdownHeight] = useState(0);
     const apiRef = useGridApiRef();
 
     // Use memoized selectors to prevent unnecessary rerenders
@@ -481,6 +491,8 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
     const selectedSatGroupId = useSelector(state => state.overviewSatTrack.selectedSatGroupId);
     const columnVisibility = useSelector(state => state.overviewSatTrack.satellitesTableColumnVisibility);
+    const satGroups = useSelector(state => state.overviewSatTrack.satGroups);
+    const passesLoading = useSelector(state => state.overviewSatTrack.passesLoading);
 
     const minHeight = 200;
 
@@ -504,17 +516,34 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     }, [selectedSatellitePositions, apiRef, satelliteRows]);
 
     useEffect(() => {
+        dispatch(fetchSatelliteGroups({socket}))
+            .unwrap()
+            .then((data) => {
+                if (data && selectedSatGroupId !== "" && selectedSatGroupId !== "none") {
+                    dispatch(fetchSatellitesByGroupId({socket: socket, satGroupId: selectedSatGroupId}));
+                }
+            })
+            .catch((err) => {
+                toast.error(t('satellite_selector.failed_load_groups') + ": " + err.message)
+            });
+    }, []);
+
+    useEffect(() => {
         const target = containerRef.current;
+        const dropdown = dropdownRef.current;
         const observer = new ResizeObserver((entries) => {
             setContainerHeight(entries[0].contentRect.height);
         });
         if (target) {
             observer.observe(target);
         }
+        if (dropdown) {
+            setDropdownHeight(dropdown.offsetHeight);
+        }
         return () => {
             observer.disconnect();
         };
-    }, [containerRef]);
+    }, [containerRef, dropdownRef]);
 
     const handleOnRowClick = useCallback((params) => {
         dispatch(setSelectedSatelliteId(params.row.norad_id));
@@ -523,6 +552,12 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const handleColumnVisibilityChange = useCallback((newModel) => {
         dispatch(setSatellitesTableColumnVisibility(newModel));
     }, [dispatch]);
+
+    const handleOnGroupChange = useCallback((event) => {
+        const satGroupId = event.target.value;
+        dispatch(setSelectedSatGroupId(satGroupId));
+        dispatch(fetchSatellitesByGroupId({socket, satGroupId}));
+    }, [dispatch, socket]);
 
     return (
         <>
@@ -543,12 +578,51 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                     </Box>
                 </Box>
             </TitleBar>
+            <Box ref={dropdownRef} sx={{ padding: '0.5rem', bgcolor: 'background.paper', borderBottom: '1px solid', borderColor: 'border.main' }}>
+                <FormControl sx={{ minWidth: 200 }} disabled={passesLoading} variant="filled" size="small" fullWidth>
+                    <InputLabel htmlFor="grouped-select">{t('satellite_selector.group_label')}</InputLabel>
+                    <Select
+                        disabled={passesLoading}
+                        value={satGroups.length ? selectedSatGroupId : ""}
+                        id="grouped-select"
+                        label="Grouping"
+                        variant="filled"
+                        size="small"
+                        onChange={handleOnGroupChange}
+                    >
+                        <ListSubheader>{t('satellite_selector.user_groups')}</ListSubheader>
+                        {satGroups.filter(group => group.type === "user").length === 0 ? (
+                            <MenuItem disabled value="">
+                                {t('satellite_selector.none_defined')}
+                            </MenuItem>
+                        ) : (
+                            satGroups.map((group, index) => {
+                                if (group.type === "user") {
+                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                }
+                            })
+                        )}
+                        <ListSubheader>{t('satellite_selector.tle_groups')}</ListSubheader>
+                        {satGroups.filter(group => group.type === "system").length === 0 ? (
+                            <MenuItem disabled value="">
+                                {t('satellite_selector.none_defined')}
+                            </MenuItem>
+                        ) : (
+                            satGroups.map((group, index) => {
+                                if (group.type === "system") {
+                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                }
+                            })
+                        )}
+                    </Select>
+                </FormControl>
+            </Box>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding: '0rem 0rem 0rem 0rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    height: containerHeight - 25,
+                    height: containerHeight - 25 - dropdownHeight,
                     minHeight,
                 }}>
                     {!selectedSatGroupId ? (
