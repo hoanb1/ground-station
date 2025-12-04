@@ -293,6 +293,55 @@ export const themeConfigs = {
             offline: '#444444',
         },
     },
+
+    'submarine': {
+        mode: 'dark',
+        primary: { main: '#ffb000' }, // Amber sonar
+        secondary: { main: '#ff6600' }, // Deep sea rust
+        success: { main: '#88cc00' }, // Contact confirmed
+        warning: { main: '#ffaa00' }, // Proximity alert
+        error: { main: '#ff3300' }, // Critical depth
+        info: { main: '#ffb000' }, // Bearing data
+        background: {
+            default: '#000000', // Deep ocean void
+            paper: '#0a0f12', // Hull interior
+            elevated: '#121a20', // Conning tower
+        },
+        border: {
+            main: '#3a4520', // Phosphor grid
+            light: '#4d5a2a',
+            dark: '#2a3518',
+        },
+        overlay: {
+            light: 'rgba(255, 176, 0, 0.06)', // Amber glow
+            medium: 'rgba(255, 176, 0, 0.12)',
+            dark: 'rgba(0, 0, 0, 0.85)', // Pressure darkness
+        },
+        status: {
+            connected: '#ffb000', // Sonar lock
+            connecting: '#ffaa00', // Pinging
+            disconnected: '#664400', // Signal lost
+            polling: '#ff8800', // Active sweep
+        },
+        // Submarine/naval themed custom properties
+        sonar: {
+            contact: '#ffb000',
+            sweep: 'rgba(255, 176, 0, 0.3)',
+            grid: '#3a4520',
+            bearing: '#ff8800',
+        },
+        tactical: {
+            friendly: '#88cc00',
+            unknown: '#ffaa00',
+            hostile: '#ff3300',
+            neutral: '#7a8080',
+        },
+        depth: {
+            safe: '#88cc00',
+            warning: '#ffaa00',
+            critical: '#ff3300',
+        },
+    },
 };
 
 /**
@@ -321,9 +370,28 @@ export function getThemeConfig(themeName) {
 }
 
 /**
+ * Get list of available themes with metadata
+ * @returns {Array<{id: string, name: string}>} Array of theme objects with id and display name
+ */
+export function getAvailableThemesWithMetadata() {
+    return [
+        { id: 'auto', name: 'Auto (System)' },
+        { id: 'dark', name: 'Dark' },
+        { id: 'light', name: 'Light' },
+        { id: 'cyberpunk', name: 'Cyberpunk' },
+        { id: 'high-contrast', name: 'High Contrast' },
+        { id: 'night', name: 'Night (OLED)' },
+        { id: 'sunset-orange', name: 'Sunset Orange' },
+        { id: 'stalker', name: 'S.T.A.L.K.E.R.' },
+        { id: 'terminal', name: 'Terminal' },
+        { id: 'submarine', name: 'Submarine' },
+    ];
+}
+
+/**
  * Get list of available theme names
  * @returns {string[]} Array of theme names including 'auto'
  */
 export function getAvailableThemes() {
-    return ['auto', ...Object.keys(themeConfigs)];
+    return getAvailableThemesWithMetadata().map(theme => theme.id);
 }

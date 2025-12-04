@@ -112,21 +112,11 @@ const FftAccordion = ({
                                 onChange={(e) => onColorMapChange(e.target.value)}
                                 label={t('fft.color_map')}
                                 variant={'filled'}>
-                                {colorMaps.map(map => {
-                                    let displayName;
-                                    if (map === 'stalker') {
-                                        displayName = 'S.T.A.L.K.E.R.';
-                                    } else if (map === 'light') {
-                                        displayName = 'Light';
-                                    } else {
-                                        displayName = map.charAt(0).toUpperCase() + map.slice(1);
-                                    }
-                                    return (
-                                        <MenuItem key={map} value={map}>
-                                            {displayName}
-                                        </MenuItem>
-                                    );
-                                })}
+                                {colorMaps.map(map => (
+                                    <MenuItem key={map.id} value={map.id}>
+                                        {map.name}
+                                    </MenuItem>
+                                ))}
                             </Select>
                         </FormControl>
                     </Box>

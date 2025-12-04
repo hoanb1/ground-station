@@ -23,6 +23,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {useRef, useState} from "react";
 import {setSelectedTransmitter} from "../target/target-slice.jsx";
+import {getAvailableColorMaps} from "./worker-modules/color-maps.js";
 
 // Mobile detection
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -105,14 +106,7 @@ export const saveWaterfallSnapshot = createAsyncThunk(
 const initialState = {
     fftDataOverflow: false,
     fftDataOverflowLimit: 20,
-    colorMaps: [
-        'iceberg',
-        'heat',
-        'cosmic',
-        'greyscale',
-        'light',
-        'stalker',
-    ],
+    colorMaps: getAvailableColorMaps(),
     colorMap: 'cosmic',
     dbRange: [-80, -20],
     //fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],

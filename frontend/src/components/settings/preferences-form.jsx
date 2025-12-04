@@ -43,7 +43,7 @@ import {
 import Grid from '@mui/material/Grid';
 import { useSocket } from "../common/socket.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
-import { getAvailableThemes } from '../../themes/theme-configs.js';
+import { getAvailableThemesWithMetadata } from '../../themes/theme-configs.js';
 
 const PreferencesForm = () => {
     const { socket } = useSocket();
@@ -94,12 +94,8 @@ const PreferencesForm = () => {
         { name: t('preferences.toast_position_bottom_right'), value: 'bottom-right' },
     ];
 
-    // Generate theme options from available themes
-    const availableThemes = getAvailableThemes();
-    const themesOptions = availableThemes.map(themeName => ({
-        name: t(`preferences.theme_${themeName}`, themeName), // Fallback to themeName if translation missing
-        value: themeName,
-    }));
+    // Get theme options with metadata from theme-configs.js
+    const themesOptions = getAvailableThemesWithMetadata();
 
     const handleChange = (name) => (e) => {
         const value = e.target.value;
@@ -249,7 +245,7 @@ const PreferencesForm = () => {
                                 label={t('preferences.theme')}
                              variant={'filled'}>
                                 {themesOptions.map((option) => (
-                                    <MenuItem key={option.value} value={option.value}>
+                                    <MenuItem key={option.id} value={option.id}>
                                         {option.name}
                                     </MenuItem>
                                 ))}

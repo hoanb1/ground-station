@@ -28,6 +28,22 @@
 const colorCache = new Map();
 
 /**
+ * Get list of available color maps
+ * @returns {Array<{id: string, name: string}>} Array of color map objects with id and display name
+ */
+export const getAvailableColorMaps = () => {
+    return [
+        { id: 'iceberg', name: 'Iceberg' },
+        { id: 'heat', name: 'Heat' },
+        { id: 'cosmic', name: 'Cosmic' },
+        { id: 'greyscale', name: 'Greyscale' },
+        { id: 'light', name: 'Light' },
+        { id: 'stalker', name: 'S.T.A.L.K.E.R.' },
+        { id: 'submarine', name: 'Submarine' },
+    ];
+};
+
+/**
  * Get color for power value using specified color map
  * @param {number} powerDb - Power in dB
  * @param {string} mapName - Color map name
@@ -70,6 +86,9 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
             break;
         case 'stalker':
             color = stalkerColorMap(normalizedValue);
+            break;
+        case 'submarine':
+            color = submarineColorMap(normalizedValue);
             break;
         default:
             color = cosmicColorMap(normalizedValue);
@@ -310,4 +329,67 @@ function stalkerColorMap(normalizedValue) {
         };
     }
     return stalkerRGB;
+}
+
+/**
+ * Submarine Sonar color map - deep ocean black to tactical amber
+ * Inspired by naval sonar displays: deep ocean darkness, phosphor CRT amber glow, tactical readouts
+ * Classic submarine warfare aesthetic with amber monochrome tactical displays
+ * @param {number} normalizedValue - Value between 0 and 1
+ * @returns {Object} RGB color {r, g, b}
+ */
+function submarineColorMap(normalizedValue) {
+    let submarineRGB;
+    const submarineCurvedValue = Math.pow(normalizedValue, 1.7);
+
+    if (submarineCurvedValue < 0.15) {
+        // Deep ocean void - pure black to faint dark blue-black
+        const factor = submarineCurvedValue / 0.15;
+        submarineRGB = {
+            r: Math.floor(0 + factor * 8),    // 0 -> 8
+            g: Math.floor(0 + factor * 10),   // 0 -> 10
+            b: Math.floor(0 + factor * 15)    // 0 -> 15
+        };
+    } else if (submarineCurvedValue < 0.3) {
+        // Pressure darkness to dim amber glow - #080a0f to #1a1200
+        const factor = (submarineCurvedValue - 0.15) / 0.15;
+        submarineRGB = {
+            r: Math.floor(8 + factor * 18),   // 8 -> 26
+            g: Math.floor(10 + factor * 8),   // 10 -> 18
+            b: Math.floor(15 - factor * 15)   // 15 -> 0
+        };
+    } else if (submarineCurvedValue < 0.5) {
+        // Dim amber to phosphor warm - #1a1200 to #4d3300
+        const factor = (submarineCurvedValue - 0.3) / 0.2;
+        submarineRGB = {
+            r: Math.floor(26 + factor * 51),  // 26 -> 77
+            g: Math.floor(18 + factor * 33),  // 18 -> 51
+            b: Math.floor(0)                  // 0 -> 0
+        };
+    } else if (submarineCurvedValue < 0.7) {
+        // Phosphor warm to tactical amber - #4d3300 to #aa7700
+        const factor = (submarineCurvedValue - 0.5) / 0.2;
+        submarineRGB = {
+            r: Math.floor(77 + factor * 93),  // 77 -> 170
+            g: Math.floor(51 + factor * 68),  // 51 -> 119
+            b: Math.floor(0)                  // 0 -> 0
+        };
+    } else if (submarineCurvedValue < 0.85) {
+        // Tactical amber to bright sonar - #aa7700 to #ffb000
+        const factor = (submarineCurvedValue - 0.7) / 0.15;
+        submarineRGB = {
+            r: Math.floor(170 + factor * 85), // 170 -> 255
+            g: Math.floor(119 + factor * 57), // 119 -> 176
+            b: Math.floor(0)                  // 0 -> 0
+        };
+    } else {
+        // Bright contact - #ffb000 to #ffdd88 (hot amber-white)
+        const factor = (submarineCurvedValue - 0.85) / 0.15;
+        submarineRGB = {
+            r: Math.floor(255),               // 255 -> 255
+            g: Math.floor(176 + factor * 45), // 176 -> 221
+            b: Math.floor(0 + factor * 136)   // 0 -> 136 (adds slight warmth at peaks)
+        };
+    }
+    return submarineRGB;
 }
