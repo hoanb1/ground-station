@@ -135,9 +135,9 @@ function rebuildPalette() {
         const amp = min + (i / 255) * safeRange;
         const c = getColorForPower(amp, colorMap, dbRange);
         const o = i * 3;
-        lut[o] = c.r | 0;
-        lut[o + 1] = c.g | 0;
-        lut[o + 2] = c.b | 0;
+        lut[o] = Math.min(255, Math.max(0, c.r | 0));
+        lut[o + 1] = Math.min(255, Math.max(0, c.g | 0));
+        lut[o + 2] = Math.min(255, Math.max(0, c.b | 0));
     }
     palette = lut;
     paletteDirty = false;
