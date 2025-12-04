@@ -449,6 +449,9 @@ class LoRaDecoder(BaseDecoderProcess):
         # Cached VFO state (populated from IQ messages)
         self.cached_vfo_state = None
 
+        # Track when we complete a decode to reset status on next churn
+        self.just_completed_decode = False
+
         # BaseDecoder required metadata attributes
         self.baudrate = config.baudrate  # Not really used for LoRa, but required by BaseDecoder
         self.framing = "lora"  # LoRa uses its own framing (preamble + header + payload + CRC)
@@ -570,6 +573,9 @@ class LoRaDecoder(BaseDecoderProcess):
             DecoderStatus.COMPLETED,
             {"packet_number": self.packet_count, "packet_length": len(payload)},
         )
+
+        # Mark that we just completed a decode so we can reset to LISTENING on next churn
+        self.just_completed_decode = True
 
     def _send_status_update(self, status, info=None):
         """Send status update to UI"""
@@ -712,6 +718,11 @@ class LoRaDecoder(BaseDecoderProcess):
                 # Read IQ samples from iq_queue
                 try:
                     iq_message = self.iq_queue.get(timeout=0.05)  # 50ms timeout
+
+                    # If we just completed a decode, reset status to LISTENING
+                    if self.just_completed_decode:
+                        self._send_status_update(DecoderStatus.LISTENING)
+                        self.just_completed_decode = False
 
                     # Extract IQ samples and metadata from message
                     samples = iq_message.get("samples")
