@@ -26,7 +26,7 @@ steps:
       skip_verify: true
       tags: true
 
-  - name: build-and-deploy
+  - name: build-and-deploy-amd64
     image: docker:cli
     depends_on:
       - clone
@@ -82,7 +82,66 @@ steps:
         fi
 
       # Display container info and version
-      - echo "✅ New container version $FULL_VERSION ($ENV_TYPE) is running on host port 7000"
+      - echo "✅ New container version $FULL_VERSION ($ENV_TYPE) is running on AMD64 host port 7000"
+      - docker ps | grep ground-station-prod
+
+  - name: build-and-deploy-rpi5
+    image: docker:cli
+    depends_on:
+      - clone
+    environment:
+      DOCKER_HOST: tcp://192.168.60.52:2375
+    when:
+      event:
+        exclude:
+          - tag
+    commands:
+      # Extract version with proper debugging
+      - VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+      - echo "Extracted VERSION_BASE=$VERSION_BASE"
+
+      # Get git hash
+      - GIT_SHA=$(git rev-parse --short HEAD)
+      - echo "Extracted GIT_SHA=$GIT_SHA"
+
+      # Set environment type
+      - if [ "$DRONE_BRANCH" = "main" ]; then ENV_TYPE="production"; else ENV_TYPE="development"; fi
+      - echo "ENV_TYPE=$ENV_TYPE"
+
+      # Get build date
+      - BUILD_DATE=$(date -u +'%Y%m%d')
+      - echo "BUILD_DATE=$BUILD_DATE"
+
+      # Make a full version string
+      - FULL_VERSION=$VERSION_BASE-$DRONE_BRANCH-$GIT_SHA
+      - echo "FULL_VERSION=$FULL_VERSION"
+
+      # Build the new image for arm64 (RPi5) with build args
+      - docker build --platform linux/arm64 --build-arg GS_ENVIRONMENT=$ENV_TYPE --build-arg GIT_COMMIT=$GIT_SHA --build-arg BUILD_DATE=$BUILD_DATE --build-arg BUILD_VERSION=$FULL_VERSION -t ground-station:$FULL_VERSION .
+
+      # Tag the image
+      - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:$FULL_VERSION-arm64
+      - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:latest-arm64
+      - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:$ENV_TYPE-latest-arm64
+
+      # Stop and remove the existing container if it exists
+      - docker rm -f ground-station-prod || true
+
+      # Run the new container with the versioned image
+      - docker run -d -p 0.0.0.0:7000:7000 --shm-size=512m --ipc=host --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /home/sgoudelis/ground-station-data:/app/backend/data -e GS_ENVIRONMENT=$ENV_TYPE -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile sgoudelis/ground-station:$FULL_VERSION
+
+      # Check that it's running
+      - sleep 5
+      - |
+        CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' ground-station-prod)
+        if [ "$CONTAINER_STATUS" != "running" ]; then
+          echo "Container is not running: $CONTAINER_STATUS"
+          docker logs ground-station-prod
+          exit 1
+        fi
+
+      # Display container info and version
+      - echo "✅ New container version $FULL_VERSION ($ENV_TYPE) is running on RPi5 host port 7000"
       - docker ps | grep ground-station-prod
 
   - name: verify-docker-connection
