@@ -9,6 +9,7 @@ from common.logger import logger
 from handlers.entities import groups, hardware, locations, preferences, satellites, systeminfo
 from handlers.entities import tlesources as tle_sources
 from handlers.entities import tracking, transmitters, vfo
+from handlers.entities.databasebackup import backup_table, full_backup, list_tables, restore_table
 from handlers.entities.filebrowser import filebrowser_request_routing
 from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry
@@ -122,5 +123,47 @@ def register_socketio_handlers(sio):
         from processing.processmanager import process_manager
 
         process_manager.performance_monitor.disable_monitoring()
+
+    @sio.on("database_backup")
+    async def handle_database_backup(sid, data=None):
+        """Handle database backup and restore operations."""
+        logger.info(
+            f"Database backup event from: {sid}, action: {data.get('action') if data else None}"
+        )
+
+        if not data or "action" not in data:
+            return {"success": False, "error": "Missing action parameter"}
+
+        action = data["action"]
+
+        try:
+            if action == "list_tables":
+                return await list_tables()
+
+            elif action == "backup_table":
+                table_name = data.get("table")
+                if not table_name:
+                    return {"success": False, "error": "Missing table parameter"}
+                return await backup_table(table_name)
+
+            elif action == "restore_table":
+                table_name = data.get("table")
+                sql = data.get("sql")
+                delete_first = data.get("delete_first", True)
+
+                if not table_name or not sql:
+                    return {"success": False, "error": "Missing table or sql parameter"}
+
+                return await restore_table(table_name, sql, delete_first)
+
+            elif action == "full_backup":
+                return await full_backup()
+
+            else:
+                return {"success": False, "error": f"Unknown action: {action}"}
+
+        except Exception as e:
+            logger.error(f"Error in database backup handler: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     return SESSIONS

@@ -25,3 +25,4 @@ export { default as BrowserFeaturesCard } from './browser-features-card.jsx';
 export { default as SocketInfoCard } from './socket-info-card.jsx';
 export { default as LibraryVersionsCard } from './library-versions-card.jsx';
 export { default as ReduxStateInspectorCard } from './redux-state-inspector-card.jsx';
+export { default as DatabaseBackupCard } from './database-backup-card.jsx';

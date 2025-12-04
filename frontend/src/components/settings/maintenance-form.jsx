@@ -29,7 +29,8 @@ import {
     BrowserFeaturesCard,
     SocketInfoCard,
     LibraryVersionsCard,
-    ReduxStateInspectorCard
+    ReduxStateInspectorCard,
+    DatabaseBackupCard
 } from './maintenance/index.jsx';
 
 const MaintenanceForm = () => {
@@ -51,6 +52,7 @@ const MaintenanceForm = () => {
                     <Tab label="Redux Inspector" />
                     <Tab label="System Control" />
                     <Tab label="Diagnostics" />
+                    <Tab label="Database" />
                     <Tab label="Dependencies" />
                 </Tabs>
 
@@ -98,8 +100,17 @@ const MaintenanceForm = () => {
                     </Grid>
                 </TabPanel>
 
-                {/* Tab 4: Dependencies */}
+                {/* Tab 4: Database */}
                 <TabPanel value={mainTab} index={4}>
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12 }}>
+                            <DatabaseBackupCard />
+                        </Grid>
+                    </Grid>
+                </TabPanel>
+
+                {/* Tab 5: Dependencies */}
+                <TabPanel value={mainTab} index={5}>
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12 }}>
                             <LibraryVersionsCard />
