@@ -735,7 +735,7 @@ export const DECODER_PARAMETERS = {
         type: 'select',
         default: [0x08, 0x10],
         options: [
-            { value: [0x12], label: '0x12 (18) - LoRaWAN Private Networks' },
+            { value: [0x12], label: '0x12 (18) - LoRaWAN Private Networks (also for Meshtastic)' },
             { value: [0x34], label: '0x34 (52) - LoRaWAN Public Networks' },
             { value: [0x08, 0x10], label: '0x08 0x10 (8, 16) - TinyGS Satellite Network' },
             { value: [], label: 'Auto-detect (accept all sync words)' }
