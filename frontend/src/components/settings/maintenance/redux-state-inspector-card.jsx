@@ -179,7 +179,7 @@ const ReduxStateInspectorCard = () => {
     const StateTreeNode = memo(({ data, path = '', depth = 0 }) => {
         if (data === null || data === undefined) {
             return (
-                <Box sx={{ ml: depth * 2, color: 'text.secondary', fontFamily: 'monospace' }}>
+                <Box sx={{ color: 'text.secondary', fontFamily: 'monospace', display: 'inline' }}>
                     {String(data)}
                 </Box>
             );
@@ -187,15 +187,15 @@ const ReduxStateInspectorCard = () => {
 
         if (typeof data !== 'object') {
             return (
-                <Box sx={{ ml: depth * 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'primary.main' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'primary.main', lineHeight: '20px' }}>
                         {typeof data === 'string' ? `"${data}"` : String(data)}
                     </Typography>
-                    <IconButton size="small" onClick={() => copyToClipboard(data)}>
+                    <IconButton size="small" onClick={() => copyToClipboard(data)} sx={{ padding: '2px' }}>
                         <ContentCopyIcon fontSize="small" />
                     </IconButton>
                     {isEditEnabled && (
-                        <IconButton size="small" onClick={() => startEdit(path, data)}>
+                        <IconButton size="small" onClick={() => startEdit(path, data)} sx={{ padding: '2px' }}>
                             <EditIcon fontSize="small" />
                         </IconButton>
                     )}
@@ -215,22 +215,19 @@ const ReduxStateInspectorCard = () => {
         if (!matchesSearch && depth > 0) return null;
 
         return (
-            <Box sx={{ ml: depth * 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                    <IconButton size="small" onClick={() => toggleExpand(path)}>
-                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                    <IconButton size="small" onClick={() => toggleExpand(path)} sx={{ padding: '2px' }}>
+                        {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
                     </IconButton>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>
-                        {path.split('.').pop() || 'root'}
-                        <Typography component="span" sx={{ color: 'text.secondary', ml: 1 }}>
-                            {isArray ? `[${keys.length}]` : `{${keys.length}}`}
-                        </Typography>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'text.secondary', lineHeight: '20px' }}>
+                        {isArray ? `[${keys.length}]` : `{${keys.length}}`}
                     </Typography>
-                    <IconButton size="small" onClick={() => copyToClipboard(data)}>
+                    <IconButton size="small" onClick={() => copyToClipboard(data)} sx={{ padding: '2px' }}>
                         <ContentCopyIcon fontSize="small" />
                     </IconButton>
                     {isEditEnabled && (
-                        <IconButton size="small" onClick={() => startEdit(path, data)}>
+                        <IconButton size="small" onClick={() => startEdit(path, data)} sx={{ padding: '2px' }}>
                             <EditIcon fontSize="small" />
                         </IconButton>
                     )}
@@ -240,16 +237,21 @@ const ReduxStateInspectorCard = () => {
                     <Box sx={{ borderLeft: '2px solid', borderColor: 'divider', pl: 1, ml: 2 }}>
                         {keys.map((key) => {
                             const childPath = path ? `${path}.${key}` : key;
+                            const childData = data[key];
+                            const isChildObject = childData !== null && typeof childData === 'object';
+
                             return (
-                                <Box key={key} sx={{ mb: 1 }}>
-                                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                <Box key={key} sx={{ mb: 0.5, display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary', minWidth: 'fit-content' }}>
                                         {key}:
                                     </Typography>
-                                    <StateTreeNode
-                                        data={data[key]}
-                                        path={childPath}
-                                        depth={depth + 1}
-                                    />
+                                    <Box sx={{ flex: 1 }}>
+                                        <StateTreeNode
+                                            data={childData}
+                                            path={childPath}
+                                            depth={depth + 1}
+                                        />
+                                    </Box>
                                 </Box>
                             );
                         })}
@@ -394,7 +396,13 @@ const ReduxStateInspectorCard = () => {
                                                 ? 'Enter valid JSON array: [1, 2, 3]'
                                                 : 'Click the edit icon next to any value in the state tree to start editing...'
                                         }
-                                        sx={{ mb: 2, fontFamily: 'monospace' }}
+                                        sx={{
+                                            mb: 2,
+                                            fontFamily: 'monospace',
+                                            '& .MuiInputBase-input': {
+                                                fontFamily: 'monospace'
+                                            }
+                                        }}
                                     />
                                     <Alert severity="warning" sx={{ mb: 2 }}>
                                         <AlertTitle>⚠️ Caution</AlertTitle>
