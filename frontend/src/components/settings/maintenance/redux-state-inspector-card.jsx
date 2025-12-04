@@ -373,12 +373,16 @@ const ReduxStateInspectorCard = () => {
                                     <TextField
                                         fullWidth
                                         multiline
-                                        rows={editingType === 'object' || editingType === 'array' ? 10 : 12}
+                                        rows={12}
+                                        minRows={12}
+                                        maxRows={12}
                                         value={editingPath ? editingValue : ''}
                                         onChange={(e) => setEditingValue(e.target.value)}
                                         disabled={!editingPath || editingType === 'null'}
                                         placeholder={
-                                            editingType === 'null'
+                                            !editingPath
+                                                ? 'Click the edit icon next to any value in the state tree to start editing...'
+                                                : editingType === 'null'
                                                 ? 'Null value (no input needed)'
                                                 : editingType === 'boolean'
                                                 ? 'Enter: true/false or 1/0'
