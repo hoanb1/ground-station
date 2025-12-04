@@ -203,7 +203,7 @@ export const canvasDrawingUtils = {
                 const formattedBaudrate = formatBaudrate(baudrate);
 
                 // Template-based label: STATUS | DECODER BAUDRATE | FRAMING | PACKET_COUNT
-                const fullText = `${status.toUpperCase()} | ${decoderType.toUpperCase()} ${formattedBaudrate} | ${framing.toUpperCase()} | ${outputCount} PKT`;
+                const fullText = `${status.toUpperCase()} | ${decoderType.toUpperCase()} ${formattedBaudrate} | ${framing.toUpperCase()}`;
 
                 ctx.font = '10px Monospace';
                 const fullTextMetrics = ctx.measureText(fullText);

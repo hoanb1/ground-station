@@ -523,7 +523,7 @@ const VFOMarkersContainer = ({
                         const framing = decoderInfo.info?.framing || 'unknown';
                         const formattedBaudrate = formatBaudrate(baudrate);
                         const outputCount = 0; // We can't get real count here, but width is similar
-                        secondaryLabelText = `${status.toUpperCase()} | ${decoderType.toUpperCase()} ${formattedBaudrate} | ${framing.toUpperCase()} | ${outputCount} PKT`;
+                        secondaryLabelText = `${status.toUpperCase()} | ${decoderType.toUpperCase()} ${formattedBaudrate} | ${framing.toUpperCase()}`;
                     } else if (decoderType === 'lora') {
                         const status = decoderInfo.status || 'listening';
                         const sf = decoderInfo.info?.spreading_factor;
