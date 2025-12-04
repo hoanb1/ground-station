@@ -49,8 +49,8 @@ const ReduxStateInspectorCard = () => {
     const [pendingEdit, setPendingEdit] = useState(null);
     const [copySuccess, setCopySuccess] = useState(false);
 
-    // Environment check for edit mode
-    const isEditEnabled = import.meta.env.VITE_ENABLE_STATE_EDITING === 'true' || import.meta.env.MODE === 'development';
+    // Edit mode always enabled
+    const isEditEnabled = true;
 
     // Toggle expand/collapse for a key
     const toggleExpand = (path) => {
@@ -265,19 +265,9 @@ const ReduxStateInspectorCard = () => {
         <>
             <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="h6">
-                            Redux State Inspector
-                        </Typography>
-                        {isEditEnabled && (
-                            <Chip
-                                icon={<WarningIcon />}
-                                label="Edit Mode Enabled"
-                                color="warning"
-                                size="small"
-                            />
-                        )}
-                    </Box>
+                    <Typography variant="h6">
+                        Redux State Inspector
+                    </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         <Tooltip title="Copy entire state">
                             <IconButton onClick={() => copyToClipboard(fullState)} color={copySuccess ? 'success' : 'default'}>
@@ -293,13 +283,6 @@ const ReduxStateInspectorCard = () => {
                 </Box>
                 <Divider sx={{ mb: 2 }} />
 
-                {!isEditEnabled && (
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                        <AlertTitle>View-Only Mode</AlertTitle>
-                        Edit mode is disabled in production. Set <code>VITE_ENABLE_STATE_EDITING=true</code> to enable editing.
-                    </Alert>
-                )}
-
                 <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
                     <Tab label="Inspector" />
                     <Tab label="Raw JSON" />
@@ -309,7 +292,7 @@ const ReduxStateInspectorCard = () => {
                 {activeTab === 0 && (
                     <Grid container spacing={2}>
                         {/* Left side: View */}
-                        <Grid size={{ xs: 12, md: isEditEnabled ? 6 : 12 }}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -334,9 +317,8 @@ const ReduxStateInspectorCard = () => {
                             </Box>
                         </Grid>
 
-                        {/* Right side: Edit (only if enabled) */}
-                        {isEditEnabled && (
-                            <Grid size={{ xs: 12, md: 6 }}>
+                        {/* Right side: Edit */}
+                        <Grid size={{ xs: 12, md: 6 }}>
                                 <Box>
                                     <Typography variant="body1" sx={{ mb: 1.5, fontFamily: 'monospace', fontWeight: 'medium' }}>
                                         {editingPath ? (
@@ -428,8 +410,7 @@ const ReduxStateInspectorCard = () => {
                                         </Button>
                                     </Box>
                                 </Box>
-                            </Grid>
-                        )}
+                        </Grid>
                     </Grid>
                 )}
 
