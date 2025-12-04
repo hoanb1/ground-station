@@ -243,7 +243,7 @@ export function drawFftLine({
 
     // Adaptive target points: use width for small FFTs, cap at reasonable limit for large FFTs
     // This prevents excessive point generation while maintaining visual quality
-    const targetPoints = Math.min(graphWidth, Math.max(512, fftData.length / 16));
+    const targetPoints = Math.min(graphWidth, Math.max(2048, fftData.length / 16));
 
     // Downsample the FFT data efficiently
     const downsampledPoints = downsampleFftData(fftData, targetPoints);
