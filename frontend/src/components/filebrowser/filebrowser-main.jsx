@@ -734,7 +734,7 @@ export default function FilebrowserMain() {
             ) : (
                 <Box sx={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
                     gap: 2
                 }}>
                     {displayItems.map((item) => {
