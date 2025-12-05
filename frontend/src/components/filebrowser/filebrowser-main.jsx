@@ -80,6 +80,7 @@ import {
     selectAllItems,
     clearSelection,
     toggleSelectionMode,
+    markFileBrowserVisited,
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
@@ -197,6 +198,11 @@ export default function FilebrowserMain() {
     const [telemetryViewerOpen, setTelemetryViewerOpen] = useState(false);
     const [telemetryFile, setTelemetryFile] = useState(null);
     const [telemetryMetadata, setTelemetryMetadata] = useState(null);
+
+    // Mark file browser as visited when component mounts
+    useEffect(() => {
+        dispatch(markFileBrowserVisited());
+    }, [dispatch]);
 
     // Fetch data when filters change (not pagination/sorting - those are handled in UI)
     useEffect(() => {

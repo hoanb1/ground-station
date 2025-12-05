@@ -34,6 +34,7 @@ import { TleIcon } from '../components/common/custom-icons.jsx';
 import { Box, CircularProgress } from '@mui/material';
 import SyncIcon from '@mui/icons-material/Sync';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import FiberNewIcon from '@mui/icons-material/FiberNew';
 import { useSelector } from 'react-redux';
 
 // Helper component to wrap icons with overlay indicators
@@ -112,6 +113,24 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                                 }}
                             />
                         </Box>
+                    ) : overlayType === 'new' ? (
+                        <Box
+                            sx={{
+                                backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '2px',
+                            }}
+                        >
+                            <FiberNewIcon
+                                sx={{
+                                    fontSize: 12,
+                                    color: '#F44336',
+                                }}
+                            />
+                        </Box>
                     ) : null}
                 </Box>
             )}
@@ -141,6 +160,17 @@ const TleIconWithStatus = () => {
     );
 };
 
+// Wrapper component for FolderIcon that reads Redux state
+const FileBrowserIconWithStatus = () => {
+    const hasNewFiles = useSelector((state) => state.filebrowser?.hasNewFiles);
+
+    return (
+        <IconWithOverlay showOverlay={hasNewFiles} overlayType="new">
+            <FolderIcon />
+        </IconWithOverlay>
+    );
+};
+
 export const getNavigation = () => [
     {
         kind: 'header',
@@ -164,7 +194,7 @@ export const getNavigation = () => [
     {
         segment: 'filebrowser',
         title: 'File Browser',
-        icon: <FolderIcon />,
+        icon: <FileBrowserIconWithStatus />,
     },
     {kind: 'divider'},
     {

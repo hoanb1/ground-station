@@ -128,6 +128,9 @@ const initialState = {
     // Multi-select state
     selectedItems: [], // Array of item keys (recording names or snapshot/decoded filenames)
     selectionMode: false, // Toggle for selection mode
+    // New files indicator
+    lastVisitedTimestamp: null, // ISO timestamp of when user last visited file browser
+    hasNewFiles: false, // Flag indicating if new files were added since last visit
 };
 
 const fileBrowserSlice = createSlice({
@@ -183,6 +186,11 @@ const fileBrowserSlice = createSlice({
                 state.selectedItems = [];
             }
         },
+        // Mark file browser as visited - clears new files indicator
+        markFileBrowserVisited: (state) => {
+            state.lastVisitedTimestamp = new Date().toISOString();
+            state.hasNewFiles = false;
+        },
     },
     extraReducers: (builder) => {
         // Unified fetchFiles
@@ -202,6 +210,16 @@ const fileBrowserSlice = createSlice({
             // Total is now the count of all files received
             state.total = (action.payload.items || []).length;
             state.diskUsage = action.payload.diskUsage || { total: 0, used: 0, available: 0 };
+
+            // Check if there are new files since last visit
+            if (state.lastVisitedTimestamp && state.files.length > 0) {
+                const lastVisited = new Date(state.lastVisitedTimestamp);
+                const hasNew = state.files.some(file => {
+                    const fileCreated = new Date(file.created || file.start_time);
+                    return fileCreated > lastVisited;
+                });
+                state.hasNewFiles = hasNew;
+            }
         });
         builder.addCase(fetchFiles.rejected, (state, action) => {
             state.filesLoading = false;
@@ -265,6 +283,7 @@ export const {
     selectAllItems,
     clearSelection,
     toggleSelectionMode,
+    markFileBrowserVisited,
 } = fileBrowserSlice.actions;
 
 export default fileBrowserSlice.reducer;
