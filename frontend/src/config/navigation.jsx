@@ -35,6 +35,8 @@ import { Box, CircularProgress } from '@mui/material';
 import SyncIcon from '@mui/icons-material/Sync';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import FiberNewIcon from '@mui/icons-material/FiberNew';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useSelector } from 'react-redux';
 
 // Helper component to wrap icons with overlay indicators
@@ -121,12 +123,12 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                padding: '2px',
+                                padding: '3px',
                             }}
                         >
-                            <FiberNewIcon
+                            <FiberManualRecordIcon
                                 sx={{
-                                    fontSize: 12,
+                                    fontSize: 10,
                                     color: '#F44336',
                                 }}
                             />
