@@ -40,10 +40,50 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useSelector } from 'react-redux';
 
 // Helper component to wrap icons with overlay indicators
-const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner' }) => {
+const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner', showLeftOverlay = false, leftOverlayType = null }) => {
     return (
         <Box sx={{ position: 'relative', display: 'inline-flex' }}>
             {children}
+            {/* Left overlay (e.g., recording indicator) */}
+            {showLeftOverlay && leftOverlayType && (
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: -4,
+                        left: -4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    {leftOverlayType === 'recording' && (
+                        <Box
+                            sx={{
+                                backgroundColor: 'rgba(244, 67, 54, 0.3) !important',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '3px',
+                            }}
+                        >
+                            <FiberManualRecordIcon
+                                sx={{
+                                    fontSize: 10,
+                                    color: '#F44336 !important',
+                                    fill: '#F44336 !important',
+                                    animation: 'pulse 1.5s ease-in-out infinite',
+                                    '@keyframes pulse': {
+                                        '0%, 100%': { opacity: 1 },
+                                        '50%': { opacity: 0.4 },
+                                    }
+                                }}
+                            />
+                        </Box>
+                    )}
+                </Box>
+            )}
+            {/* Right overlay (e.g., streaming, sync indicators) */}
             {showOverlay && (
                 <Box
                     sx={{
@@ -149,9 +189,15 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
 // Wrapper component for WavesIcon that reads Redux state
 const WaterfallIconWithStatus = () => {
     const isStreaming = useSelector((state) => state.waterfall?.isStreaming);
+    const isRecording = useSelector((state) => state.waterfall?.isRecording);
 
     return (
-        <IconWithOverlay showOverlay={isStreaming} overlayType="play">
+        <IconWithOverlay
+            showOverlay={isStreaming}
+            overlayType="play"
+            showLeftOverlay={isRecording}
+            leftOverlayType="recording"
+        >
             <WavesIcon />
         </IconWithOverlay>
     );
