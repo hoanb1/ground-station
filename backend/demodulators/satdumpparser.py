@@ -39,6 +39,8 @@ class SatDumpStatus:
     image_lines: Dict[int, int] = field(default_factory=dict)
     current_product: Optional[str] = None
     products_generated: list = field(default_factory=list)
+    registered_pipelines: list = field(default_factory=list)
+    pipeline_files: list = field(default_factory=list)
 
 
 class SatDumpOutputParser:
@@ -87,6 +89,8 @@ class SatDumpOutputParser:
         "critical": re.compile(r"\(C\)\s+(.+)", re.IGNORECASE),
         "warning": re.compile(r"(?:\[WARNING\]|\(W\))\s+(.+)", re.IGNORECASE),
         "debug": re.compile(r"\(D\)\s+(.+)", re.IGNORECASE),
+        "pipeline": re.compile(r"SatDump DEBUG:\s*-\s*(.+)", re.IGNORECASE),
+        "pipeline_file": re.compile(r"Loading pipelines from file (.+)", re.IGNORECASE),
     }
 
     def __init__(self, status_callback: Optional[Callable] = None):
@@ -288,7 +292,7 @@ class SatDumpOutputParser:
             update = {"type": "projection", "projection_type": proj_type}
             logger.info(f"🗺️  Applying {proj_type} projection")
 
-        # General messages
+        # General messages (check critical/error FIRST before other patterns)
         elif match := self.PATTERNS["critical"].search(line):
             message = match.group(1)
             update = {"type": "critical", "message": message}
@@ -304,20 +308,53 @@ class SatDumpOutputParser:
             update = {"type": "warning", "message": message}
             logger.warning(f"SatDump WARNING: {message}")
 
+        elif match := self.PATTERNS["pipeline_file"].search(line):
+            filepath = match.group(1).strip()
+            self.status.pipeline_files.append(filepath)
+            update = {"type": "pipeline_file", "filepath": filepath}
+
         elif match := self.PATTERNS["info"].search(line):
             message = match.group(1)
+            # Check if this is a pipeline file loading message (already handled above)
+            if "Loading pipelines from file" in message:
+                return None
             update = {"type": "info", "message": message}
             logger.debug(f"SatDump INFO: {message}")
 
+        elif match := self.PATTERNS["pipeline"].search(line):
+            pipeline = match.group(1).strip()
+            self.status.registered_pipelines.append(pipeline)
+            update = {"type": "pipeline", "pipeline": pipeline}
+
         elif match := self.PATTERNS["debug"].search(line):
             message = match.group(1)
-            update = {"type": "debug", "message": message}
-            logger.debug(f"SatDump DEBUG: {message}")
+            # Check if this is a pipeline registration line
+            if message.strip().startswith("-"):
+                pipeline = message.strip()[1:].strip()
+                self.status.registered_pipelines.append(pipeline)
+                update = {"type": "pipeline", "pipeline": pipeline}
+            else:
+                update = {"type": "debug", "message": message}
+                logger.debug(f"SatDump DEBUG: {message}")
 
         else:
-            # Unknown message format
+            # Unknown message format - skip logging for verbose initialization messages
             self.message_counts["unknown"] += 1
-            logger.debug(f"Unparsed SatDump output: {line}")
+
+            # Always log error messages that weren't caught by patterns
+            if "(E)" in line or "[ERROR]" in line:
+                logger.error(f"SatDump ERROR (unparsed): {line}")
+                return None
+
+            suppress_patterns = [
+                "Found system pipeline file",
+                "Found user pipeline file",
+                "Loading plugin",
+                "Plugin",
+                "loaded!",
+            ]
+            if not any(pattern in line for pattern in suppress_patterns):
+                logger.debug(f"Unparsed SatDump output: {line}")
             return None
 
         # Track parsed messages
@@ -346,6 +383,8 @@ class SatDumpOutputParser:
             "image_lines": self.status.image_lines.copy(),
             "current_product": self.status.current_product,
             "products_generated": self.status.products_generated.copy(),
+            "registered_pipelines": self.status.registered_pipelines.copy(),
+            "pipeline_files": self.status.pipeline_files.copy(),
         }
 
     def get_statistics(self) -> Dict[str, Any]:

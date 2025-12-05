@@ -161,6 +161,7 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
         # SatDump subprocess
         self.satdump_process: Optional[subprocess.Popen] = None
         self.satdump_parser: Optional[SatDumpOutputParser] = None
+        self._cleanup_done = False  # Track if cleanup already happened
 
         # Monitoring threads
         self.output_monitor_thread: Optional[threading.Thread] = None
@@ -293,8 +294,13 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
         # Decimate
         return filtered[::decimation_factor]
 
-    def _start_satdump_process(self, actual_samplerate=None):
-        """Start SatDump subprocess for real-time processing."""
+    def _start_satdump_process(self, actual_samplerate=None, vfo_center_freq=None):
+        """Start SatDump subprocess for real-time processing.
+
+        Args:
+            actual_samplerate: Actual sample rate being sent to SatDump
+            vfo_center_freq: VFO center frequency in Hz (for frequency shift calculation)
+        """
         # SatDump baseband mode with stdin for continuous streaming
         # Using /dev/stdin allows continuous streaming without FIFO issues
         #
@@ -312,8 +318,22 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
             str(int(samplerate_to_use)),  # ACTUAL rate we're sending
             "--baseband_format",
             "cf32",  # Complex float32 (interleaved I/Q)
-            "--dc_block",  # Remove DC offset
         ]
+
+        # Optionally add dc_block (commented out for now to test if it causes crashes)
+        # cmd.append("--dc_block")
+
+        # Add frequency shift if VFO is offset from SDR center frequency
+        # This tells SatDump where in the spectrum to look for the signal
+        # We pass raw samples to SatDump and let it handle the frequency shift internally
+        if self.sdr_center_freq and vfo_center_freq:
+            # Both frequencies are already in Hz, so just subtract
+            freq_offset_hz = int(vfo_center_freq - self.sdr_center_freq)
+            if freq_offset_hz != 0:
+                cmd.extend(["--freq_shift", str(freq_offset_hz)])
+                logger.info(
+                    f"SatDump frequency shift: {freq_offset_hz} Hz ({freq_offset_hz/1e3:.1f} kHz)"
+                )
 
         logger.info(f"Starting SatDump: {' '.join(cmd)}")
 
@@ -366,6 +386,23 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
         if self.satdump_parser:
             stats = self.satdump_parser.get_statistics()
             logger.info(f"SatDump parser stats: {stats}")
+
+        # Log SatDump exit code
+        if self.satdump_process:
+            exit_code = self.satdump_process.poll()
+            if exit_code is not None:
+                if exit_code == 0:
+                    logger.info(f"SatDump process exited normally (code: {exit_code})")
+                elif exit_code == -11:
+                    logger.error(
+                        f"SatDump process crashed with SIGSEGV (segmentation fault, code: {exit_code})"
+                    )
+                elif exit_code < 0:
+                    logger.error(
+                        f"SatDump process terminated by signal {-exit_code} (code: {exit_code})"
+                    )
+                else:
+                    logger.error(f"SatDump process exited with error code: {exit_code}")
 
     def _send_parsed_update(self, parsed: Dict[str, Any]):
         """Send parsed SatDump update to UI via data queue."""
@@ -678,8 +715,10 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
                         self.sample_rate = sdr_rate  # Use actual SDR rate (no decimation)
                         self.decimation_filter = None  # No decimation needed
 
-                        # Start SatDump with ACTUAL SDR sample rate
-                        self._start_satdump_process(actual_samplerate=self.sdr_sample_rate)
+                        # Start SatDump with ACTUAL SDR sample rate and VFO center frequency
+                        self._start_satdump_process(
+                            actual_samplerate=self.sdr_sample_rate, vfo_center_freq=vfo_center
+                        )
 
                         # Initialize parser
                         self.satdump_parser = SatDumpOutputParser(
@@ -717,24 +756,24 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
                             f"SatDump will resample from {self.sdr_sample_rate/1e6:.2f} MS/s internally"
                         )
 
-                    # Frequency translation (shift VFO to baseband)
-                    offset_freq = vfo_center - sdr_center
-                    translated = self._frequency_translate(
-                        samples, offset_freq, self.sdr_sample_rate
-                    )
-
-                    # Apply bandpass filter using pipeline bandwidth (not VFO bandwidth)
-                    # This ensures we capture the full signal regardless of VFO setting
-                    # NOTE: Filtering disabled for now - testing raw signal
-                    # pipeline_bw = self._get_pipeline_bandwidth()
-                    # filtered = self._bandpass_filter(translated, pipeline_bw, self.sdr_sample_rate)
+                    # NO frequency translation - pass raw samples to SatDump
+                    # SatDump handles frequency shift internally via --freq_shift parameter
+                    # This is more efficient and accurate than doing it in Python
 
                     # No decimation - pass SDR rate directly to SatDump
                     # SatDump handles internal resampling to match pipeline requirements
 
                     # Write to SatDump stdin (continuous streaming)
-                    samples_cf32 = translated.astype(np.complex64)
+                    samples_cf32 = samples.astype(np.complex64)
                     try:
+                        # Check if SatDump is still running before writing
+                        if self.satdump_process and self.satdump_process.poll() is not None:
+                            exit_code = self.satdump_process.poll()
+                            logger.error(
+                                f"SatDump process died unexpectedly with exit code: {exit_code}"
+                            )
+                            break
+
                         if self.satdump_process and self.satdump_process.stdin:
                             self.satdump_process.stdin.write(samples_cf32.tobytes())
                             self.satdump_process.stdin.flush()
@@ -794,6 +833,12 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
 
     def _cleanup(self):
         """Clean up resources."""
+        # Prevent duplicate cleanup
+        if self._cleanup_done:
+            logger.debug("Cleanup already done, skipping")
+            return
+
+        self._cleanup_done = True
         logger.info("Cleaning up weather decoder...")
 
         # Stop monitoring threads
@@ -807,15 +852,31 @@ class SatDumpWeatherDecoder(BaseDecoderProcess):
             except Exception as e:
                 logger.error(f"Error closing stdin: {e}")
 
+        # Wait for output monitor thread to finish (with timeout)
+        if self.output_monitor_thread and self.output_monitor_thread.is_alive():
+            logger.debug("Waiting for output monitor thread to finish...")
+            self.output_monitor_thread.join(timeout=2.0)
+            if self.output_monitor_thread.is_alive():
+                logger.warning("Output monitor thread did not finish in time")
+
         # Terminate SatDump process
         if self.satdump_process:
             try:
-                self.satdump_process.terminate()
-                self.satdump_process.wait(timeout=5.0)
-                logger.info("SatDump process terminated")
+                # Give it a moment to finish processing
+                self.satdump_process.wait(timeout=2.0)
+                logger.info("SatDump process exited normally")
             except subprocess.TimeoutExpired:
-                self.satdump_process.kill()
-                logger.warning("SatDump process killed (timeout)")
+                # Process didn't exit, terminate it
+                logger.debug("SatDump process timeout, sending SIGTERM")
+                self.satdump_process.terminate()
+                try:
+                    self.satdump_process.wait(timeout=3.0)
+                    logger.info("SatDump process terminated")
+                except subprocess.TimeoutExpired:
+                    logger.warning("SatDump process not responding to SIGTERM, sending SIGKILL")
+                    self.satdump_process.kill()
+                    self.satdump_process.wait()
+                    logger.warning("SatDump process killed")
             except Exception as e:
                 logger.error(f"Error terminating SatDump: {e}")
 
