@@ -35,7 +35,7 @@ import {
     Link,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Tooltip from "@mui/material/Tooltip";
@@ -223,6 +223,110 @@ const SatelliteInfoPopover = () => {
 
     const currentActivePass = getCurrentActivePass();
     const showTimeline = satelliteData.details.norad_id && currentActivePass;
+
+    // Memoize the next pass calculation to prevent unnecessary recalculations
+    const nextPass = useMemo(() => {
+        if (!satellitePasses || satellitePasses.length === 0 || !satelliteData.details.norad_id) return null;
+
+        const now = new Date();
+        const matchingPasses = satellitePasses.filter(pass =>
+            pass.norad_id === satelliteData.details.norad_id &&
+            new Date(pass.event_start) > now
+        );
+
+        // Sort by start time and return the earliest
+        if (matchingPasses.length === 0) return null;
+        return matchingPasses.sort((a, b) =>
+            new Date(a.event_start) - new Date(b.event_start)
+        )[0];
+    }, [satellitePasses, satelliteData.details.norad_id]);
+
+    // Countdown Component - extracted outside to use memoized nextPass
+    const NextPassCountdown = React.memo(({ pass }) => {
+        const passId = pass?.id;
+        const passStartTime = pass?.event_start;
+
+        // Calculate initial countdown value to avoid empty state
+        const calculateCountdown = (startTimeStr) => {
+            if (!startTimeStr) return '';
+
+            const now = new Date();
+            const startTime = new Date(startTimeStr);
+            const diff = startTime - now;
+
+            if (diff <= 0) {
+                return 'Pass starting...';
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            if (days > 0) {
+                return `${days}d ${hours}h ${minutes}m`;
+            } else if (hours > 0) {
+                return `${hours}h ${minutes}m ${seconds}s`;
+            } else if (minutes > 0) {
+                return `${minutes}m ${seconds}s`;
+            } else {
+                return `${seconds}s`;
+            }
+        };
+
+        const [countdown, setCountdown] = useState(() => calculateCountdown(passStartTime));
+
+        useEffect(() => {
+            if (!passStartTime) return;
+
+            const updateCountdown = () => {
+                setCountdown(calculateCountdown(passStartTime));
+            };
+
+            updateCountdown();
+            const interval = setInterval(updateCountdown, 1000);
+
+            return () => clearInterval(interval);
+        }, [passId, passStartTime]); // Only re-run if the pass ID or start time changes
+
+        if (!pass) {
+            return (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No upcoming passes
+                </Typography>
+            );
+        }
+
+        return (
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1
+            }}>
+                <Typography variant="body2" color="text.secondary">
+                    Next pass in
+                </Typography>
+                <Typography
+                    variant="h4"
+                    sx={{
+                        fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                        fontWeight: 'bold',
+                        color: 'info.light'
+                    }}
+                >
+                    {countdown}
+                </Typography>
+                <Typography variant="caption" color="text.disabled">
+                    {formatLegibleDateTime(pass.event_start)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                    Peak elevation: {pass.peak_altitude?.toFixed(1)}°
+                </Typography>
+            </Box>
+        );
+    });
 
     return (
         <>
@@ -486,7 +590,7 @@ const SatelliteInfoPopover = () => {
                         </>
                     ) : null}
 
-                    {/* Active Pass Timeline - show when there's an active pass, otherwise show placeholder */}
+                    {/* Active Pass Timeline - show when there's an active pass, otherwise show countdown */}
                     {satelliteData.details.norad_id && (
                         <Box sx={{ mb: 1, height: '150px' }}>
                             {showTimeline ? (
@@ -511,9 +615,7 @@ const SatelliteInfoPopover = () => {
                                         borderColor: 'divider',
                                     }}
                                 >
-                                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                        No active pass at the moment
-                                    </Typography>
+                                    <NextPassCountdown pass={nextPass} />
                                 </Box>
                             )}
                         </Box>
