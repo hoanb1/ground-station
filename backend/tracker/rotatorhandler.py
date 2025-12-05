@@ -171,18 +171,22 @@ class RotatorHandler:
             await self.connect_to_rotator()
             self.tracker.rotator_data["connected"] = True
             self.tracker.rotator_data["stopped"] = True
+            self.tracker.rotator_data["parked"] = False
         elif new == "tracking":
             await self.connect_to_rotator()
             self.tracker.rotator_data["tracking"] = True
             self.tracker.rotator_data["stopped"] = False
+            self.tracker.rotator_data["parked"] = False
         elif new == "stopped":
             self.tracker.rotator_data["tracking"] = False
             self.tracker.rotator_data["slewing"] = False
             self.tracker.rotator_data["stopped"] = True
+            self.tracker.rotator_data["parked"] = False
         elif new == "disconnected":
             await self.disconnect_rotator()
             self.tracker.rotator_data["tracking"] = False
             self.tracker.rotator_data["stopped"] = True
+            self.tracker.rotator_data["parked"] = False
         elif new == "parked":
             await self.park_rotator()
         else:
