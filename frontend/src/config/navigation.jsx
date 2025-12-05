@@ -31,6 +31,85 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import FolderIcon from '@mui/icons-material/Folder';
 import i18n from '../i18n/config.js';
 import { TleIcon } from '../components/common/custom-icons.jsx';
+import { Box, CircularProgress } from '@mui/material';
+import SyncIcon from '@mui/icons-material/Sync';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { useSelector } from 'react-redux';
+
+// Helper component to wrap icons with overlay indicators
+const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner' }) => {
+    return (
+        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+            {children}
+            {showOverlay && (
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    {overlayType === 'spinner' ? (
+                        <CircularProgress
+                            size={12}
+                            thickness={6}
+                            sx={{
+                                color: 'primary.main',
+                            }}
+                        />
+                    ) : overlayType === 'sync' ? (
+                        <SyncIcon
+                            sx={{
+                                fontSize: 12,
+                                color: 'warning.main',
+                                animation: 'spin 1s linear infinite',
+                                '@keyframes spin': {
+                                    '0%': { transform: 'rotate(0deg)' },
+                                    '100%': { transform: 'rotate(360deg)' },
+                                }
+                            }}
+                        />
+                    ) : overlayType === 'play' ? (
+                        <PlayArrowIcon
+                            sx={{
+                                fontSize: 14,
+                                color: 'success.main',
+                                backgroundColor: 'background.paper',
+                                borderRadius: '50%',
+                                padding: '1px',
+                            }}
+                        />
+                    ) : null}
+                </Box>
+            )}
+        </Box>
+    );
+};
+
+// Wrapper component for WavesIcon that reads Redux state
+const WaterfallIconWithStatus = () => {
+    const isStreaming = useSelector((state) => state.waterfall?.isStreaming);
+
+    return (
+        <IconWithOverlay showOverlay={isStreaming} overlayType="play">
+            <WavesIcon />
+        </IconWithOverlay>
+    );
+};
+
+// Wrapper component for TleIcon that reads Redux state
+const TleIconWithStatus = () => {
+    const isSynchronizing = useSelector((state) => state.syncSatellite?.synchronizing);
+
+    return (
+        <IconWithOverlay showOverlay={isSynchronizing} overlayType="sync">
+            <TleIcon />
+        </IconWithOverlay>
+    );
+};
 
 export const getNavigation = () => [
     {
@@ -50,7 +129,7 @@ export const getNavigation = () => [
     {
         segment: 'waterfall',
         title: i18n.t('waterfall_view', { ns: 'navigation' }),
-        icon: <WavesIcon />,
+        icon: <WaterfallIconWithStatus />,
     },
     {
         segment: 'filebrowser',
@@ -90,7 +169,7 @@ export const getNavigation = () => [
     {
         segment: 'satellites/tlesources',
         title: i18n.t('tle_sources', { ns: 'navigation' }),
-        icon: <TleIcon/>,
+        icon: <TleIconWithStatus />,
     },
     {
         segment: 'satellites/satellites',
