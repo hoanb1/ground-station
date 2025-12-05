@@ -129,7 +129,7 @@ const initialState = {
     selectedItems: [], // Array of item keys (recording names or snapshot/decoded filenames)
     selectionMode: false, // Toggle for selection mode
     // New files indicator
-    lastVisitedTimestamp: null, // ISO timestamp of when user last visited file browser
+    lastVisitedTimestamp: new Date().toISOString(), // ISO timestamp - initialized to app start time
     hasNewFiles: false, // Flag indicating if new files were added since last visit
 };
 
@@ -190,6 +190,10 @@ const fileBrowserSlice = createSlice({
         markFileBrowserVisited: (state) => {
             state.lastVisitedTimestamp = new Date().toISOString();
             state.hasNewFiles = false;
+        },
+        // Set new files indicator (called when new files are added via socket events)
+        setHasNewFiles: (state, action) => {
+            state.hasNewFiles = action.payload;
         },
     },
     extraReducers: (builder) => {
