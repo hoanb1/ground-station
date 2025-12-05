@@ -229,16 +229,24 @@ const SatelliteInfoPopover = () => {
         if (!satellitePasses || satellitePasses.length === 0 || !satelliteData.details.norad_id) return null;
 
         const now = new Date();
-        const matchingPasses = satellitePasses.filter(pass =>
-            pass.norad_id === satelliteData.details.norad_id &&
-            new Date(pass.event_start) > now
-        );
 
-        // Sort by start time and return the earliest
-        if (matchingPasses.length === 0) return null;
-        return matchingPasses.sort((a, b) =>
-            new Date(a.event_start) - new Date(b.event_start)
-        )[0];
+        // Find the earliest upcoming pass without creating a large intermediate array
+        let earliestPass = null;
+        let earliestTime = null;
+
+        for (const pass of satellitePasses) {
+            if (pass.norad_id === satelliteData.details.norad_id) {
+                const startTime = new Date(pass.event_start);
+                if (startTime > now) {
+                    if (!earliestPass || startTime < earliestTime) {
+                        earliestPass = pass;
+                        earliestTime = startTime;
+                    }
+                }
+            }
+        }
+
+        return earliestPass;
     }, [satellitePasses, satelliteData.details.norad_id]);
 
     // Countdown Component - extracted outside to use memoized nextPass
