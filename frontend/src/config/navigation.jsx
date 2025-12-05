@@ -58,7 +58,7 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                     {overlayType === 'spinner' ? (
                         <Box
                             sx={{
-                                backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                                backgroundColor: 'rgba(33, 150, 243, 0.3) !important',
                                 borderRadius: '50%',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -70,14 +70,17 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                                 size={12}
                                 thickness={6}
                                 sx={{
-                                    color: '#2196F3',
+                                    color: '#2196F3 !important',
+                                    '& .MuiCircularProgress-circle': {
+                                        stroke: '#2196F3 !important',
+                                    }
                                 }}
                             />
                         </Box>
                     ) : overlayType === 'sync' ? (
                         <Box
                             sx={{
-                                backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                                backgroundColor: 'rgba(255, 152, 0, 0.3) !important',
                                 borderRadius: '50%',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -88,7 +91,8 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                             <SyncIcon
                                 sx={{
                                     fontSize: 12,
-                                    color: '#FF9800',
+                                    color: '#FF9800 !important',
+                                    fill: '#FF9800 !important',
                                     animation: 'spin 1s linear infinite',
                                     '@keyframes spin': {
                                         '0%': { transform: 'rotate(0deg)' },
@@ -100,7 +104,7 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                     ) : overlayType === 'play' ? (
                         <Box
                             sx={{
-                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                backgroundColor: 'rgba(76, 175, 80, 0.3) !important',
                                 borderRadius: '50%',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -111,14 +115,15 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                             <PlayArrowIcon
                                 sx={{
                                     fontSize: 12,
-                                    color: '#4CAF50',
+                                    color: '#4CAF50 !important',
+                                    fill: '#4CAF50 !important',
                                 }}
                             />
                         </Box>
                     ) : overlayType === 'new' ? (
                         <Box
                             sx={{
-                                backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                                backgroundColor: 'rgba(244, 67, 54, 0.3) !important',
                                 borderRadius: '50%',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -129,7 +134,8 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                             <FiberManualRecordIcon
                                 sx={{
                                     fontSize: 10,
-                                    color: '#F44336',
+                                    color: '#F44336 !important',
+                                    fill: '#F44336 !important',
                                 }}
                             />
                         </Box>
