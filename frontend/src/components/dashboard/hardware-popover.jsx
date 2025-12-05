@@ -47,6 +47,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import LocationSearchingIcon from '@mui/icons-material/LocationSearching';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import LocalParkingIcon from '@mui/icons-material/LocalParking';
 
 const HardwareSettingsPopover = () => {
     const { t } = useTranslation('dashboard');
@@ -139,6 +140,12 @@ const HardwareSettingsPopover = () => {
             icon: CloseIcon,
             color: 'text.primary',
             badgeBackgroundColor: 'status.disconnected',
+            badgeBorderColor: "text.primary"
+        };
+        if (rotatorData.parked) return {
+            icon: LocalParkingIcon,
+            color: 'text.primary',
+            badgeBackgroundColor: 'warning.main',
             badgeBorderColor: "text.primary"
         };
         if (rotatorData.outofbounds) return {

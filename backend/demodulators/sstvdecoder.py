@@ -636,6 +636,9 @@ class SSTVDecoder(threading.Thread):
         image.save(filepath)
         logger.info(f"Saved: {filepath}")
 
+        # Get file size
+        filesize = os.path.getsize(filepath)
+
         # Get VFO state for metadata
         vfo_state = None
         if self.vfo is not None:
@@ -651,6 +654,7 @@ class SSTVDecoder(threading.Thread):
                 "width": image.width,
                 "height": image.height,
                 "mode": mode_name,
+                "filesize": filesize,
                 "timestamp": decode_timestamp,
                 "timestamp_iso": time.strftime(
                     "%Y-%m-%dT%H:%M:%S%z", time.localtime(decode_timestamp)
@@ -703,6 +707,7 @@ class SSTVDecoder(threading.Thread):
                 "mode": mode_name,
                 "width": image.width,
                 "height": image.height,
+                "filesize": filesize,
             },
         }
         try:

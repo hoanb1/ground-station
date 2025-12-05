@@ -117,15 +117,22 @@ const DecodedPacketsDrawer = () => {
             .filter(output => output.type === 'decoder-output')
             .slice(-100) // Take last 100 entries
             .map(output => {
+                const isSstv = output.decoder_type === 'sstv';
                 const isLora = output.decoder_type === ModulationType.LORA;
 
-                // For LoRa: use packet metadata, for others: use callsigns
-                const fromCallsign = isLora ? '-' : (output.output.callsigns?.from || '-');
-                const toCallsign = isLora ? '-' : (output.output.callsigns?.to || '-');
+                // For SSTV and LoRa: use different display logic
+                const fromCallsign = (isSstv || isLora) ? '-' : (output.output.callsigns?.from || '-');
+                const toCallsign = (isSstv || isLora) ? '-' : (output.output.callsigns?.to || '-');
 
                 // Use identified NORAD ID from backend lookup, then configured satellite
                 const noradId = output.output.callsigns?.identified_norad_id || output.output.satellite?.norad_id;
                 const satelliteName = output.output.callsigns?.identified_satellite || output.output.satellite?.name || '-';
+
+                // For SSTV, use mode as parameters, for others use existing parameters
+                const parameters = isSstv ? output.output.mode : output.output.parameters;
+
+                // File size from output
+                const fileSize = output.output.filesize || output.output.packet_length;
 
                 return {
                     id: output.id,
@@ -136,15 +143,19 @@ const DecodedPacketsDrawer = () => {
                     to: toCallsign,
                     decoderType: output.decoder_type,
                     parser: output.output.telemetry?.parser || '-',
-                    packetLength: output.output.packet_length,
+                    packetLength: fileSize,
                     vfo: output.vfo,
                     hasTelemetry: !!output.output.telemetry,
                     telemetry: output.output.telemetry,
-                    parameters: output.output.parameters,
+                    parameters: parameters,
                     // Decoder config
                     framing: output.output.decoder_config?.framing || '-',
                     payloadProtocol: output.output.decoder_config?.payload_protocol || '-',
                     configSource: output.output.decoder_config?.source || '-',
+                    // SSTV specific
+                    mode: output.output.mode,
+                    width: output.output.width,
+                    height: output.output.height,
                     // File paths for telemetry viewer
                     filename: output.output.filename,
                     filepath: output.output.filepath,
