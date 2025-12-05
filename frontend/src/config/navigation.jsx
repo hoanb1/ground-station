@@ -53,35 +53,65 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                     }}
                 >
                     {overlayType === 'spinner' ? (
-                        <CircularProgress
-                            size={12}
-                            thickness={6}
+                        <Box
                             sx={{
-                                color: 'primary.main',
-                            }}
-                        />
-                    ) : overlayType === 'sync' ? (
-                        <SyncIcon
-                            sx={{
-                                fontSize: 12,
-                                color: 'warning.main',
-                                animation: 'spin 1s linear infinite',
-                                '@keyframes spin': {
-                                    '0%': { transform: 'rotate(0deg)' },
-                                    '100%': { transform: 'rotate(360deg)' },
-                                }
-                            }}
-                        />
-                    ) : overlayType === 'play' ? (
-                        <PlayArrowIcon
-                            sx={{
-                                fontSize: 14,
-                                color: 'success.main',
-                                backgroundColor: 'background.paper',
+                                backgroundColor: 'rgba(33, 150, 243, 0.2)',
                                 borderRadius: '50%',
-                                padding: '1px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '2px',
                             }}
-                        />
+                        >
+                            <CircularProgress
+                                size={12}
+                                thickness={6}
+                                sx={{
+                                    color: '#2196F3',
+                                }}
+                            />
+                        </Box>
+                    ) : overlayType === 'sync' ? (
+                        <Box
+                            sx={{
+                                backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '2px',
+                            }}
+                        >
+                            <SyncIcon
+                                sx={{
+                                    fontSize: 12,
+                                    color: '#FF9800',
+                                    animation: 'spin 1s linear infinite',
+                                    '@keyframes spin': {
+                                        '0%': { transform: 'rotate(0deg)' },
+                                        '100%': { transform: 'rotate(360deg)' },
+                                    }
+                                }}
+                            />
+                        </Box>
+                    ) : overlayType === 'play' ? (
+                        <Box
+                            sx={{
+                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '2px',
+                            }}
+                        >
+                            <PlayArrowIcon
+                                sx={{
+                                    fontSize: 12,
+                                    color: '#4CAF50',
+                                }}
+                            />
+                        </Box>
                     ) : null}
                 </Box>
             )}
