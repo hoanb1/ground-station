@@ -167,6 +167,11 @@ export const useSocketEventHandlers = (socket) => {
         socket.on("sat-sync-events", (data) => {
             store.dispatch(setSyncState(data));
 
+            // Set synchronizing flag based on sync status
+            if (data.status === 'in_progress' || data.status === 'started') {
+                store.dispatch(setSynchronizing(true));
+            }
+
             if (data.status === 'complete' && data.success) {
                 const newSats = data.newly_added?.satellites?.length || 0;
                 const newTransmitters = data.newly_added?.transmitters?.length || 0;
