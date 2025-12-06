@@ -289,15 +289,28 @@ export const useVFOWheelHandler = ({
         e.stopPropagation();
 
         const marker = vfoMarkers[selectedVFO];
-
         const freqChange = -Math.sign(e.deltaY) * marker.stepSize;
-        const newFrequency = marker.frequency + freqChange;
 
-        const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
+        // Check if VFO is locked to a transmitter
+        const isLocked = marker.lockedTransmitterId && marker.lockedTransmitterId !== 'none';
 
-        updateVFOProperty(selectedVFO, {
-            frequency: limitedFreq,
-        });
+        if (isLocked) {
+            // When locked, adjust the frequency offset instead of absolute frequency
+            const currentOffset = marker.frequencyOffset || 0;
+            const newOffset = Math.round(currentOffset + freqChange);
+
+            updateVFOProperty(selectedVFO, {
+                frequencyOffset: newOffset,
+            });
+        } else {
+            // When unlocked, adjust absolute frequency as before
+            const newFrequency = marker.frequency + freqChange;
+            const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
+
+            updateVFOProperty(selectedVFO, {
+                frequency: limitedFreq,
+            });
+        }
 
     }, [selectedVFO, vfoMarkers, vfoActive, startFreq, endFreq, updateVFOProperty]);
 
