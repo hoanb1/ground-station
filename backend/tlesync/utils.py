@@ -107,7 +107,7 @@ def sync_fetch(url: str) -> Optional[requests.Response]:
     Returns:
         requests.Response or None: The response object
     """
-    reply = requests.get(url, timeout=5)
+    reply = requests.get(url, timeout=15)
     return reply
 
 
