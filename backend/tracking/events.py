@@ -271,12 +271,16 @@ def run_events_calculation(
                 logger.info(f"Using cached satellite pass calculation (key: {cache_key[:8]}...)")
 
                 # Return the cached result, adjusting the forecast hours if needed
-                return {
+                result = {
                     "success": cached_result["success"],
                     "forecast_hours": hours,  # Return the requested hours
                     "data": cached_result["data"],  # Keep all the data
                     "cached": True,
                 }
+                logger.info(
+                    f"Returning cached result with {len(cached_result.get('data', []))} events"
+                )
+                return result
         else:
             logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
 
