@@ -263,26 +263,33 @@ def run_events_calculation(
         current_time = time.time()
 
         # Check if we have a cached result
-        if cache_key in _cache:
-            calculation_time, valid_until, cached_result = _cache[cache_key]
+        try:
+            if cache_key in _cache:
+                calculation_time, valid_until, cached_result = _cache[cache_key]
 
-            # Check if the cache is still valid (current time < valid_until)
-            if current_time < valid_until:
-                logger.info(f"Using cached satellite pass calculation (key: {cache_key[:8]}...)")
+                # Check if the cache is still valid (current time < valid_until)
+                if current_time < valid_until:
+                    logger.info(
+                        f"Using cached satellite pass calculation (key: {cache_key[:8]}...)"
+                    )
 
-                # Return the cached result, adjusting the forecast hours if needed
-                result = {
-                    "success": cached_result["success"],
-                    "forecast_hours": hours,  # Return the requested hours
-                    "data": cached_result["data"],  # Keep all the data
-                    "cached": True,
-                }
-                logger.info(
-                    f"Returning cached result with {len(cached_result.get('data', []))} events"
-                )
-                return result
-        else:
-            logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
+                    # Return the cached result, adjusting the forecast hours if needed
+                    result = {
+                        "success": cached_result["success"],
+                        "forecast_hours": hours,  # Return the requested hours
+                        "data": cached_result["data"],  # Keep all the data
+                        "cached": True,
+                    }
+                    logger.info(
+                        f"Returning cached result with {len(cached_result.get('data', []))} events"
+                    )
+                    return result
+            else:
+                logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
+        except Exception as cache_error:
+            logger.error(
+                f"Error accessing cache (key: {cache_key[:8]}...), bypassing cache: {cache_error}"
+            )
 
     # Calculate events as before if no cache hit or cache disabled
     logger.info("Calculating satellite passes (cache miss or disabled)")

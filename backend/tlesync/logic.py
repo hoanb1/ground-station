@@ -422,7 +422,6 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     sync_state["newly_added"]["satellites"].append(
                         {"norad_id": norad_id, "name": satellite.name, "sat_id": satellite.sat_id}
                     )
-                    logger.info(f"New satellite added: {satellite.name} (NORAD ID: {norad_id})")
 
                 # let's find transmitter info in the satnogs_transmitter_data list
                 satnogs_transmitter_info = get_transmitter_info_by_norad_id(
@@ -487,9 +486,6 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                                 "downlink_high": transmitter.downlink_high,
                                 "mode": transmitter.mode,
                             }
-                        )
-                        logger.info(
-                            f"New transmitter added: {transmitter.description} for satellite {satellite.name} (UUID: {transmitter_uuid})"
                         )
 
             # Mark processing phases as complete
