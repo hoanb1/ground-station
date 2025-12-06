@@ -357,8 +357,11 @@ def update_satellite_with_satnogs_data(satellite, satnogs_sat_info):
     if not satnogs_sat_info:
         return {"name": satellite.name, "tle1": satellite.tle1, "tle2": satellite.tle2}
 
+    # Preserve the TLE name (Celestrak) - store SatNOGS name as alternative
+    # tle_name = satellite.name  # Save the TLE name before updating
+
     satellite.sat_id = satnogs_sat_info.get("sat_id", None)
-    satellite.name = satnogs_sat_info.get("name", None)
+    satellite.name_other = satnogs_sat_info.get("name", None)  # Store SatNOGS name as alternative
     satellite.image = satnogs_sat_info.get("image", None)
     satellite.status = satnogs_sat_info.get("status", None)
     satellite.decayed = (
