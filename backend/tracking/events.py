@@ -371,12 +371,11 @@ async def fetch_next_events_for_group(
             # Create pool with named processes
             with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
                 # Submit the calculation task to the pool, passing the serialized satellites list
-                result = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    pool.apply,
+                async_result = pool.apply_async(
                     run_events_calculation,
                     (satellites, homelat, homelon, hours, above_el, step_minutes),
                 )
+                result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
 
             if result.get("success", False):
                 events_data = result.get("data", [])
@@ -480,12 +479,11 @@ async def fetch_next_events_for_satellite(
             # Create a pool with named processes
             with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
                 # Submit the calculation task to the pool, passing the serialized satellite dict
-                result = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    pool.apply,
+                async_result = pool.apply_async(
                     run_events_calculation,
                     (satellite, homelat, homelon, hours, above_el, step_minutes),
                 )
+                result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
 
             if result.get("success", False):
                 events_for_satellite = result.get("data", [])
