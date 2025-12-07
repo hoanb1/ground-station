@@ -70,7 +70,9 @@
     "sent": "Gesendet:",
     "received": "Empfangen:",
     "messages": "{{count}} Nachrichten",
-    "transport_upgrades": "Transport-Upgrades:"
+    "transport_upgrades": "Transport-Upgrades:",
+    "audio_buffer": "Audio-Puffer",
+    "browser_buffer_length": "Browser-Pufferlänge:"
   },
   "hardware_popover": {
     "socket_disconnected": "Socket: Getrennt",

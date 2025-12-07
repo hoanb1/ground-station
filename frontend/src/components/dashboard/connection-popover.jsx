@@ -28,16 +28,20 @@ function ConnectionStatus() {
     const { t } = useTranslation('dashboard');
     const dispatch = useDispatch();
     const { socket, trafficStatsRef } = useSocket();
+    const { getAudioBufferLength } = useAudio();
     const [anchorEl, setAnchorEl] = useState(null);
     const [, forceUpdate] = useState(0);
+    const audioBufferLengthRef = React.useRef(0);
 
     // Force update stats every second to get fresh data
     useEffect(() => {
         const interval = setInterval(()=>{
+            // Update audio buffer length without causing state changes
+            audioBufferLengthRef.current = getAudioBufferLength();
             forceUpdate(prev => prev + 1);
         }, 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [getAudioBufferLength]);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -250,6 +254,24 @@ function ConnectionStatus() {
                                 </Typography>
                             </Box>
                         )}
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            {t('connection_popover.audio_buffer')}
+                        </Typography>
+                        <Grid container spacing={2}>
+                            <Grid size={12}>
+                                <Typography variant="caption" color="text.secondary">
+                                    {t('connection_popover.browser_buffer_length')}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#ff9800' }}>
+                                    {(audioBufferLengthRef.current * 1000).toFixed(0)} ms
+                                </Typography>
+                            </Grid>
+                        </Grid>
                     </Box>
 
                     <Divider sx={{ my: 2 }} />

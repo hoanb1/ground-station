@@ -10,7 +10,8 @@ const AudioContext = createContext({
     setAudioVolume: () => {},
     stopAudio: () => {},
     getAudioState: () => {},
-    flushAudioBuffers: () => {}
+    flushAudioBuffers: () => {},
+    getAudioBufferLength: () => 0
 });
 
 export const useAudio = () => {
@@ -241,6 +242,16 @@ export const AudioProvider = ({ children }) => {
         };
     }, [audioEnabled, volume]);
 
+    // Get browser audio buffer length in seconds
+    const getAudioBufferLength = useCallback(() => {
+        if (!audioContextRef.current) {
+            return 0;
+        }
+        const currentTime = audioContextRef.current.currentTime;
+        const bufferLength = Math.max(0, nextPlayTimeRef.current - currentTime);
+        return bufferLength;
+    }, []);
+
     // Register flush callback for use by middleware
     useEffect(() => {
         registerFlushCallback(flushAudioBuffers);
@@ -270,8 +281,9 @@ export const AudioProvider = ({ children }) => {
         setAudioVolume,
         stopAudio,
         getAudioState,
-        flushAudioBuffers
-    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, stopAudio, getAudioState, flushAudioBuffers]);
+        flushAudioBuffers,
+        getAudioBufferLength
+    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, stopAudio, getAudioState, flushAudioBuffers, getAudioBufferLength]);
 
     return (
         <AudioContext.Provider value={value}>

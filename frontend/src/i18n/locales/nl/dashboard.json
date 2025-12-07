@@ -70,7 +70,9 @@
     "sent": "Verzonden:",
     "received": "Ontvangen:",
     "messages": "{{count}} berichten",
-    "transport_upgrades": "Transport-upgrades:"
+    "transport_upgrades": "Transport-upgrades:",
+    "audio_buffer": "Audiobuffer",
+    "browser_buffer_length": "Browserbufferlengte:"
   },
   "hardware_popover": {
     "socket_disconnected": "Socket: Verbinding verbroken",

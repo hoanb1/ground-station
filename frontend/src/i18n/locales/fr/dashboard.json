@@ -70,7 +70,9 @@
     "sent": "Envoyés :",
     "received": "Reçus :",
     "messages": "{{count}} messages",
-    "transport_upgrades": "Mises à niveau du transport :"
+    "transport_upgrades": "Mises à niveau du transport :",
+    "audio_buffer": "Tampon audio",
+    "browser_buffer_length": "Longueur du tampon du navigateur :"
   },
   "hardware_popover": {
     "socket_disconnected": "Socket : Déconnecté",
