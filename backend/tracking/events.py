@@ -327,15 +327,19 @@ async def fetch_next_events_for_group(
 
             # If no cache hit, spawn worker to calculate
             if result is None:
+                logger.info("Cache miss - spawning worker process to calculate passes")
                 # Create pool with named processes
                 with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
                     # Submit the calculation task to the pool, passing the serialized satellites list
                     # NOTE: use_cache=False because cache is handled in main process
+                    logger.info("Submitting calculation to worker pool")
                     async_result = pool.apply_async(
                         run_events_calculation,
                         (satellites, homelat, homelon, hours, above_el, step_minutes, False),
                     )
+                    logger.info("Waiting for worker to complete calculation")
                     result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+                    logger.info("Worker completed, result received")
 
                 # Store result in cache (main process only, no IPC from worker)
                 try:
@@ -489,15 +493,19 @@ async def fetch_next_events_for_satellite(
 
             # If no cache hit, spawn worker to calculate
             if result is None:
+                logger.info("Cache miss - spawning worker process to calculate passes")
                 # Create a pool with named processes
                 with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
                     # Submit the calculation task to the pool, passing the serialized satellite dict
                     # NOTE: use_cache=False because cache is handled in main process
+                    logger.info("Submitting calculation to worker pool")
                     async_result = pool.apply_async(
                         run_events_calculation,
                         (satellite, homelat, homelon, hours, above_el, step_minutes, False),
                     )
+                    logger.info("Waiting for worker to complete calculation")
                     result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+                    logger.info("Worker completed, result received")
 
                 # Store result in cache (main process only, no IPC from worker)
                 try:
