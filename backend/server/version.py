@@ -1,7 +1,10 @@
 import json
 import os
+import platform
 import subprocess
 from datetime import datetime, timezone
+
+import psutil
 
 from common.logger import logger
 
@@ -88,6 +91,58 @@ def get_version_info():
     return version_info
 
 
+def get_system_info():
+    """Get system information (CPU, memory, disk usage)."""
+    try:
+        # CPU information
+        cpu_info = {
+            "architecture": platform.machine(),  # e.g., 'x86_64', 'aarch64', 'armv7l'
+            "processor": platform.processor(),
+            "cores": {
+                "physical": psutil.cpu_count(logical=False),
+                "logical": psutil.cpu_count(logical=True),
+            },
+            "usage_percent": psutil.cpu_percent(interval=0.1),
+        }
+
+        # Memory information
+        memory = psutil.virtual_memory()
+        memory_info = {
+            "total_gb": round(memory.total / (1024**3), 2),
+            "available_gb": round(memory.available / (1024**3), 2),
+            "used_gb": round(memory.used / (1024**3), 2),
+            "usage_percent": memory.percent,
+        }
+
+        # Disk information for root partition
+        disk = psutil.disk_usage("/")
+        disk_info = {
+            "total_gb": round(disk.total / (1024**3), 2),
+            "available_gb": round(disk.free / (1024**3), 2),
+            "used_gb": round(disk.used / (1024**3), 2),
+            "usage_percent": disk.percent,
+        }
+
+        # OS information
+        os_info = {
+            "system": platform.system(),  # e.g., 'Linux', 'Darwin', 'Windows'
+            "release": platform.release(),
+            "version": platform.version(),
+        }
+
+        return {
+            "cpu": cpu_info,
+            "memory": memory_info,
+            "disk": disk_info,
+            "os": os_info,
+        }
+    except Exception as e:
+        logger.error(f"Error gathering system information: {e}")
+        return {
+            "error": f"Failed to gather system info: {str(e)}",
+        }
+
+
 def get_version():
     """Get the current version string."""
     global _version_info
@@ -97,11 +152,16 @@ def get_version():
 
 
 def get_full_version_info():
-    """Get the complete version information dictionary."""
+    """Get the complete version information dictionary including system information."""
     global _version_info
     if _version_info is None:
         _version_info = get_version_info()
-    return _version_info
+
+    # Merge version info with system info
+    full_info = _version_info.copy()
+    full_info["system"] = get_system_info()
+
+    return full_info
 
 
 def write_version_info_during_build(version_info_override=None):

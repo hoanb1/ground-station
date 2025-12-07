@@ -19,7 +19,40 @@ export const fetchVersionInfo = createAsyncThunk(
 const versionSlice = createSlice({
     name: 'version',
     initialState: {
-        data: null,
+        data: {
+            version: null,
+            buildDate: null,
+            gitCommit: null,
+            environment: null,
+            system: {
+                cpu: {
+                    architecture: null,
+                    processor: null,
+                    cores: {
+                        physical: null,
+                        logical: null,
+                    },
+                    usage_percent: null,
+                },
+                memory: {
+                    total_gb: null,
+                    available_gb: null,
+                    used_gb: null,
+                    usage_percent: null,
+                },
+                disk: {
+                    total_gb: null,
+                    available_gb: null,
+                    used_gb: null,
+                    usage_percent: null,
+                },
+                os: {
+                    system: null,
+                    release: null,
+                    version: null,
+                },
+            },
+        },
         previousVersion: null,
         loading: false,
         error: null,
@@ -38,13 +71,17 @@ const versionSlice = createSlice({
             })
             .addCase(fetchVersionInfo.fulfilled, (state, action) => {
                 state.loading = false;
-                
-                // Store previous version before updating
-                if (state.data && state.data.version !== action.payload.version) {
-                    state.previousVersion = state.data.version;
+
+                // Only trigger version change if the version string actually changed
+                // Ignore system info changes (CPU/memory usage fluctuates)
+                const currentVersion = state.data?.version;
+                const newVersion = action.payload?.version;
+
+                if (currentVersion && newVersion && currentVersion !== newVersion) {
+                    state.previousVersion = currentVersion;
                     state.hasVersionChanged = true;
                 }
-                
+
                 state.data = action.payload;
             })
             .addCase(fetchVersionInfo.rejected, (state, action) => {

@@ -24,34 +24,53 @@ const VersionInfo = ({ minimal = false }) => {
     }, [dispatch]);
 
     if (minimal) {
-        return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Tooltip title={`${data?.version || t('version_info.unknown')}`}>
-                    <Chip
-                        label={data?.version?.split('-')[0] || 'v?.?.?'}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                            fontSize: '0.6rem',
-                            height: '18px',
-                            backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                            '& .MuiChip-label': { px: 1 }
-                        }}
-                    />
-                </Tooltip>
-                <Tooltip title={`Environment: ${environment}`}>
-                    <Chip
-                        label={environment === 'production' ? 'PROD' : 'DEV'}
-                        size="small"
-                        color={envColor}
-                        sx={{
-                            fontSize: '0.6rem',
-                            height: '18px',
-                            '& .MuiChip-label': { px: 1 }
-                        }}
-                    />
-                </Tooltip>
+        // Extract CPU architecture (e.g., x86_64 -> x64, aarch64 -> arm64)
+        const cpuArch = data?.system?.cpu?.architecture;
+        let archLabel = 'unknown';
+        if (cpuArch) {
+            if (cpuArch.includes('x86_64') || cpuArch.includes('amd64')) {
+                archLabel = 'x64';
+            } else if (cpuArch.includes('aarch64') || cpuArch.includes('arm64')) {
+                archLabel = 'arm64';
+            } else if (cpuArch.includes('armv7')) {
+                archLabel = 'armv7';
+            } else {
+                archLabel = cpuArch.substring(0, 6); // Truncate long arch names
+            }
+        }
+
+        // Determine environment label
+        const envLabel = environment === 'production' ? 'PROD' : 'DEV';
+
+        // Build tooltip content with system info
+        const tooltipContent = (
+            <Box sx={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
+                <Box><strong>Version:</strong> {data?.version || t('version_info.unknown')}</Box>
+                <Box><strong>Build Date:</strong> {data?.buildDate || t('version_info.unknown')}</Box>
+                <Box><strong>Git Commit:</strong> {data?.gitCommit || t('version_info.unknown')}</Box>
+                <Box sx={{ mt: 0.5 }}><strong>Architecture:</strong> {cpuArch || 'unknown'}</Box>
+                <Box><strong>CPU Cores:</strong> {data?.system?.cpu?.cores?.logical || '?'} ({data?.system?.cpu?.cores?.physical || '?'} physical)</Box>
+                <Box><strong>Memory:</strong> {data?.system?.memory?.total_gb || '?'} GB ({data?.system?.memory?.usage_percent || '?'}% used)</Box>
+                <Box><strong>Disk:</strong> {data?.system?.disk?.total_gb || '?'} GB ({data?.system?.disk?.usage_percent || '?'}% used)</Box>
+                <Box><strong>OS:</strong> {data?.system?.os?.system || 'unknown'} {data?.system?.os?.release || ''}</Box>
             </Box>
+        );
+
+        return (
+            <Tooltip title={tooltipContent} placement="bottom-start">
+                <Typography
+                    variant="caption"
+                    sx={{
+                        fontSize: '0.65rem',
+                        fontFamily: 'monospace',
+                        color: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+                        cursor: 'default',
+                        userSelect: 'none',
+                    }}
+                >
+                    {data?.version?.split('-')[0] || 'v?.?.?'} • {archLabel} • {envLabel}
+                </Typography>
+            </Tooltip>
         );
     }
 
