@@ -169,29 +169,71 @@ const DecodedPacketsDrawer = () => {
     // Handler to open telemetry viewer
     const handleOpenTelemetry = async (row) => {
         try {
-            // Convert filepath from 'data/decoded/file.bin' to '/decoded/file.bin' (same as backend)
-            const filename = row.filename;
-            const metadataFilename = filename.replace('.bin', '.json');
-            const fileUrl = `/decoded/${filename}`;
-            const metadataUrl = `/decoded/${metadataFilename}`;
+            // For SSTV images, metadata is already in the output
+            const isSstv = row.decoderType === 'sstv';
 
-            // Fetch metadata from the metadata URL
-            const response = await fetch(metadataUrl);
+            if (isSstv) {
+                // SSTV images have inline base64 image data and metadata filepath
+                // Ensure we get the JSON metadata filename, not the PNG
+                let metadataFilename = row.output?.metadata_filename;
 
-            if (!response.ok) {
-                throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
+                // If metadata_filename is not set or is the PNG file, derive it from filename
+                if (!metadataFilename || metadataFilename.endsWith('.png')) {
+                    const pngFilename = row.filename || row.output?.filename;
+                    if (!pngFilename) {
+                        throw new Error('Filename not found in output');
+                    }
+                    metadataFilename = pngFilename.replace('.png', '.json');
+                }
+
+                const metadataUrl = `/decoded/${metadataFilename}`;
+
+                const response = await fetch(metadataUrl);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
+                }
+
+                const metadata = await response.json();
+
+                // For SSTV, pass the image data directly
+                setTelemetryFile({
+                    filename: row.filename || row.output?.filename,
+                    imageData: row.output?.image_data,
+                    type: 'decoded'
+                });
+                setTelemetryMetadata(metadata);
+                setTelemetryDialogOpen(true);
+            } else {
+                // For other decoded files (.bin), fetch both file and metadata
+                const filename = row.filename;
+
+                if (!filename) {
+                    throw new Error('Filename not found');
+                }
+
+                const metadataFilename = filename.replace('.bin', '.json');
+                const fileUrl = `/decoded/${filename}`;
+                const metadataUrl = `/decoded/${metadataFilename}`;
+
+                // Fetch metadata from the metadata URL
+                const response = await fetch(metadataUrl);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
+                }
+
+                const metadata = await response.json();
+
+                // Set state to open dialog
+                setTelemetryFile({
+                    filename: filename,
+                    url: fileUrl,
+                    type: 'decoded'
+                });
+                setTelemetryMetadata(metadata);
+                setTelemetryDialogOpen(true);
             }
-
-            const metadata = await response.json();
-
-            // Set state to open dialog
-            setTelemetryFile({
-                filename: filename,
-                url: fileUrl,
-                type: 'decoded'
-            });
-            setTelemetryMetadata(metadata);
-            setTelemetryDialogOpen(true);
         } catch (error) {
             toast.error(`Failed to load telemetry: ${error.message}`);
         }
