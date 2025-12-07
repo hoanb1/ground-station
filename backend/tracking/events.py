@@ -9,6 +9,7 @@ from multiprocessing import Manager
 from typing import Any, Dict, List, Union
 
 import numpy as np
+import setproctitle
 from skyfield.api import EarthSatellite, Loader, Topos
 
 import crud
@@ -16,14 +17,6 @@ from common.common import ModelEncoder
 from db import AsyncSessionLocal
 
 from .passes import calculate_next_events
-
-# Add setproctitle import for process naming
-try:
-    import setproctitle
-
-    HAS_SETPROCTITLE = True
-except ImportError:
-    HAS_SETPROCTITLE = False
 
 # Create logger
 logger = logging.getLogger("passes-worker")
@@ -57,8 +50,7 @@ def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minu
 def _named_worker_init():
     """Initialize worker process with a descriptive name"""
     # Set process title for system monitoring tools
-    if HAS_SETPROCTITLE:
-        setproctitle.setproctitle("Ground Station - SatellitePassWorker")
+    setproctitle.setproctitle("Ground Station - SatellitePassWorker")
 
     # Set multiprocessing process name
     multiprocessing.current_process().name = "Ground Station - SatellitePassWorker"
@@ -223,76 +215,22 @@ def _calculate_elevation_curve(
 
 
 def run_events_calculation(
-    satellite_data, homelat, homelon, hours, above_el, step_minutes, use_cache=True
+    satellite_data, homelat, homelon, hours, above_el, step_minutes, use_cache=False
 ):
+    """
+    Calculate satellite pass events. This function runs in a worker process.
+
+    NOTE: Cache handling is now done in the main process (fetch_next_events_for_*)
+    to avoid IPC deadlocks with Manager.dict(). This function only does computation.
+    """
     # Set process name if not already set by pool initializer
     current_proc = multiprocessing.current_process()
     if current_proc.name.startswith("ForkPoolWorker"):
-        if HAS_SETPROCTITLE:
-            setproctitle.setproctitle("Ground Station - SatellitePassWorker")
+        setproctitle.setproctitle("Ground Station - SatellitePassWorker")
         current_proc.name = "Ground Station - SatellitePassWorker"
 
-    cache_key = None
-
-    # Extract TLE data for cache key generation (maintaining compatibility with existing cache)
-    if isinstance(satellite_data, dict):
-        # Single satellite case
-        tle_groups_for_cache = [
-            [satellite_data["norad_id"], satellite_data["tle1"], satellite_data["tle2"]]
-        ]
-    elif isinstance(satellite_data, list):
-        # Multiple satellites case
-        tle_groups_for_cache = []
-        for sat in satellite_data:
-            if isinstance(sat, dict):
-                tle_groups_for_cache.append([sat["norad_id"], sat["tle1"], sat["tle2"]])
-            else:
-                # Fallback for old format
-                tle_groups_for_cache.append(sat)
-    else:
-        # Fallback for old format (tle_groups directly)
-        tle_groups_for_cache = satellite_data
-
-    if use_cache:
-        # Generate a unique cache key (without hours) using TLE data for compatibility
-        cache_key = _generate_cache_key(
-            tle_groups_for_cache, homelat, homelon, hours, above_el, step_minutes
-        )
-
-        # Get current time
-        current_time = time.time()
-
-        # Check if we have a cached result
-        try:
-            if cache_key in _cache:
-                calculation_time, valid_until, cached_result = _cache[cache_key]
-
-                # Check if the cache is still valid (current time < valid_until)
-                if current_time < valid_until:
-                    logger.info(
-                        f"Using cached satellite pass calculation (key: {cache_key[:8]}...)"
-                    )
-
-                    # Return the cached result, adjusting the forecast hours if needed
-                    result = {
-                        "success": cached_result["success"],
-                        "forecast_hours": hours,  # Return the requested hours
-                        "data": cached_result["data"],  # Keep all the data
-                        "cached": True,
-                    }
-                    logger.info(
-                        f"Returning cached result with {len(cached_result.get('data', []))} events"
-                    )
-                    return result
-            else:
-                logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
-        except Exception as cache_error:
-            logger.error(
-                f"Error accessing cache (key: {cache_key[:8]}...), bypassing cache: {cache_error}"
-            )
-
-    # Calculate events as before if no cache hit or cache disabled
-    logger.info("Calculating satellite passes (cache miss or disabled)")
+    # Calculate events (no cache access to avoid IPC deadlock)
+    logger.info("Calculating satellite passes in worker process")
     events = calculate_next_events(
         satellite_data=satellite_data,  # Pass the full satellite data directly
         home_location={"lat": homelat, "lon": homelon},
@@ -306,19 +244,6 @@ def run_events_calculation(
     # Enrich the events result with the forecast window
     if isinstance(events, dict):
         events["forecast_hours"] = hours
-
-    # Store the result in cache if caching is enabled
-    if use_cache:
-        # Calculate how long this calculation is valid for, hours / 2
-        validity_period = int((hours / 4) * 3600)
-        valid_until = time.time() + validity_period
-
-        _cache[cache_key] = (time.time(), valid_until, events)
-
-        # Optional: Clean up expired cache entries
-        for k in list(_cache.keys()):
-            if time.time() > _cache[k][1]:  # If the current time is past valid_until
-                del _cache[k]
 
     return events
 
@@ -379,16 +304,73 @@ async def fetch_next_events_for_group(
             satellites = await crud.satellites.fetch_satellites_for_group_id(dbsession, group_id)
             satellites = json.loads(json.dumps(satellites["data"], cls=ModelEncoder))
 
-            # Create pool with named processes
-            with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
-                # Submit the calculation task to the pool, passing the serialized satellites list
-                async_result = pool.apply_async(
-                    run_events_calculation,
-                    (satellites, homelat, homelon, hours, above_el, step_minutes),
-                )
-                result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+            # Generate cache key for this request
+            tle_groups_for_cache = [
+                [sat["norad_id"], sat["tle1"], sat["tle2"]] for sat in satellites
+            ]
+            cache_key = _generate_cache_key(
+                tle_groups_for_cache, homelat, homelon, hours, above_el, step_minutes
+            )
 
-            if result.get("success", False):
+            # Check cache BEFORE spawning worker process (main process only, no IPC)
+            current_time = time.time()
+            result = None
+
+            try:
+                if cache_key in _cache:
+                    calculation_time, valid_until, cached_result = _cache[cache_key]
+
+                    if current_time < valid_until:
+                        logger.info(
+                            f"Using cached satellite pass calculation (key: {cache_key[:8]}...)"
+                        )
+                        result = {
+                            "success": cached_result["success"],
+                            "forecast_hours": hours,
+                            "data": cached_result["data"],
+                            "cached": True,
+                        }
+                        logger.info(
+                            f"Returning cached result with {len(cached_result.get('data', []))} events"
+                        )
+                    else:
+                        logger.info(f"Cached result expired for key: {cache_key[:8]}...")
+                else:
+                    logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
+            except Exception as cache_error:
+                logger.error(
+                    f"Error accessing cache (key: {cache_key[:8]}...), bypassing: {cache_error}"
+                )
+
+            # If no cache hit, spawn worker to calculate
+            if result is None:
+                # Create pool with named processes
+                with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
+                    # Submit the calculation task to the pool, passing the serialized satellites list
+                    # NOTE: use_cache=False because cache is handled in main process
+                    async_result = pool.apply_async(
+                        run_events_calculation,
+                        (satellites, homelat, homelon, hours, above_el, step_minutes, False),
+                    )
+                    result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+
+                # Store result in cache (main process only, no IPC from worker)
+                try:
+                    validity_period = int((hours / 4) * 3600)
+                    valid_until = time.time() + validity_period
+                    _cache[cache_key] = (time.time(), valid_until, result)
+                    logger.info(f"Cached calculation result for key: {cache_key[:8]}...")
+
+                    # Clean up expired cache entries
+                    expired_keys = [k for k in _cache.keys() if time.time() > _cache[k][1]]
+                    for k in expired_keys:
+                        del _cache[k]
+                    if expired_keys:
+                        logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
+                except Exception as cache_store_error:
+                    logger.error(f"Error storing to cache: {cache_store_error}")
+
+            if result and result.get("success", False):
                 events_data = result.get("data", [])
 
                 # Create a lookup dict for satellite names, transmitters and counts
@@ -487,24 +469,94 @@ async def fetch_next_events_for_satellite(
             satellite_reply = await crud.satellites.fetch_satellites(dbsession, norad_id=norad_id)
             satellite = json.loads(json.dumps(satellite_reply["data"][0], cls=ModelEncoder))
 
-            # Create a pool with named processes
-            with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
-                # Submit the calculation task to the pool, passing the serialized satellite dict
-                async_result = pool.apply_async(
-                    run_events_calculation,
-                    (satellite, homelat, homelon, hours, above_el, step_minutes),
-                )
-                result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+            # Generate cache key for this request
+            tle_groups_for_cache = [[satellite["norad_id"], satellite["tle1"], satellite["tle2"]]]
+            cache_key = _generate_cache_key(
+                tle_groups_for_cache, homelat, homelon, hours, above_el, step_minutes
+            )
 
-            if result.get("success", False):
+            # Check cache BEFORE spawning worker process (main process only, no IPC)
+            current_time = time.time()
+            result = None
+
+            try:
+                if cache_key in _cache:
+                    calculation_time, valid_until, cached_result = _cache[cache_key]
+
+                    if current_time < valid_until:
+                        logger.info(
+                            f"Using cached satellite pass calculation (key: {cache_key[:8]}...)"
+                        )
+                        result = {
+                            "success": cached_result["success"],
+                            "forecast_hours": hours,
+                            "data": cached_result["data"],
+                            "cached": True,
+                        }
+                        logger.info(
+                            f"Returning cached result with {len(cached_result.get('data', []))} events"
+                        )
+                    else:
+                        logger.info(f"Cached result expired for key: {cache_key[:8]}...")
+                else:
+                    logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
+            except Exception as cache_error:
+                logger.error(
+                    f"Error accessing cache (key: {cache_key[:8]}...), bypassing: {cache_error}"
+                )
+
+            # If no cache hit, spawn worker to calculate
+            if result is None:
+                # Create a pool with named processes
+                with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
+                    # Submit the calculation task to the pool, passing the serialized satellite dict
+                    # NOTE: use_cache=False because cache is handled in main process
+                    async_result = pool.apply_async(
+                        run_events_calculation,
+                        (satellite, homelat, homelon, hours, above_el, step_minutes, False),
+                    )
+                    result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+
+                # Store result in cache (main process only, no IPC from worker)
+                try:
+                    validity_period = int((hours / 4) * 3600)
+                    valid_until = time.time() + validity_period
+                    _cache[cache_key] = (time.time(), valid_until, result)
+                    logger.info(f"Cached calculation result for key: {cache_key[:8]}...")
+
+                    # Clean up expired cache entries
+                    expired_keys = [k for k in _cache.keys() if time.time() > _cache[k][1]]
+                    for k in expired_keys:
+                        del _cache[k]
+                    if expired_keys:
+                        logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
+                except Exception as cache_store_error:
+                    logger.error(f"Error storing to cache: {cache_store_error}")
+
+                # Store result in cache (main process only, no IPC from worker)
+                try:
+                    validity_period = int((hours / 4) * 3600)
+                    valid_until = time.time() + validity_period
+                    _cache[cache_key] = (time.time(), valid_until, result)
+                    logger.info(f"Cached calculation result for key: {cache_key[:8]}...")
+
+                    # Clean up expired cache entries
+                    expired_keys = [k for k in _cache.keys() if time.time() > _cache[k][1]]
+                    for k in expired_keys:
+                        del _cache[k]
+                    if expired_keys:
+                        logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
+                except Exception as cache_store_error:
+                    logger.error(f"Error storing to cache: {cache_store_error}")
+
+            if result and result.get("success", False):
                 events_for_satellite = result.get("data", [])
                 home_location = {"lat": homelat, "lon": homelon}
 
                 # Get current time to determine which passes should be extended
-                from datetime import datetime
                 from datetime import timezone as dt_timezone
 
-                current_time = datetime.now(dt_timezone.utc)
+                current_time_dt = datetime.now(dt_timezone.utc)
 
                 for idx, event in enumerate(events_for_satellite):
                     event["name"] = satellite["name"]
@@ -518,9 +570,11 @@ async def fetch_next_events_for_satellite(
                     event_end = datetime.fromisoformat(event["event_end"].replace("Z", "+00:00"))
 
                     # Calculate time until pass starts (negative if already started)
-                    time_until_start = (event_start - current_time).total_seconds() / 60  # minutes
+                    time_until_start = (
+                        event_start - current_time_dt
+                    ).total_seconds() / 60  # minutes
                     # Calculate time since pass ended (negative if not yet ended)
-                    time_since_end = (current_time - event_end).total_seconds() / 60  # minutes
+                    time_since_end = (current_time_dt - event_end).total_seconds() / 60  # minutes
 
                     # Extend if: pass is active OR starts within next 2 hours OR ended less than 30 min ago
                     should_extend = (time_until_start <= 120) and (time_since_end <= 30)
