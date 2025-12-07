@@ -194,6 +194,10 @@ async def full_backup() -> Dict[str, Any]:
         # Get all table names in the correct order (respecting foreign keys)
         table_names = [table.name for table in Base.metadata.sorted_tables]
 
+        # Also include alembic_version table (not in Base.metadata but essential for migrations)
+        if "alembic_version" not in table_names:
+            table_names.append("alembic_version")
+
         # Backup each table
         for table_name in table_names:
             result = await backup_table(table_name)
@@ -208,6 +212,123 @@ async def full_backup() -> Dict[str, Any]:
 
         sql = "\n".join(sql_statements)
         return {"success": True, "sql": sql}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
+    """
+    Restore full database from SQL backup file.
+
+    Args:
+        sql: Full SQL backup content (schema + data)
+        drop_tables: Whether to drop existing tables before restore (default: True)
+
+    Returns:
+        Dict with success status and statistics
+    """
+    try:
+        # Parse SQL into lines and remove comments/empty lines
+        lines = []
+        for line in sql.split("\n"):
+            stripped = line.strip()
+            # Keep the line if it's not empty and not a comment
+            if stripped and not stripped.startswith("--"):
+                lines.append(line)
+
+        # Join multi-line statements
+        sql_content = "\n".join(lines)
+
+        # Split by semicolon to get individual statements
+        statements = [stmt.strip() for stmt in sql_content.split(";") if stmt.strip()]
+
+        # Separate CREATE and INSERT statements
+        create_statements = []
+        insert_statements = []
+
+        for stmt in statements:
+            stmt_upper = stmt.upper().strip()
+            if stmt_upper.startswith("CREATE TABLE"):
+                create_statements.append(stmt)
+            elif stmt_upper.startswith("INSERT INTO"):
+                insert_statements.append(stmt)
+
+        if not create_statements:
+            return {"success": False, "error": "No CREATE TABLE statements found in backup file"}
+
+        # Validate that we only have safe statements
+        for stmt in statements:
+            stmt_upper = stmt.upper().strip()
+            if not (stmt_upper.startswith("CREATE TABLE") or stmt_upper.startswith("INSERT INTO")):
+                return {
+                    "success": False,
+                    "error": f"Invalid statement detected. Only CREATE TABLE and INSERT INTO are allowed. Found: {stmt[:50]}...",
+                }
+
+        async with AsyncSessionLocal() as session:
+            try:
+                # Disable foreign key constraints temporarily for SQLite
+                await session.execute(text("PRAGMA foreign_keys = OFF"))
+
+                # Drop existing tables if requested
+                if drop_tables:
+                    # Get all existing table names from database (including alembic_version)
+                    result = await session.execute(
+                        text(
+                            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                        )
+                    )
+                    existing_tables = [row[0] for row in result.fetchall()]
+
+                    # Drop all existing tables in reverse order
+                    for table_name in reversed(existing_tables):
+                        try:
+                            await session.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+                        except Exception:
+                            # Continue even if drop fails
+                            pass
+
+                    # Commit the drops before creating new tables
+                    await session.commit()
+
+                # Execute CREATE TABLE statements
+                tables_created = 0
+                for stmt in create_statements:
+                    await session.execute(text(stmt))
+                    tables_created += 1
+
+                # Commit after creating tables
+                await session.commit()
+
+                # Execute INSERT statements
+                rows_inserted = 0
+                for stmt in insert_statements:
+                    await session.execute(text(stmt))
+                    rows_inserted += 1
+
+                # Re-enable foreign key constraints
+                await session.execute(text("PRAGMA foreign_keys = ON"))
+
+                # Commit all changes
+                await session.commit()
+
+                return {
+                    "success": True,
+                    "tables_created": tables_created,
+                    "rows_inserted": rows_inserted,
+                }
+
+            except Exception as e:
+                # Rollback on any error
+                await session.rollback()
+                # Re-enable foreign keys even on error
+                try:
+                    await session.execute(text("PRAGMA foreign_keys = ON"))
+                    await session.commit()
+                except Exception:
+                    pass
+                raise e
+
     except Exception as e:
         return {"success": False, "error": str(e)}
 

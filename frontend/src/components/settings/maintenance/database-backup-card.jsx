@@ -38,7 +38,8 @@ import {
     DialogActions,
     FormControlLabel,
     Checkbox,
-    Alert
+    Alert,
+    Divider
 } from '@mui/material';
 import { Download, Upload, Backup } from '@mui/icons-material';
 import { useSocket } from '../../common/socket.jsx';
@@ -51,6 +52,9 @@ const DatabaseBackupCard = () => {
     const [restoreDialog, setRestoreDialog] = useState({ open: false, table: null });
     const [deleteBeforeRestore, setDeleteBeforeRestore] = useState(true);
     const [selectedFile, setSelectedFile] = useState(null);
+    const [fullRestoreDialog, setFullRestoreDialog] = useState(false);
+    const [fullRestoreFile, setFullRestoreFile] = useState(null);
+    const [dropTables, setDropTables] = useState(true);
 
     useEffect(() => {
         if (socket) {
@@ -176,6 +180,50 @@ const DatabaseBackupCard = () => {
         }
     };
 
+    const handleFullRestoreOpen = () => {
+        setFullRestoreDialog(true);
+        setFullRestoreFile(null);
+        setDropTables(true);
+    };
+
+    const handleFullRestoreFileSelect = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            setFullRestoreFile(file);
+        }
+    };
+
+    const handleFullRestoreConfirm = async () => {
+        if (!socket || !fullRestoreFile) return;
+
+        setLoading(true);
+        try {
+            const sqlContent = await fullRestoreFile.text();
+
+            const response = await socket.emitWithAck('database_backup', {
+                action: 'full_restore',
+                sql: sqlContent,
+                drop_tables: dropTables
+            });
+
+            if (response.success) {
+                toast.success(
+                    `Full database restored successfully!\n${response.tables_created} tables created, ${response.rows_inserted} rows inserted`
+                );
+                setFullRestoreDialog(false);
+                setFullRestoreFile(null);
+                // Reload tables to show updated data
+                await loadTables();
+            } else {
+                toast.error(`Failed to restore database: ${response.error}`);
+            }
+        } catch (error) {
+            toast.error(`Error restoring database: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <>
             <Card>
@@ -183,77 +231,108 @@ const DatabaseBackupCard = () => {
                     <Typography variant="h6" gutterBottom>
                         Database Backup & Restore
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Backup and restore individual tables or the entire database
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Manage full database backups and individual table operations
                     </Typography>
 
-                    <Box sx={{ mb: 2 }}>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            startIcon={<Backup />}
-                            onClick={handleFullBackup}
-                            disabled={loading}
-                        >
-                            Full Database Backup (Schema + Data)
-                        </Button>
+                    {/* Full Database Backup/Restore Section */}
+                    <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                            Full Database Operations
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Create or restore complete database backups including schema and all data
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                startIcon={<Backup />}
+                                onClick={handleFullBackup}
+                                disabled={loading}
+                            >
+                                Full Database Backup
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="warning"
+                                startIcon={<Upload />}
+                                onClick={handleFullRestoreOpen}
+                                disabled={loading}
+                            >
+                                Full Database Restore
+                            </Button>
+                        </Box>
                     </Box>
 
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                        Backup files contain only INSERT statements. Schema is included in full backup only.
-                    </Alert>
+                    <Divider sx={{ my: 3 }} />
 
-                    {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                            <CircularProgress />
-                        </Box>
-                    ) : (
-                        <TableContainer component={Paper} variant="outlined">
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>Table Name</TableCell>
-                                        <TableCell align="center">Row Count</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {tables.map((table) => (
-                                        <TableRow key={table.name}>
-                                            <TableCell component="th" scope="row">
-                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                    {table.name}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                <Typography variant="body2">
-                                                    {table.row_count}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Button
-                                                    size="small"
-                                                    startIcon={<Download />}
-                                                    onClick={() => handleBackupTable(table.name)}
-                                                    sx={{ mr: 1 }}
-                                                >
-                                                    Backup
-                                                </Button>
-                                                <Button
-                                                    size="small"
-                                                    startIcon={<Upload />}
-                                                    onClick={() => handleRestoreTable(table.name)}
-                                                    color="warning"
-                                                >
-                                                    Restore
-                                                </Button>
-                                            </TableCell>
+                    {/* Individual Table Operations Section */}
+                    <Box>
+                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                            Individual Table Operations
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Backup or restore specific tables (data only, no schema)
+                        </Typography>
+
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            Table backups contain only INSERT statements (data). Schema is NOT included.
+                        </Alert>
+
+                        {loading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                                <CircularProgress />
+                            </Box>
+                        ) : (
+                            <TableContainer component={Paper} variant="outlined">
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Table Name</TableCell>
+                                            <TableCell align="center">Row Count</TableCell>
+                                            <TableCell align="right">Actions</TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    )}
+                                    </TableHead>
+                                    <TableBody>
+                                        {tables.map((table) => (
+                                            <TableRow key={table.name}>
+                                                <TableCell component="th" scope="row">
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {table.name}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <Typography variant="body2">
+                                                        {table.row_count}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Button
+                                                        size="small"
+                                                        startIcon={<Download />}
+                                                        onClick={() => handleBackupTable(table.name)}
+                                                        sx={{ mr: 1 }}
+                                                    >
+                                                        Backup
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        startIcon={<Upload />}
+                                                        onClick={() => handleRestoreTable(table.name)}
+                                                        color="warning"
+                                                    >
+                                                        Restore
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        )}
+                    </Box>
                 </CardContent>
             </Card>
 
@@ -308,6 +387,69 @@ const DatabaseBackupCard = () => {
                         disabled={!selectedFile}
                     >
                         Restore
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Full Database Restore Dialog */}
+            <Dialog open={fullRestoreDialog} onClose={() => setFullRestoreDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Full Database Restore</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ minWidth: 400 }}>
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            <strong>⚠️ DESTRUCTIVE OPERATION!</strong><br />
+                            This will replace your entire database with the backup file.
+                            All current data will be lost if "Drop existing tables" is checked.
+                            Make sure you have a recent backup before proceeding!
+                        </Alert>
+
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            The backup file must be a full database backup containing both schema (CREATE TABLE statements) and data (INSERT statements).
+                        </Alert>
+
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={dropTables}
+                                    onChange={(e) => setDropTables(e.target.checked)}
+                                />
+                            }
+                            label="Drop existing tables before restore (recommended)"
+                        />
+
+                        <Box sx={{ mt: 2 }}>
+                            <Button
+                                variant="outlined"
+                                component="label"
+                                fullWidth
+                            >
+                                Select Full Backup SQL File
+                                <input
+                                    type="file"
+                                    hidden
+                                    accept=".sql"
+                                    onChange={handleFullRestoreFileSelect}
+                                />
+                            </Button>
+                            {fullRestoreFile && (
+                                <Typography variant="body2" sx={{ mt: 1 }}>
+                                    Selected: {fullRestoreFile.name}
+                                </Typography>
+                            )}
+                        </Box>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setFullRestoreDialog(false)} disabled={loading}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleFullRestoreConfirm}
+                        variant="contained"
+                        color="error"
+                        disabled={!fullRestoreFile || loading}
+                    >
+                        {loading ? <CircularProgress size={24} /> : 'Restore Full Database'}
                     </Button>
                 </DialogActions>
             </Dialog>

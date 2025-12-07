@@ -9,7 +9,13 @@ from common.logger import logger
 from handlers.entities import groups, hardware, locations, preferences, satellites, systeminfo
 from handlers.entities import tlesources as tle_sources
 from handlers.entities import tracking, transmitters, vfo
-from handlers.entities.databasebackup import backup_table, full_backup, list_tables, restore_table
+from handlers.entities.databasebackup import (
+    backup_table,
+    full_backup,
+    full_restore,
+    list_tables,
+    restore_table,
+)
 from handlers.entities.filebrowser import filebrowser_request_routing
 from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry
@@ -158,6 +164,15 @@ def register_socketio_handlers(sio):
 
             elif action == "full_backup":
                 return await full_backup()
+
+            elif action == "full_restore":
+                sql = data.get("sql")
+                drop_tables = data.get("drop_tables", True)
+
+                if not sql:
+                    return {"success": False, "error": "Missing sql parameter"}
+
+                return await full_restore(sql, drop_tables)
 
             else:
                 return {"success": False, "error": f"Unknown action: {action}"}
