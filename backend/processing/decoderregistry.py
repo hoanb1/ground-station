@@ -26,7 +26,8 @@ from demodulators.gmskdecoder import GMSKDecoder
 from demodulators.loradecoder import LoRaDecoder
 from demodulators.morsedecoder import MorseDecoder
 from demodulators.satdumpweatherdecoder import SatDumpWeatherDecoder
-from demodulators.sstvdecoder import SSTVDecoder
+from demodulators.sstvdecoder import SSTVDecoder  # noqa: F401 - kept for backward compatibility
+from demodulators.sstvdecoderv2 import SSTVDecoderV2
 
 
 @dataclass
@@ -89,14 +90,14 @@ class DecoderRegistry:
             ),
             "sstv": DecoderCapabilities(
                 name="sstv",
-                decoder_class=SSTVDecoder,
-                needs_raw_iq=False,
-                required_demodulator="fm",  # Needs internal FM demodulator
+                decoder_class=SSTVDecoderV2,
+                needs_raw_iq=True,  # Receives IQ directly (integrated FM demod)
+                required_demodulator=None,  # Has integrated FM demodulator
                 demodulator_mode=None,
                 default_bandwidth=12500,  # 12.5 kHz for SSTV
                 supports_transmitter_config=False,
-                restart_on_params=[],  # TODO: Add SSTV-specific parameters
-                description="Slow-scan television image decoder",
+                restart_on_params=[],
+                description="Slow-scan television image decoder (process-based with integrated FM demod)",
             ),
             "morse": DecoderCapabilities(
                 name="morse",

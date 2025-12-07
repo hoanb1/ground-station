@@ -663,8 +663,8 @@ export const ComponentNode = ({ data }) => {
                                         label="Queue"
                                         value={component.input_queue_size || 0}
                                     />
-                                    {/* IQ-based decoders (BPSK, FSK-family, LoRa) receive IQ samples, others receive audio */}
-                                    {(component.type === 'BPSKDecoder' || component.type === 'FSKDecoder' || component.type === 'GMSKDecoder' || component.type === 'GFSKDecoder' || component.type === 'LoRaDecoder') ? (
+                                    {/* IQ-based decoders (BPSK, FSK-family, LoRa, SSTVDecoderV2) receive IQ samples, others receive audio */}
+                                    {(component.type === 'BPSKDecoder' || component.type === 'FSKDecoder' || component.type === 'GMSKDecoder' || component.type === 'GFSKDecoder' || component.type === 'LoRaDecoder' || component.type === 'SSTVDecoderV2') ? (
                                         <>
                                             <MetricRow
                                                 label="IQ"

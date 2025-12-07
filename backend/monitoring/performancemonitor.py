@@ -758,16 +758,17 @@ class PerformanceMonitor(threading.Thread):
                     time_delta,
                 )
 
-                # For IQ-based decoders (BPSK, GMSK, LoRa)
+                # For IQ-based decoders (BPSK, GMSK, LoRa, SSTVDecoderV2)
                 iq_chunks_in_rate = self._calculate_rate(
                     stats_snapshot.get("iq_chunks_in", 0),
                     prev_snapshot.get("iq_chunks_in", 0),
                     time_delta,
                 )
 
+                # Try both samples_in (BPSK, GMSK, LoRa) and iq_samples_in (SSTVDecoderV2)
                 samples_in_rate = self._calculate_rate(
-                    stats_snapshot.get("samples_in", 0),
-                    prev_snapshot.get("samples_in", 0),
+                    stats_snapshot.get("samples_in", 0) or stats_snapshot.get("iq_samples_in", 0),
+                    prev_snapshot.get("samples_in", 0) or prev_snapshot.get("iq_samples_in", 0),
                     time_delta,
                 )
 
@@ -785,14 +786,15 @@ class PerformanceMonitor(threading.Thread):
                 decoder_name = vfo_num  # Using vfo_num as decoder name based on the key structure
 
                 # Check if this is an IQ-based decoder by type name (not attribute check)
-                # IQ-based: BPSK, FSK, GFSK, GMSK, LoRa
-                # Audio-based: AFSK, SSTV, Morse
+                # IQ-based: BPSK, FSK, GFSK, GMSK, LoRa, SSTVDecoderV2 (with integrated FM demod)
+                # Audio-based: AFSK, SSTVDecoder (legacy), Morse
                 is_iq_decoder = decoder_type in [
                     "BPSKDecoder",
                     "FSKDecoder",
                     "GFSKDecoder",
                     "GMSKDecoder",
                     "LoRaDecoder",
+                    "SSTVDecoderV2",
                 ]
 
                 if is_iq_decoder:
@@ -820,7 +822,7 @@ class PerformanceMonitor(threading.Thread):
                 if is_iq_decoder:
                     # IQ-based decoder rates
                     rates["iq_chunks_in_per_sec"] = iq_chunks_in_rate
-                    rates["samples_in_per_sec"] = samples_in_rate
+                    rates["iq_samples_in_per_sec"] = samples_in_rate
                 else:
                     # Audio-based decoder rates
                     rates["audio_chunks_in_per_sec"] = audio_chunks_in_rate
