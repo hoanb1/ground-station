@@ -104,6 +104,11 @@ const DecodedPacketsDrawer = () => {
     const [telemetryFile, setTelemetryFile] = useState(null);
     const [telemetryMetadata, setTelemetryMetadata] = useState(null);
 
+    // SSTV image viewer state
+    const [sstvDialogOpen, setSstvDialogOpen] = useState(false);
+    const [sstvImage, setSstvImage] = useState(null);
+    const [sstvMetadata, setSstvMetadata] = useState(null);
+
     // Delete confirmation state
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [packetToDelete, setPacketToDelete] = useState(null);
@@ -169,6 +174,8 @@ const DecodedPacketsDrawer = () => {
     // Handler to open telemetry viewer
     const handleOpenTelemetry = async (row) => {
         try {
+            console.log('Opening telemetry for row:', row);
+
             // For SSTV images, metadata is already in the output
             const isSstv = row.decoderType === 'sstv';
 
@@ -178,14 +185,18 @@ const DecodedPacketsDrawer = () => {
                 let metadataFilename = row.output?.metadata_filename;
 
                 // If metadata_filename is not set or is the PNG file, derive it from filename
-                if (!metadataFilename || metadataFilename.endsWith('.png')) {
+                if (!metadataFilename || (typeof metadataFilename === 'string' && metadataFilename.endsWith('.png'))) {
                     const pngFilename = row.filename || row.output?.filename;
-                    if (!pngFilename) {
-                        throw new Error('Filename not found in output');
+                    console.log('Deriving metadata filename from PNG:', pngFilename);
+
+                    if (!pngFilename || typeof pngFilename !== 'string') {
+                        console.error('Invalid filename:', pngFilename);
+                        throw new Error('Filename not found in output or invalid');
                     }
                     metadataFilename = pngFilename.replace('.png', '.json');
                 }
 
+                console.log('Fetching metadata from:', metadataFilename);
                 const metadataUrl = `/decoded/${metadataFilename}`;
 
                 const response = await fetch(metadataUrl);
@@ -196,20 +207,20 @@ const DecodedPacketsDrawer = () => {
 
                 const metadata = await response.json();
 
-                // For SSTV, pass the image data directly
-                setTelemetryFile({
+                // For SSTV, open SSTV image viewer instead
+                setSstvImage({
                     filename: row.filename || row.output?.filename,
                     imageData: row.output?.image_data,
-                    type: 'decoded'
                 });
-                setTelemetryMetadata(metadata);
-                setTelemetryDialogOpen(true);
+                setSstvMetadata(metadata);
+                setSstvDialogOpen(true);
             } else {
                 // For other decoded files (.bin), fetch both file and metadata
                 const filename = row.filename;
 
-                if (!filename) {
-                    throw new Error('Filename not found');
+                if (!filename || typeof filename !== 'string') {
+                    console.error('Invalid filename:', filename);
+                    throw new Error('Filename not found or invalid');
                 }
 
                 const metadataFilename = filename.replace('.bin', '.json');
@@ -235,6 +246,7 @@ const DecodedPacketsDrawer = () => {
                 setTelemetryDialogOpen(true);
             }
         } catch (error) {
+            console.error('Error opening telemetry:', error);
             toast.error(`Failed to load telemetry: ${error.message}`);
         }
     };
@@ -686,6 +698,101 @@ const DecodedPacketsDrawer = () => {
                 file={telemetryFile}
                 metadata={telemetryMetadata}
             />
+
+            {/* SSTV Image Viewer Dialog */}
+            <Dialog
+                open={sstvDialogOpen}
+                onClose={() => setSstvDialogOpen(false)}
+                maxWidth="lg"
+                fullWidth
+            >
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6">SSTV Image</Typography>
+                        {sstvMetadata?.decoder?.mode && (
+                            <Chip
+                                label={sstvMetadata.decoder.mode}
+                                size="small"
+                                color="success"
+                                sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                            />
+                        )}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                        {sstvImage?.filename}
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    {sstvImage && (
+                        <Box>
+                            {/* Image */}
+                            <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                <img
+                                    src={`data:image/png;base64,${sstvImage.imageData}`}
+                                    alt={sstvImage.filename}
+                                    style={{ maxWidth: '100%', height: 'auto' }}
+                                />
+                            </Box>
+
+                            {/* Metadata */}
+                            {sstvMetadata && (
+                                <Box sx={{ mt: 2 }}>
+                                    <Typography variant="subtitle2" color="text.primary" gutterBottom>
+                                        Metadata
+                                    </Typography>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
+                                        {sstvMetadata.decoder?.type && (
+                                            <>
+                                                <Typography variant="body2" color="text.secondary">Decoder Type:</Typography>
+                                                <Typography variant="body2">{sstvMetadata.decoder.type.toUpperCase()}</Typography>
+                                            </>
+                                        )}
+                                        {sstvMetadata.decoder?.mode && (
+                                            <>
+                                                <Typography variant="body2" color="text.secondary">SSTV Mode:</Typography>
+                                                <Typography variant="body2">{sstvMetadata.decoder.mode}</Typography>
+                                            </>
+                                        )}
+                                        {sstvMetadata.signal?.frequency_mhz && (
+                                            <>
+                                                <Typography variant="body2" color="text.secondary">Frequency:</Typography>
+                                                <Typography variant="body2">{sstvMetadata.signal.frequency_mhz.toFixed(6)} MHz</Typography>
+                                            </>
+                                        )}
+                                        {sstvMetadata.signal?.sample_rate_hz && (
+                                            <>
+                                                <Typography variant="body2" color="text.secondary">Sample Rate:</Typography>
+                                                <Typography variant="body2">{sstvMetadata.signal.sample_rate_hz} Hz</Typography>
+                                            </>
+                                        )}
+                                        {sstvMetadata.vfo?.bandwidth_khz && (
+                                            <>
+                                                <Typography variant="body2" color="text.secondary">VFO Bandwidth:</Typography>
+                                                <Typography variant="body2">{sstvMetadata.vfo.bandwidth_khz.toFixed(1)} kHz</Typography>
+                                            </>
+                                        )}
+                                        {sstvMetadata.image?.timestamp_iso && (
+                                            <>
+                                                <Typography variant="body2" color="text.secondary">Decoded:</Typography>
+                                                <Typography variant="body2">{sstvMetadata.image.timestamp_iso}</Typography>
+                                            </>
+                                        )}
+                                        {sstvMetadata.image?.width && sstvMetadata.image?.height && (
+                                            <>
+                                                <Typography variant="body2" color="text.secondary">Dimensions:</Typography>
+                                                <Typography variant="body2">{sstvMetadata.image.width} × {sstvMetadata.image.height}</Typography>
+                                            </>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setSstvDialogOpen(false)}>Close</Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Delete Confirmation Dialog */}
             <Dialog
