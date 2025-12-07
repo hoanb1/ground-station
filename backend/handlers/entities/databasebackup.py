@@ -14,6 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+import html
 import re
 from typing import Any, Dict
 
@@ -231,6 +232,9 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
         Dict with success status and statistics
     """
     try:
+        # Decode HTML entities in the SQL content first
+        sql = html.unescape(sql)
+
         # Parse SQL into lines and remove comments/empty lines
         lines = []
         for line in sql.split("\n"):
