@@ -82,8 +82,10 @@ async def backup_table(table_name: str) -> Dict[str, Any]:
                     if value is None:
                         values.append("NULL")
                     elif isinstance(value, str):
-                        # Escape single quotes
+                        # Escape single quotes and handle special characters
                         escaped_value = value.replace("'", "''")
+                        # Replace backslashes to prevent escape sequence issues
+                        escaped_value = escaped_value.replace("\\", "\\\\")
                         values.append(f"'{escaped_value}'")
                     elif isinstance(value, (int, float)):
                         values.append(str(value))
@@ -92,6 +94,7 @@ async def backup_table(table_name: str) -> Dict[str, Any]:
                     else:
                         # For other types, convert to string
                         escaped_value = str(value).replace("'", "''")
+                        escaped_value = escaped_value.replace("\\", "\\\\")
                         values.append(f"'{escaped_value}'")
 
                 values_str = ", ".join(values)
