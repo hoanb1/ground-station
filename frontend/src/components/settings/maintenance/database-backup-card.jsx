@@ -39,7 +39,8 @@ import {
     FormControlLabel,
     Checkbox,
     Alert,
-    Divider
+    Divider,
+    Backdrop
 } from '@mui/material';
 import { Download, Upload, Backup } from '@mui/icons-material';
 import { useSocket } from '../../common/socket.jsx';
@@ -55,6 +56,7 @@ const DatabaseBackupCard = () => {
     const [fullRestoreDialog, setFullRestoreDialog] = useState(false);
     const [fullRestoreFile, setFullRestoreFile] = useState(null);
     const [dropTables, setDropTables] = useState(true);
+    const [showReloadBackdrop, setShowReloadBackdrop] = useState(false);
 
     useEffect(() => {
         if (socket) {
@@ -212,14 +214,19 @@ const DatabaseBackupCard = () => {
                 );
                 setFullRestoreDialog(false);
                 setFullRestoreFile(null);
-                // Reload tables to show updated data
-                await loadTables();
+                setLoading(false);
+
+                // Show backdrop spinner and reload page after 1 second
+                setShowReloadBackdrop(true);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
             } else {
                 toast.error(`Failed to restore database: ${response.error}`);
+                setLoading(false);
             }
         } catch (error) {
             toast.error(`Error restoring database: ${error.message}`);
-        } finally {
             setLoading(false);
         }
     };
@@ -453,6 +460,19 @@ const DatabaseBackupCard = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Backdrop spinner for page reload */}
+            <Backdrop
+                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                open={showReloadBackdrop}
+            >
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <CircularProgress color="inherit" size={60} />
+                    <Typography variant="h6" sx={{ mt: 2 }}>
+                        Reloading application...
+                    </Typography>
+                </Box>
+            </Backdrop>
         </>
     );
 };
