@@ -198,9 +198,9 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
             {/* Search field with autocomplete - full width on mobile, fixed width on desktop */}
             <Box sx={{
                 width: { xs: '100%', md: 'auto' },
-                minWidth: { md: 350 },
-                maxWidth: { md: 450 },
-                flexShrink: 0
+                minWidth: { md: 250 },
+                maxWidth: { md: 350 },
+                flexShrink: 1
             }}>
                 <SatelliteSearchAutocomplete onSatelliteSelect={handleSatelliteSelect} />
             </Box>
@@ -210,12 +210,13 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
                 display: 'flex',
                 gap: '16px',
                 flex: 1,
+                minWidth: 0,
                 flexWrap: { xs: 'nowrap', sm: 'nowrap' }
             }}>
                 {/* Group selector dropdown */}
                 <Box sx={{
-                    minWidth: { xs: 150, sm: 200 },
-                    maxWidth: { xs: '50%', md: 250 },
+                    minWidth: { xs: 120, sm: 150 },
+                    maxWidth: { xs: '50%', md: 200 },
                     flex: 1
                 }}>
                     <GroupDropdown />
@@ -223,8 +224,8 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
 
                 {/* Satellite selector dropdown */}
                 <Box sx={{
-                    minWidth: { xs: 150, sm: 250 },
-                    maxWidth: { xs: '50%', md: 350 },
+                    minWidth: { xs: 120, sm: 180 },
+                    maxWidth: { xs: '50%', md: 280 },
                     flex: 1
                 }}>
                     <SatelliteList />
@@ -234,7 +235,7 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
             {/* Combined dashboard - only show when there's enough room */}
             <Box
                 sx={{
-                    display: { xs: 'none', lg: 'flex' },
+                    display: { xs: 'none', md: 'flex' },
                     alignItems: 'center',
                     gap: '8px',
                     ml: 'auto',
@@ -249,6 +250,7 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
                             label={rigData?.tracking || rotatorData?.tracking ? "Tracking" : "Stopped"}
                             size="small"
                             sx={{
+                                display: { xs: 'none', lg: 'flex' },
                                 bgcolor: rigData?.tracking || rotatorData?.tracking ? 'success.main' : 'action.hover',
                                 color: rigData?.tracking || rotatorData?.tracking ? 'white' : 'text.secondary',
                                 fontWeight: 'bold',
@@ -273,6 +275,7 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
                             label={`El: ${satelliteData.position.el?.toFixed(1)}°`}
                             size="small"
                             sx={{
+                                display: { xs: 'none', lg: 'flex' },
                                 bgcolor: satelliteData.position.el < 0 ? 'action.hover' :
                                          satelliteData.position.el < 10 ? 'error.main' :
                                          satelliteData.position.el < 45 ? 'warning.main' : 'success.main',
@@ -299,6 +302,7 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
                             label={countdown}
                             size="small"
                             sx={{
+                                display: { xs: 'none', lg: 'flex' },
                                 bgcolor: passInfo.type === 'active' ? 'success.main' : 'info.main',
                                 color: 'white',
                                 fontWeight: 'bold',
@@ -316,13 +320,14 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
                     <Button
                         variant="contained"
                         color="error"
-                        size="small"
                         startIcon={<StopIcon />}
                         disabled={rigData?.tracking !== true && rotatorData?.tracking !== true}
                         onClick={handleTrackingStop}
                         sx={{
                             textTransform: 'none',
                             fontWeight: 'bold',
+                            height: '40px',
+                            minHeight: '40px',
                         }}
                     >
                         {t('satellite_selector.stop_tracking')}
