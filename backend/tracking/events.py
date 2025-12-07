@@ -23,6 +23,18 @@ logger = logging.getLogger("passes-worker")
 # Create a simple in-memory cache (no multiprocessing needed since cache is only accessed from main process)
 _cache: Dict[str, tuple] = {}
 
+# Create a persistent worker pool (reused across all calculations to avoid repeated pool creation/destruction)
+_worker_pool: multiprocessing.pool.Pool = None  # type: ignore
+
+
+def _get_worker_pool():
+    """Get or create the persistent worker pool"""
+    global _worker_pool
+    if _worker_pool is None:
+        logger.info("Creating persistent worker pool for satellite pass calculations")
+        _worker_pool = multiprocessing.Pool(processes=1, initializer=_named_worker_init)
+    return _worker_pool
+
 
 def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minutes):
     """Generate a unique cache key from function parameters, excluding hours"""
@@ -327,19 +339,19 @@ async def fetch_next_events_for_group(
 
             # If no cache hit, spawn worker to calculate
             if result is None:
-                logger.info("Cache miss - spawning worker process to calculate passes")
-                # Create pool with named processes
-                with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
-                    # Submit the calculation task to the pool, passing the serialized satellites list
-                    # NOTE: use_cache=False because cache is handled in main process
-                    logger.info("Submitting calculation to worker pool")
-                    async_result = pool.apply_async(
-                        run_events_calculation,
-                        (satellites, homelat, homelon, hours, above_el, step_minutes, False),
-                    )
-                    logger.info("Waiting for worker to complete calculation")
-                    result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
-                    logger.info("Worker completed, result received")
+                logger.info("Cache miss - submitting calculation to worker pool")
+                # Use persistent pool (reused across all calculations)
+                pool = _get_worker_pool()
+                # Submit the calculation task to the pool, passing the serialized satellites list
+                # NOTE: use_cache=False because cache is handled in main process
+                logger.info("Submitting calculation to worker pool")
+                async_result = pool.apply_async(
+                    run_events_calculation,
+                    (satellites, homelat, homelon, hours, above_el, step_minutes, False),
+                )
+                logger.info("Waiting for worker to complete calculation")
+                result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+                logger.info("Worker completed, result received")
 
                 # Store result in cache (main process only, no IPC from worker)
                 try:
@@ -493,19 +505,19 @@ async def fetch_next_events_for_satellite(
 
             # If no cache hit, spawn worker to calculate
             if result is None:
-                logger.info("Cache miss - spawning worker process to calculate passes")
-                # Create a pool with named processes
-                with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
-                    # Submit the calculation task to the pool, passing the serialized satellite dict
-                    # NOTE: use_cache=False because cache is handled in main process
-                    logger.info("Submitting calculation to worker pool")
-                    async_result = pool.apply_async(
-                        run_events_calculation,
-                        (satellite, homelat, homelon, hours, above_el, step_minutes, False),
-                    )
-                    logger.info("Waiting for worker to complete calculation")
-                    result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
-                    logger.info("Worker completed, result received")
+                logger.info("Cache miss - submitting calculation to worker pool")
+                # Use persistent pool (reused across all calculations)
+                pool = _get_worker_pool()
+                # Submit the calculation task to the pool, passing the serialized satellite dict
+                # NOTE: use_cache=False because cache is handled in main process
+                logger.info("Submitting calculation to worker pool")
+                async_result = pool.apply_async(
+                    run_events_calculation,
+                    (satellite, homelat, homelon, hours, above_el, step_minutes, False),
+                )
+                logger.info("Waiting for worker to complete calculation")
+                result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+                logger.info("Worker completed, result received")
 
                 # Store result in cache (main process only, no IPC from worker)
                 try:
