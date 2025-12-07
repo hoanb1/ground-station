@@ -50,9 +50,9 @@ async def backup_table(table_name: str) -> Dict[str, Any]:
         if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", table_name):
             return {"success": False, "error": "Invalid table name"}
 
-        # Check if table exists in our models
+        # Check if table exists in our models (alembic_version is a special case)
         table_names = [table.name for table in Base.metadata.sorted_tables]
-        if table_name not in table_names:
+        if table_name not in table_names and table_name != "alembic_version":
             return {"success": False, "error": f"Table {table_name} not found"}
 
         async with AsyncSessionLocal() as session:
