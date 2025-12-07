@@ -19,7 +19,7 @@
 
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, FormControl, InputLabel, Select, MenuItem, ListSubheader, Chip, Menu, Typography, Badge, Tooltip } from "@mui/material";
+import { Box, FormControl, InputLabel, Select, MenuItem, ListSubheader, Chip, Menu, Typography, Badge, Tooltip, ToggleButton, Button } from "@mui/material";
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -35,7 +35,7 @@ import {
 
 const SATELLITE_NUMBER_LIMIT = 200;
 const RECENT_GROUPS_KEY = 'satellite-recent-groups';
-const MAX_RECENT_GROUPS = 20;
+const MAX_RECENT_GROUPS = 12;
 const MIN_PILLS_VISIBLE = 2;
 
 const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar() {
@@ -103,9 +103,13 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
     }, [dispatch, socket]);
 
     // Get groups to display as pills (recent or fallback to first few from dropdown)
+    // Include satellite count for each group
     const pillGroups = recentGroups.length > 0
-        ? recentGroups
-        : satGroups.slice(0, MAX_RECENT_GROUPS).map(g => ({ id: g.id, name: g.name, type: g.type }));
+        ? recentGroups.map(rg => {
+            const group = satGroups.find(g => g.id === rg.id);
+            return { ...rg, satelliteCount: group?.satellite_ids?.length || 0 };
+          })
+        : satGroups.slice(0, MAX_RECENT_GROUPS).map(g => ({ id: g.id, name: g.name, type: g.type, satelliteCount: g.satellite_ids?.length || 0 }));
 
     // Calculate how many pills can fit based on container width
     useEffect(() => {
@@ -261,32 +265,51 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
                 {/* Hidden pills for measurement */}
                 <Box sx={{ position: 'absolute', visibility: 'hidden', display: 'flex', gap: 1, pointerEvents: 'none' }}>
                     {pillGroups.map((group, index) => (
-                        <Chip
+                        <Button
                             key={`measure-${group.id}`}
                             ref={el => pillRefs.current[index] = el}
-                            label={group.name}
+                            variant="outlined"
                             size="small"
-                        />
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: '16px',
+                                px: 2,
+                            }}
+                        >
+                            {group.name}
+                            <Box component="span" sx={{ ml: 1, opacity: 0.7, fontWeight: 'bold' }}>
+                                {group.satelliteCount}
+                            </Box>
+                        </Button>
                     ))}
                 </Box>
 
                 {/* Visible pills */}
                 {visiblePills.map((group) => (
-                    <Chip
+                    <Button
                         key={group.id}
-                        label={group.name}
+                        variant={selectedSatGroupId === group.id ? "contained" : "outlined"}
                         size="small"
-                        clickable
-                        color={selectedSatGroupId === group.id ? "primary" : "default"}
                         onClick={() => handleRecentGroupClick(group.id)}
                         sx={{
-                            cursor: 'pointer',
                             flexShrink: 0,
-                            '&:hover': {
-                                bgcolor: selectedSatGroupId === group.id ? 'primary.dark' : 'action.hover',
-                            },
+                            textTransform: 'none',
+                            borderRadius: '16px',
+                            px: 2,
                         }}
-                    />
+                    >
+                        {group.name}
+                        <Box
+                            component="span"
+                            sx={{
+                                ml: 1,
+                                opacity: 0.7,
+                                fontWeight: 'bold',
+                            }}
+                        >
+                            {group.satelliteCount}
+                        </Box>
+                    </Button>
                 ))}
 
                 {/* "More" button */}
