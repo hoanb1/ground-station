@@ -252,21 +252,36 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
         # Separate CREATE and INSERT statements
         create_statements = []
         insert_statements = []
+        alembic_create = None
+        alembic_inserts = []
 
         for stmt in statements:
             stmt_upper = stmt.upper().strip()
             if stmt_upper.startswith("CREATE TABLE"):
-                create_statements.append(stmt)
+                # Separate alembic_version CREATE statement
+                if "ALEMBIC_VERSION" in stmt_upper:
+                    alembic_create = stmt
+                else:
+                    create_statements.append(stmt)
             elif stmt_upper.startswith("INSERT INTO"):
-                insert_statements.append(stmt)
+                # Separate alembic_version INSERT statements
+                if "ALEMBIC_VERSION" in stmt_upper:
+                    alembic_inserts.append(stmt)
+                else:
+                    insert_statements.append(stmt)
             # Skip any other statements (like HTML entities or malformed content)
 
-        if not create_statements:
+        if not create_statements and not alembic_create:
             return {"success": False, "error": "No CREATE TABLE statements found in backup file"}
 
         # Validate that we only have safe statements
         # Only process CREATE TABLE and INSERT INTO statements, ignore others
-        valid_statements = create_statements + insert_statements
+        valid_statements = (
+            create_statements
+            + insert_statements
+            + ([alembic_create] if alembic_create else [])
+            + alembic_inserts
+        )
         if len(valid_statements) == 0:
             return {
                 "success": False,
@@ -299,7 +314,7 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
                     # Commit the drops before creating new tables
                     await session.commit()
 
-                # Execute CREATE TABLE statements
+                # Execute CREATE TABLE statements (excluding alembic_version)
                 tables_created = 0
                 for stmt in create_statements:
                     await session.execute(text(stmt))
@@ -308,16 +323,30 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
                 # Commit after creating tables
                 await session.commit()
 
-                # Execute INSERT statements (only the valid ones)
+                # Execute INSERT statements (excluding alembic_version)
                 rows_inserted = 0
                 for stmt in insert_statements:
+                    await session.execute(text(stmt))
+                    rows_inserted += 1
+
+                # Commit data inserts before handling alembic_version
+                await session.commit()
+
+                # Now handle alembic_version table LAST to ensure it's created only if everything else succeeded
+                if alembic_create:
+                    await session.execute(text(alembic_create))
+                    tables_created += 1
+                    await session.commit()
+
+                # Insert alembic_version data LAST
+                for stmt in alembic_inserts:
                     await session.execute(text(stmt))
                     rows_inserted += 1
 
                 # Re-enable foreign key constraints
                 await session.execute(text("PRAGMA foreign_keys = ON"))
 
-                # Commit all changes
+                # Final commit with alembic_version
                 await session.commit()
 
                 return {
