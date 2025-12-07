@@ -29,6 +29,8 @@ import { useSocket } from "../common/socket.jsx";
 import {
     setSelectedSatGroupId,
     fetchSatellitesByGroupId,
+    addRecentSatelliteGroup,
+    setRecentSatelliteGroups,
 } from './overview-slice.jsx';
 
 const SATELLITE_NUMBER_LIMIT = 200;
@@ -45,24 +47,25 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
     const satGroups = useSelector(state => state.overviewSatTrack.satGroups);
     const passesLoading = useSelector(state => state.overviewSatTrack.passesLoading);
     const selectedSatellitePositions = useSelector(state => state.overviewSatTrack.selectedSatellitePositions);
+    const recentGroups = useSelector(state => state.overviewSatTrack.recentSatelliteGroups);
 
-    const [recentGroups, setRecentGroups] = useState([]);
     const [visibleCount, setVisibleCount] = useState(MAX_RECENT_GROUPS);
     const [anchorEl, setAnchorEl] = useState(null);
     const containerRef = useRef(null);
     const pillRefs = useRef([]);
 
-    // Load recent groups from localStorage on mount
+    // Load recent groups from localStorage on mount and store in Redux
     useEffect(() => {
         try {
             const stored = localStorage.getItem(RECENT_GROUPS_KEY);
             if (stored) {
-                setRecentGroups(JSON.parse(stored));
+                const parsedGroups = JSON.parse(stored);
+                dispatch(setRecentSatelliteGroups(parsedGroups));
             }
         } catch (e) {
             console.error('Failed to load recent groups:', e);
         }
-    }, []);
+    }, [dispatch]);
 
     // Update recent groups when selection changes
     useEffect(() => {
@@ -71,24 +74,21 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
         const group = satGroups.find(g => g.id === selectedSatGroupId);
         if (!group) return;
 
-        setRecentGroups(prev => {
-            // Remove if already exists
-            const filtered = prev.filter(g => g.id !== selectedSatGroupId);
-            // Add to front
-            const updated = [{ id: group.id, name: group.name, type: group.type }, ...filtered];
-            // Keep only MAX_RECENT_GROUPS
-            const trimmed = updated.slice(0, MAX_RECENT_GROUPS);
+        // Add to Redux
+        dispatch(addRecentSatelliteGroup({ id: group.id, name: group.name, type: group.type }));
 
-            // Save to localStorage
+    }, [selectedSatGroupId, satGroups, dispatch]);
+
+    // Persist recentGroups to localStorage whenever it changes
+    useEffect(() => {
+        if (recentGroups && recentGroups.length > 0) {
             try {
-                localStorage.setItem(RECENT_GROUPS_KEY, JSON.stringify(trimmed));
+                localStorage.setItem(RECENT_GROUPS_KEY, JSON.stringify(recentGroups));
             } catch (e) {
                 console.error('Failed to save recent groups:', e);
             }
-
-            return trimmed;
-        });
-    }, [selectedSatGroupId, satGroups]);
+        }
+    }, [recentGroups]);
 
     const handleOnGroupChange = useCallback((event) => {
         const satGroupId = event.target.value;

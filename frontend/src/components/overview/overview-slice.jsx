@@ -209,6 +209,7 @@ const overviewSlice = createSlice({
             countries: false,
             decayed: false,
         },
+        recentSatelliteGroups: [],
     },
     reducers: {
         setShowPastOrbitPath(state, action) {
@@ -303,6 +304,18 @@ const overviewSlice = createSlice({
         },
         setSatellitesTableColumnVisibility(state, action) {
             state.satellitesTableColumnVisibility = action.payload;
+        },
+        setRecentSatelliteGroups(state, action) {
+            state.recentSatelliteGroups = action.payload;
+        },
+        addRecentSatelliteGroup(state, action) {
+            const group = action.payload;
+            // Remove if already exists
+            const filtered = state.recentSatelliteGroups.filter(g => g.id !== group.id);
+            // Add to front
+            const updated = [group, ...filtered];
+            // Keep only first 20
+            state.recentSatelliteGroups = updated.slice(0, 20);
         }
     },
     extraReducers: (builder) => {
@@ -441,6 +454,8 @@ export const {
     setSelectedSatellitePositions,
     setLoadingSatellites,
     setSatellitesTableColumnVisibility,
+    setRecentSatelliteGroups,
+    addRecentSatelliteGroup,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;
