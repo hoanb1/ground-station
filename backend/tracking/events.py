@@ -226,7 +226,6 @@ def run_events_calculation(
         current_proc.name = "Ground Station - SatellitePassWorker"
 
     # Calculate events (no cache access - handled in main process)
-    logger.info("Calculating satellite passes in worker process")
     events = calculate_next_events(
         satellite_data=satellite_data,  # Pass the full satellite data directly
         home_location={"lat": homelat, "lon": homelon},
@@ -270,6 +269,7 @@ async def fetch_next_events_for_group(
 
     assert group_id, f"Group id is required ({group_id}, {type(group_id)})"
 
+    start_time = time.time()
     reply: Dict[str, Union[bool, None, list, Dict]] = {
         "success": None,
         "data": None,
@@ -278,11 +278,8 @@ async def fetch_next_events_for_group(
     events = []
 
     logger.info(
-        "Calculating satellite events for group id: "
-        + str(group_id)
-        + " for next "
-        + str(hours)
-        + " hours"
+        f"Calculating events for group_id={group_id}, hours={hours}, "
+        f"above_el={above_el}, step_minutes={step_minutes} (fetch_next_events_for_group)"
     )
 
     async with AsyncSessionLocal() as dbsession:
@@ -317,25 +314,15 @@ async def fetch_next_events_for_group(
                     calculation_time, valid_until, cached_result = _cache[cache_key]
 
                     if current_time < valid_until:
-                        logger.info(
-                            f"Using cached satellite pass calculation (key: {cache_key[:8]}...)"
-                        )
                         result = {
                             "success": cached_result["success"],
                             "forecast_hours": hours,
                             "data": cached_result["data"],
                             "cached": True,
                         }
-                        logger.info(
-                            f"Returning cached result with {len(cached_result.get('data', []))} events"
-                        )
-                    else:
-                        logger.info(f"Cached result expired for key: {cache_key[:8]}...")
-                else:
-                    logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
             except Exception as cache_error:
                 logger.error(
-                    f"Error accessing cache (key: {cache_key[:8]}...), bypassing: {cache_error}"
+                    f"Cache error for group_id={group_id}: {cache_error} (fetch_next_events_for_group)"
                 )
 
             # If no cache hit, spawn worker to calculate
@@ -355,16 +342,15 @@ async def fetch_next_events_for_group(
                     validity_period = int((hours / 4) * 3600)
                     valid_until = time.time() + validity_period
                     _cache[cache_key] = (time.time(), valid_until, result)
-                    logger.info(f"Cached calculation result for key: {cache_key[:8]}...")
 
                     # Clean up expired cache entries
                     expired_keys = [k for k in _cache.keys() if time.time() > _cache[k][1]]
                     for k in expired_keys:
                         del _cache[k]
-                    if expired_keys:
-                        logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
                 except Exception as cache_store_error:
-                    logger.error(f"Error storing to cache: {cache_store_error}")
+                    logger.error(
+                        f"Cache store error: {cache_store_error} (fetch_next_events_for_group)"
+                    )
 
             if result and result.get("success", False):
                 events_data = result.get("data", [])
@@ -399,6 +385,12 @@ async def fetch_next_events_for_group(
                 reply["data"] = events
                 reply["forecast_hours"] = result.get("forecast_hours", hours)
                 reply["cached"] = result.get("cached", False)
+
+                elapsed_ms = (time.time() - start_time) * 1000
+                logger.info(
+                    f"Returned {len(events)} events for group_id={group_id}, "
+                    f"cached={result.get('cached', False)}, elapsed={elapsed_ms:.1f}ms (fetch_next_events_for_group)"
+                )
 
             else:
                 raise Exception(f"Subprocess for calculating next passes failed: {result}")
@@ -441,6 +433,7 @@ async def fetch_next_events_for_satellite(
 
     assert norad_id, f"NORAD ID is required ({norad_id}, {type(norad_id)})"
 
+    start_time = time.time()
     reply: Dict[str, Union[bool, None, list, Dict]] = {
         "success": None,
         "data": None,
@@ -449,7 +442,10 @@ async def fetch_next_events_for_satellite(
     }
     events = []
 
-    logger.info(f"Calculating satellite events for NORAD ID: {norad_id} for next {hours} hours")
+    logger.info(
+        f"Calculating events for norad_id={norad_id}, hours={hours}, "
+        f"above_el={above_el}, step_minutes={step_minutes} (fetch_next_events_for_satellite)"
+    )
     async with AsyncSessionLocal() as dbsession:
         try:
             # Get home location (get first location from list)
@@ -480,25 +476,15 @@ async def fetch_next_events_for_satellite(
                     calculation_time, valid_until, cached_result = _cache[cache_key]
 
                     if current_time < valid_until:
-                        logger.info(
-                            f"Using cached satellite pass calculation (key: {cache_key[:8]}...)"
-                        )
                         result = {
                             "success": cached_result["success"],
                             "forecast_hours": hours,
                             "data": cached_result["data"],
                             "cached": True,
                         }
-                        logger.info(
-                            f"Returning cached result with {len(cached_result.get('data', []))} events"
-                        )
-                    else:
-                        logger.info(f"Cached result expired for key: {cache_key[:8]}...")
-                else:
-                    logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
             except Exception as cache_error:
                 logger.error(
-                    f"Error accessing cache (key: {cache_key[:8]}...), bypassing: {cache_error}"
+                    f"Cache error for norad_id={norad_id}: {cache_error} (fetch_next_events_for_satellite)"
                 )
 
             # If no cache hit, spawn worker to calculate
@@ -518,32 +504,15 @@ async def fetch_next_events_for_satellite(
                     validity_period = int((hours / 4) * 3600)
                     valid_until = time.time() + validity_period
                     _cache[cache_key] = (time.time(), valid_until, result)
-                    logger.info(f"Cached calculation result for key: {cache_key[:8]}...")
 
                     # Clean up expired cache entries
                     expired_keys = [k for k in _cache.keys() if time.time() > _cache[k][1]]
                     for k in expired_keys:
                         del _cache[k]
-                    if expired_keys:
-                        logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
                 except Exception as cache_store_error:
-                    logger.error(f"Error storing to cache: {cache_store_error}")
-
-                # Store result in cache (main process only, no IPC from worker)
-                try:
-                    validity_period = int((hours / 4) * 3600)
-                    valid_until = time.time() + validity_period
-                    _cache[cache_key] = (time.time(), valid_until, result)
-                    logger.info(f"Cached calculation result for key: {cache_key[:8]}...")
-
-                    # Clean up expired cache entries
-                    expired_keys = [k for k in _cache.keys() if time.time() > _cache[k][1]]
-                    for k in expired_keys:
-                        del _cache[k]
-                    if expired_keys:
-                        logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
-                except Exception as cache_store_error:
-                    logger.error(f"Error storing to cache: {cache_store_error}")
+                    logger.error(
+                        f"Cache store error: {cache_store_error} (fetch_next_events_for_satellite)"
+                    )
 
             if result and result.get("success", False):
                 events_for_satellite = result.get("data", [])
@@ -598,6 +567,12 @@ async def fetch_next_events_for_satellite(
                 reply["data"] = events
                 reply["cached"] = result.get("cached", False)
                 reply["forecast_hours"] = result.get("forecast_hours", hours)
+
+                elapsed_ms = (time.time() - start_time) * 1000
+                logger.info(
+                    f"Returned {len(events)} events for norad_id={norad_id}, "
+                    f"cached={result.get('cached', False)}, elapsed={elapsed_ms:.1f}ms (fetch_next_events_for_satellite)"
+                )
 
             else:
                 raise Exception(f"Subprocess for calculating next passes failed: {result}")

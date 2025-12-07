@@ -144,7 +144,10 @@ async def cleanup_sdr_session(sid):
         del active_sdr_clients[sid]
 
     else:
-        logger.warning(f"Client {sid} not found in active clients while cleaning up")
+        logger.warning(
+            f"Client {sid} not found in active clients. "
+            f"Current active clients: {list(active_sdr_clients.keys())} (cleanup_sdr_session)"
+        )
 
 
 async def get_local_soapy_sdr_devices():

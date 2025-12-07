@@ -200,9 +200,12 @@ async def fetch_next_passes(
     Returns:
         Dictionary with success status and next passes
     """
-    logger.debug(f"Fetching next passes, data: {data}")
     norad_id = data.get("norad_id", None) if data else None
     hours = data.get("hours", 4.0) if data else 4.0
+    logger.info(
+        f"Handling request from client_id={sid}, norad_id={norad_id}, hours={hours} "
+        f"(get_next_passes)"
+    )
     next_passes = await fetch_next_events_for_satellite(norad_id=norad_id, hours=hours)
     return {
         "success": next_passes["success"],

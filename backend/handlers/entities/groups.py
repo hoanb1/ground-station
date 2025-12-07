@@ -200,9 +200,12 @@ async def fetch_next_passes_for_group(
     Returns:
         Dictionary with success status and next passes
     """
-    logger.debug(f"Fetching next passes for group, data: {data}")
     group_id = data.get("group_id", None) if data else None
     hours = data.get("hours", 2.0) if data else 2.0
+    logger.info(
+        f"Handling request from client_id={sid}, group_id={group_id}, hours={hours} "
+        f"(get_next_passes_for_group)"
+    )
     next_passes = await fetch_next_events_for_group(group_id=group_id, hours=hours)
     return {
         "success": next_passes["success"],
