@@ -253,15 +253,21 @@ class SatelliteTracker:
 
                     initial_tracking_state = tracking_data["value"].copy()
 
-                    assert (
-                        tracking_state_reply.get("success", False) is True
-                    ), f"Error in satellite tracking task: {tracking_state_reply}"
-                    assert tracking_state_reply["data"]["value"][
-                        "group_id"
-                    ], f"No group id found in satellite tracking state: {tracking_state_reply}"
-                    assert tracking_state_reply["data"]["value"][
-                        "norad_id"
-                    ], f"No norad id found in satellite tracking state: {tracking_state_reply}"
+                    if not tracking_state_reply.get("success", False):
+                        logger.error(f"Error in satellite tracking task: {tracking_state_reply}")
+                        continue
+
+                    if not tracking_state_reply["data"]["value"].get("group_id"):
+                        logger.warning(
+                            "No group id found in satellite tracking state, skipping iteration"
+                        )
+                        continue
+
+                    if not tracking_state_reply["data"]["value"].get("norad_id"):
+                        logger.warning(
+                            "No norad id found in satellite tracking state, skipping iteration"
+                        )
+                        continue
 
                     # Fetch the location of the ground station
                     location_reply = await crud.locations.fetch_all_locations(dbsession)
