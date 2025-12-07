@@ -30,6 +30,10 @@ import {
     Chip,
     useTheme,
     Link,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    LinearProgress,
 } from "@mui/material";
 import { GroundStationLogoGreenBlue } from "../common/dataurl-icons.jsx";
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
@@ -41,6 +45,9 @@ import CodeIcon from '@mui/icons-material/Code';
 import StorageIcon from '@mui/icons-material/Storage';
 import WebIcon from '@mui/icons-material/Web';
 import InfoIcon from '@mui/icons-material/Info';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import MemoryIcon from '@mui/icons-material/Memory';
+import ComputerIcon from '@mui/icons-material/Computer';
 import Grid from "@mui/material/Grid";
 import {
     Table,
@@ -225,6 +232,17 @@ const AboutPage = () => {
                                                 variant="outlined"
                                                 sx={{ fontFamily: 'monospace', height: 20, fontSize: '0.75rem' }}
                                             />
+                                        </Box>
+                                    )}
+                                    
+                                    {versionInfo.system?.cpu?.architecture && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', minWidth: 60 }}>
+                                                Arch:
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                                                {versionInfo.system.cpu.architecture}
+                                            </Typography>
                                         </Box>
                                     )}
                                 </Stack>
