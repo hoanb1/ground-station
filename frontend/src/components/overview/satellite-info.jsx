@@ -111,7 +111,7 @@ const OverviewSatelliteInfoCard = () => {
     const modulations = satelliteData && satelliteData['transmitters']
         ? Array.from(new Set(
             satelliteData['transmitters'].flatMap(t => {
-                const keywords = ['FSK', 'GMSK', 'GFSK', 'BPSK', 'SSTV', 'AFSK', 'LORA', 'CW', 'DOKA'];
+                const keywords = ['FSK', 'GMSK', 'GFSK', 'BPSK', 'SSTV', 'AFSK', 'LORA', 'CW', 'DOKA', 'FM', 'FMN', 'AM', 'LSB', 'USB'];
                 const found = [];
                 const mode = (t['mode'] || '').toUpperCase();
                 const description = (t['description'] || '').toUpperCase();
