@@ -18,9 +18,10 @@
  */
 
 import React, { useCallback, useState, useEffect, useMemo } from "react";
-import { Box, Typography, Chip, Tooltip } from "@mui/material";
+import { Box, Typography, Chip, Tooltip, Button } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
 import { useSocket } from "../common/socket.jsx";
+import { useTranslation } from 'react-i18next';
 import SatelliteSearchAutocomplete from "./satellite-search.jsx";
 import GroupDropdown from "./group-dropdown.jsx";
 import SatelliteList from "./satellite-dropdown.jsx";
@@ -30,6 +31,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import GpsOffIcon from '@mui/icons-material/GpsOff';
+import StopIcon from '@mui/icons-material/Stop';
 import {
     setSatelliteId,
     setTrackingStateInBackend,
@@ -39,6 +41,7 @@ import {
 const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBar() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('target');
 
     const {
         trackingState,
@@ -84,6 +87,15 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }, [dispatch, socket, trackingState, selectedRadioRig, selectedRotator, selectedTransmitter, groupOfSats]);
+
+    const handleTrackingStop = useCallback(() => {
+        const newTrackingState = {
+            ...trackingState,
+            'rotator_state': "stopped",
+            'rig_state': "stopped",
+        };
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
+    }, [dispatch, socket, trackingState]);
 
     // Get current active pass or next upcoming pass
     const passInfo = useMemo(() => {
@@ -297,6 +309,24 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
                             }}
                         />
                     </Tooltip>
+                )}
+
+                {/* Stop tracking button */}
+                {satelliteId && (
+                    <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
+                        startIcon={<StopIcon />}
+                        disabled={rigData?.tracking !== true && rotatorData?.tracking !== true}
+                        onClick={handleTrackingStop}
+                        sx={{
+                            textTransform: 'none',
+                            fontWeight: 'bold',
+                        }}
+                    >
+                        {t('satellite_selector.stop_tracking')}
+                    </Button>
                 )}
             </Box>
         </Box>
