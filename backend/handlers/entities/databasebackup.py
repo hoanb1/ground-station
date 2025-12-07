@@ -252,18 +252,19 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
                 create_statements.append(stmt)
             elif stmt_upper.startswith("INSERT INTO"):
                 insert_statements.append(stmt)
+            # Skip any other statements (like HTML entities or malformed content)
 
         if not create_statements:
             return {"success": False, "error": "No CREATE TABLE statements found in backup file"}
 
         # Validate that we only have safe statements
-        for stmt in statements:
-            stmt_upper = stmt.upper().strip()
-            if not (stmt_upper.startswith("CREATE TABLE") or stmt_upper.startswith("INSERT INTO")):
-                return {
-                    "success": False,
-                    "error": f"Invalid statement detected. Only CREATE TABLE and INSERT INTO are allowed. Found: {stmt[:50]}...",
-                }
+        # Only process CREATE TABLE and INSERT INTO statements, ignore others
+        valid_statements = create_statements + insert_statements
+        if len(valid_statements) == 0:
+            return {
+                "success": False,
+                "error": "No valid CREATE TABLE or INSERT INTO statements found in backup file",
+            }
 
         async with AsyncSessionLocal() as session:
             try:
@@ -300,7 +301,7 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
                 # Commit after creating tables
                 await session.commit()
 
-                # Execute INSERT statements
+                # Execute INSERT statements (only the valid ones)
                 rows_inserted = 0
                 for stmt in insert_statements:
                     await session.execute(text(stmt))
