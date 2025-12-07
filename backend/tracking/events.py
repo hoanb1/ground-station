@@ -5,7 +5,6 @@ import logging
 import multiprocessing
 import time
 from datetime import datetime
-from multiprocessing import Manager
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -21,11 +20,8 @@ from .passes import calculate_next_events
 # Create logger
 logger = logging.getLogger("passes-worker")
 
-# Create a manager for shared objects
-manager = Manager()
-
-# Create a shared dictionary
-_cache = manager.dict()
+# Create a simple in-memory cache (no multiprocessing needed since cache is only accessed from main process)
+_cache: Dict[str, tuple] = {}
 
 
 def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minutes):
@@ -221,7 +217,7 @@ def run_events_calculation(
     Calculate satellite pass events. This function runs in a worker process.
 
     NOTE: Cache handling is now done in the main process (fetch_next_events_for_*)
-    to avoid IPC deadlocks with Manager.dict(). This function only does computation.
+    to keep cache operations simple and avoid any IPC overhead. This function only does computation.
     """
     # Set process name if not already set by pool initializer
     current_proc = multiprocessing.current_process()
@@ -229,7 +225,7 @@ def run_events_calculation(
         setproctitle.setproctitle("Ground Station - SatellitePassWorker")
         current_proc.name = "Ground Station - SatellitePassWorker"
 
-    # Calculate events (no cache access to avoid IPC deadlock)
+    # Calculate events (no cache access - handled in main process)
     logger.info("Calculating satellite passes in worker process")
     events = calculate_next_events(
         satellite_data=satellite_data,  # Pass the full satellite data directly
