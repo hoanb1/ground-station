@@ -24,7 +24,7 @@ logger = logging.getLogger("passes-worker")
 _cache: Dict[str, tuple] = {}
 
 # Create a persistent worker pool (reused across all calculations to avoid repeated pool creation/destruction)
-_worker_pool: multiprocessing.pool.Pool = None  # type: ignore
+_worker_pool = None
 
 
 def _get_worker_pool():
