@@ -54,7 +54,7 @@ const MemoizedStyledDataGrid = React.memo(({
                                                loadingSatellites,
                                                columnVisibility,
                                                onColumnVisibilityChange,
-                                               selectedSatellitePositions,
+                                               selectedSatellitePositionsRef,
                                             }) => {
     const { t, i18n } = useTranslation('overview');
     const currentLanguage = i18n.language;
@@ -203,6 +203,7 @@ const MemoizedStyledDataGrid = React.memo(({
             flex: 1,
             renderCell: (params) => {
                 const noradId = params.row.norad_id;
+                const selectedSatellitePositions = selectedSatellitePositionsRef.current();
                 const position = selectedSatellitePositions?.[noradId];
 
                 return (
@@ -385,13 +386,14 @@ const MemoizedStyledDataGrid = React.memo(({
         }
 
         // Color rows based on elevation: green only if positive
-        const elevation = params.row.elevation;
+        const selectedSatellitePositions = selectedSatellitePositionsRef.current();
+        const elevation = selectedSatellitePositions?.[params.row.norad_id]?.el;
         if (elevation !== null && elevation !== undefined && elevation > 0) {
             return "satellite-cell-alive pointer-cursor";
         }
 
         return "pointer-cursor";
-    }, [selectedSatelliteId]);
+    }, [selectedSatelliteId, selectedSatellitePositionsRef]);
 
     return (
         <StyledDataGrid
@@ -440,10 +442,16 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const containerRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
     const apiRef = useGridApiRef();
+    const store = useStore();
+
+    // Use ref-based selector to prevent re-renders from position updates
+    const selectedSatellitePositionsRef = useRef(() => {
+        const state = store.getState();
+        return state.overviewSatTrack.selectedSatellitePositions;
+    });
 
     // Use memoized selectors to prevent unnecessary rerenders
     const selectedSatellites = useSelector(state => state.overviewSatTrack.selectedSatellites);
-    const selectedSatellitePositions = useSelector(state => state.overviewSatTrack.selectedSatellitePositions);
     const gridEditable = useSelector(state => state.overviewSatTrack.gridEditable);
     const loadingSatellites = useSelector(state => state.overviewSatTrack.loadingSatellites);
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
@@ -454,24 +462,37 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
 
     const minHeight = 200;
 
+    // Add elevation to rows for sorting, but use useMemo to prevent unnecessary recalculations
     const satelliteRows = React.useMemo(() => {
+        const positions = selectedSatellitePositionsRef.current();
         return (selectedSatellites || []).map(satellite => ({
             ...satellite,
-            elevation: selectedSatellitePositions?.[satellite.norad_id]?.el ?? null,
+            elevation: positions?.[satellite.norad_id]?.el ?? null,
         }));
-    }, [selectedSatellites]);
+    }, [selectedSatellites, selectedSatellitePositionsRef]);
 
+    // Update rows with latest elevation data using apiRef to avoid full re-renders
     useEffect(() => {
         if (!apiRef.current?.updateRows || !satelliteRows.length) return;
 
-        (satelliteRows || []).forEach(row => {
-            const position = selectedSatellitePositions?.[row.norad_id];
-            if (position && position.el !== undefined) {
-                const newRow = { ...row, elevation: position.el };
-                apiRef.current.updateRows([newRow]);
-            }
-        });
-    }, [selectedSatellitePositions, apiRef, satelliteRows]);
+        const updateElevations = () => {
+            const positions = selectedSatellitePositionsRef.current();
+            satelliteRows.forEach(row => {
+                const elevation = positions?.[row.norad_id]?.el;
+                if (elevation !== undefined) {
+                    apiRef.current.updateRows([{ norad_id: row.norad_id, elevation }]);
+                }
+            });
+        };
+
+        // Initial update
+        updateElevations();
+
+        // Set up periodic updates every 2 seconds
+        const interval = setInterval(updateElevations, 2000);
+
+        return () => clearInterval(interval);
+    }, [selectedSatellites, apiRef, satelliteRows, selectedSatellitePositionsRef]);
 
     useEffect(() => {
         dispatch(fetchSatelliteGroups({socket}))
@@ -556,7 +577,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                             loadingSatellites={loadingSatellites}
                             columnVisibility={columnVisibility}
                             onColumnVisibilityChange={handleColumnVisibilityChange}
-                            selectedSatellitePositions={selectedSatellitePositions}
+                            selectedSatellitePositionsRef={selectedSatellitePositionsRef}
                         />
                     )}
                 </div>
