@@ -58,6 +58,7 @@ import CoordinateGrid from '../common/mercator-grid.jsx';
 import SatelliteTrackSuggestion from './map-target-button.jsx';
 import {
     calculateSatelliteAzEl,
+    calculateTimeToMaxElevation,
     getSatelliteCoverageCircle,
     getSatelliteLatLon,
     getSatellitePaths,
@@ -138,6 +139,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     const updateTimeRef = useRef(null);
     const controlsBoxRef = useRef(null);
     const arrowControlsRef = useRef(null);
+    const elevationHistoryRef = useRef({}); // Store elevation history for each satellite
 
     const handleSetMapZoomLevel = useCallback(
         (zoomLevel) => {
@@ -254,8 +256,74 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     now
                 );
 
-                // Accumulate the selected satellite position
-                selectedSatPos[noradId] = {az, el, range};
+                // Initialize or update elevation history for this satellite
+                if (!elevationHistoryRef.current[noradId]) {
+                    elevationHistoryRef.current[noradId] = [];
+                }
+
+                // Add current elevation to history
+                elevationHistoryRef.current[noradId].push(el);
+
+                // Keep only last 5 samples
+                if (elevationHistoryRef.current[noradId].length > 5) {
+                    elevationHistoryRef.current[noradId].shift();
+                }
+
+                // Calculate elevation trend
+                const history = elevationHistoryRef.current[noradId];
+                let trend = 'stable';
+                let elRate = 0;
+
+                if (history.length >= 2) {
+                    // Calculate average rate of change
+                    const changes = [];
+                    for (let i = 1; i < history.length; i++) {
+                        changes.push(history[i] - history[i - 1]);
+                    }
+                    elRate = changes.reduce((a, b) => a + b, 0) / changes.length;
+
+                    // Determine trend based on rate (threshold: 0.1 degrees per update)
+                    if (elRate > 0.1) {
+                        trend = 'rising';
+                    } else if (elRate < -0.1) {
+                        trend = 'falling';
+                    } else if (Math.abs(elRate) <= 0.1 && el > 0) {
+                        // Check if we're at a peak (elevation is positive and rate is near zero)
+                        if (history.length >= 3) {
+                            const recent = history.slice(-3);
+                            const maxRecent = Math.max(...recent);
+                            if (Math.abs(el - maxRecent) < 0.2) {
+                                trend = 'peak';
+                            }
+                        }
+                    }
+                }
+
+                // Calculate time to max elevation only for visible satellites
+                let timeToMaxEl = null;
+                if (el > 0 && trend === 'rising') {
+                    timeToMaxEl = calculateTimeToMaxElevation(
+                        satellite['tle1'],
+                        satellite['tle2'],
+                        {
+                            lat: location['lat'],
+                            lon: location['lon'],
+                            alt: location['alt'],
+                        },
+                        now
+                    );
+                }
+
+                // Accumulate the selected satellite position with enriched data
+                selectedSatPos[noradId] = {
+                    az,
+                    el,
+                    range,
+                    elHistory: [...history],
+                    trend,
+                    elRate,
+                    timeToMaxEl
+                };
 
                 if (selectedSatelliteId === satellite['norad_id']) {
                     // Get the recent state

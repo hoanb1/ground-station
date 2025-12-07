@@ -45,6 +45,7 @@ import OverviewSatelliteInfoCard from "./satellite-info.jsx";
 import {setTrackingStateInBackend} from "../target/target-slice.jsx";
 import SatelliteMapContainer from './overview-map.jsx';
 import SatelliteDetailsTable from "./satellites-table.jsx";
+import SatelliteGroupSelectorBar from "./satellite-group-selector-bar.jsx";
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
@@ -374,7 +375,12 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             </ResponsiveReactGridLayout>;
     }
 
-    return ResponsiveGridLayoutParent;
+    return (
+        <>
+            <SatelliteGroupSelectorBar />
+            {ResponsiveGridLayoutParent}
+        </>
+    );
 });
 
 export default GlobalSatelliteTrackLayout;

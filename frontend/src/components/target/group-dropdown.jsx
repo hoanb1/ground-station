@@ -67,7 +67,7 @@ const GroupDropdown = React.memo(function GroupDropdown() {
     return (
         <FormControl
             disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"}
-            sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }}
+            sx={{ minWidth: 200, margin: 0 }}
             fullWidth
             variant={"filled"}
             size={"small"}

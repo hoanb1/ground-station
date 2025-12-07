@@ -57,6 +57,7 @@ import ControllerTabs from "../common/controller.jsx";
 import TargetSatelliteMapContainer from './satellite-map.jsx';
 import TargetSatelliteTransmittersIsland from "./satellite-transmitters.jsx";
 import SatellitePassTimeline from "./timeline-main.jsx";
+import TargetSatelliteSelectorBar from "./target-satellite-selector-bar.jsx";
 
 
 // global leaflet map object
@@ -478,7 +479,12 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
         </ResponsiveReactGridLayout>;
     }
 
-    return ResponsiveGridLayoutParent;
+    return (
+        <>
+            <TargetSatelliteSelectorBar />
+            {ResponsiveGridLayoutParent}
+        </>
+    );
 });
 
 export default TargetSatelliteLayout;

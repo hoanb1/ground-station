@@ -58,7 +58,7 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
     return (
         <Autocomplete
             size={"small"}
-            sx={{ minWidth: 200 }}
+            sx={{ minWidth: 200, margin: 0 }}
             open={open}
             fullWidth={true}
             onOpen={handleOpen}

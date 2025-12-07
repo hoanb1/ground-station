@@ -44,6 +44,7 @@ import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 import { useTranslation } from 'react-i18next';
 import { SatelliteInfoDialog } from '../satellites/satellite-info-page.jsx';
+import ElevationDisplay from "./elevation-display.jsx";
 
 const OverviewSatelliteInfoCard = () => {
     const dispatch = useDispatch();
@@ -57,7 +58,8 @@ const OverviewSatelliteInfoCard = () => {
         loading,
         error,
         gridEditable,
-        selectedSatGroupId
+        selectedSatGroupId,
+        selectedSatellitePositions
     } = useSelector((state) => state.overviewSatTrack);
     const {
         trackingState,
@@ -313,8 +315,16 @@ const OverviewSatelliteInfoCard = () => {
                                                 {t('satellite_info.elevation')}
                                             </Typography>
                                         </Box>
-                                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'error.light' }}>
-                                            {satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
+                                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                            {selectedSatelliteId && selectedSatellitePositions?.[selectedSatelliteId] ? (
+                                                <ElevationDisplay
+                                                    elevation={selectedSatellitePositions[selectedSatelliteId].el}
+                                                    trend={selectedSatellitePositions[selectedSatelliteId].trend}
+                                                    timeToMaxEl={selectedSatellitePositions[selectedSatelliteId].timeToMaxEl}
+                                                    elRate={selectedSatellitePositions[selectedSatelliteId].elRate}
+                                                    showNegative={true}
+                                                />
+                                            ) : 'N/A'}
                                         </Typography>
                                     </Box>
                                 </Grid>

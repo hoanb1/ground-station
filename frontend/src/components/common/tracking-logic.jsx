@@ -499,3 +499,58 @@ export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date =
         return null;
     }
 }
+
+/**
+ * Calculate time to maximum elevation for a satellite
+ * @param {string} tleLine1 - First line of TLE
+ * @param {string} tleLine2 - Second line of TLE
+ * @param {object} groundStation - Ground station coordinates {lat, lon, alt}
+ * @param {Date} startDate - Start date for calculation
+ * @param {number} maxMinutes - Maximum time to look ahead (default 30 minutes)
+ * @returns {number|null} - Time to max elevation in seconds, or null if satellite is descending or error
+ */
+export function calculateTimeToMaxElevation(tleLine1, tleLine2, groundStation, startDate = new Date(), maxMinutes = 30) {
+    try {
+        let maxEl = -90;
+        let maxElTime = null;
+        const stepSeconds = 10; // Check every 10 seconds
+        const maxSteps = (maxMinutes * 60) / stepSeconds;
+
+        // Get current elevation
+        const currentData = calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, startDate);
+        if (!currentData) return null;
+
+        const currentEl = currentData[1];
+
+        // If satellite is below horizon, don't calculate
+        if (currentEl < 0) return null;
+
+        maxEl = currentEl;
+
+        // Look ahead in time
+        for (let i = 1; i <= maxSteps; i++) {
+            const futureDate = new Date(startDate.getTime() + (i * stepSeconds * 1000));
+            const data = calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, futureDate);
+
+            if (!data) continue;
+
+            const el = data[1];
+
+            // If below horizon, we've passed the peak
+            if (el < 0) break;
+
+            if (el > maxEl) {
+                maxEl = el;
+                maxElTime = i * stepSeconds;
+            } else if (maxElTime !== null && el < maxEl - 0.5) {
+                // If elevation is dropping significantly after finding max, we found the peak
+                break;
+            }
+        }
+
+        return maxElTime;
+    } catch (error) {
+        console.error("Error calculating time to max elevation:", error);
+        return null;
+    }
+}

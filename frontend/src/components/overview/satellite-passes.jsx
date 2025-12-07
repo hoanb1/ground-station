@@ -48,6 +48,7 @@ import {useStore} from 'react-redux';
 import ProgressFormatter from "./progressbar-widget.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
+import ElevationDisplay from "./elevation-display.jsx";
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 
 
@@ -271,7 +272,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         },
         {
             field: 'elevation',
-            minWidth: 80,
+            minWidth: 90,
             headerName: t('passes_table.current_elevation'),
             align: 'center',
             headerAlign: 'center',
@@ -288,25 +289,14 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                 const selectedSatellitePositions = selectedSatellitePositionsRef.current();
                 const noradId = params.row.id.split("_")[1];
                 const position = selectedSatellitePositions?.[noradId];
-                const elevation = position?.el;
-
-                if (elevation === null || elevation === undefined) {
-                    return <span>-</span>;
-                }
-
-                let color;
-                if (elevation < 10) {
-                    color = 'error.main';
-                } else if (elevation >= 10 && elevation < 45) {
-                    color = 'warning.main';
-                } else {
-                    color = 'success.main';
-                }
 
                 return (
-                    <Box component="span" sx={{ color, fontWeight: 'bold' }}>
-                        {elevation.toFixed(1)}°
-                    </Box>
+                    <ElevationDisplay
+                        elevation={position?.el}
+                        trend={position?.trend}
+                        timeToMaxEl={position?.timeToMaxEl}
+                        elRate={position?.elRate}
+                    />
                 );
             }
         },

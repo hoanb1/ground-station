@@ -155,7 +155,7 @@ const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId,
         <>
             <Grid container spacing={0} columns={12}>
                 <Grid size={12}>
-                    <Grid size={12} style={{padding: '0rem 0rem 0rem 0rem'}}>
+                    <Grid size={12} style={{padding: '0rem 0rem 0.5rem 0rem'}}>
                         <SatelliteSearchAutocomplete onSatelliteSelect={handleSatelliteSelect} />
                     </Grid>
                 </Grid>
@@ -167,7 +167,7 @@ const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId,
                             </Grid>
                             <Grid
                                 size={12}
-                                style={{ padding: '0rem 0rem 0rem 0rem' }}
+                                style={{ padding: '0.5rem 0rem 0rem 0rem' }}
                             >
                                 <SatelliteList/>
                             </Grid>
@@ -180,7 +180,7 @@ const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 height: '100%',
-                                paddingTop: '0.5rem',
+                                paddingTop: '0rem',
                                 paddingBottom: '0rem',
                                 paddingLeft: '0rem',
                                 paddingRight: '0rem',

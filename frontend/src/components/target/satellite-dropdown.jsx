@@ -98,6 +98,7 @@ function SatelliteList() {
     return (
         <FormControl
             disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"}
+            sx={{ margin: 0 }}
             fullWidth={true} variant={"filled"} size={"small"}>
             <InputLabel htmlFor="satellite-select">{t('satellite_dropdown.label')}</InputLabel>
             <Select onClose={handleSelectCloseEvent}
