@@ -53,10 +53,12 @@ import RadioIcon from '@mui/icons-material/Radio';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Grid from "@mui/material/Grid";
 import React from "react";
+import ElevationDisplay from "../common/elevation-display.jsx";
 
 const TargetSatelliteInfoIsland = () => {
     const { t } = useTranslation('target');
-    const { satelliteData, gridEditable } = useSelector((state) => state.targetSatTrack);
+    const { satelliteData, gridEditable, satelliteId } = useSelector((state) => state.targetSatTrack);
+    const selectedSatellitePositions = useSelector(state => state.overviewSatTrack.selectedSatellitePositions);
     const navigate = useNavigate();
 
     // Mini circular gauge for angular measurements
@@ -184,7 +186,16 @@ const TargetSatelliteInfoIsland = () => {
             {/* Satellite Status Header - Sticky */}
             <Box sx={{
                 p: 1,
-                background: (theme) => `linear-gradient(135deg, ${theme.palette.overlay.light} 0%, ${theme.palette.overlay.main} 100%)`,
+                background: satelliteData && satelliteData['details'] ?
+                    (() => {
+                        const status = satelliteData['details']['status'];
+                        switch(status) {
+                            case 'alive': return (theme) => `linear-gradient(135deg, ${theme.palette.success.main}26 0%, ${theme.palette.success.main}0D 100%)`;
+                            case 'dead': return (theme) => `linear-gradient(135deg, ${theme.palette.error.main}26 0%, ${theme.palette.error.main}0D 100%)`;
+                            case 're-entered': return (theme) => `linear-gradient(135deg, ${theme.palette.warning.main}26 0%, ${theme.palette.warning.main}0D 100%)`;
+                            default: return (theme) => `linear-gradient(135deg, ${theme.palette.overlay.light} 0%, ${theme.palette.overlay.main} 100%)`;
+                        }
+                    })() : (theme) => `linear-gradient(135deg, ${theme.palette.overlay.light} 0%, ${theme.palette.overlay.main} 100%)`,
                 borderBottom: '1px solid',
                 borderColor: 'border.main'
             }}>
@@ -199,22 +210,21 @@ const TargetSatelliteInfoIsland = () => {
                             bgcolor: satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'alive' ? 'success.main' : 'error.main',
                             boxShadow: (theme) => `0 0 8px ${satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'alive' ? theme.palette.success.main : theme.palette.error.main}`
                         }} />
-                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, minWidth: 0, flex: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '0.3px', fontSize: '1.1rem', flexShrink: 0 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: '0.3px' }}>
                                 {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "NO DATA"}
                             </Typography>
-                            {satelliteData && satelliteData['details'] && (
+                            {satelliteData && satelliteData['details'] && satelliteData['details']['name_other'] && (
                                 <Typography variant="caption" sx={{
-                                    color: 'text.secondary',
-                                    fontSize: '0.7rem',
-                                    fontStyle: 'italic',
+                                    color: 'text.disabled',
+                                    fontSize: '0.65rem',
+                                    display: 'block',
+                                    mt: -0.5,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    fontFamily: 'monospace'
+                                    whiteSpace: 'nowrap'
                                 }}>
-                                    {satelliteData['details']['alternative_name'] && `(${satelliteData['details']['alternative_name']}) `}
-                                    {satelliteData['details']['norad_id'] && `#${satelliteData['details']['norad_id']}`}
+                                    {satelliteData['details']['name_other']}
                                 </Typography>
                             )}
                         </Box>
@@ -270,26 +280,23 @@ const TargetSatelliteInfoIsland = () => {
             <Box sx={{ pr: 1.5, pl: 1.5, pt: 1.5, pb: 1, flex: 1, overflow: 'auto' }}>
 
                 {/* Real-time Position Data - Priority Section */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <ExploreIcon sx={{ fontSize: 14, mr: 0.75, color: 'primary.main' }} />
+                    <Typography variant="overline" sx={{
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: 'primary.main',
+                        letterSpacing: '0.5px'
+                    }}>
+                        Real-Time Position
+                    </Typography>
+                </Box>
                 <Box sx={{
                     mb: 1.5,
                     p: 1.25,
                     bgcolor: 'overlay.light',
-                    borderRadius: 1,
-                    border: '1px solid',
-                    borderColor: 'primary.main',
-                    boxShadow: (theme) => `0 0 12px ${theme.palette.primary.main}30`
+                    borderRadius: 1
                 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <ExploreIcon sx={{ fontSize: 14, mr: 0.75, color: 'primary.main' }} />
-                        <Typography variant="overline" sx={{
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            color: 'primary.main',
-                            letterSpacing: '0.5px'
-                        }}>
-                            Real-Time Position
-                        </Typography>
-                    </Box>
                     <Grid container spacing={1}>
                         <Grid size={6}>
                             <Box sx={{
@@ -304,7 +311,17 @@ const TargetSatelliteInfoIsland = () => {
                                     Elevation
                                 </Typography>
                                 <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace', lineHeight: 1 }}>
-                                    {satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : '--'}
+                                    {satelliteId && selectedSatellitePositions?.[satelliteId] ? (
+                                        <ElevationDisplay
+                                            elevation={selectedSatellitePositions[satelliteId].el}
+                                            trend={selectedSatellitePositions[satelliteId].trend}
+                                            timeToMaxEl={selectedSatellitePositions[satelliteId].timeToMaxEl}
+                                            elRate={selectedSatellitePositions[satelliteId].elRate}
+                                            showNegative={true}
+                                        />
+                                    ) : (
+                                        satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : '--'
+                                    )}
                                 </Typography>
                             </Box>
                         </Grid>

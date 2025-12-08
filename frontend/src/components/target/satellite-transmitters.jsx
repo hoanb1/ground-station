@@ -279,99 +279,25 @@ const TargetSatelliteTransmittersIsland = () => {
             </TitleBar>
 
             {/* Main Content */}
-            <Box sx={{ pr: 1.5, pl: 1.5, pt: 1.5, pb: 1, flex: 1, overflow: 'auto' }}>
-
-                {/* Communication Overview */}
-                <Section title={t('satellite_transmitters.sections.communication_overview')} icon={SettingsInputAntennaIcon}>
-                    <Box sx={{
-                        p: 1.25,
-                        bgcolor: 'overlay.light',
-                        borderRadius: 1
-                    }}>
-                        <Grid container spacing={1.5}>
-                            <Grid size={4}>
-                                <Box sx={{ textAlign: 'center' }}>
-                                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', fontFamily: 'monospace' }}>
-                                        {satelliteData && satelliteData['transmitters'] ? satelliteData['transmitters'].length : '0'}
-                                    </Typography>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                        {t('satellite_transmitters.labels.total')}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                            <Grid size={4}>
-                                <Box sx={{ textAlign: 'center' }}>
-                                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'success.main', fontFamily: 'monospace' }}>
-                                        {satelliteData && satelliteData['transmitters'] ?
-                                            satelliteData['transmitters'].filter(t => t.alive && t.status === 'active').length : '0'}
-                                    </Typography>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                        {t('satellite_transmitters.labels.active')}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                            <Grid size={4}>
-                                <Box sx={{ textAlign: 'center' }}>
-                                    <Typography variant="h5" sx={{ fontWeight: 700, color: 'error.main', fontFamily: 'monospace' }}>
-                                        {satelliteData && satelliteData['transmitters'] ?
-                                            satelliteData['transmitters'].filter(t => !t.alive || t.status !== 'active').length : '0'}
-                                    </Typography>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                        {t('satellite_transmitters.labels.inactive')}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                        </Grid>
-
-                        {bands.length > 0 && (
-                            <Box sx={{ mt: 1.5, pt: 1, borderTop: '1px solid', borderColor: 'rgba(255,255,255,0.08)' }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.5px', mb: 0.75, display: 'block' }}>
-                                    {t('satellite_transmitters.labels.frequency_bands')}
-                                </Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                    {bands.map((band, index) => (
-                                        <Chip
-                                            key={index}
-                                            label={band}
-                                            size="small"
-                                            sx={{
-                                                bgcolor: getBandColor(band),
-                                                color: '#ffffff',
-                                                fontSize: '0.65rem',
-                                                height: 20,
-                                                fontWeight: 600
-                                            }}
-                                        />
-                                    ))}
-                                </Box>
-                            </Box>
-                        )}
-                    </Box>
-                </Section>
-
-                {/* Detailed Transmitters */}
-                {satelliteData && satelliteData['transmitters'] && satelliteData['transmitters'].length > 0 ? (
-                    <Section title={t('satellite_transmitters.sections.transmitter_details')} icon={RadioIcon}>
-                        <Box sx={{ maxHeight: '100%', overflowY: 'auto' }}>
-                            {satelliteData['transmitters'].map((transmitter, index) => (
-                                <TransmitterRow key={transmitter.id || index} transmitter={transmitter} index={index} />
-                            ))}
-                        </Box>
-                    </Section>
-                ) : (
-                    <Box sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '100%',
-                        py: 4
-                    }}>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                            {t('satellite_transmitters.messages.no_transmitters')}
-                        </Typography>
-                    </Box>
-                )}
-            </Box>
+            {satelliteData && satelliteData['transmitters'] && satelliteData['transmitters'].length > 0 ? (
+                <Box sx={{ pr: 1.5, pl: 1.5, pt: 1.5, pb: 1, flex: 1, overflow: 'auto' }}>
+                    {satelliteData['transmitters'].map((transmitter, index) => (
+                        <TransmitterRow key={transmitter.id || index} transmitter={transmitter} index={index} />
+                    ))}
+                </Box>
+            ) : (
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flex: 1,
+                    py: 4
+                }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                        {t('satellite_transmitters.messages.no_transmitters')}
+                    </Typography>
+                </Box>
+            )}
         </Box>
     );
 }

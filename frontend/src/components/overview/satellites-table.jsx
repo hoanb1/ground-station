@@ -30,7 +30,7 @@ import {
     renderCountryFlagsCSV,
     TitleBar
 } from "../common/common.jsx";
-import ElevationDisplay from "./elevation-display.jsx";
+import ElevationDisplay from "../common/elevation-display.jsx";
 import {
     setSelectedSatelliteId,
     setSatellitesTableColumnVisibility,

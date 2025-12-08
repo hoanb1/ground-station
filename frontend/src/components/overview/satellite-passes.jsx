@@ -48,7 +48,7 @@ import {useStore} from 'react-redux';
 import ProgressFormatter from "./progressbar-widget.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
-import ElevationDisplay from "./elevation-display.jsx";
+import ElevationDisplay from "../common/elevation-display.jsx";
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 
 

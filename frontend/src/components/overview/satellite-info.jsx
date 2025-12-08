@@ -44,7 +44,7 @@ import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 import { useTranslation } from 'react-i18next';
 import { SatelliteInfoDialog } from '../satellites/satellite-info-page.jsx';
-import ElevationDisplay from "./elevation-display.jsx";
+import ElevationDisplay from "../common/elevation-display.jsx";
 
 const OverviewSatelliteInfoCard = () => {
     const dispatch = useDispatch();
@@ -259,9 +259,16 @@ const OverviewSatelliteInfoCard = () => {
                                         }
                                     })() : (theme) => `0 0 8px ${theme.palette.info.main}40`
                             }}/>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
-                                {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
-                            </Typography>
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                    {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
+                                </Typography>
+                                {satelliteData && satelliteData['details'] && satelliteData['details']['name_other'] && (
+                                    <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem', display: 'block', mt: -0.5 }}>
+                                        {satelliteData['details']['name_other']}
+                                    </Typography>
+                                )}
+                            </Box>
                             {satelliteData && satelliteData['details'] && betterStatusValue(satelliteData['details']['status'])}
                         </Box>
 
