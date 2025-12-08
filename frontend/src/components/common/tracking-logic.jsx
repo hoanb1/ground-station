@@ -39,9 +39,33 @@ export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
         }
 
         const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
+
+        // Check if TLE parsing failed
+        // Error codes: 1=Eccentricity out of range, 2=Mean motion <=0, 3=Perturbed eccentricity,
+        // 4=Semi-latus rectum <0, 6=Orbit decayed
+        if (satrec.error) {
+            console.error(`TLE parsing error for satellite ${noradId}: error code ${satrec.error}`);
+            return [0, 0, 0, 0];
+        }
+
+        // Check for extreme BSTAR values that indicate rapid orbital decay
+        // BSTAR > 0.01 typically indicates a satellite in rapid decay that will cause
+        // satellite.js propagation to hang or take extremely long time
+        const bstarThreshold = 0.01;
+        if (satrec.bstar && Math.abs(satrec.bstar) > bstarThreshold) {
+            console.error(
+                `Satellite ${noradId} skipped: Extreme BSTAR drag coefficient ${satrec.bstar.toFixed(6)} ` +
+                `(threshold: ${bstarThreshold}). This satellite is likely in rapid orbital decay and ` +
+                `will cause performance issues during propagation.`
+            );
+            return [0, 0, 0, 0];
+        }
+
         const pv = satellite.propagate(satrec, date);
 
-        if (!pv.position || !pv.velocity) {
+        // Check if propagation failed OR if propagation detected an error (like orbit decay)
+        if (!pv.position || !pv.velocity || satrec.error) {
+            console.warn(`Failed to propagate satellite ${noradId}: ${!pv.position ? 'no position' : !pv.velocity ? 'no velocity' : `error code ${satrec.error}`}`);
             return [0, 0, 0, 0];
         }
 
@@ -52,8 +76,19 @@ export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
         const lon = satellite.degreesLong(geo.longitude);
         const altitude = geo.height;
 
+        // Validate the calculated values
+        if (!isFinite(lat) || !isFinite(lon) || !isFinite(altitude)) {
+            console.error(`Invalid coordinates calculated for satellite ${noradId}: [${lat}, ${lon}, ${altitude}]`);
+            return [0, 0, 0, 0];
+        }
+
         const {x, y, z} = pv.velocity;
         const velocity = Math.sqrt(x * x + y * y + z * z);
+
+        if (!isFinite(velocity)) {
+            console.error(`Invalid velocity calculated for satellite ${noradId}: ${velocity}`);
+            return [0, 0, 0, 0];
+        }
 
         return [lat, lon, altitude, velocity];
 
@@ -219,14 +254,22 @@ export function splitAtDateline(points) {
  * @param {Array} tle - An array containing two TLE lines [line1, line2].
  * @param {number} durationMinutes - The projection duration (in minutes) for both past and future.
  * @param {number} [stepMinutes=1] - (Optional) The time interval in minutes between coordinate samples.
+ * @param {number} [noradId=null] - (Optional) NORAD ID for debug logging.
  * @returns {Object} An object with two properties:
  *                   { past: [{lat, lon}] or [[{lat, lon}], ...],
  *                     future: [{lat, lon}] or [[{lat, lon}], ...] }
  */
-export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
+export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1, noradId = null) {
     try {
         // Create a satellite record from the provided TLE
         const satrec = satellite.twoline2satrec(tle[0], tle[1]);
+
+        // Check if TLE parsing failed
+        if (satrec.error) {
+            console.error(`TLE parsing error in getSatellitePaths: error code ${satrec.error}`);
+            return { past: [], future: [] };
+        }
+
         const now = new Date();
         const pastPoints = [];
         const futurePoints = [];
@@ -236,12 +279,21 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
         for (let t = now.getTime() - durationMinutes * 60 * 1000; t <= now.getTime(); t += stepMs) {
             const time = new Date(t);
             const { position } = satellite.propagate(satrec, time);
+
+            // Check for propagation errors (orbit decay, etc)
+            if (satrec.error) {
+                console.warn(`Satellite path propagation error at time ${time}: error code ${satrec.error}`);
+                break; // Stop calculating path if propagation fails
+            }
             if (position) {
                 const gmst = satellite.gstime(time);
                 const posGd = satellite.eciToGeodetic(position, gmst);
                 let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
                 const lat = satellite.degreesLat(posGd.latitude);
-                pastPoints.push({ lat, lon });
+                // Validate coordinates before adding
+                if (isFinite(lat) && isFinite(lon)) {
+                    pastPoints.push({ lat, lon });
+                }
             }
         }
 
@@ -249,12 +301,21 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
         for (let t = now.getTime(); t <= now.getTime() + durationMinutes * 60 * 1000; t += stepMs) {
             const time = new Date(t);
             const { position } = satellite.propagate(satrec, time);
+
+            // Check for propagation errors (orbit decay, etc)
+            if (satrec.error) {
+                console.warn(`Satellite path propagation error at time ${time}: error code ${satrec.error}`);
+                break; // Stop calculating path if propagation fails
+            }
             if (position) {
                 const gmst = satellite.gstime(time);
                 const posGd = satellite.eciToGeodetic(position, gmst);
                 let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
                 const lat = satellite.degreesLat(posGd.latitude);
-                futurePoints.push({ lat, lon });
+                // Validate coordinates before adding
+                if (isFinite(lat) && isFinite(lon)) {
+                    futurePoints.push({ lat, lon });
+                }
             }
         }
 
@@ -453,10 +514,26 @@ export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date =
         // Initialize satellite record from TLE data
         const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
 
+        // Check if TLE parsing failed
+        if (satrec.error) {
+            console.error(`TLE parsing error in AzEl calculation: error code ${satrec.error}`);
+            return null;
+        }
+
+        // Check for extreme BSTAR values that indicate rapid orbital decay
+        const bstarThreshold = 0.01;
+        if (satrec.bstar && Math.abs(satrec.bstar) > bstarThreshold) {
+            console.error(
+                `Satellite skipped in AzEl calculation: Extreme BSTAR drag coefficient ${satrec.bstar.toFixed(6)} ` +
+                `(threshold: ${bstarThreshold}). This satellite is likely in rapid orbital decay.`
+            );
+            return null;
+        }
+
         // Get satellite position and velocity in ECI coordinates
         const positionAndVelocity = satellite.propagate(satrec, date);
-        if (!positionAndVelocity.position) {
-            console.error("Failed to propagate satellite position");
+        if (!positionAndVelocity.position || satrec.error) {
+            console.error(`Failed to propagate satellite position: ${!positionAndVelocity.position ? 'no position' : `error code ${satrec.error}`}`);
             return null;
         }
 
@@ -480,6 +557,12 @@ export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date =
         let azimuthDeg = lookAngles.azimuth * (180 / Math.PI);
         const elevationDeg = lookAngles.elevation * (180 / Math.PI);
         const rangeKm = lookAngles.rangeSat; // Range in kilometers
+
+        // Validate calculated values
+        if (!isFinite(azimuthDeg) || !isFinite(elevationDeg) || !isFinite(rangeKm)) {
+            console.error(`Invalid AzEl values calculated: [${azimuthDeg}, ${elevationDeg}, ${rangeKm}]`);
+            return null;
+        }
 
         // Normalize azimuth to 0-360 degrees
         while (azimuthDeg < 0) azimuthDeg += 360;

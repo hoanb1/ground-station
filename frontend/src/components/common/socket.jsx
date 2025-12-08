@@ -440,8 +440,8 @@ export const SocketProvider = ({ children }) => {
             };
         });
 
-        newSocket.on('disconnect', () => {
-            console.info('Socket disconnected - updating traffic stats');
+        newSocket.on('disconnect', (reason) => {
+            console.error(`[SOCKET DISCONNECT] Reason: ${reason}`, new Error().stack);
             trafficStatsRef.current = {
                 ...trafficStatsRef.current,
                 transport: {

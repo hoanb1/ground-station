@@ -117,6 +117,30 @@ def calculate_next_events(
         for tle_group in tle_groups:
             norad_id, line1, line2 = tle_group
 
+            # Check for extreme orbital decay indicators in TLE
+            # The First Derivative of Mean Motion (columns 34-43) indicates orbital decay rate
+            # High values (>0.01) indicate rapid orbital decay and will cause propagation issues
+            try:
+                # Extract first derivative of mean motion (columns 34-43, 0-indexed: 33-42)
+                # Format: ±.dddddddd (decimal value with explicit decimal point)
+                # Example: " .11903621" = 0.11903621
+                # Example: " .00013419" = 0.00013419 (normal)
+                ndot_str = line1[33:43].strip()
+                if ndot_str:
+                    ndot = float(ndot_str)
+                    ndot_threshold = 0.01
+
+                    if abs(ndot) > ndot_threshold:
+                        logger.error(
+                            f"Satellite {norad_id} skipped: Extreme first derivative of mean motion {ndot:.8f} "
+                            f"(threshold: {ndot_threshold}). This satellite is in rapid orbital decay and "
+                            f"will cause performance issues during propagation."
+                        )
+                        continue  # Skip this satellite
+            except (ValueError, IndexError) as e:
+                logger.warning(f"Failed to parse first derivative for satellite {norad_id}: {e}")
+                # Continue anyway - if we can't parse, let Skyfield try
+
             satellite = EarthSatellite(line1, line2, name=f"satellite_{norad_id}")
 
             # Check if it is geostationary or geosynchronous

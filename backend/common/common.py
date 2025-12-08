@@ -16,6 +16,7 @@
 
 import functools
 import json
+import math
 import time
 import uuid
 from datetime import date, datetime, timedelta
@@ -27,6 +28,12 @@ from .logger import logger
 
 
 class ModelEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        # Force allow_nan=False to raise errors instead of producing invalid JSON
+        # We'll handle NaN/Infinity by converting to None in default()
+        kwargs["allow_nan"] = False
+        super().__init__(*args, **kwargs)
+
     def default(self, obj):
 
         if isinstance(obj, (date, datetime)):
@@ -49,7 +56,12 @@ class ModelEncoder(json.JSONEncoder):
             return int(obj)
 
         if isinstance(obj, (numpy.floating, numpy.float64)):
-            return float(obj)
+            value = float(obj)
+            # Sanitize NaN and Infinity values to null for valid JSON
+            # JavaScript's JSON.parse() cannot handle unquoted NaN/Infinity
+            if not math.isfinite(value):
+                return None
+            return value
 
         # Attempt to convert SQLAlchemy model objects
         # by reading their columns
@@ -58,6 +70,22 @@ class ModelEncoder(json.JSONEncoder):
         except AttributeError:
             # If the object is not an SQLAlchemy model row, fallback
             return super().default(obj)
+
+    def encode(self, o):
+        # Sanitize the data structure before encoding to catch regular Python floats
+        def sanitize(obj):
+            if isinstance(obj, float):
+                if not math.isfinite(obj):
+                    return None
+                return obj
+            elif isinstance(obj, dict):
+                return {k: sanitize(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [sanitize(item) for item in obj]
+            return obj
+
+        sanitized = sanitize(o)
+        return super().encode(sanitized)
 
 
 def serialize_object(obj):

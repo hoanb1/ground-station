@@ -140,6 +140,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     const controlsBoxRef = useRef(null);
     const arrowControlsRef = useRef(null);
     const elevationHistoryRef = useRef({}); // Store elevation history for each satellite
+    const mapInvalidateIntervalRef = useRef(null); // Store interval ID for cleanup
 
     const handleSetMapZoomLevel = useCallback(
         (zoomLevel) => {
@@ -244,6 +245,15 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     now
                 );
 
+                // Validate satellite position - skip if invalid
+                if (!isFinite(lat) || !isFinite(lon) || !isFinite(altitude) ||
+                    lat === 0 && lon === 0 && altitude === 0 && velocity === 0) {
+                    console.warn(
+                        `Skipping satellite ${satellite['name']} (${noradId}): Invalid position data [${lat}, ${lon}, ${altitude}]`
+                    );
+                    return;
+                }
+
                 // Let's also update the satellite info island with the new position data we have
                 let [az, el, range] = calculateSatelliteAzEl(
                     satellite['tle1'],
@@ -254,7 +264,15 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                         alt: location['alt'],
                     },
                     now
-                );
+                ) || [0, 0, 0];
+
+                // Validate AzEl data
+                if (!isFinite(az) || !isFinite(el) || !isFinite(range)) {
+                    console.warn(
+                        `Skipping satellite ${satellite['name']} (${noradId}): Invalid AzEl data [${az}, ${el}, ${range}]`
+                    );
+                    return;
+                }
 
                 // Initialize or update elevation history for this satellite
                 if (!elevationHistoryRef.current[noradId]) {
@@ -349,7 +367,9 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     // calculate paths
                     let paths = getSatellitePaths(
                         [satellite['tle1'], satellite['tle2']],
-                        orbitProjectionDuration
+                        orbitProjectionDuration,
+                        1,
+                        noradId
                     );
 
                     // past path
@@ -611,18 +631,42 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
         const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
         const initialMapZoom = savedZoomLevel ? parseFloat(savedZoomLevel) : 1;
         dispatch(setMapZoomLevel(initialMapZoom));
+
+        // Cleanup: clear the map invalidate interval when component unmounts
         return () => {
+            if (mapInvalidateIntervalRef.current) {
+                clearInterval(mapInvalidateIntervalRef.current);
+                mapInvalidateIntervalRef.current = null;
+            }
         };
     }, []);
 
     const handleWhenReady = (map) => {
         // map is ready
         MapObject = map.target;
-        setInterval(() => {
-            if (MapObject) {
-                try {
-                    MapObject.invalidateSize();
-                } catch (e) {
+
+        // Clear any existing interval before creating a new one
+        if (mapInvalidateIntervalRef.current) {
+            clearInterval(mapInvalidateIntervalRef.current);
+        }
+
+        mapInvalidateIntervalRef.current = setInterval(() => {
+            try {
+                // Check if MapObject exists and has required properties
+                if (!MapObject || !MapObject._container || !MapObject._loaded) {
+                    return;
+                }
+
+                // Additional check: verify the container element exists in DOM
+                if (!document.contains(MapObject._container)) {
+                    return;
+                }
+
+                MapObject.invalidateSize();
+            } catch (e) {
+                // Silently ignore - this can happen during rapid component unmount/remount
+                // Only log if it's not the _leaflet_pos error
+                if (!e.message.includes('_leaflet_pos')) {
                     console.error(`Error while updating map: ${e}`);
                 }
             }
