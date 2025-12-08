@@ -127,10 +127,11 @@ const ReduxStateInspectorCard = () => {
         switch (type) {
             case 'string':
                 return String(value);
-            case 'number':
+            case 'number': {
                 const num = Number(value);
                 if (isNaN(num)) throw new Error('Invalid number');
                 return num;
+            }
             case 'boolean':
                 if (value === 'true' || value === '1') return true;
                 if (value === 'false' || value === '0') return false;
