@@ -36,6 +36,19 @@ const formatNumber = (num) => {
     return num.toLocaleString();
 };
 
+const formatQueueSize = (current, max) => {
+    // If no max, just show current
+    if (max === null || max === undefined) {
+        return current || 0;
+    }
+    // If max is unreasonably large (> 1 million), treat as unlimited
+    if (max > 1000000) {
+        return `${current || 0}/∞`;
+    }
+    // Normal case: show current/max
+    return `${current || 0}/${max}`;
+};
+
 const humanizeTimestamp = (unixTimestamp) => {
     if (!unixTimestamp) return 'Never';
 
@@ -455,7 +468,7 @@ export const ComponentNode = ({ data }) => {
                                 <Stack spacing={0.25}>
                                     <MetricRow
                                         label="Queue"
-                                        value={component.source_queue_size || 0}
+                                        value={formatQueueSize(component.source_queue_size, component.source_queue_maxsize)}
                                     />
                                     <MetricRow
                                         label="Msgs"
@@ -505,7 +518,7 @@ export const ComponentNode = ({ data }) => {
                                 <Stack spacing={0.25}>
                                     <MetricRow
                                         label="Queue"
-                                        value={component.input_queue_size || 0}
+                                        value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     <MetricRow
                                         label="IQ"
@@ -538,7 +551,7 @@ export const ComponentNode = ({ data }) => {
                                 <Stack spacing={0.25}>
                                     <MetricRow
                                         label="Queue"
-                                        value={component.output_queue_size || 0}
+                                        value={formatQueueSize(component.output_queue_size, component.output_queue_maxsize)}
                                     />
                                     <MetricRow
                                         label="FFT"
@@ -565,7 +578,7 @@ export const ComponentNode = ({ data }) => {
                                 <Stack spacing={0.25}>
                                     <MetricRow
                                         label="Queue"
-                                        value={component.input_queue_size || 0}
+                                        value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     <MetricRow
                                         label="IQ"
@@ -588,7 +601,7 @@ export const ComponentNode = ({ data }) => {
                                 <Stack spacing={0.25}>
                                     <MetricRow
                                         label="Queue"
-                                        value={component.output_queue_size || 0}
+                                        value={formatQueueSize(component.output_queue_size, component.output_queue_maxsize)}
                                     />
                                     <MetricRow
                                         label="Audio"
@@ -615,7 +628,7 @@ export const ComponentNode = ({ data }) => {
                                 <Stack spacing={0.25}>
                                     <MetricRow
                                         label="Queue"
-                                        value={component.input_queue_size || 0}
+                                        value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     <MetricRow
                                         label="IQ"
@@ -661,7 +674,7 @@ export const ComponentNode = ({ data }) => {
                                 <Stack spacing={0.25}>
                                     <MetricRow
                                         label="Queue"
-                                        value={component.input_queue_size || 0}
+                                        value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     {/* IQ-based decoders (BPSK, FSK-family, LoRa, SSTVDecoderV2) receive IQ samples, others receive audio */}
                                     {(component.type === 'BPSKDecoder' || component.type === 'FSKDecoder' || component.type === 'GMSKDecoder' || component.type === 'GFSKDecoder' || component.type === 'LoRaDecoder' || component.type === 'SSTVDecoderV2') ? (

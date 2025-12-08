@@ -306,6 +306,8 @@ class PerformanceMonitor(threading.Thread):
         # Get subscriber info (thread-safe)
         with broadcaster.lock:
             source_queue_size = broadcaster.source_queue.qsize()
+            # Get source queue maxsize (multiprocessing.Queue stores it in _maxsize)
+            source_queue_maxsize = getattr(broadcaster.source_queue, "_maxsize", None)
             subscriber_count = len(broadcaster.subscribers)
 
             subscribers_info = {}
@@ -343,6 +345,7 @@ class PerformanceMonitor(threading.Thread):
 
         return {
             "source_queue_size": source_queue_size,
+            "source_queue_maxsize": source_queue_maxsize,
             "subscriber_count": subscriber_count,
             "stats": stats_snapshot,
             "rates": {
@@ -374,7 +377,9 @@ class PerformanceMonitor(threading.Thread):
         data_queue = process_info.get("data_queue")
 
         input_queue_size = iq_queue_fft.qsize() if iq_queue_fft else 0
+        input_queue_maxsize = getattr(iq_queue_fft, "_maxsize", None) if iq_queue_fft else None
         output_queue_size = data_queue.qsize() if data_queue else 0
+        output_queue_maxsize = getattr(data_queue, "_maxsize", None) if data_queue else None
 
         # Calculate rates from previous snapshot
         prev_key = f"fft_{sdr_id}"
@@ -407,7 +412,9 @@ class PerformanceMonitor(threading.Thread):
         return {
             "fft_id": sdr_id,
             "input_queue_size": input_queue_size,
+            "input_queue_maxsize": input_queue_maxsize,
             "output_queue_size": output_queue_size,
+            "output_queue_maxsize": output_queue_maxsize,
             "stats": fft_stats,
             "rates": {
                 "iq_chunks_per_sec": iq_chunks_rate,
@@ -508,7 +515,9 @@ class PerformanceMonitor(threading.Thread):
 
                 # Get queue sizes
                 input_queue_size = demod_instance.iq_queue.qsize()
+                input_queue_maxsize = getattr(demod_instance.iq_queue, "_maxsize", None)
                 output_queue_size = demod_instance.audio_queue.qsize()
+                output_queue_maxsize = getattr(demod_instance.audio_queue, "_maxsize", None)
 
                 # Calculate rates
                 prev_key = f"demod_{sdr_id}_{key}"
@@ -594,7 +603,9 @@ class PerformanceMonitor(threading.Thread):
                     "vfo_number": vfo_num,
                     "demod_id": key,
                     "input_queue_size": input_queue_size,
+                    "input_queue_maxsize": input_queue_maxsize,
                     "output_queue_size": output_queue_size,
+                    "output_queue_maxsize": output_queue_maxsize,
                     "is_alive": demod_instance.is_alive(),
                     "stats": stats_snapshot,
                     "rates": {
@@ -644,6 +655,7 @@ class PerformanceMonitor(threading.Thread):
 
             # Get queue sizes
             input_queue_size = recorder_instance.iq_queue.qsize()
+            input_queue_maxsize = getattr(recorder_instance.iq_queue, "_maxsize", None)
 
             # Calculate rates
             prev_key = f"recorder_{sdr_id}_{key}"
@@ -684,6 +696,7 @@ class PerformanceMonitor(threading.Thread):
                 "session_id": session_id,
                 "recorder_id": key,
                 "input_queue_size": input_queue_size,
+                "input_queue_maxsize": input_queue_maxsize,
                 "is_alive": recorder_instance.is_alive(),
                 "stats": stats_snapshot,
                 "rates": {
@@ -736,10 +749,13 @@ class PerformanceMonitor(threading.Thread):
 
                 # Get queue sizes - handle both audio_queue (SSTV, Morse) and iq_queue (BPSK, GMSK, LoRa)
                 input_queue_size = 0
+                input_queue_maxsize = None
                 if hasattr(decoder_instance, "audio_queue"):
                     input_queue_size = decoder_instance.audio_queue.qsize()
+                    input_queue_maxsize = getattr(decoder_instance.audio_queue, "_maxsize", None)
                 elif hasattr(decoder_instance, "iq_queue"):
                     input_queue_size = decoder_instance.iq_queue.qsize()
+                    input_queue_maxsize = getattr(decoder_instance.iq_queue, "_maxsize", None)
 
                 # Calculate rates - handle both audio-based and IQ-based decoders
                 prev_key = f"decoder_{sdr_id}_{key}"
@@ -834,6 +850,7 @@ class PerformanceMonitor(threading.Thread):
                     "vfo_number": vfo_num,
                     "decoder_id": key,
                     "input_queue_size": input_queue_size,
+                    "input_queue_maxsize": input_queue_maxsize,
                     "is_alive": decoder_instance.is_alive(),
                     "stats": stats_snapshot,
                     "rates": rates,
