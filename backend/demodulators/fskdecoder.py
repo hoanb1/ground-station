@@ -501,6 +501,12 @@ class FSKDecoder(BaseDecoderProcess):
         self.framing = config.framing
         self.config_source = config.config_source
 
+        # Validate baudrate (must be positive)
+        if not self.baudrate or self.baudrate <= 0:
+            error_msg = f"Invalid baudrate: {self.baudrate}. Must be a positive number."
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+
         # Deviation: Use config value or smart default based on baudrate
         # FSK demodulator REQUIRES a deviation value (cannot be None)
         if config.deviation is not None:
@@ -848,6 +854,17 @@ class FSKDecoder(BaseDecoderProcess):
                         # Target 8-10 samples per symbol
                         target_sps = 8
                         target_sample_rate = self.baudrate * target_sps
+
+                        # Safety check to prevent division by zero
+                        if target_sample_rate <= 0:
+                            self.logger.error(
+                                f"Invalid target_sample_rate: {target_sample_rate} (baudrate={self.baudrate})"
+                            )
+                            self._send_status_update(
+                                DecoderStatus.ERROR, {"error": "Invalid baudrate configuration"}
+                            )
+                            continue
+
                         decimation = int(self.sdr_sample_rate / target_sample_rate)
                         if decimation < 1:
                             decimation = 1
