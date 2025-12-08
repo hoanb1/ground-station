@@ -420,9 +420,10 @@ class FSKFlowgraph(gr.top_block):
             # and release shared memory segments
             gc.collect()
 
-            # Longer delay to allow system to clean up shared memory
+            # Short delay to allow system to clean up shared memory
             # GNU Radio 3.10+ has issues with rapid flowgraph creation/destruction
-            time.sleep(0.1)
+            # Reduced from 0.1s to 0.02s for better throughput
+            time.sleep(0.02)
 
     def flush_buffer(self):
         """Process any remaining samples in the buffer"""
@@ -783,7 +784,7 @@ class FSKDecoder(BaseDecoderProcess):
         # CPU and memory monitoring
         process = psutil.Process()
         last_cpu_check = time.time()
-        cpu_check_interval = 0.5  # Update CPU usage every 0.5 seconds
+        cpu_check_interval = 2.0  # Update CPU usage every 2 seconds (reduced overhead)
 
         try:
             while self.running.value == 1:  # Changed from self.running
@@ -806,7 +807,7 @@ class FSKDecoder(BaseDecoderProcess):
 
                 # Read IQ samples from iq_queue
                 try:
-                    iq_message = self.iq_queue.get(timeout=0.05)  # 50ms timeout
+                    iq_message = self.iq_queue.get(timeout=0.2)  # 200ms timeout (reduced wakeups)
 
                     # Update stats
                     with self.stats_lock:

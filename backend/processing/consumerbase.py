@@ -159,7 +159,8 @@ class ConsumerManager:
                 subscription_key = f"{subscription_prefix}:{session_id}"
 
             # Subscribe to the broadcaster to get a dedicated queue
-            subscriber_queue = iq_broadcaster.subscribe(subscription_key, maxsize=3)
+            # Increased maxsize from 3 to 10 for better burst handling on slower CPUs (RPi5)
+            subscriber_queue = iq_broadcaster.subscribe(subscription_key, maxsize=10)
 
             # Add vfo_number to kwargs for multi-VFO support
             if vfo_number is not None:
