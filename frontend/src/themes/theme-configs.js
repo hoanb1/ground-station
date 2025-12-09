@@ -294,7 +294,7 @@ export const themeConfigs = {
         },
     },
 
-    'submarine': {
+    'sonar': {
         mode: 'dark',
         primary: { main: '#ffb000' }, // Amber sonar
         secondary: { main: '#ff6600' }, // Deep sea rust
@@ -384,7 +384,7 @@ export function getAvailableThemesWithMetadata() {
         { id: 'sunset-orange', name: 'Sunset Orange' },
         { id: 'stalker', name: 'S.T.A.L.K.E.R.' },
         { id: 'terminal', name: 'Terminal' },
-        { id: 'submarine', name: 'Submarine' },
+        { id: 'sonar', name: 'Sonar' },
     ];
 }
 

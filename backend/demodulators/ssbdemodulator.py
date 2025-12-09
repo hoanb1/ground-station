@@ -102,8 +102,19 @@ class SSBDemodulator(threading.Thread):
             "queue_timeouts": 0,
             "last_activity": None,
             "errors": 0,
+            # Ingest-side flow metrics (updated every ~1s)
+            "ingest_samples_per_sec": 0.0,
+            "ingest_chunks_per_sec": 0.0,
+            # Out-of-band accounting
+            "samples_dropped_out_of_band": 0,
+            # Sleeping state (VFO out of SDR bandwidth)
+            "is_sleeping": False,
         }
         self.stats_lock = threading.Lock()
+
+        # Track sleeping state (mirror in stats["is_sleeping"])
+        self.is_sleeping = False
+        self.sleep_reason = None
 
     def _get_active_vfo(self):
         """Get the VFO state for this demodulator's VFO."""
@@ -271,6 +282,12 @@ class SSBDemodulator(threading.Thread):
         decimation_state = None
         audio_filter_state = None
 
+        # Ingest-rate tracking and stats heartbeat
+        ingest_window_start = time.time()
+        ingest_samples_accum = 0
+        ingest_chunks_accum = 0
+        last_stats_time = time.time()
+
         while self.running:
             try:
 
@@ -298,6 +315,9 @@ class SSBDemodulator(threading.Thread):
                 # Update sample count
                 with self.stats_lock:
                     self.stats["iq_samples_in"] += len(samples)
+                # Update ingest accumulators regardless of DSP path
+                ingest_samples_accum += len(samples)
+                ingest_chunks_accum += 1
 
                 # Determine VFO parameters based on mode
                 if self.internal_mode:
@@ -377,6 +397,38 @@ class SSBDemodulator(threading.Thread):
                 if vfo_center_freq == 0:
                     logger.debug("VFO frequency not set, skipping frame")
                     continue
+
+                # Validate VFO center is within SDR bandwidth (with edge margin)
+                offset = vfo_center_freq - sdr_center_freq
+                half_bw = sdr_sample_rate / 2.0
+                usable = half_bw * 0.98
+                is_in_band = abs(offset) <= usable
+                margin = usable - abs(offset)
+
+                if not is_in_band:
+                    # VFO is outside SDR bandwidth - enter sleeping state and skip DSP
+                    with self.stats_lock:
+                        self.stats["samples_dropped_out_of_band"] += len(samples)
+                        self.stats["is_sleeping"] = True
+                    if not self.is_sleeping:
+                        self.is_sleeping = True
+                        self.sleep_reason = (
+                            f"VFO out of SDR bandwidth: VFO={vfo_center_freq/1e6:.3f}MHz, "
+                            f"SDR={sdr_center_freq/1e6:.3f}MHz±{(sdr_sample_rate/2)/1e6:.2f}MHz, "
+                            f"offset={offset/1e3:.1f}kHz, exceeded by {abs(margin)/1e3:.1f}kHz"
+                        )
+                        logger.warning(self.sleep_reason)
+                    continue
+
+                # If we were sleeping and now back in band, resume
+                if self.is_sleeping:
+                    self.is_sleeping = False
+                    with self.stats_lock:
+                        self.stats["is_sleeping"] = False
+                    logger.info(
+                        f"VFO back in SDR bandwidth, resuming SSB demodulation: VFO={vfo_center_freq/1e6:.3f}MHz, "
+                        f"SDR={sdr_center_freq/1e6:.3f}MHz, offset={offset/1e3:.1f}kHz"
+                    )
 
                 offset_freq = vfo_center_freq - sdr_center_freq
                 if abs(offset_freq) > sdr_sample_rate / 2:
@@ -538,6 +590,30 @@ class SSBDemodulator(threading.Thread):
                     with self.stats_lock:
                         self.stats["errors"] += 1
                 time.sleep(0.1)
+            finally:
+                # Time-based stats tick (every ~1s), compute ingest rates regardless of processing state
+                now = time.time()
+                if now - last_stats_time >= 1.0:
+                    dt = now - ingest_window_start
+                    if dt > 0:
+                        ingest_sps = ingest_samples_accum / dt
+                        ingest_cps = ingest_chunks_accum / dt
+                    else:
+                        ingest_sps = 0.0
+                        ingest_cps = 0.0
+
+                    with self.stats_lock:
+                        self.stats["ingest_samples_per_sec"] = ingest_sps
+                        self.stats["ingest_chunks_per_sec"] = ingest_cps
+                        self.stats["is_sleeping"] = self.is_sleeping
+
+                    # Reset window
+                    ingest_window_start = now
+                    ingest_samples_accum = 0
+                    ingest_chunks_accum = 0
+
+                    # Advance the stats tick reference to ensure ~1s cadence
+                    last_stats_time = now
 
         logger.info(f"SSB demodulator stopped for session {self.session_id}")
 

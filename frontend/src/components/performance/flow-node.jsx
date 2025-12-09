@@ -253,17 +253,12 @@ export const ComponentNode = ({ data }) => {
                     p: 0,
                     minWidth: (type === 'fft' || type === 'worker' || type === 'tracker' || type === 'decoder') ? 380 : 280,
                     backgroundColor: (theme) => theme.palette.background?.paper || theme.palette.background.paper,
-                    border: 1,
-                    borderColor: (theme) => theme.palette.mode === 'dark'
-                        ? 'rgba(255, 255, 255, 0.08)'
-                        : 'rgba(0, 0, 0, 0.08)',
+                    // Remove outside border entirely
+                    border: 0,
                     borderRadius: 1.5,
                     overflow: 'hidden',
-                    transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                    transition: 'box-shadow 0.2s ease',
                     '&:hover': {
-                        borderColor: (theme) => theme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.15)'
-                            : 'rgba(0, 0, 0, 0.15)',
                         boxShadow: (theme) => theme.palette.mode === 'dark'
                             ? '0 2px 8px rgba(0, 0, 0, 0.4)'
                             : '0 2px 8px rgba(0, 0, 0, 0.08)',
@@ -294,6 +289,23 @@ export const ComponentNode = ({ data }) => {
                         {data.label}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {(type === 'decoder' || type === 'demodulator') && component?.stats?.is_sleeping && (
+                            <Chip
+                                size="small"
+                                label="Sleeping"
+                                color="warning"
+                                variant="filled"
+                                sx={{
+                                    height: 18,
+                                    fontSize: '0.6rem',
+                                    px: 0.5,
+                                    '& .MuiChip-label': {
+                                        p: 0.25,
+                                        px: 0.5,
+                                    },
+                                }}
+                            />
+                        )}
                         {component.stats?.last_activity && (
                             <Tooltip title={`Last activity: ${new Date(component.stats.last_activity * 1000).toLocaleString()}`} arrow>
                                 <Typography 
@@ -589,6 +601,21 @@ export const ComponentNode = ({ data }) => {
                                         value={formatRate(component.rates?.iq_chunks_in_per_sec)}
                                         unit="/s"
                                     />
+                                    {/* Ingest-side rate from demodulator stats (available even when skipping processing) */}
+                                    {component.stats?.ingest_samples_per_sec !== undefined && (
+                                        <MetricRow
+                                            label="Ingest"
+                                            value={`${(component.stats.ingest_samples_per_sec/1000).toFixed(1)}`}
+                                            unit="kS/s"
+                                        />
+                                    )}
+                                    {component.stats?.ingest_chunks_per_sec !== undefined && (
+                                        <MetricRow
+                                            label="Chunks"
+                                            value={component.stats.ingest_chunks_per_sec.toFixed(2)}
+                                            unit="/s"
+                                        />
+                                    )}
                                 </Stack>
                             </Box>
                             {/* Vertical divider */}
@@ -688,6 +715,21 @@ export const ComponentNode = ({ data }) => {
                                                 value={formatRate(component.rates?.iq_chunks_in_per_sec || component.rates?.samples_in_per_sec)}
                                                 unit="/s"
                                             />
+                                            {/* Ingest-side rate from decoder stats (available even when skipping processing) */}
+                                            {component.stats?.ingest_samples_per_sec !== undefined && (
+                                                <MetricRow
+                                                    label="Ingest"
+                                                    value={`${(component.stats.ingest_samples_per_sec/1000).toFixed(1)}`}
+                                                    unit="kS/s"
+                                                />
+                                            )}
+                                            {component.stats?.ingest_chunks_per_sec !== undefined && (
+                                                <MetricRow
+                                                    label="Chunks"
+                                                    value={component.stats.ingest_chunks_per_sec.toFixed(2)}
+                                                    unit="/s"
+                                                />
+                                            )}
                                         </>
                                     ) : (
                                         <>

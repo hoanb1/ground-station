@@ -86,8 +86,19 @@ class AMDemodulator(threading.Thread):
             "queue_timeouts": 0,
             "last_activity": None,
             "errors": 0,
+            # Ingest-side flow metrics (updated every ~1s)
+            "ingest_samples_per_sec": 0.0,
+            "ingest_chunks_per_sec": 0.0,
+            # Out-of-band accounting
+            "samples_dropped_out_of_band": 0,
+            # Sleeping state (VFO out of SDR bandwidth)
+            "is_sleeping": False,
         }
         self.stats_lock = threading.Lock()
+
+        # Track sleeping state (mirror in stats["is_sleeping"])
+        self.is_sleeping = False
+        self.sleep_reason = None
 
     def _get_active_vfo(self):
         """Get VFO state for this demodulator's VFO."""
@@ -239,6 +250,21 @@ class AMDemodulator(threading.Thread):
 
         return demodulated
 
+    def _is_vfo_in_sdr_bandwidth(
+        self, vfo_center: float, sdr_center: float, sdr_sample_rate: float
+    ):
+        """
+        Check if VFO center frequency is within SDR bandwidth (with small edge margin).
+
+        Returns tuple: (is_in_band, offset_from_sdr_center, margin_hz)
+        """
+        offset = vfo_center - sdr_center
+        half_sdr_bandwidth = sdr_sample_rate / 2.0
+        usable_bandwidth = half_sdr_bandwidth * 0.98  # 2% margin for roll-off
+        is_in_band = abs(offset) <= usable_bandwidth
+        margin_hz = usable_bandwidth - abs(offset)
+        return is_in_band, offset, margin_hz
+
     def run(self):
         """Main demodulator loop."""
         logger.info(f"AM demodulator started for session {self.session_id}")
@@ -247,6 +273,12 @@ class AMDemodulator(threading.Thread):
         decimation_state = None
         audio_filter_state = None
         dc_blocker_state = None
+
+        # Ingest-rate tracking and stats heartbeat
+        ingest_window_start = time.time()
+        ingest_samples_accum = 0
+        ingest_chunks_accum = 0
+        last_stats_time = time.time()
 
         while self.running:
             try:
@@ -285,9 +317,11 @@ class AMDemodulator(threading.Thread):
                 if samples is None or len(samples) == 0:
                     continue
 
-                # Update sample count
+                # Update sample count and ingest accumulators
                 with self.stats_lock:
                     self.stats["iq_samples_in"] += len(samples)
+                ingest_samples_accum += len(samples)
+                ingest_chunks_accum += 1
 
                 # Check if we need to reinitialize filters
                 if (
@@ -332,13 +366,38 @@ class AMDemodulator(threading.Thread):
                     logger.debug("VFO frequency not set, skipping frame")
                     continue
 
-                offset_freq = vfo_state.center_freq - sdr_center_freq
-                if abs(offset_freq) > sdr_sample_rate / 2:
-                    logger.debug(
-                        f"VFO frequency {vfo_state.center_freq} Hz is outside SDR bandwidth "
-                        f"(SDR center: {sdr_center_freq} Hz, rate: {sdr_sample_rate} Hz)"
-                    )
+                # Validate VFO center is within SDR bandwidth (with edge margin)
+                is_in_band, vfo_offset, margin = self._is_vfo_in_sdr_bandwidth(
+                    vfo_state.center_freq, sdr_center_freq, sdr_sample_rate
+                )
+
+                if not is_in_band:
+                    # VFO is outside SDR bandwidth - enter sleeping state, skip DSP for this chunk
+                    with self.stats_lock:
+                        self.stats["samples_dropped_out_of_band"] += len(samples)
+                    if not self.is_sleeping:
+                        self.is_sleeping = True
+                        self.sleep_reason = (
+                            f"VFO out of SDR bandwidth: VFO={vfo_state.center_freq/1e6:.3f}MHz, "
+                            f"SDR={sdr_center_freq/1e6:.3f}MHz±{(sdr_sample_rate/2)/1e6:.2f}MHz, "
+                            f"offset={vfo_offset/1e3:.1f}kHz, exceeded by {abs(margin)/1e3:.1f}kHz"
+                        )
+                        logger.warning(self.sleep_reason)
+                    with self.stats_lock:
+                        self.stats["is_sleeping"] = True
                     continue
+
+                # If we were sleeping and now back in band, resume
+                if self.is_sleeping:
+                    self.is_sleeping = False
+                    with self.stats_lock:
+                        self.stats["is_sleeping"] = False
+                    logger.info(
+                        f"VFO back in SDR bandwidth, resuming AM demodulation: VFO={vfo_state.center_freq/1e6:.3f}MHz, "
+                        f"SDR={sdr_center_freq/1e6:.3f}MHz, offset={vfo_offset/1e3:.1f}kHz"
+                    )
+
+                offset_freq = vfo_state.center_freq - sdr_center_freq
 
                 translated = self._frequency_translate(samples, offset_freq, sdr_sample_rate)
 
@@ -479,6 +538,30 @@ class AMDemodulator(threading.Thread):
                     with self.stats_lock:
                         self.stats["errors"] += 1
                 time.sleep(0.1)
+            finally:
+                # Time-based stats tick (every ~1s), compute ingest rates regardless of processing state
+                now = time.time()
+                if now - last_stats_time >= 1.0:
+                    dt = now - ingest_window_start
+                    if dt > 0:
+                        ingest_sps = ingest_samples_accum / dt
+                        ingest_cps = ingest_chunks_accum / dt
+                    else:
+                        ingest_sps = 0.0
+                        ingest_cps = 0.0
+
+                    with self.stats_lock:
+                        self.stats["ingest_samples_per_sec"] = ingest_sps
+                        self.stats["ingest_chunks_per_sec"] = ingest_cps
+                        self.stats["is_sleeping"] = self.is_sleeping
+
+                    # Reset window
+                    ingest_window_start = now
+                    ingest_samples_accum = 0
+                    ingest_chunks_accum = 0
+
+                    # Advance the stats tick reference to ensure ~1s cadence
+                    last_stats_time = now
 
         logger.info(f"AM demodulator stopped for session {self.session_id}")
 

@@ -33,6 +33,7 @@ class DecoderStatus(Enum):
     LISTENING = "listening"
     CAPTURING = "capturing"
     PROCESSING = "processing"
+    SLEEPING = "sleeping"  # VFO out of SDR bandwidth
     COMPLETED = "completed"
     ERROR = "error"
 
@@ -221,6 +222,10 @@ class SSTVDecoderV2(BaseDecoderProcess):
         # Cached VFO state from IQ messages
         self.cached_vfo_state = None
 
+        # Sleeping state when VFO is out of SDR bandwidth
+        self.is_sleeping = False
+        self.sleep_reason = None
+
         os.makedirs(self.output_dir, exist_ok=True)
         logger.info(f"SSTV decoder v2 initialized for session {session_id}, VFO {vfo}")
 
@@ -295,6 +300,19 @@ class SSTVDecoderV2(BaseDecoderProcess):
         b, a = signal.bilinear([1], [1 / omega, 1], sample_rate)
         return (b, a)
 
+    def _is_vfo_in_sdr_bandwidth(self, vfo_center, sdr_center, sdr_sample_rate):
+        """
+        Check if VFO center frequency is within SDR bandwidth (with small edge margin).
+
+        Returns tuple: (is_in_band, offset_from_sdr_center, margin_hz)
+        """
+        offset = vfo_center - sdr_center
+        half_sdr_bandwidth = sdr_sample_rate / 2
+        usable_bandwidth = half_sdr_bandwidth * 0.98  # 2% margin for roll-off
+        is_in_band = abs(offset) <= usable_bandwidth
+        margin_hz = usable_bandwidth - abs(offset)
+        return is_in_band, offset, margin_hz
+
     def _fm_demodulate(self, samples):
         """Demodulate FM using phase differentiation."""
         diff = samples[1:] * np.conj(samples[:-1])
@@ -309,7 +327,7 @@ class SSTVDecoderV2(BaseDecoderProcess):
         self.last_sample = samples[-1]
         return demodulated
 
-    def _send_status_update(self, status, mode_name=None):
+    def _send_status_update(self, status, mode_name=None, info=None):
         """Send status update to UI"""
         msg = {
             "type": "decoder-status",
@@ -321,6 +339,8 @@ class SSTVDecoderV2(BaseDecoderProcess):
             "vfo": self.vfo,
             "timestamp": time.time(),
         }
+        if info:
+            msg["info"] = info
         try:
             self.data_queue.put(msg, block=False)
             with self.stats_lock:
@@ -330,15 +350,25 @@ class SSTVDecoderV2(BaseDecoderProcess):
 
     def _send_stats_update(self):
         """Send statistics update to UI and performance monitor"""
-        # UI-friendly stats
-        ui_stats = {
-            "images_decoded": self.stats.get("images_decoded", 0),
-            "audio_sample_rate": self.audio_sample_rate,
-        }
-
         # Full performance stats for monitoring (thread-safe copy)
         with self.stats_lock:
             perf_stats = self.stats.copy()
+            ingest_sps = perf_stats.get("ingest_samples_per_sec", 0.0)
+            ingest_cps = perf_stats.get("ingest_chunks_per_sec", 0.0)
+
+        # UI-friendly stats (include ingest rates so UI can display flow even when sleeping)
+        ui_stats = {
+            "images_decoded": self.stats.get("images_decoded", 0),
+            "audio_sample_rate": self.audio_sample_rate,
+            "is_sleeping": getattr(self, "is_sleeping", False),
+            # Coerce possibly None values to float before rounding/dividing for mypy safety
+            "ingest_samples_per_sec": round(float(ingest_sps or 0.0), 1),
+            "ingest_chunks_per_sec": round(float(ingest_cps or 0.0), 2),
+            "ingest_kSps": round(float(ingest_sps or 0.0) / 1e3, 2),
+        }
+
+        # Add sleeping state to performance stats
+        perf_stats["is_sleeping"] = getattr(self, "is_sleeping", False)
 
         msg = {
             "type": "decoder-stats",
@@ -798,6 +828,11 @@ class SSTVDecoderV2(BaseDecoderProcess):
             "cpu_percent": 0.0,
             "memory_mb": 0.0,
             "memory_percent": 0.0,
+            # Ingest-side flow metrics (updated every stats tick)
+            "ingest_samples_per_sec": 0.0,
+            "ingest_chunks_per_sec": 0.0,
+            # Out-of-band accounting
+            "samples_dropped_out_of_band": 0,
         }
 
         self._send_status_update(DecoderStatus.LISTENING)
@@ -810,6 +845,11 @@ class SSTVDecoderV2(BaseDecoderProcess):
         # Stats tracking
         last_stats_time = time.time()
         stats_interval = 1.0  # Send stats every 1 second
+
+        # Track ingest rates regardless of decoding state (in-band or out-of-band)
+        ingest_window_start = time.time()
+        ingest_samples_accum = 0
+        ingest_chunks_accum = 0
 
         # FM demodulator filter states
         decimation_state = None
@@ -839,140 +879,229 @@ class SSTVDecoderV2(BaseDecoderProcess):
                         last_cpu_check = current_time
                     except Exception as e:
                         logger.debug(f"Error updating CPU/memory usage: {e}")
-                # Read IQ samples from iq_queue
+                # Per-iteration work; ensure stats tick executes even on `continue`
                 try:
-                    iq_message = self.iq_queue.get(timeout=0.1)
+                    # Read IQ samples from iq_queue
+                    try:
+                        iq_message = self.iq_queue.get(timeout=0.1)
+                    except queue.Empty:
+                        with self.stats_lock:
+                            self.stats["queue_timeouts"] += 1  # type: ignore[operator]
+                        iq_message = None
 
-                    with self.stats_lock:
-                        self.stats["iq_chunks_in"] += 1  # type: ignore[operator]
-                        self.stats["last_activity"] = time.time()
+                    if iq_message is None:
+                        # nothing to process this iteration
+                        pass
+                    else:
+                        with self.stats_lock:
+                            self.stats["iq_chunks_in"] += 1  # type: ignore[operator]
+                            self.stats["last_activity"] = time.time()
 
-                    # Extract IQ samples and metadata
-                    samples = iq_message.get("samples")
-                    sdr_center = iq_message.get("center_freq")
-                    sdr_rate = iq_message.get("sample_rate")
+                        # Extract IQ samples and metadata
+                        samples = iq_message.get("samples")
+                        sdr_center = iq_message.get("center_freq")
+                        sdr_rate = iq_message.get("sample_rate")
 
-                    if samples is None or len(samples) == 0:
-                        continue
-
-                    with self.stats_lock:
-                        self.stats["iq_samples_in"] += len(samples)  # type: ignore[operator]
-
-                    # Get VFO parameters from IQ message
-                    vfo_states = iq_message.get("vfo_states", {})
-                    vfo_state_dict = vfo_states.get(self.vfo)
-
-                    if not vfo_state_dict or not vfo_state_dict.get("active", False):
-                        continue  # VFO not active
-
-                    # Cache VFO state for metadata
-                    self.cached_vfo_state = vfo_state_dict
-
-                    vfo_center = vfo_state_dict.get("center_freq", 0)
-                    vfo_bandwidth = vfo_state_dict.get("bandwidth", 12500)  # 12.5kHz for SSTV
-
-                    # Initialize on first message
-                    if self.sdr_sample_rate is None:
-                        self.sdr_sample_rate = sdr_rate
-
-                        # Design filters
-                        stages, total_decimation = self._design_decimation_filter(
-                            sdr_rate, vfo_bandwidth
-                        )
-                        self.decimation_filter = (stages, total_decimation)
-
-                        intermediate_rate = sdr_rate / total_decimation
-                        self.audio_filter = self._design_audio_filter(
-                            intermediate_rate, vfo_bandwidth
-                        )
-                        self.deemphasis_filter = self._design_deemphasis_filter(intermediate_rate)
-
-                        # Initialize filter states
-                        initial_value = samples[0] if len(samples) > 0 else 0
-                        decimation_state = []
-                        for (b, a), _ in stages:
-                            state = signal.lfilter_zi(b, a) * initial_value
-                            decimation_state.append(state)
-
-                        audio_filter_state = signal.lfilter_zi(self.audio_filter, 1) * 0
-                        b_deemph, a_deemph = self.deemphasis_filter
-                        deemph_state = signal.lfilter_zi(b_deemph, a_deemph) * 0
-
-                        logger.info(
-                            f"SSTV decoder initialized: SDR={sdr_rate / 1e6:.2f}MS/s, "
-                            f"VFO={vfo_center / 1e6:.3f}MHz, BW={vfo_bandwidth / 1e3:.0f}kHz, "
-                            f"decimation={total_decimation}, intermediate={intermediate_rate / 1e3:.1f}kHz"
-                        )
-
-                    # Step 1: Frequency translation
-                    offset_freq = vfo_center - sdr_center
-                    translated = self._frequency_translate(samples, offset_freq, sdr_rate)
-
-                    # Step 2: Multi-stage decimation
-                    stages, total_decimation = self.decimation_filter  # type: ignore[misc]
-                    decimated = translated
-                    for stage_idx, ((b, a), stage_decimation) in enumerate(stages):
-                        if decimation_state is None or stage_idx >= len(decimation_state):
-                            if decimation_state is None:
-                                decimation_state = []
-                            decimation_state.append(signal.lfilter_zi(b, a) * decimated[0])
-
-                        filtered, decimation_state[stage_idx] = signal.lfilter(
-                            b, a, decimated, zi=decimation_state[stage_idx]
-                        )
-                        decimated = filtered[::stage_decimation]
-
-                    intermediate_rate = sdr_rate / total_decimation
-
-                    # Step 3: FM demodulation
-                    demodulated = self._fm_demodulate(decimated)
-
-                    # Step 4: Audio filtering
-                    if audio_filter_state is None:
-                        audio_filter_state = (
-                            signal.lfilter_zi(self.audio_filter, 1) * demodulated[0]
-                        )
-                    audio_filtered, audio_filter_state = signal.lfilter(
-                        self.audio_filter, 1, demodulated, zi=audio_filter_state
-                    )
-
-                    # Step 5: De-emphasis
-                    b, a = self.deemphasis_filter  # type: ignore[misc]
-                    if deemph_state is None:
-                        deemph_state = signal.lfilter_zi(b, a) * audio_filtered[0]
-                    deemphasized, deemph_state = signal.lfilter(
-                        b, a, audio_filtered, zi=deemph_state
-                    )
-
-                    # Step 6: Resample to audio rate (44.1 kHz)
-                    num_output_samples = int(
-                        len(deemphasized) * self.audio_sample_rate / intermediate_rate
-                    )
-                    if num_output_samples > 0:
-                        audio = signal.resample(deemphasized, num_output_samples)
-                        audio = audio.astype(np.float32)
+                        if samples is None or len(samples) == 0:
+                            continue
 
                         with self.stats_lock:
-                            self.stats["audio_samples_generated"] += len(audio)  # type: ignore[operator]
+                            self.stats["iq_samples_in"] += len(samples)  # type: ignore[operator]
 
-                        # Step 7: SSTV processing
-                        if processing:
-                            next_decode_buffer = np.concatenate([next_decode_buffer, audio])
-                            max_next_buffer = int(self.audio_sample_rate * 5.0)
-                            if len(next_decode_buffer) > max_next_buffer:
-                                next_decode_buffer = next_decode_buffer[-max_next_buffer:]
+                        # Update ingest accumulators (count what we pull, even if we skip processing)
+                        ingest_samples_accum += len(samples)
+                        ingest_chunks_accum += 1
+
+                        # Get VFO parameters from IQ message
+                        vfo_states = iq_message.get("vfo_states", {})
+                        vfo_state_dict = vfo_states.get(self.vfo)
+
+                        if not vfo_state_dict or not vfo_state_dict.get("active", False):
+                            continue  # VFO not active
+
+                        # Cache VFO state for metadata
+                        self.cached_vfo_state = vfo_state_dict
+
+                        vfo_center = vfo_state_dict.get("center_freq", 0)
+                        vfo_bandwidth = vfo_state_dict.get("bandwidth", 12500)  # 12.5kHz for SSTV
+
+                        # Validate VFO center is within SDR bandwidth
+                        is_in_band, vfo_offset, margin = self._is_vfo_in_sdr_bandwidth(
+                            vfo_center, sdr_center, sdr_rate
+                        )
+
+                        if not is_in_band:
+                            # VFO is outside SDR bandwidth - enter sleeping state
+                            with self.stats_lock:
+                                # Safely increment (mypy-safe in case initial value is None)
+                                current_dropped = int(
+                                    (self.stats.get("samples_dropped_out_of_band", 0) or 0)
+                                )
+                                self.stats["samples_dropped_out_of_band"] = current_dropped + len(
+                                    samples
+                                )
+
+                            if not self.is_sleeping:
+                                self.is_sleeping = True
+                                sdr_bw_mhz = sdr_rate / 1e6
+                                self.sleep_reason = (
+                                    f"VFO out of SDR bandwidth: VFO={vfo_center/1e6:.3f}MHz, "
+                                    f"SDR={sdr_center/1e6:.3f}MHz±{sdr_bw_mhz/2:.2f}MHz, "
+                                    f"offset={vfo_offset/1e3:.1f}kHz, exceeded by {abs(margin)/1e3:.1f}kHz"
+                                )
+                                logger.warning(self.sleep_reason)
+                                self._send_status_update(
+                                    DecoderStatus.SLEEPING,
+                                    mode_name=None,
+                                    info={
+                                        "reason": "vfo_out_of_sdr_bandwidth",
+                                        "vfo_center_mhz": round(vfo_center / 1e6, 3),
+                                        "sdr_center_mhz": round(sdr_center / 1e6, 3),
+                                        "sdr_bandwidth_mhz": round(sdr_rate / 1e6, 2),
+                                        "vfo_offset_khz": round(vfo_offset / 1e3, 1),
+                                        "exceeded_by_khz": round(abs(margin) / 1e3, 1),
+                                        "samples_dropped": self.stats[
+                                            "samples_dropped_out_of_band"
+                                        ],
+                                    },
+                                )
+                            continue  # Skip DSP for this chunk
+
+                        # If we were sleeping and now back in band, resume
+                        if self.is_sleeping:
+                            self.is_sleeping = False
+                            logger.info(
+                                f"VFO back in SDR bandwidth, resuming: VFO={vfo_center/1e6:.3f}MHz, "
+                                f"SDR={sdr_center/1e6:.3f}MHz, offset={vfo_offset/1e3:.1f}kHz"
+                            )
+                            # For SSTV, LISTENING is the idle state
+                            self._send_status_update(
+                                DecoderStatus.LISTENING,
+                                mode_name=None,
+                                info={
+                                    "resumed_from_sleep": True,
+                                    "vfo_center_mhz": round(vfo_center / 1e6, 3),
+                                    "sdr_center_mhz": round(sdr_center / 1e6, 3),
+                                },
+                            )
+
+                        # Initialize on first message
+                        if self.sdr_sample_rate is None:
+                            self.sdr_sample_rate = sdr_rate
+
+                            # Design filters
+                            stages, total_decimation = self._design_decimation_filter(
+                                sdr_rate, vfo_bandwidth
+                            )
+                            self.decimation_filter = (stages, total_decimation)
+
+                            intermediate_rate = sdr_rate / total_decimation
+                            self.audio_filter = self._design_audio_filter(
+                                intermediate_rate, vfo_bandwidth
+                            )
+                            self.deemphasis_filter = self._design_deemphasis_filter(
+                                intermediate_rate
+                            )
+
+                            # Initialize filter states
+                            initial_value = samples[0] if len(samples) > 0 else 0
+                            decimation_state = []
+                            for (b, a), _ in stages:
+                                state = signal.lfilter_zi(b, a) * initial_value
+                                decimation_state.append(state)
+
+                            audio_filter_state = signal.lfilter_zi(self.audio_filter, 1) * 0
+                            b_deemph, a_deemph = self.deemphasis_filter
+                            deemph_state = signal.lfilter_zi(b_deemph, a_deemph) * 0
+
+                            logger.info(
+                                f"SSTV decoder initialized: SDR={sdr_rate / 1e6:.2f}MS/s, "
+                                f"VFO={vfo_center / 1e6:.3f}MHz, BW={vfo_bandwidth / 1e3:.0f}kHz, "
+                                f"decimation={total_decimation}, intermediate={intermediate_rate / 1e3:.1f}kHz"
+                            )
+
+                        # Step 1: Frequency translation
+                        offset_freq = vfo_center - sdr_center
+                        translated = self._frequency_translate(samples, offset_freq, sdr_rate)
+
+                        # Step 2: Multi-stage decimation
+                        stages, total_decimation = self.decimation_filter  # type: ignore[misc]
+                        decimated = translated
+                        for stage_idx, ((b, a), stage_decimation) in enumerate(stages):
+                            if decimation_state is None or stage_idx >= len(decimation_state):
+                                if decimation_state is None:
+                                    decimation_state = []
+                                decimation_state.append(signal.lfilter_zi(b, a) * decimated[0])
+
+                            filtered, decimation_state[stage_idx] = signal.lfilter(
+                                b, a, decimated, zi=decimation_state[stage_idx]
+                            )
+                            decimated = filtered[::stage_decimation]
+
+                        intermediate_rate = sdr_rate / total_decimation
+
+                        # Step 3: FM demodulation
+                        demodulated = self._fm_demodulate(decimated)
+
+                        # Step 4: Audio filtering
+                        if audio_filter_state is None:
+                            audio_filter_state = (
+                                signal.lfilter_zi(self.audio_filter, 1) * demodulated[0]
+                            )
+                        audio_filtered, audio_filter_state = signal.lfilter(
+                            self.audio_filter, 1, demodulated, zi=audio_filter_state
+                        )
+
+                        # Step 5: De-emphasis
+                        b, a = self.deemphasis_filter  # type: ignore[misc]
+                        if deemph_state is None:
+                            deemph_state = signal.lfilter_zi(b, a) * audio_filtered[0]
+                        deemphasized, deemph_state = signal.lfilter(
+                            b, a, audio_filtered, zi=deemph_state
+                        )
+
+                        # Step 6: Resample to audio rate (44.1 kHz)
+                        num_output_samples = int(
+                            len(deemphasized) * self.audio_sample_rate / intermediate_rate
+                        )
+                        if num_output_samples > 0:
+                            audio = signal.resample(deemphasized, num_output_samples)
+                            audio = audio.astype(np.float32)
+
+                            with self.stats_lock:
+                                self.stats["audio_samples_generated"] += len(audio)  # type: ignore[operator]
+
+                            # Step 7: SSTV processing
+                            if processing:
+                                next_decode_buffer = np.concatenate([next_decode_buffer, audio])
+                                max_next_buffer = int(self.audio_sample_rate * 5.0)
+                                if len(next_decode_buffer) > max_next_buffer:
+                                    next_decode_buffer = next_decode_buffer[-max_next_buffer:]
+                            else:
+                                self.audio_buffer = np.concatenate([self.audio_buffer, audio])
+                finally:
+                    # Time-based stats tick (every ~1s), compute ingest rates regardless of processing state
+                    current_time = time.time()
+                    if current_time - last_stats_time >= stats_interval:
+                        dt = current_time - ingest_window_start
+                        if dt > 0:
+                            ingest_sps = ingest_samples_accum / dt
+                            ingest_cps = ingest_chunks_accum / dt
                         else:
-                            self.audio_buffer = np.concatenate([self.audio_buffer, audio])
+                            ingest_sps = 0.0
+                            ingest_cps = 0.0
 
-                except queue.Empty:
-                    with self.stats_lock:
-                        self.stats["queue_timeouts"] += 1  # type: ignore[operator]
+                        with self.stats_lock:
+                            self.stats["ingest_samples_per_sec"] = ingest_sps
+                            self.stats["ingest_chunks_per_sec"] = ingest_cps
 
-                # Send stats periodically
-                current_time = time.time()
-                if current_time - last_stats_time >= stats_interval:
-                    self._send_stats_update()
-                    last_stats_time = current_time
+                        # Reset window
+                        ingest_window_start = current_time
+                        ingest_samples_accum = 0
+                        ingest_chunks_accum = 0
+
+                        self._send_stats_update()
+                        last_stats_time = current_time
 
                 # SSTV decode logic
                 if len(self.audio_buffer) < min_buffer_size:

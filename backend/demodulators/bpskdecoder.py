@@ -101,6 +101,7 @@ class DecoderStatus(Enum):
     LISTENING = "listening"
     DETECTING = "detecting"
     DECODING = "decoding"
+    SLEEPING = "sleeping"  # VFO out of SDR bandwidth
     COMPLETED = "completed"
     ERROR = "error"
 
@@ -581,6 +582,11 @@ class BPSKDecoder(BaseDecoderProcess):
             "packets_decoded": 0,
             "last_activity": None,
             "errors": 0,
+            # Ingest-side flow metrics (updated every stats tick)
+            "ingest_samples_per_sec": 0.0,
+            "ingest_chunks_per_sec": 0.0,
+            # Out-of-band accounting
+            "samples_dropped_out_of_band": 0,
         }
 
         # Signal power measurement (from BaseDecoder)
@@ -590,6 +596,10 @@ class BPSKDecoder(BaseDecoderProcess):
 
         # Cached VFO state (populated from IQ messages)
         self.cached_vfo_state = None
+
+        # Track sleeping state to avoid spamming status updates
+        self.is_sleeping = False
+        self.sleep_reason = None
 
     def _get_decoder_type_for_init(self) -> str:
         """Return decoder type for process naming."""
@@ -681,6 +691,19 @@ class BPSKDecoder(BaseDecoderProcess):
             return "ccsds"
         return "ax25"
 
+    def _is_vfo_in_sdr_bandwidth(self, vfo_center, sdr_center, sdr_sample_rate):
+        """
+        Check if VFO center frequency is within SDR bandwidth (with small edge margin).
+
+        Returns tuple: (is_in_band, offset_from_sdr_center, margin_hz)
+        """
+        offset = vfo_center - sdr_center
+        half_sdr_bandwidth = sdr_sample_rate / 2
+        usable_bandwidth = half_sdr_bandwidth * 0.98  # 2% margin for roll-off
+        is_in_band = abs(offset) <= usable_bandwidth
+        margin_hz = usable_bandwidth - abs(offset)
+        return is_in_band, offset, margin_hz
+
     def _on_flowgraph_status(self, status, info=None):
         """Callback when flowgraph status changes"""
         self._send_status_update(status, info)
@@ -727,16 +750,25 @@ class BPSKDecoder(BaseDecoderProcess):
 
     def _send_stats_update(self):
         """Send statistics update to UI and performance monitor"""
-        # UI-friendly stats
-        ui_stats = {
-            "packets_decoded": self.packet_count,
-            "baudrate": self.baudrate,
-        }
-        ui_stats.update(self._get_power_statistics())
-
         # Full performance stats for monitoring (thread-safe copy)
         with self.stats_lock:
             perf_stats = self.stats.copy()
+            ingest_sps = perf_stats.get("ingest_samples_per_sec", 0.0)
+            ingest_cps = perf_stats.get("ingest_chunks_per_sec", 0.0)
+
+        # UI-friendly stats (include ingest rates so UI can display flow even when sleeping)
+        ui_stats = {
+            "packets_decoded": self.packet_count,
+            "baudrate": self.baudrate,
+            "is_sleeping": self.is_sleeping,
+            "ingest_samples_per_sec": round(ingest_sps, 1),
+            "ingest_chunks_per_sec": round(ingest_cps, 2),
+            "ingest_kSps": round(ingest_sps / 1e3, 2),
+        }
+        ui_stats.update(self._get_power_statistics())
+
+        # Add sleeping state to performance stats
+        perf_stats["is_sleeping"] = self.is_sleeping
 
         msg = {
             "type": "decoder-stats",
@@ -776,6 +808,11 @@ class BPSKDecoder(BaseDecoderProcess):
                 "cpu_percent": 0.0,
                 "memory_mb": 0.0,
                 "memory_percent": 0.0,
+                # Ingest-side flow metrics (updated every stats tick)
+                "ingest_samples_per_sec": 0.0,
+                "ingest_chunks_per_sec": 0.0,
+                # Out-of-band accounting
+                "samples_dropped_out_of_band": 0,
             }
         )
 
@@ -785,6 +822,11 @@ class BPSKDecoder(BaseDecoderProcess):
         chunks_received = 0
         flowgraph_started = False
         last_stats_time = time.time()  # Track time for periodic stats updates
+
+        # Track ingest rates regardless of decoding state (in-band or out-of-band)
+        ingest_window_start = time.time()
+        ingest_samples_accum = 0
+        ingest_chunks_accum = 0
 
         # CPU and memory monitoring
         process = psutil.Process()
@@ -810,140 +852,215 @@ class BPSKDecoder(BaseDecoderProcess):
                     except Exception as e:
                         logger.debug(f"Error updating CPU/memory usage: {e}")
 
-                # Read IQ samples from iq_queue
+                # Per-iteration work; ensure stats tick executes even on `continue`
                 try:
-                    iq_message = self.iq_queue.get(timeout=0.05)  # 50ms timeout
+                    # Read IQ samples from iq_queue
+                    try:
+                        iq_message = self.iq_queue.get(timeout=0.2)  # 200ms timeout
+                    except queue.Empty:
+                        with self.stats_lock:
+                            self.stats["queue_timeouts"] += 1
+                        iq_message = None
 
-                    # Update stats
-                    with self.stats_lock:
-                        self.stats["iq_chunks_in"] += 1
-                        self.stats["last_activity"] = time.time()
+                    if iq_message is None:
+                        # nothing to process this iteration
+                        pass
+                    else:
+                        # Update stats
+                        with self.stats_lock:
+                            self.stats["iq_chunks_in"] += 1
+                            self.stats["last_activity"] = time.time()
 
-                    # Extract IQ samples and metadata from message
-                    samples = iq_message.get("samples")
-                    sdr_center = iq_message.get("center_freq")
-                    sdr_rate = iq_message.get("sample_rate")
+                        # Extract IQ samples and metadata from message
+                        samples = iq_message.get("samples")
+                        sdr_center = iq_message.get("center_freq")
+                        sdr_rate = iq_message.get("sample_rate")
 
-                    if samples is None or len(samples) == 0:
-                        continue
+                        if samples is None or len(samples) == 0:
+                            continue
 
-                    # Update sample count
-                    with self.stats_lock:
-                        self.stats["samples_in"] += len(samples)
+                        # Update sample count
+                        with self.stats_lock:
+                            self.stats["samples_in"] += len(samples)
 
-                    # Get VFO parameters from IQ message (added by IQBroadcaster)
-                    vfo_states = iq_message.get("vfo_states", {})
-                    vfo_state_dict = vfo_states.get(self.vfo)
+                        # Update ingest accumulators (count what we pull, even if we skip processing)
+                        ingest_samples_accum += len(samples)
+                        ingest_chunks_accum += 1
 
-                    if not vfo_state_dict or not vfo_state_dict.get("active", False):
-                        continue  # VFO not active, skip
+                        # Get VFO parameters from IQ message (added by IQBroadcaster)
+                        vfo_states = iq_message.get("vfo_states", {})
+                        vfo_state_dict = vfo_states.get(self.vfo)
 
-                    # Cache VFO state for metadata purposes
-                    self.cached_vfo_state = vfo_state_dict
+                        if not vfo_state_dict or not vfo_state_dict.get("active", False):
+                            continue  # VFO not active, skip
 
-                    vfo_center = vfo_state_dict.get("center_freq", 0)
-                    vfo_bandwidth = vfo_state_dict.get("bandwidth", 10000)
+                        # Cache VFO state for metadata purposes
+                        self.cached_vfo_state = vfo_state_dict
 
-                    # Initialize on first message
-                    if self.sdr_sample_rate is None:
-                        self.sdr_sample_rate = sdr_rate
-                        self.sdr_center_freq = sdr_center
+                        vfo_center = vfo_state_dict.get("center_freq", 0)
+                        vfo_bandwidth = vfo_state_dict.get("bandwidth", 10000)
 
-                        # Calculate decimation factor for optimal samples per symbol
-                        # Target 8-10 samples per symbol
-                        target_sps = 8
-                        target_sample_rate = self.baudrate * target_sps
-                        decimation = int(self.sdr_sample_rate / target_sample_rate)
+                        # Validate VFO center is within SDR bandwidth
+                        is_in_band, vfo_offset, margin = self._is_vfo_in_sdr_bandwidth(
+                            vfo_center, sdr_center, sdr_rate
+                        )
+
+                        if not is_in_band:
+                            # VFO is outside SDR bandwidth - enter sleeping state
+                            with self.stats_lock:
+                                self.stats["samples_dropped_out_of_band"] += len(samples)
+
+                            if not self.is_sleeping:
+                                self.is_sleeping = True
+                                sdr_bw_mhz = sdr_rate / 1e6
+                                self.sleep_reason = (
+                                    f"VFO out of SDR bandwidth: VFO={vfo_center/1e6:.3f}MHz, "
+                                    f"SDR={sdr_center/1e6:.3f}MHz±{sdr_bw_mhz/2:.2f}MHz, "
+                                    f"offset={vfo_offset/1e3:.1f}kHz, exceeded by {abs(margin)/1e3:.1f}kHz"
+                                )
+                                logger.warning(self.sleep_reason)
+                                self._send_status_update(
+                                    DecoderStatus.SLEEPING,
+                                    {
+                                        "reason": "vfo_out_of_sdr_bandwidth",
+                                        "vfo_center_mhz": round(vfo_center / 1e6, 3),
+                                        "sdr_center_mhz": round(sdr_center / 1e6, 3),
+                                        "sdr_bandwidth_mhz": round(sdr_rate / 1e6, 2),
+                                        "vfo_offset_khz": round(vfo_offset / 1e3, 1),
+                                        "exceeded_by_khz": round(abs(margin) / 1e3, 1),
+                                        "samples_dropped": self.stats[
+                                            "samples_dropped_out_of_band"
+                                        ],
+                                    },
+                                )
+                            continue  # Skip processing this chunk
+
+                        # VFO is in band - check if we're waking up from sleep
+                        if self.is_sleeping:
+                            self.is_sleeping = False
+                            logger.info(
+                                f"VFO back in SDR bandwidth, resuming decoding: VFO={vfo_center/1e6:.3f}MHz, "
+                                f"SDR={sdr_center/1e6:.3f}MHz, offset={vfo_offset/1e3:.1f}kHz"
+                            )
+                            self._send_status_update(
+                                DecoderStatus.DECODING,
+                                {
+                                    "resumed_from_sleep": True,
+                                    "vfo_center_mhz": round(vfo_center / 1e6, 3),
+                                    "sdr_center_mhz": round(sdr_center / 1e6, 3),
+                                },
+                            )
+
+                        # Initialize on first message
+                        if self.sdr_sample_rate is None:
+                            self.sdr_sample_rate = sdr_rate
+                            self.sdr_center_freq = sdr_center
+
+                            # Calculate decimation factor for optimal samples per symbol
+                            # Target 8-10 samples per symbol
+                            target_sps = 8
+                            target_sample_rate = self.baudrate * target_sps
+                            decimation = int(self.sdr_sample_rate / target_sample_rate)
+                            if decimation < 1:
+                                decimation = 1
+                            self.sample_rate = self.sdr_sample_rate / decimation
+
+                            # Design decimation filter
+                            self.decimation_filter = self._design_decimation_filter(
+                                decimation, vfo_bandwidth, self.sdr_sample_rate
+                            )
+
+                            # Calculate offset frequency for logging
+                            offset_freq_init = vfo_center - sdr_center
+
+                            # Initialize flowgraph (before consolidated log to avoid duplicate messages)
+                            # Note: We don't pass f_offset here since each batch creates new flowgraph
+                            self.flowgraph = BPSKFlowgraph(
+                                sample_rate=self.sample_rate,
+                                callback=self._on_packet_decoded,
+                                status_callback=self._on_flowgraph_status,
+                                baudrate=self.baudrate,
+                                differential=self.differential,
+                                packet_size=self.packet_size,
+                                batch_interval=self.batch_interval,
+                                framing=self.framing,  # Pass framing protocol
+                            )
+                            flowgraph_started = True
+
+                            # Consolidated initialization log
+                            tx_info = (
+                                f", TX={self.transmitter_downlink_freq/1e6:.3f}MHz"
+                                if self.transmitter_downlink_freq
+                                else ""
+                            )
+                            diff_info = " (differential)" if self.differential else ""
+                            logger.info(
+                                f"BPSK decoder started: session={self.session_id} | "
+                                f"{self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps){diff_info}, {self.framing.upper()}, pkt_sz={self.packet_size}B | "
+                                f"SDR={self.sdr_sample_rate/1e6:.2f}MS/s@{sdr_center/1e6:.3f}MHz, "
+                                f"VFO={vfo_center/1e6:.3f}MHz (ofs={offset_freq_init/1e3:.1f}kHz, BW={vfo_bandwidth/1e3:.0f}kHz, dec={decimation}) | "
+                                f"batch={self.batch_interval}s{tx_info}"
+                            )
+
+                        # Step 1: Frequency translation to put SIGNAL at baseband center
+                        offset_freq = vfo_center - sdr_center
+                        translated = self._frequency_translate(
+                            samples, offset_freq, self.sdr_sample_rate
+                        )
+
+                        # Measure signal power AFTER frequency translation, BEFORE decimation/AGC
+                        power_dbfs = self._measure_signal_power(translated)
+                        self._update_power_measurement(power_dbfs)
+
+                        # Step 2: Decimate to target sample rate
+                        decimation = int(self.sdr_sample_rate / self.sample_rate)
                         if decimation < 1:
                             decimation = 1
-                        self.sample_rate = self.sdr_sample_rate / decimation
+                        decimated = self._decimate_iq(translated, decimation)
 
-                        # Design decimation filter
-                        self.decimation_filter = self._design_decimation_filter(
-                            decimation, vfo_bandwidth, self.sdr_sample_rate
-                        )
+                        # Process samples through flowgraph
+                        if flowgraph_started and self.flowgraph is not None:
+                            self.flowgraph.process_samples(decimated, vfo_center, vfo_bandwidth)
 
-                        # Calculate offset frequency for logging
-                        offset_freq_init = vfo_center - sdr_center
+                        # Send periodic status updates
+                        if chunks_received % 50 == 0:
+                            self._send_status_update(
+                                DecoderStatus.DECODING,
+                                {
+                                    "packets_decoded": self.packet_count,
+                                },
+                            )
 
-                        # Initialize flowgraph (before consolidated log to avoid duplicate messages)
-                        # Note: We don't pass f_offset here since each batch creates new flowgraph
-                        self.flowgraph = BPSKFlowgraph(
-                            sample_rate=self.sample_rate,
-                            callback=self._on_packet_decoded,
-                            status_callback=self._on_flowgraph_status,
-                            baudrate=self.baudrate,
-                            differential=self.differential,
-                            packet_size=self.packet_size,
-                            batch_interval=self.batch_interval,
-                            framing=self.framing,  # Pass framing protocol
-                        )
-                        flowgraph_started = True
+                        chunks_received += 1
 
-                        # Consolidated initialization log (replaces "BPSK decoder process started", "BPSK decoder", and "BPSK flowgraph initialized" logs)
-                        tx_info = (
-                            f", TX={self.transmitter_downlink_freq/1e6:.3f}MHz"
-                            if self.transmitter_downlink_freq
-                            else ""
-                        )
-                        diff_info = " (differential)" if self.differential else ""
-                        logger.info(
-                            f"BPSK decoder started: session={self.session_id} | "
-                            f"{self.baudrate}bd, {target_sample_rate/1e3:.2f}kS/s ({target_sps}sps){diff_info}, {self.framing.upper()}, pkt_sz={self.packet_size}B | "
-                            f"SDR={self.sdr_sample_rate/1e6:.2f}MS/s@{sdr_center/1e6:.3f}MHz, "
-                            f"VFO={vfo_center/1e6:.3f}MHz (ofs={offset_freq_init/1e3:.1f}kHz, BW={vfo_bandwidth/1e3:.0f}kHz, dec={decimation}) | "
-                            f"batch={self.batch_interval}s{tx_info}"
-                        )
+                        # Monitor shared memory every 100 chunks
+                        if chunks_received % 100 == 0:
+                            self._monitor_shared_memory()
+                finally:
+                    # Send stats periodically based on time (every 1 second) regardless of chunk rate
+                    current_time = time.time()
+                    if current_time - last_stats_time >= 1.0:
+                        # Compute ingest rates for the last window
+                        dt = current_time - ingest_window_start
+                        if dt > 0:
+                            ingest_sps = ingest_samples_accum / dt
+                            ingest_cps = ingest_chunks_accum / dt
+                        else:
+                            ingest_sps = 0.0
+                            ingest_cps = 0.0
 
-                    # Step 1: Frequency translation to put SIGNAL at baseband center
-                    # CRITICAL: Use current VFO center frequency (where user/Doppler correction has tuned)
-                    # This tracks Doppler shifts in real-time during satellite passes
-                    # VFO state is read on every IQ chunk (~100ms), providing continuous Doppler tracking
-                    offset_freq = vfo_center - sdr_center
-                    translated = self._frequency_translate(
-                        samples, offset_freq, self.sdr_sample_rate
-                    )
+                        # Store in stats for both UI-friendly and performance metrics
+                        with self.stats_lock:
+                            self.stats["ingest_samples_per_sec"] = ingest_sps
+                            self.stats["ingest_chunks_per_sec"] = ingest_cps
 
-                    # Measure signal power AFTER frequency translation, BEFORE decimation/AGC
-                    # This gives the most accurate raw signal strength
-                    power_dbfs = self._measure_signal_power(translated)
-                    self._update_power_measurement(power_dbfs)
+                        # Reset window
+                        ingest_window_start = current_time
+                        ingest_samples_accum = 0
+                        ingest_chunks_accum = 0
 
-                    # Step 2: Decimate to target sample rate
-                    decimation = int(self.sdr_sample_rate / self.sample_rate)
-                    if decimation < 1:
-                        decimation = 1
-                    decimated = self._decimate_iq(translated, decimation)
-
-                    # Process samples through flowgraph
-                    if flowgraph_started and self.flowgraph is not None:
-                        # Pass VFO state that was used for DSP processing
-                        self.flowgraph.process_samples(decimated, vfo_center, vfo_bandwidth)
-
-                    # Send periodic status updates
-                    if chunks_received % 50 == 0:
-                        self._send_status_update(
-                            DecoderStatus.DECODING,
-                            {
-                                "packets_decoded": self.packet_count,
-                            },
-                        )
-
-                    chunks_received += 1
-
-                    # Monitor shared memory every 100 chunks
-                    if chunks_received % 100 == 0:
-                        self._monitor_shared_memory()
-
-                except queue.Empty:
-                    with self.stats_lock:
-                        self.stats["queue_timeouts"] += 1
-
-                # Send stats periodically based on time (every 1 second) regardless of chunk rate
-                current_time = time.time()
-                if current_time - last_stats_time >= 1.0:
-                    self._send_stats_update()
-                    last_stats_time = current_time
+                        self._send_stats_update()
+                        last_stats_time = current_time
 
         except Exception as e:
             logger.error(f"BPSK decoder error: {e}")
