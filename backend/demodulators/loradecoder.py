@@ -499,6 +499,14 @@ class LoRaDecoder(BaseDecoderProcess):
         # Track background processing thread
         self.processing_thread = None
 
+        # Authoritative rate computation (parity with FSK/BPSK)
+        self._rates_prev_ts = None
+        self._rates_prev_counters = {
+            "iq_chunks_in": 0,
+            "samples_in": 0,
+            "data_messages_out": 0,
+        }
+
         # BaseDecoder required metadata attributes
         self.baudrate = config.baudrate  # Not really used for LoRa, but required by BaseDecoder
         self.framing = "lora"  # LoRa uses its own framing (preamble + header + payload + CRC)
@@ -601,6 +609,24 @@ class LoRaDecoder(BaseDecoderProcess):
         # Decimate
         return filtered[::decimation_factor]
 
+    def _is_vfo_in_sdr_bandwidth(self, vfo_center, sdr_center, sdr_sample_rate):
+        """
+        Check if VFO center frequency is within SDR bandwidth.
+
+        Returns:
+            tuple: (is_in_band, offset_from_sdr_center, margin_hz)
+        """
+        offset = vfo_center - sdr_center
+        half_sdr_bandwidth = sdr_sample_rate / 2
+
+        # Add small margin (2%) for edge effects and filter roll-off
+        usable_bandwidth = half_sdr_bandwidth * 0.98
+
+        is_in_band = abs(offset) <= usable_bandwidth
+        margin_hz = usable_bandwidth - abs(offset)
+
+        return is_in_band, offset, margin_hz
+
     def _on_packet_decoded(self, payload):
         """
         Callback when GNU Radio decodes a LoRa packet.
@@ -664,31 +690,90 @@ class LoRaDecoder(BaseDecoderProcess):
         }
         try:
             self.data_queue.put(msg, block=False)
+            with self.stats_lock:
+                self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping status update")
 
     def _send_stats_update(self):
         """Send statistics update to UI and performance monitor"""
-        # UI-friendly stats
-        ui_stats = {
-            "packets_decoded": self.packet_count,
-            "spreading_factor": self.sf,  # LoRa uses self.sf, not self.spreading_factor
-            "coding_rate": self.cr,  # LoRa uses self.cr, not self.coding_rate
-            "bandwidth": self.bw,  # LoRa uses self.bw, not self.bandwidth
-        }
-
         # Full performance stats for monitoring (thread-safe copy)
         with self.stats_lock:
             perf_stats = self.stats.copy()
+
+        # Compute authoritative 1 Hz rates at the decoder side
+        now_ts = time.time()
+        prev_ts = self._rates_prev_ts
+        dt = now_ts - prev_ts if prev_ts is not None else None
+        try:
+            curr_iq_chunks = perf_stats.get("iq_chunks_in", 0)
+            curr_samples = (
+                perf_stats.get("samples_in", 0) or perf_stats.get("iq_samples_in", 0) or 0
+            )
+            curr_msgs_out = perf_stats.get("data_messages_out", 0)
+
+            if dt and dt > 0:
+                rates = {
+                    "iq_chunks_in_per_sec": (
+                        curr_iq_chunks - self._rates_prev_counters.get("iq_chunks_in", 0)
+                    )
+                    / dt,
+                    "samples_in_per_sec": (
+                        curr_samples - self._rates_prev_counters.get("samples_in", 0)
+                    )
+                    / dt,
+                    "data_messages_out_per_sec": (
+                        curr_msgs_out - self._rates_prev_counters.get("data_messages_out", 0)
+                    )
+                    / dt,
+                }
+            else:
+                rates = {
+                    "iq_chunks_in_per_sec": 0.0,
+                    "samples_in_per_sec": 0.0,
+                    "data_messages_out_per_sec": 0.0,
+                }
+        except Exception:
+            rates = {
+                "iq_chunks_in_per_sec": 0.0,
+                "samples_in_per_sec": 0.0,
+                "data_messages_out_per_sec": 0.0,
+            }
+
+        # Mirror rates into perf_stats for PerformanceMonitor
+        perf_stats["rates"] = rates
+
+        # Update previous snapshot
+        self._rates_prev_ts = now_ts
+        self._rates_prev_counters = {
+            "iq_chunks_in": perf_stats.get("iq_chunks_in", 0),
+            "samples_in": perf_stats.get("samples_in", 0)
+            or perf_stats.get("iq_samples_in", 0)
+            or 0,
+            "data_messages_out": perf_stats.get("data_messages_out", 0),
+        }
+
+        # UI-friendly stats (add ingest rates and power statistics)
+        ui_stats = {
+            "packets_decoded": self.packet_count,
+            "spreading_factor": self.sf,
+            "coding_rate": self.cr,
+            "bandwidth": self.bw,
+            "ingest_samples_per_sec": round(rates.get("samples_in_per_sec", 0.0), 1),
+            "ingest_chunks_per_sec": round(rates.get("iq_chunks_in_per_sec", 0.0), 2),
+            "ingest_kSps": round((rates.get("samples_in_per_sec", 0.0) / 1e3), 2),
+        }
+        ui_stats.update(self._get_power_statistics())
 
         msg = {
             "type": "decoder-stats",
             "decoder_type": "lora",
             "session_id": self.session_id,
             "vfo": self.vfo,
-            "timestamp": time.time(),
-            "stats": ui_stats,  # UI-friendly stats
-            "perf_stats": perf_stats,  # Full performance stats for PerformanceMonitor
+            "timestamp": now_ts,
+            "stats": ui_stats,
+            "perf_stats": perf_stats,
+            "rates": rates,
         }
         try:
             self.data_queue.put(msg, block=False)
@@ -710,6 +795,7 @@ class LoRaDecoder(BaseDecoderProcess):
         self.stats: Dict[str, Any] = {
             "iq_chunks_in": 0,
             "samples_in": 0,
+            "samples_dropped_out_of_band": 0,
             "data_messages_out": 0,
             "queue_timeouts": 0,
             "packets_decoded": 0,
@@ -837,6 +923,34 @@ class LoRaDecoder(BaseDecoderProcess):
 
                     # Step 1: Frequency translation to VFO center
                     offset_freq = vfo_center - sdr_center
+
+                    # Optional out-of-band accounting/parity with FSK
+                    try:
+                        in_band, _, margin_hz = self._is_vfo_in_sdr_bandwidth(
+                            vfo_center, sdr_center, sdr_rate
+                        )
+                    except Exception:
+                        in_band = True
+                        margin_hz = 0.0
+
+                    if not in_band:
+                        # Count these samples and mark as dropped out-of-band, then skip processing
+                        with self.stats_lock:
+                            self.stats["iq_chunks_in"] += 1
+                            self.stats["samples_in"] += len(samples)
+                            self.stats["samples_dropped_out_of_band"] += len(samples)
+                            self.stats["last_activity"] = time.time()
+                        if chunks_received % 50 == 0:
+                            logger.info(
+                                f"LoRa: VFO out of SDR band by {abs(margin_hz):.0f} Hz, skipping chunk"
+                            )
+                        chunks_received += 1
+                        # Send stats periodically even if skipping
+                        current_time = time.time()
+                        if current_time - last_stats_time >= 1.0:
+                            self._send_stats_update()
+                            last_stats_time = current_time
+                        continue
 
                     # Debug: Log frequency translation details every 100 chunks
                     if chunks_received % 100 == 0:

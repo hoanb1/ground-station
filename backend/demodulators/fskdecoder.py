@@ -83,6 +83,7 @@ os.environ.setdefault("GR_BUFFER_TYPE", "vmcirc_mmap_tmpfile")
 
 from gnuradio import blocks, gr  # noqa: E402
 from satellites.components.deframers.ax25_deframer import ax25_deframer  # noqa: E402
+from satellites.components.deframers.ax100_deframer import ax100_deframer  # noqa: E402
 from satellites.components.deframers.ccsds_concatenated_deframer import (  # noqa: E402
     ccsds_concatenated_deframer,
 )
@@ -110,10 +111,11 @@ class DecoderStatus(Enum):
 class FSKMessageHandler(gr.basic_block):
     """Message handler to receive PDU messages from HDLC deframer"""
 
-    def __init__(self, callback, logger=None):
+    def __init__(self, callback, logger=None, framing: str = "ax25"):
         gr.basic_block.__init__(self, name="fsk_message_handler", in_sig=None, out_sig=None)
         self.callback = callback
         self.logger = logger or logging.getLogger("fskdecoder")
+        self.framing = framing
         self.message_port_register_in(gr.pmt.intern("in"))
         self.set_msg_handler(gr.pmt.intern("in"), self.handle_msg)
         self.packets_decoded = 0
@@ -132,30 +134,32 @@ class FSKMessageHandler(gr.basic_block):
                 packet_data = bytes(packet_data)
 
             if isinstance(packet_data, bytes):
-                # Parse AX.25 callsigns
                 callsigns = None
-                try:
-                    if len(packet_data) >= 14:
-                        dest_call = "".join(
-                            chr((packet_data[i] >> 1) & 0x7F) for i in range(6)
-                        ).strip()
-                        dest_ssid = (packet_data[6] >> 1) & 0x0F
-                        src_call = "".join(
-                            chr((packet_data[i] >> 1) & 0x7F) for i in range(7, 13)
-                        ).strip()
-                        src_ssid = (packet_data[13] >> 1) & 0x0F
-                        callsigns = {
-                            "from": f"{src_call}-{src_ssid}",
-                            "to": f"{dest_call}-{dest_ssid}",
-                        }
-                except Exception as parse_err:
-                    self.logger.debug(f"Could not parse callsigns: {parse_err}")
+                out_bytes = packet_data
+                # Only parse callsigns and wrap with HDLC flags for AX.25/USP
+                if self.framing in ["ax25", "usp"]:
+                    try:
+                        if len(packet_data) >= 14:
+                            dest_call = "".join(
+                                chr((packet_data[i] >> 1) & 0x7F) for i in range(6)
+                            ).strip()
+                            dest_ssid = (packet_data[6] >> 1) & 0x0F
+                            src_call = "".join(
+                                chr((packet_data[i] >> 1) & 0x7F) for i in range(7, 13)
+                            ).strip()
+                            src_ssid = (packet_data[13] >> 1) & 0x0F
+                            callsigns = {
+                                "from": f"{src_call}-{src_ssid}",
+                                "to": f"{dest_call}-{dest_ssid}",
+                            }
+                    except Exception as parse_err:
+                        self.logger.debug(f"Could not parse callsigns: {parse_err}")
 
-                # Add HDLC flags for compatibility
-                packet_with_flags = bytes([0x7E]) + packet_data + bytes([0x7E])
+                    # Add HDLC flags for compatibility with AX.25 parsers
+                    out_bytes = bytes([0x7E]) + packet_data + bytes([0x7E])
 
                 if self.callback:
-                    self.callback(packet_with_flags, callsigns)
+                    self.callback(out_bytes, callsigns)
             else:
                 self.logger.warning(f"Unexpected packet data type: {type(packet_data)}")
 
@@ -186,7 +190,7 @@ class FSKFlowgraph(gr.top_block):
         clk_bw=0.06,
         clk_limit=0.004,
         batch_interval=5.0,
-        framing="ax25",  # 'ax25', 'usp', 'geoscan', 'doka'
+        framing="ax25",  # 'ax25', 'usp', 'geoscan', 'doka', 'ax100_asm', 'ax100_rs'
         modulation_subtype="FSK",  # 'FSK', 'GFSK', or 'GMSK' (metadata only)
         logger=None,
     ):
@@ -355,6 +359,14 @@ class FSKFlowgraph(gr.top_block):
                 # DOKA/CCSDS concatenated frames (used by some Russian satellites)
                 deframer = ccsds_concatenated_deframer(options=options)
                 frame_info = "DOKA(CCSDS)"
+            elif self.framing == "ax100_rs":
+                # AX100 Reed-Solomon mode
+                deframer = ax100_deframer(mode="RS", options=options)
+                frame_info = "AX100(RS)"
+            elif self.framing == "ax100_asm":
+                # AX100 ASM+Golay mode with CCSDS scrambler
+                deframer = ax100_deframer(mode="ASM", scrambler="CCSDS", options=options)
+                frame_info = "AX100(ASM+Golay)"
             else:  # default to ax25
                 deframer = ax25_deframer(g3ruh_scrambler=True, options=options)
                 frame_info = "AX25(G3RUH)"
@@ -365,7 +377,7 @@ class FSKFlowgraph(gr.top_block):
                 f"Frame: {frame_info} | VFO: {self.batch_vfo_center:.0f}Hz, BW={self.batch_vfo_bandwidth:.0f}Hz"
             )
             # Create message handler for this batch
-            msg_handler = FSKMessageHandler(self.callback, logger=self.logger)
+            msg_handler = FSKMessageHandler(self.callback, logger=self.logger, framing=self.framing)
 
             # Build flowgraph
             tb.connect(source, demod, deframer)
@@ -496,6 +508,14 @@ class FSKDecoder(BaseDecoderProcess):
             f"FSKDecoder initialized ({modulation_subtype}): packet_count=0, "
             f"SHM threshold={shm_restart_threshold}, monitor interval={shm_monitor_interval}s"
         )
+
+        # Previous snapshot for 1 Hz rate computation (authoritative at decoder side)
+        self._rates_prev_ts = None
+        self._rates_prev_counters = {
+            "iq_chunks_in": 0,
+            "samples_in": 0,
+            "data_messages_out": 0,
+        }
 
         # Extract all parameters from resolved config (including metadata)
         self.baudrate = config.baudrate
@@ -668,8 +688,12 @@ class FSKDecoder(BaseDecoderProcess):
 
     def _should_accept_packet(self, payload, callsigns):
         """FSK-family decoders require valid callsigns"""
+        # Accept non-AX.25 framings (AX100/CCSDS/GEOSCAN) without callsigns
+        if self.framing not in ["ax25", "usp"]:
+            return True
+        # For AX.25/USP, require callsigns
         if not callsigns or not callsigns.get("from") or not callsigns.get("to"):
-            self.logger.debug("Packet rejected: no valid callsigns found")
+            self.logger.debug("Packet rejected: no valid AX.25 callsigns found")
             return False
         return True
 
@@ -776,6 +800,59 @@ class FSKDecoder(BaseDecoderProcess):
         # Add sleeping state to performance stats
         perf_stats["is_sleeping"] = self.is_sleeping
 
+        # Compute authoritative 1 Hz rates at the decoder side (no smoothing)
+        now_ts = time.time()
+        prev_ts = self._rates_prev_ts
+        dt = now_ts - prev_ts if prev_ts is not None else None
+        rates = {}
+        try:
+            curr_iq_chunks = perf_stats.get("iq_chunks_in", 0)
+            curr_samples = (
+                perf_stats.get("samples_in", 0) or perf_stats.get("iq_samples_in", 0) or 0
+            )
+            curr_msgs_out = perf_stats.get("data_messages_out", 0)
+
+            if dt and dt > 0:
+                rates = {
+                    "iq_chunks_in_per_sec": (
+                        curr_iq_chunks - self._rates_prev_counters.get("iq_chunks_in", 0)
+                    )
+                    / dt,
+                    "samples_in_per_sec": (
+                        curr_samples - self._rates_prev_counters.get("samples_in", 0)
+                    )
+                    / dt,
+                    "data_messages_out_per_sec": (
+                        curr_msgs_out - self._rates_prev_counters.get("data_messages_out", 0)
+                    )
+                    / dt,
+                }
+            else:
+                rates = {
+                    "iq_chunks_in_per_sec": 0.0,
+                    "samples_in_per_sec": 0.0,
+                    "data_messages_out_per_sec": 0.0,
+                }
+        except Exception:
+            rates = {
+                "iq_chunks_in_per_sec": 0.0,
+                "samples_in_per_sec": 0.0,
+                "data_messages_out_per_sec": 0.0,
+            }
+
+        # Mirror rates into perf_stats for persistence/consumers
+        perf_stats["rates"] = rates
+
+        # Update previous snapshot for next tick
+        self._rates_prev_ts = now_ts
+        self._rates_prev_counters = {
+            "iq_chunks_in": perf_stats.get("iq_chunks_in", 0),
+            "samples_in": perf_stats.get("samples_in", 0)
+            or perf_stats.get("iq_samples_in", 0)
+            or 0,
+            "data_messages_out": perf_stats.get("data_messages_out", 0),
+        }
+
         msg = {
             "type": "decoder-stats",
             "decoder_type": self.modulation_subtype.lower(),
@@ -785,6 +862,7 @@ class FSKDecoder(BaseDecoderProcess):
             "timestamp": time.time(),
             "stats": ui_stats,  # UI-friendly stats
             "perf_stats": perf_stats,  # Full performance stats for PerformanceMonitor
+            "rates": rates,  # Authoritative rates computed at decoder side
         }
         try:
             self.data_queue.put(msg, block=False)

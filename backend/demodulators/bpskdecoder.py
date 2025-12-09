@@ -601,6 +601,14 @@ class BPSKDecoder(BaseDecoderProcess):
         self.is_sleeping = False
         self.sleep_reason = None
 
+        # Previous snapshot for 1 Hz rate computation (authoritative at decoder side)
+        self._rates_prev_ts = None
+        self._rates_prev_counters = {
+            "iq_chunks_in": 0,
+            "samples_in": 0,
+            "data_messages_out": 0,
+        }
+
     def _get_decoder_type_for_init(self) -> str:
         """Return decoder type for process naming."""
         return "BPSK"
@@ -770,6 +778,60 @@ class BPSKDecoder(BaseDecoderProcess):
         # Add sleeping state to performance stats
         perf_stats["is_sleeping"] = self.is_sleeping
 
+        # Compute authoritative 1 Hz rates at the decoder side (no smoothing)
+        now_ts = time.time()
+        prev_ts = self._rates_prev_ts
+        dt = now_ts - prev_ts if prev_ts is not None else None
+        rates = {}
+        try:
+            curr_iq_chunks = perf_stats.get("iq_chunks_in", 0)
+            curr_samples = (
+                perf_stats.get("samples_in", 0) or perf_stats.get("iq_samples_in", 0) or 0
+            )
+            curr_msgs_out = perf_stats.get("data_messages_out", 0)
+
+            if dt and dt > 0:
+                rates = {
+                    "iq_chunks_in_per_sec": (
+                        curr_iq_chunks - self._rates_prev_counters.get("iq_chunks_in", 0)
+                    )
+                    / dt,
+                    "samples_in_per_sec": (
+                        curr_samples - self._rates_prev_counters.get("samples_in", 0)
+                    )
+                    / dt,
+                    "data_messages_out_per_sec": (
+                        curr_msgs_out - self._rates_prev_counters.get("data_messages_out", 0)
+                    )
+                    / dt,
+                }
+            else:
+                rates = {
+                    "iq_chunks_in_per_sec": 0.0,
+                    "samples_in_per_sec": 0.0,
+                    "data_messages_out_per_sec": 0.0,
+                }
+        except Exception:
+            # Be conservative in case of unexpected values
+            rates = {
+                "iq_chunks_in_per_sec": 0.0,
+                "samples_in_per_sec": 0.0,
+                "data_messages_out_per_sec": 0.0,
+            }
+
+        # Mirror rates into perf_stats for persistence/consumers
+        perf_stats["rates"] = rates
+
+        # Update previous snapshot for next tick
+        self._rates_prev_ts = now_ts
+        self._rates_prev_counters = {
+            "iq_chunks_in": perf_stats.get("iq_chunks_in", 0),
+            "samples_in": perf_stats.get("samples_in", 0)
+            or perf_stats.get("iq_samples_in", 0)
+            or 0,
+            "data_messages_out": perf_stats.get("data_messages_out", 0),
+        }
+
         msg = {
             "type": "decoder-stats",
             "decoder_type": "bpsk",
@@ -778,6 +840,7 @@ class BPSKDecoder(BaseDecoderProcess):
             "timestamp": time.time(),
             "stats": ui_stats,  # UI-friendly stats
             "perf_stats": perf_stats,  # Full performance stats for PerformanceMonitor
+            "rates": rates,  # Authoritative rates computed at decoder side
         }
         try:
             self.data_queue.put(msg, block=False)

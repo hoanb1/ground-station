@@ -7,7 +7,7 @@ name = "ground-station"
 version = "0.1.0"
 description = "Full-featured, open-source software solution for satellite tracking, radio communication, and data decoding"
 readme = "../README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12,<3.13"
 license = {text = "GPL-3.0-only"}
 authors = [
     {name = "Efstratios Goudelis"}
@@ -28,10 +28,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Communications :: Ham Radio",
     "Topic :: Scientific/Engineering :: Astronomy",
@@ -172,7 +168,7 @@ skip_gitignore = true
 skip = [".venv", "venv", "build", "dist"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

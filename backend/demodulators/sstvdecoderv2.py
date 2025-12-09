@@ -14,6 +14,7 @@ import os
 import queue
 import time
 from enum import Enum
+from typing import Any, Dict
 
 import numpy as np
 import psutil
@@ -352,7 +353,7 @@ class SSTVDecoderV2(BaseDecoderProcess):
         """Send statistics update to UI and performance monitor"""
         # Full performance stats for monitoring (thread-safe copy)
         with self.stats_lock:
-            perf_stats = self.stats.copy()
+            perf_stats: Dict[str, Any] = self.stats.copy()
             ingest_sps = perf_stats.get("ingest_samples_per_sec", 0.0)
             ingest_cps = perf_stats.get("ingest_chunks_per_sec", 0.0)
 
@@ -370,6 +371,72 @@ class SSTVDecoderV2(BaseDecoderProcess):
         # Add sleeping state to performance stats
         perf_stats["is_sleeping"] = getattr(self, "is_sleeping", False)
 
+        # Compute authoritative 1 Hz rates at the decoder side (no smoothing)
+        # Initialize prev holders on first use
+        if not hasattr(self, "_rates_prev_ts"):
+            self._rates_prev_ts = None
+            self._rates_prev_counters = {
+                "iq_chunks_in": 0,
+                # SSTVDecoderV2 tracks iq_samples_in
+                "samples_in": 0,
+                "data_messages_out": 0,
+            }
+
+        now_ts = time.time()
+        prev_ts = self._rates_prev_ts
+        dt: float | None
+        if prev_ts is None:
+            dt = None
+        else:
+            dt = now_ts - float(prev_ts)
+        try:
+            curr_iq_chunks = int(perf_stats.get("iq_chunks_in", 0) or 0)
+            curr_samples = int(
+                perf_stats.get("samples_in", 0) or perf_stats.get("iq_samples_in", 0) or 0
+            )
+            curr_msgs_out = int(perf_stats.get("data_messages_out", 0) or 0)
+
+            if dt and dt > 0:
+                rates = {
+                    "iq_chunks_in_per_sec": (
+                        curr_iq_chunks - self._rates_prev_counters.get("iq_chunks_in", 0)
+                    )
+                    / dt,
+                    "samples_in_per_sec": (
+                        curr_samples - self._rates_prev_counters.get("samples_in", 0)
+                    )
+                    / dt,
+                    "data_messages_out_per_sec": (
+                        curr_msgs_out - self._rates_prev_counters.get("data_messages_out", 0)
+                    )
+                    / dt,
+                }
+            else:
+                rates = {
+                    "iq_chunks_in_per_sec": 0.0,
+                    "samples_in_per_sec": 0.0,
+                    "data_messages_out_per_sec": 0.0,
+                }
+        except Exception:
+            rates = {
+                "iq_chunks_in_per_sec": 0.0,
+                "samples_in_per_sec": 0.0,
+                "data_messages_out_per_sec": 0.0,
+            }
+
+        # Mirror rates into perf_stats for persistence/consumers
+        perf_stats["rates"] = rates
+
+        # Update previous snapshot for next tick
+        self._rates_prev_ts = now_ts
+        self._rates_prev_counters = {
+            "iq_chunks_in": int(perf_stats.get("iq_chunks_in", 0) or 0),
+            "samples_in": int(
+                perf_stats.get("samples_in", 0) or perf_stats.get("iq_samples_in", 0) or 0
+            ),
+            "data_messages_out": int(perf_stats.get("data_messages_out", 0) or 0),
+        }
+
         msg = {
             "type": "decoder-stats",
             "decoder_type": "sstv",
@@ -378,6 +445,7 @@ class SSTVDecoderV2(BaseDecoderProcess):
             "timestamp": time.time(),
             "stats": ui_stats,  # UI-friendly stats
             "perf_stats": perf_stats,  # Full performance stats for PerformanceMonitor
+            "rates": rates,  # Authoritative rates computed at decoder side
         }
         try:
             self.data_queue.put(msg, block=False)

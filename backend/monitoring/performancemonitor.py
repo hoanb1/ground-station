@@ -757,42 +757,63 @@ class PerformanceMonitor(threading.Thread):
                     input_queue_size = decoder_instance.iq_queue.qsize()
                     input_queue_maxsize = getattr(decoder_instance.iq_queue, "_maxsize", None)
 
-                # Calculate rates - handle both audio-based and IQ-based decoders
+                # Calculate rates - prefer decoder-supplied rates when present for IQ-based decoders
                 prev_key = f"decoder_{sdr_id}_{key}"
                 prev_snapshot = self.previous_snapshots.get(prev_key, {})
 
+                supplied_rates = stats_snapshot.get("rates") or {}
+
                 # For audio-based decoders (SSTV, Morse)
-                audio_chunks_in_rate = self._calculate_rate(
-                    stats_snapshot.get("audio_chunks_in", 0),
-                    prev_snapshot.get("audio_chunks_in", 0),
-                    time_delta,
+                audio_chunks_in_rate = (
+                    supplied_rates.get("audio_chunks_in_per_sec")
+                    if supplied_rates
+                    else self._calculate_rate(
+                        stats_snapshot.get("audio_chunks_in", 0),
+                        prev_snapshot.get("audio_chunks_in", 0),
+                        time_delta,
+                    )
                 )
 
-                audio_samples_in_rate = self._calculate_rate(
-                    stats_snapshot.get("audio_samples_in", 0),
-                    prev_snapshot.get("audio_samples_in", 0),
-                    time_delta,
+                audio_samples_in_rate = (
+                    supplied_rates.get("audio_samples_in_per_sec")
+                    if supplied_rates
+                    else self._calculate_rate(
+                        stats_snapshot.get("audio_samples_in", 0),
+                        prev_snapshot.get("audio_samples_in", 0),
+                        time_delta,
+                    )
                 )
 
                 # For IQ-based decoders (BPSK, GMSK, LoRa, SSTVDecoderV2)
-                iq_chunks_in_rate = self._calculate_rate(
-                    stats_snapshot.get("iq_chunks_in", 0),
-                    prev_snapshot.get("iq_chunks_in", 0),
-                    time_delta,
-                )
+                if supplied_rates:
+                    # Accept either field names for samples per sec
+                    samples_in_rate = (
+                        supplied_rates.get("samples_in_per_sec")
+                        if supplied_rates.get("samples_in_per_sec") is not None
+                        else supplied_rates.get("iq_samples_in_per_sec")
+                    )
+                    iq_chunks_in_rate = supplied_rates.get("iq_chunks_in_per_sec")
+                    data_messages_out_rate = supplied_rates.get("data_messages_out_per_sec")
+                else:
+                    iq_chunks_in_rate = self._calculate_rate(
+                        stats_snapshot.get("iq_chunks_in", 0),
+                        prev_snapshot.get("iq_chunks_in", 0),
+                        time_delta,
+                    )
 
-                # Try both samples_in (BPSK, GMSK, LoRa) and iq_samples_in (SSTVDecoderV2)
-                samples_in_rate = self._calculate_rate(
-                    stats_snapshot.get("samples_in", 0) or stats_snapshot.get("iq_samples_in", 0),
-                    prev_snapshot.get("samples_in", 0) or prev_snapshot.get("iq_samples_in", 0),
-                    time_delta,
-                )
+                    # Try both samples_in (BPSK, GMSK, LoRa) and iq_samples_in (SSTVDecoderV2)
+                    samples_in_rate = self._calculate_rate(
+                        stats_snapshot.get("samples_in", 0)
+                        or stats_snapshot.get("iq_samples_in", 0),
+                        prev_snapshot.get("samples_in", 0) or prev_snapshot.get("iq_samples_in", 0),
+                        time_delta,
+                    )
 
-                data_messages_out_rate = self._calculate_rate(
-                    stats_snapshot.get("data_messages_out", 0),
-                    prev_snapshot.get("data_messages_out", 0),
-                    time_delta,
-                )
+                    data_messages_out_rate = self._calculate_rate(
+                        stats_snapshot.get("data_messages_out", 0),
+                        prev_snapshot.get("data_messages_out", 0),
+                        time_delta,
+                    )
 
                 # Store current snapshot
                 self.previous_snapshots[prev_key] = stats_snapshot.copy()
@@ -838,6 +859,7 @@ class PerformanceMonitor(threading.Thread):
                 if is_iq_decoder:
                     # IQ-based decoder rates
                     rates["iq_chunks_in_per_sec"] = iq_chunks_in_rate
+                    # Preserve legacy field name for compatibility and map from decoder-supplied 'samples_in_per_sec' if needed
                     rates["iq_samples_in_per_sec"] = samples_in_rate
                 else:
                     # Audio-based decoder rates

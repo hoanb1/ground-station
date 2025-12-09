@@ -262,8 +262,24 @@ class BaseDecoder:
             packet_data = self._strip_hdlc_flags(payload)
             logger.info(f"  First 20 bytes: {packet_data[:20].hex()}")
 
-            # Parse telemetry
-            telemetry_result = self.telemetry_parser.parse(packet_data)
+            # Parse telemetry with protocol hinting
+            protocol_hint = None
+            try:
+                protocol_hint = self._get_payload_protocol()
+            except Exception:
+                protocol_hint = None
+
+            sat_hint = None
+            try:
+                sat_hint = (self.satellite or {}).get("name")
+            except Exception:
+                sat_hint = None
+
+            telemetry_result = self.telemetry_parser.parse(
+                packet_data,
+                protocol_hint=protocol_hint,
+                sat_hint=sat_hint,
+            )
             if telemetry_result.get("success"):
                 logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
 
@@ -547,6 +563,8 @@ class BaseDecoder:
                 return "ccsds"
             elif self.framing in ["ax25", "usp"]:
                 return "ax25"
+            elif self.framing in ["ax100_rs", "ax100_asm"]:
+                return "csp"
             elif self.framing == "geoscan":
                 return "proprietary"
         return "ax25"  # default
