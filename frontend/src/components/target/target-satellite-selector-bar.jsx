@@ -183,63 +183,73 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
     return (
         <Box
             sx={{
-                display: 'flex',
-                flexDirection: { xs: 'column', md: 'row' },
-                gap: '16px',
+                // Mobile/Tablet: two-column grid (main area + narrow stop column)
+                // Desktop (lg+): single row flex
+                display: { xs: 'grid', lg: 'flex' },
+                gridTemplateColumns: { xs: '1fr auto' },
+                gridTemplateRows: { xs: 'auto auto' },
+                columnGap: { xs: 2 },
+                rowGap: { xs: 1.5 },
+                alignItems: { lg: 'center' },
+                gap: { lg: 2 },
                 padding: '8px 12px',
                 bgcolor: 'background.paper',
                 borderBottom: '1px solid',
                 borderColor: 'border.main',
-                minHeight: { xs: 'auto', md: '64px' },
-                height: { md: '64px' },
-                maxHeight: { md: '64px' },
+                minHeight: { xs: 'auto', lg: '64px' },
+                height: { lg: '64px' },
+                maxHeight: { lg: '64px' },
             }}
         >
-            {/* Search field with autocomplete - full width on mobile, fixed width on desktop */}
-            <Box sx={{
-                width: { xs: '100%', md: 'auto' },
-                minWidth: { md: 250 },
-                maxWidth: { md: 350 },
-                flexShrink: 1
-            }}>
+            {/* Search field with autocomplete */}
+            <Box
+                sx={{
+                    gridColumn: { xs: '1 / 2', lg: 'auto' },
+                    gridRow: { xs: '1 / 2', lg: 'auto' },
+                    width: { lg: '40%' },
+                    minWidth: { lg: 250 },
+                    maxWidth: { lg: 350 },
+                    flexShrink: { lg: 1 },
+                }}
+            >
                 <SatelliteSearchAutocomplete onSatelliteSelect={handleSatelliteSelect} />
             </Box>
 
-            {/* Group and Satellite selectors - side by side on all screen sizes */}
-            <Box sx={{
-                display: 'flex',
-                gap: '16px',
-                flex: 1,
-                minWidth: 0,
-                flexWrap: { xs: 'nowrap', sm: 'nowrap' }
-            }}>
+            {/* Group + Satellite dropdowns (side-by-side) */}
+            <Box
+                sx={{
+                    gridColumn: { xs: '1 / 2', lg: 'auto' },
+                    gridRow: { xs: '2 / 3', lg: 'auto' },
+                    display: { xs: 'grid', lg: 'flex' },
+                    gridTemplateColumns: { xs: '1fr 1fr' },
+                    gap: '16px',
+                    flex: { lg: 1 },
+                    minWidth: 0,
+                }}
+            >
                 {/* Group selector dropdown */}
-                <Box sx={{
-                    minWidth: { xs: 120, sm: 150 },
-                    maxWidth: { xs: '50%', md: 200 },
-                    flex: 1
-                }}>
+                <Box sx={{ minWidth: { xs: 120, sm: 150 }, maxWidth: { lg: 200 }, flex: 1 }}>
                     <GroupDropdown />
                 </Box>
 
                 {/* Satellite selector dropdown */}
-                <Box sx={{
-                    minWidth: { xs: 120, sm: 180 },
-                    maxWidth: { xs: '50%', md: 280 },
-                    flex: 1
-                }}>
+                <Box sx={{ minWidth: { xs: 120, sm: 180 }, maxWidth: { lg: 280 }, flex: 1 }}>
                     <SatelliteList />
                 </Box>
             </Box>
 
-            {/* Combined dashboard - only show when there's enough room */}
+            {/* Pills + Stop (desktop row) OR Stop only (mobile/tablet column) */}
             <Box
                 sx={{
-                    display: { xs: 'none', md: 'flex' },
+                    // On mobile/tablet: right column spanning both rows
+                    gridColumn: { xs: '2 / 3', lg: 'auto' },
+                    gridRow: { xs: '1 / 3', lg: 'auto' },
+                    display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    ml: 'auto',
+                    ml: { lg: 'auto' },
                     flexShrink: 0,
+                    justifyContent: { xs: 'center', lg: 'flex-start' },
                 }}
             >
                 {/* Tracking status badge */}
@@ -323,14 +333,18 @@ const TargetSatelliteSelectorBar = React.memo(function TargetSatelliteSelectorBa
                         startIcon={<StopIcon />}
                         disabled={rigData?.tracking !== true && rotatorData?.tracking !== true}
                         onClick={handleTrackingStop}
+                        size="small"
                         sx={{
                             textTransform: 'none',
                             fontWeight: 'bold',
-                            height: '40px',
-                            minHeight: '40px',
+                            minWidth: { xs: 40, sm: 'auto' },
+                            px: { xs: 1, sm: 2 },
+                            height: 36,
                         }}
                     >
-                        {t('satellite_selector.stop_tracking')}
+                        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                            {t('satellite_selector.stop_tracking')}
+                        </Box>
                     </Button>
                 )}
             </Box>
