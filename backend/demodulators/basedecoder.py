@@ -283,6 +283,56 @@ class BaseDecoder:
             if telemetry_result.get("success"):
                 logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
 
+            # Backfill missing callsigns from AX.25 telemetry header (regression fix)
+            # Some framings (e.g., AX100/CSP, GEOSCAN) do not extract callsigns at the
+            # deframer stage. However, TelemetryParser may still parse an AX.25 header
+            # from the resulting bytes. If so, synthesize the callsigns object here so
+            # downstream metadata/UI continue to receive `output.callsigns.{from,to}`.
+            try:
+                if not callsigns:
+                    parser_name = telemetry_result.get("parser") or ""
+                    if isinstance(parser_name, str) and parser_name.startswith("ax25"):
+                        frame = telemetry_result.get("frame") or {}
+                        src_val = frame.get("source")
+                        dst_val = frame.get("destination")
+                        # Type narrow to strings for mypy
+                        if isinstance(src_val, str) and isinstance(dst_val, str):
+                            src_str: str = src_val
+                            dst_str: str = dst_val
+                            callsigns = {"from": src_str, "to": dst_str}
+
+                            # Perform NORAD lookup now that we have a from-callsign
+                            backfill_from_callsign: str = src_str
+                            lookup_table = _load_callsign_lookup()
+
+                            # Try exact match first
+                            identified_norad_id = lookup_table.get(backfill_from_callsign)
+
+                            # If not found and callsign ends with -X, try base callsign
+                            if not identified_norad_id and backfill_from_callsign.endswith(
+                                ("-0", "-1", "-2", "-3", "-4", "-5", "-6", "-7", "-8", "-9")
+                            ):
+                                base_callsign = backfill_from_callsign[:-2]
+                                identified_norad_id = lookup_table.get(base_callsign)
+                                if identified_norad_id:
+                                    identified_satellite = base_callsign
+                                    logger.info(
+                                        f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id}) from callsign {backfill_from_callsign}"
+                                    )
+
+                            if identified_norad_id and not identified_satellite:
+                                identified_satellite = backfill_from_callsign
+                                logger.info(
+                                    f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id})"
+                                )
+                            elif not identified_norad_id:
+                                logger.debug(
+                                    f"  Callsign '{backfill_from_callsign}' not found in lookup table"
+                                )
+            except Exception:
+                # Non-fatal – continue without backfilled callsigns
+                pass
+
             # Save to file
             decode_timestamp = time.time()
             filename = self._generate_filename(decode_timestamp)
