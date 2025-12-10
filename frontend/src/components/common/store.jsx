@@ -43,6 +43,7 @@ import fileBrowserReducer from '../filebrowser/filebrowser-slice.jsx';
 import decodersReducer from '../decoders/decoders-slice.jsx';
 import libraryVersionsReducer from '../settings/library-versions-slice.jsx';
 import performanceReducer from '../performance/performance-slice.jsx';
+import systemInfoReducer from '../settings/system-info-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
 import passesCleanupMiddleware from '../overview/passes-cleanup-middleware.jsx';
 
@@ -221,6 +222,13 @@ const performancePersistConfig = {
     whitelist: []  // Don't persist performance metrics (runtime only)
 };
 
+// Persist configuration for system info slice (do not persist runtime metrics)
+const systemInfoPersistConfig = {
+    key: 'systemInfo',
+    storage,
+    whitelist: []
+};
+
 
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
@@ -244,6 +252,7 @@ const persistedFileBrowserReducer = persistReducer(fileBrowserPersistConfig, fil
 const persistedDecodersReducer = persistReducer(decodersPersistConfig, decodersReducer);
 const persistedLibraryVersionsReducer = persistReducer(libraryVersionsPersistConfig, libraryVersionsReducer);
 const persistedPerformanceReducer = persistReducer(performancePersistConfig, performanceReducer);
+const persistedSystemInfoReducer = persistReducer(systemInfoPersistConfig, systemInfoReducer);
 
 
 export const store = configureStore({
@@ -269,6 +278,7 @@ export const store = configureStore({
         decoders: persistedDecodersReducer,
         libraryVersions: persistedLibraryVersionsReducer,
         performance: persistedPerformanceReducer,
+        systemInfo: persistedSystemInfoReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>

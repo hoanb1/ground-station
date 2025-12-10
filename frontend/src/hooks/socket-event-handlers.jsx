@@ -75,6 +75,7 @@ import {
     cleanupStaleDecoders
 } from '../components/decoders/decoders-slice.jsx';
 import { updateMetrics } from '../components/performance/performance-slice.jsx';
+import { setSystemInfo } from '../components/settings/system-info-slice.jsx';
 import ImageIcon from '@mui/icons-material/Image';
 
 /**
@@ -132,6 +133,15 @@ export const useSocketEventHandlers = (socket) => {
                     icon: () => <SyncIcon />,
                 }
             );
+        });
+
+        // Live system info stream
+        socket.on('system-info', (payload) => {
+            try {
+                store.dispatch(setSystemInfo(payload));
+            } catch (e) {
+                console.error('Failed to update system info from socket:', e);
+            }
         });
 
         // Error event

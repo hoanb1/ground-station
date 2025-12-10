@@ -91,10 +91,41 @@ def get_version_info():
     return version_info
 
 
-def get_system_info():
-    """Get system information (CPU, memory, disk usage)."""
+def _get_cpu_usage_percent_nonblocking(prime: bool = False) -> float:
+    """Return CPU usage percent using a non-blocking approach.
+
+    psutil.cpu_percent(interval=None) returns the percent since last call.
+    The first call returns a meaningless 0.0, so we allow a priming call.
+    """
+    if prime:
+        try:
+            psutil.cpu_percent(interval=None)
+        except Exception:
+            pass
+        return 0.0
+    try:
+        return float(psutil.cpu_percent(interval=None))
+    except Exception:
+        return 0.0
+
+
+def get_system_info(
+    include_load_avg: bool = False, include_cpu_temp: bool = False, nonblocking_cpu: bool = False
+):
+    """Get system information (CPU, memory, disk usage).
+
+    Args:
+        include_load_avg: Include 1m/5m/15m load averages if available.
+        include_cpu_temp: Include CPU temperature in Celsius if available.
+        nonblocking_cpu: Use non-blocking CPU percent calculation.
+    """
     try:
         # CPU information
+        cpu_usage = (
+            _get_cpu_usage_percent_nonblocking()
+            if nonblocking_cpu
+            else psutil.cpu_percent(interval=0.1)
+        )
         cpu_info = {
             "architecture": platform.machine(),  # e.g., 'x86_64', 'aarch64', 'armv7l'
             "processor": platform.processor(),
@@ -102,7 +133,7 @@ def get_system_info():
                 "physical": psutil.cpu_count(logical=False),
                 "logical": psutil.cpu_count(logical=True),
             },
-            "usage_percent": psutil.cpu_percent(interval=0.1),
+            "usage_percent": cpu_usage,
         }
 
         # Memory information
@@ -129,13 +160,87 @@ def get_system_info():
             "release": platform.release(),
             "version": platform.version(),
         }
-
-        return {
+        result = {
             "cpu": cpu_info,
             "memory": memory_info,
             "disk": disk_info,
             "os": os_info,
         }
+        if include_load_avg:
+            try:
+                la1, la5, la15 = os.getloadavg()
+                result["load_avg"] = {
+                    "1m": round(la1, 2),
+                    "5m": round(la5, 2),
+                    "15m": round(la15, 2),
+                }
+            except Exception:
+                # Not available on all platforms — omit the key to avoid Optional typing issues
+                pass
+
+        if include_cpu_temp:
+            cpu_temp_c = None
+            gpu_temps = []
+            disk_temps = {}
+            try:
+                temps = psutil.sensors_temperatures(fahrenheit=False) or {}
+                # CPU temperatures (average across cores if multiple)
+                for key in ("coretemp", "cpu_thermal", "k10temp", "acpitz"):
+                    if key in temps and temps[key]:
+                        entries = temps[key]
+                        vals = [
+                            t.current for t in entries if getattr(t, "current", None) is not None
+                        ]
+                        if vals:
+                            cpu_temp_c = round(sum(vals) / len(vals), 1)
+                            break
+
+                # GPU temperatures
+                # Common groups: 'amdgpu', 'nvidia', 'nouveau', sometimes vendor-specific
+                for key in ("amdgpu", "nvidia", "nouveau", "gpu"):
+                    if key in temps and temps[key]:
+                        for t in temps[key]:
+                            cur = getattr(t, "current", None)
+                            if cur is not None:
+                                try:
+                                    gpu_temps.append(round(float(cur), 1))
+                                except Exception:
+                                    pass
+
+                # Disk temperatures
+                # Common groups: 'nvme', 'hddtemp', 'drivetemp', plus nvme-pci-* keys
+                for key, entries in temps.items():
+                    if not entries:
+                        continue
+                    key_lower = key.lower()
+                    if (
+                        key_lower in ("nvme", "hddtemp", "drivetemp")
+                        or key_lower.startswith("nvme")
+                        or "disk" in key_lower
+                    ):
+                        for t in entries:
+                            cur = getattr(t, "current", None)
+                            label = getattr(t, "label", None) or getattr(t, "device", None) or key
+                            if cur is not None and label:
+                                try:
+                                    disk_temps[str(label)] = round(float(cur), 1)
+                                except Exception:
+                                    pass
+            except Exception:
+                # If sensors not available, keep defaults (None/empty)
+                pass
+
+            # Backward compatibility: keep cpu_temp_c at top level when available
+            if cpu_temp_c is not None:
+                result["cpu_temp_c"] = cpu_temp_c
+            # New structured temperatures section
+            result["temperatures"] = {
+                "cpu_c": cpu_temp_c,
+                "gpus_c": gpu_temps,
+                "disks_c": disk_temps,
+            }
+
+        return result
     except Exception as e:
         logger.error(f"Error gathering system information: {e}")
         return {
@@ -152,14 +257,21 @@ def get_version():
 
 
 def get_full_version_info():
-    """Get the complete version information dictionary including system information."""
+    """Get the complete version information dictionary (no live system stats).
+
+    Note: Live system stats have been moved to Socket.IO `system-info` emissions.
+    We keep CPU architecture as a top-level field for other features.
+    """
     global _version_info
     if _version_info is None:
         _version_info = get_version_info()
 
-    # Merge version info with system info
+    # Do not include live system info here; only provide static version data
     full_info = _version_info.copy()
-    full_info["system"] = get_system_info()
+    try:
+        full_info["cpuArchitecture"] = platform.machine()
+    except Exception:
+        full_info["cpuArchitecture"] = "unknown"
 
     return full_info
 

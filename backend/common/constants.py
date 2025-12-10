@@ -52,6 +52,9 @@ class SocketEvents:
     # Performance Monitoring
     PERFORMANCE_METRICS = "performance-metrics"
 
+    # System Info (CPU/MEM/Disk/OS) live updates
+    SYSTEM_INFO = "system-info"
+
 
 # ============================================================================
 # Queue Message Types (inter-process communication)

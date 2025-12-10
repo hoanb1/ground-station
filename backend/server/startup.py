@@ -23,6 +23,7 @@ from processing.processmanager import process_manager
 from server import shutdown
 from server.firsttime import first_time_initialization, run_initial_sync
 from server.scheduler import start_scheduler, stop_scheduler
+from server.systeminfo import start_system_info_emitter
 from server.version import get_full_version_info
 from tracker.messages import handle_tracker_messages
 from tracker.runner import start_tracker_process
@@ -96,10 +97,17 @@ async def lifespan(fastapiapp: FastAPI):
     process_manager.start_monitoring()
     logger.info("Performance monitoring started (metrics emission every 2s)")
 
+    # Start live system-info emitter task (registers into background_tasks)
+    start_system_info_emitter(sio, background_tasks)
+
     try:
         yield
     finally:
         logger.info("FastAPI lifespan cleanup...")
+        # Cancel background tasks we created
+        for task in list(background_tasks):
+            task.cancel()
+        background_tasks.clear()
         stop_scheduler()
         process_manager.shutdown()
         shutdown.cleanup_everything()

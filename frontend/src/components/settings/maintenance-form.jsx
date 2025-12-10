@@ -49,7 +49,7 @@ const MaintenanceForm = () => {
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0  }}>
             <Box component="form" sx={{mt: 0}}>
                 <Tabs value={mainTab} onChange={(e, newValue) => setMainTab(newValue)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                    <Tab label="Storage & State" />
+                    <Tab label="Frontend State" />
                     <Tab label="Redux Inspector" />
                     <Tab label="System Control" />
                     <Tab label="Diagnostics" />
@@ -58,7 +58,7 @@ const MaintenanceForm = () => {
                     <Tab label="System Info" />
                 </Tabs>
 
-                {/* Tab 0: Storage & State */}
+                {/* Tab 0: Frontend State */}
                 <TabPanel value={mainTab} index={0}>
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12, md: 6 }}>
