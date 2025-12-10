@@ -251,19 +251,56 @@ const SatelliteInfoPopover = () => {
 
     // Countdown Component - extracted outside to use memoized nextPass
     const NextPassCountdown = React.memo(({ pass }) => {
-        const passId = pass?.id;
-        const passStartTime = pass?.event_start;
+        // We intentionally read from outer scope to react to store updates over time
+        // without relying only on props that don't change as time advances.
+        const selectedNoradId = satelliteData.details?.norad_id;
+
+        // Utility: find earliest future pass for the selected satellite
+        const findNextFuturePass = React.useCallback(() => {
+            if (!selectedNoradId) return null;
+            const now = new Date();
+            let earliest = null;
+            let earliestTime = null;
+            for (const p of satellitePasses || []) {
+                if (p.norad_id === selectedNoradId && p?.event_start) {
+                    const st = new Date(p.event_start);
+                    if (!isNaN(st) && st > now) {
+                        if (!earliest || st < earliestTime) {
+                            earliest = p;
+                            earliestTime = st;
+                        }
+                    }
+                }
+            }
+            return earliest;
+        }, [selectedNoradId, satellitePasses]);
+
+        // Local pass state that can advance to the next pass when current has started
+        const [currentPass, setCurrentPass] = useState(pass || findNextFuturePass());
+        const passId = currentPass?.id;
+        const passStartTime = currentPass?.event_start;
 
         // Calculate initial countdown value to avoid empty state
         const calculateCountdown = (startTimeStr) => {
-            if (!startTimeStr) return '';
+            if (!selectedNoradId) return 'No satellite selected';
+            if (!startTimeStr) return 'No upcoming passes';
 
             const now = new Date();
             const startTime = new Date(startTimeStr);
+            if (isNaN(startTime)) return 'Invalid pass start time';
+
             const diff = startTime - now;
 
             if (diff <= 0) {
-                return 'Pass starting...';
+                // Try to advance to the next future pass
+                const nxt = findNextFuturePass();
+                if (nxt && nxt.id !== currentPass?.id) {
+                    setCurrentPass(nxt);
+                    // Recalculate based on the new pass
+                    return calculateCountdown(nxt.event_start);
+                }
+                // No future pass found — report a helpful message
+                return 'No upcoming passes (schedule not updated)';
             }
 
             const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -284,20 +321,31 @@ const SatelliteInfoPopover = () => {
 
         const [countdown, setCountdown] = useState(() => calculateCountdown(passStartTime));
 
+        // Keep local pass in sync if parent prop changes (e.g., selected satellite changes)
         useEffect(() => {
-            if (!passStartTime) return;
+            setCurrentPass(pass || findNextFuturePass());
+        }, [pass, findNextFuturePass]);
 
+        // Recompute countdown every second; also attempt to advance to the next pass if needed
+        useEffect(() => {
             const updateCountdown = () => {
-                setCountdown(calculateCountdown(passStartTime));
+                setCountdown(calculateCountdown(currentPass?.event_start));
             };
 
             updateCountdown();
             const interval = setInterval(updateCountdown, 1000);
-
             return () => clearInterval(interval);
-        }, [passId, passStartTime]); // Only re-run if the pass ID or start time changes
+        }, [passId, currentPass?.event_start, selectedNoradId, findNextFuturePass]);
 
-        if (!pass) {
+        if (!selectedNoradId) {
+            return (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No satellite selected
+                </Typography>
+            );
+        }
+
+        if (!currentPass) {
             return (
                 <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                     No upcoming passes
@@ -327,10 +375,10 @@ const SatelliteInfoPopover = () => {
                     {countdown}
                 </Typography>
                 <Typography variant="caption" color="text.disabled">
-                    {formatLegibleDateTime(pass.event_start)}
+                    {formatLegibleDateTime(currentPass.event_start)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                    Peak elevation: {pass.peak_altitude?.toFixed(1)}°
+                    Peak elevation: {currentPass.peak_altitude?.toFixed(1)}°
                 </Typography>
             </Box>
         );
