@@ -218,10 +218,26 @@ const VfoAccordion = ({
                                         <VolumeUpIcon
                                             sx={{
                                                 position: 'absolute',
-                                                top: -4,
-                                                left: -8,
+                                                bottom: -2,
+                                                right: -6,
                                                 fontSize: '0.75rem',
                                                 pointerEvents: 'none',
+                                            }}
+                                        />
+                                    )}
+                                    {/* Active VFO indicator (small status dot) */}
+                                    {vfoActive[index + 1] && (
+                                        <Box
+                                            aria-label={`VFO ${index + 1} active`}
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -4,
+                                                left: -8,
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: '50%',
+                                                bgcolor: 'success.main',
+                                                boxShadow: 1,
                                             }}
                                         />
                                     )}
