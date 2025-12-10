@@ -44,7 +44,7 @@ import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 import { useTranslation } from 'react-i18next';
 import { SatelliteInfoDialog } from '../satellites/satellite-info-page.jsx';
-import ElevationDisplay from "../common/elevation-display.jsx";
+// ElevationDisplay removed per request; display raw value instead
 
 const OverviewSatelliteInfoCard = () => {
     const dispatch = useDispatch();
@@ -323,15 +323,9 @@ const OverviewSatelliteInfoCard = () => {
                                             </Typography>
                                         </Box>
                                         <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                                            {selectedSatelliteId && selectedSatellitePositions?.[selectedSatelliteId] ? (
-                                                <ElevationDisplay
-                                                    elevation={selectedSatellitePositions[selectedSatelliteId].el}
-                                                    trend={selectedSatellitePositions[selectedSatelliteId].trend}
-                                                    timeToMaxEl={selectedSatellitePositions[selectedSatelliteId].timeToMaxEl}
-                                                    elRate={selectedSatellitePositions[selectedSatelliteId].elRate}
-                                                    showNegative={true}
-                                                />
-                                            ) : 'N/A'}
+                                            {selectedSatelliteId && selectedSatellitePositions?.[selectedSatelliteId]?.el !== undefined && selectedSatellitePositions?.[selectedSatelliteId]?.el !== null
+                                                ? `${selectedSatellitePositions[selectedSatelliteId].el.toFixed(1)}°`
+                                                : 'N/A'}
                                         </Typography>
                                     </Box>
                                 </Grid>
