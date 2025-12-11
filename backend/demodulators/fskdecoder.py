@@ -340,15 +340,16 @@ class FSKFlowgraph(gr.top_block):
 
             # Create appropriate deframer based on framing protocol
             if self.framing == "geoscan":
-                # GEOSCAN uses 66 or 74 byte frames (varies by satellite)
-                # Default to 66 (most common), will need satellite-specific config for others
-                frame_size = 66
+                # GEOSCAN uses fixed-size frames (commonly 66 or 74 bytes depending on satellite)
+                # Use value provided by DecoderConfig.framing_params with a safe default
+                frame_size = int(self.framing_params.get("frame_size", 66))
+                syncword_thresh = int(self.framing_params.get("syncword_threshold", 4))
                 deframer = geoscan_deframer(
                     frame_size=frame_size,
-                    syncword_threshold=4,  # Standard GEOSCAN default
+                    syncword_threshold=syncword_thresh,  # Standard GEOSCAN default is 4
                     options=options,
                 )
-                frame_info = f"GEOSCAN(sz={frame_size},PN9,CC11xx)"
+                frame_info = f"GEOSCAN(sz={frame_size},sw_th={syncword_thresh},PN9,CC11xx)"
             elif self.framing == "usp":
                 # Increase syncword threshold for low SNR (allow more bit errors)
                 # Default is 13, trying 20 for weak signals
@@ -520,6 +521,7 @@ class FSKDecoder(BaseDecoderProcess):
         # Extract all parameters from resolved config (including metadata)
         self.baudrate = config.baudrate
         self.framing = config.framing
+        self.framing_params = getattr(config, "framing_params", None) or {}
         self.config_source = config.config_source
 
         # Validate baudrate (must be positive)

@@ -15,7 +15,7 @@
 
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -66,6 +66,9 @@ class DecoderConfig:
     # Optional metadata
     packet_size: Optional[int] = None  # Expected packet size in bytes
 
+    # Framing-specific parameters (protocol options passed to deframers)
+    framing_params: Optional[Dict[str, Any]] = None
+
     # Satellite metadata (for logging, file naming, telemetry parsing)
     satellite: Optional[Dict] = None
 
@@ -99,10 +102,18 @@ class DecoderConfig:
             and self.fldro == other.fldro
             and self.pipeline == other.pipeline
             and self.target_sample_rate == other.target_sample_rate
+            and (self.framing_params or {}) == (other.framing_params or {})
         )
 
     def __hash__(self):
         """Allow DecoderConfig to be used as dict key"""
+        # Convert dicts/lists to hashable representations
+        framing_params_tuple = (
+            tuple(sorted((self.framing_params or {}).items()))
+            if (self.framing_params is not None)
+            else None
+        )
+
         return hash(
             (
                 self.baudrate,
@@ -118,6 +129,7 @@ class DecoderConfig:
                 self.fldro,
                 self.pipeline,
                 self.target_sample_rate,
+                framing_params_tuple,
             )
         )
 
@@ -139,6 +151,7 @@ class DecoderConfig:
             "pipeline": self.pipeline,
             "target_sample_rate": self.target_sample_rate,
             "packet_size": self.packet_size,
+            "framing_params": self.framing_params,
             "satellite": self.satellite,
             "transmitter": self.transmitter,
         }

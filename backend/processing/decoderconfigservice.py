@@ -206,6 +206,15 @@ class DecoderConfigService:
             differential=sat_params.get("differential", False),
         )
 
+        # Framing-specific parameters
+        config.framing_params = {}
+        if framing == "geoscan":
+            # Prefer explicit YAML frame size if present; default to 66 otherwise
+            frame_size = sat_params.get("frame_size")
+            if frame_size is None:
+                frame_size = 66
+            config.framing_params["frame_size"] = frame_size
+
         # Add decoder-specific parameters
         if decoder_type == "afsk":
             config.af_carrier = transmitter.get("af_carrier", 1700)  # APRS default
@@ -239,6 +248,12 @@ class DecoderConfigService:
             deviation=deviation,
             differential=differential,
         )
+
+        # Default framing params for certain framings when detected from metadata
+        config.framing_params = {}
+        if framing == "geoscan":
+            # Default GEOSCAN frame size if unknown
+            config.framing_params["frame_size"] = 66
 
         # Add decoder-specific parameters
         if decoder_type == "afsk":
@@ -348,6 +363,13 @@ class DecoderConfigService:
             config.preamble_len = overrides["preamble_len"]
         if "fldro" in overrides:
             config.fldro = overrides["fldro"]
+
+        # Framing-specific overrides
+        if "framing_params" in overrides and isinstance(overrides["framing_params"], dict):
+            # Merge with existing
+            if not config.framing_params:
+                config.framing_params = {}
+            config.framing_params.update(overrides["framing_params"])
 
         config.config_source = "manual"
         return config
