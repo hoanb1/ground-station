@@ -531,6 +531,26 @@ export function humanizeAltitude(meters, decimals = 2, unit = "km", showUnit=fal
 }
 
 
+// Humanize byte sizes using SI units (B, kB, MB, GB, TB)
+export function humanizeBytes(bytes) {
+    if (bytes === null || bytes === undefined || isNaN(bytes)) return '-';
+    const units = ['B', 'kB', 'MB', 'GB', 'TB'];
+    let unitIndex = 0;
+    let value = Number(bytes);
+
+    while (value >= 1000 && unitIndex < units.length - 1) {
+        value /= 1000;
+        unitIndex++;
+    }
+
+    const formatted = value >= 100 ? value.toFixed(0)
+        : value >= 10 ? value.toFixed(1)
+        : value.toFixed(2);
+
+    return `${formatted} ${units[unitIndex]}`;
+}
+
+
 export function humanizeVelocity(kmPerSecond, decimals = 2, unit = "km/s", showUnit=false) {
     if (typeof kmPerSecond !== "number" || isNaN(kmPerSecond)) {
         return "Invalid velocity";

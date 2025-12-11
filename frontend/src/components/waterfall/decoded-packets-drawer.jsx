@@ -26,6 +26,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
 import { alpha } from '@mui/material/styles';
 import { setPacketsDrawerOpen, setPacketsDrawerHeight } from './waterfall-slice';
 import { getDecoderDisplay, getModulationDisplay, ModulationType } from '../../constants/modulations';
@@ -33,6 +34,7 @@ import TelemetryViewerDialog from '../filebrowser/telemetry-viewer-dialog.jsx';
 import { deleteDecoded } from '../filebrowser/filebrowser-slice';
 import { deleteOutputByFilename } from '../decoders/decoders-slice';
 import { useSocket } from '../common/socket.jsx';
+import { humanizeBytes } from '../common/common.jsx';
 import { toast } from 'react-toastify';
 
 // Humanize timestamp to show relative time (e.g., "5m 32s ago")
@@ -85,6 +87,8 @@ const TimeFormatter = React.memo(function TimeFormatter({ value }) {
 
     return <span>{humanizePastTime(value)} ({timeString})</span>;
 });
+
+// humanizeBytes now provided by common.jsx and imported above
 
 const DecodedPacketsDrawer = () => {
     const theme = useTheme();
@@ -324,29 +328,6 @@ const DecodedPacketsDrawer = () => {
             )
         },
         {
-            field: 'parser',
-            headerName: 'Parser',
-            minWidth: 100,
-            flex: 1,
-            align: 'center',
-            headerAlign: 'center',
-            renderCell: (params) => (
-                <Chip
-                    label={params.value}
-                    size="small"
-                    sx={{
-                        height: '20px',
-                        fontSize: '0.65rem',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        backgroundColor: alpha(theme.palette.secondary.main, 0.15),
-                        border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
-                        color: 'secondary.main',
-                    }}
-                />
-            )
-        },
-        {
             field: 'framing',
             headerName: 'Framing',
             minWidth: 90,
@@ -393,13 +374,36 @@ const DecodedPacketsDrawer = () => {
             )
         },
         {
+            field: 'parser',
+            headerName: 'Parser',
+            minWidth: 100,
+            flex: 1,
+            align: 'center',
+            headerAlign: 'center',
+            renderCell: (params) => (
+                <Chip
+                    label={params.value}
+                    size="small"
+                    sx={{
+                        height: '20px',
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        backgroundColor: alpha(theme.palette.secondary.main, 0.15),
+                        border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                        color: 'secondary.main',
+                    }}
+                />
+            )
+        },
+        {
             field: 'packetLength',
             headerName: 'Size',
             minWidth: 70,
             flex: 0.6,
             align: 'center',
             headerAlign: 'center',
-            valueFormatter: (value) => `${value}B`
+            valueFormatter: (value) => humanizeBytes(value)
         },
         {
             field: 'vfo',
@@ -458,7 +462,25 @@ const DecodedPacketsDrawer = () => {
                         }}
                     />
                 </Tooltip>
-            ) : '-'
+            ) : (
+                <Tooltip title="No telemetry" placement="top">
+                    <Chip
+                        icon={<CloseIcon sx={{ fontSize: '0.9rem' }} />}
+                        size="small"
+                        label=""
+                        sx={{
+                            height: '20px',
+                            width: '30px',
+                            fontSize: '0.65rem',
+                            fontWeight: 600,
+                            backgroundColor: alpha(theme.palette.text.disabled, 0.08),
+                            border: `1px solid ${alpha(theme.palette.text.disabled, 0.2)}`,
+                            color: 'text.disabled',
+                            '& .MuiChip-icon': { ml: '4px', mr: 0 },
+                        }}
+                    />
+                </Tooltip>
+            )
         },
         {
             field: 'parameters',
