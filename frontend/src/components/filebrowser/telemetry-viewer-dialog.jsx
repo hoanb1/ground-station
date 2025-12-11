@@ -30,6 +30,7 @@ import Float32Tab from './telemetry-float32-tab';
 import IntegersTab from './telemetry-integers-tab';
 import StringsTab from './telemetry-strings-tab';
 import AnalysisTab from './telemetry-analysis-tab';
+import TelemetryValuesTab from './telemetry-values-tab';
 
 function TabPanel({ children, value, index, ...other }) {
     return (
@@ -122,6 +123,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                     sx={{ px: 2 }}
                 >
                     <Tab label="Overview" id="telemetry-tab-0" />
+                    <Tab label="Telemetry" id="telemetry-tab-6" />
                     <Tab label="Hex + ASCII" id="telemetry-tab-1" />
                     <Tab label="As Float32" id="telemetry-tab-2" />
                     <Tab label="As Integers" id="telemetry-tab-3" />
@@ -145,16 +147,13 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
 
                 <TabPanel value={activeTab} index={1}>
                     <Box sx={{ px: 3, pb: 2 }}>
-                        <HexAsciiTab
-                            packet={packet}
-                            telemetry={telemetry}
-                        />
+                        <TelemetryValuesTab telemetry={telemetry} />
                     </Box>
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={2}>
                     <Box sx={{ px: 3, pb: 2 }}>
-                        <Float32Tab
+                        <HexAsciiTab
                             packet={packet}
                             telemetry={telemetry}
                         />
@@ -163,7 +162,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
 
                 <TabPanel value={activeTab} index={3}>
                     <Box sx={{ px: 3, pb: 2 }}>
-                        <IntegersTab
+                        <Float32Tab
                             packet={packet}
                             telemetry={telemetry}
                         />
@@ -172,7 +171,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
 
                 <TabPanel value={activeTab} index={4}>
                     <Box sx={{ px: 3, pb: 2 }}>
-                        <StringsTab
+                        <IntegersTab
                             packet={packet}
                             telemetry={telemetry}
                         />
@@ -180,6 +179,15 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                 </TabPanel>
 
                 <TabPanel value={activeTab} index={5}>
+                    <Box sx={{ px: 3, pb: 2 }}>
+                        <StringsTab
+                            packet={packet}
+                            telemetry={telemetry}
+                        />
+                    </Box>
+                </TabPanel>
+
+                <TabPanel value={activeTab} index={6}>
                     <Box sx={{ px: 3, pb: 2 }}>
                         <AnalysisTab
                             packet={packet}

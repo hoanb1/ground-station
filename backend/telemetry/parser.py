@@ -90,6 +90,7 @@ Notes and common expectations
 """
 
 import logging
+import re
 from typing import Any, Dict, Optional, Tuple
 
 from .ax25parser import AX25Parser
@@ -125,6 +126,32 @@ class TelemetryParser:
         self.ccsds_parser = CCSDSParser()
         self.payload_parsers: Dict[Any, Any] = {}  # protocol-aware registry
         logger.debug("Telemetry parser initialized (protocol-agnostic)")
+
+        # Built-in registrations for common encapsulated cases
+        # GEOSCAN missions that encapsulate AX.25 (e.g., STRATOSAT-TK 1 / RS52S)
+        try:
+            from .parsers.rs52s import RS52SGeoscanAx25Parser
+
+            rs52s_parser = RS52SGeoscanAx25Parser()
+            # Register by exact callsign and base callsign
+            self.register_payload_parser("RS52S", rs52s_parser)
+            self.register_payload_parser("RS52S-0", rs52s_parser)
+        except Exception:
+            # Optional: if file not present, continue without RS52S mapping
+            pass
+
+        # COLIBRI-S (RS67S) Type-I beacon: AX.25 header inside GEOSCAN, 72-byte payload
+        try:
+            from .parsers.colibri_s import ColibriSGeoscanAx25Parser
+
+            colibri_parser = ColibriSGeoscanAx25Parser()
+            # Register by common callsigns
+            self.register_payload_parser("RS67S", colibri_parser)
+            self.register_payload_parser("RS67S-0", colibri_parser)
+            # Some stations may label source as COLIBRI-S; register by name as well
+            self.register_payload_parser("COLIBRI-S", colibri_parser)
+        except Exception:
+            pass
 
     def register_payload_parser(self, identifier, parser):
         """
@@ -168,7 +195,7 @@ class TelemetryParser:
 
         # Choose protocol
         protocol = None
-        if protocol_hint in ("ax25", "csp", "ccsds"):
+        if protocol_hint in ("ax25", "csp", "ccsds", "proprietary"):
             protocol = protocol_hint
         else:
             # Auto-detect in simple order
@@ -284,6 +311,170 @@ class TelemetryParser:
             }
             return result
 
+        # Proprietary payloads (e.g., GEOSCAN)
+        if protocol == "proprietary":
+            payload = packet_bytes
+
+            # Some proprietary link-layers (e.g., GEOSCAN) encapsulate an AX.25 frame inside.
+            # Try parsing as AX.25 first; if it succeeds, use that. This is more robust than
+            # relying on a heuristic and gracefully falls back on failure.
+            try:
+                ax25_result = self.ax25_parser.parse(payload)
+                logger.debug(
+                    "proprietary→AX25 attempt | first16=%s | success=%s",
+                    payload[:16].hex(),
+                    ax25_result.get("success"),
+                )
+            except Exception as e:
+                logger.debug(
+                    "proprietary→AX25 parse raised: %s | first16=%s",
+                    e,
+                    payload[:16].hex(),
+                )
+                ax25_result = {"success": False}
+            if ax25_result.get("success"):
+                result["parser"] = "ax25"
+                result["frame"] = {
+                    "destination": ax25_result["destination"],
+                    "source": ax25_result["source"],
+                    "control": ax25_result["control"],
+                    "pid": ax25_result["pid"],
+                    "repeaters": ax25_result.get("repeaters"),
+                }
+                ax25_payload = ax25_result["payload"]
+                payload_parser = self._select_payload_parser_ax25(
+                    ax25_result["source"], parser_hint
+                )
+                if payload_parser:
+                    try:
+                        telemetry_data = payload_parser.parse(ax25_payload)
+                        result["telemetry"] = telemetry_data
+                        result["parser"] = f"ax25+{payload_parser.__class__.__name__}"
+                    except Exception as e:
+                        logger.warning(
+                            f"Encapsulated AX.25 payload parser failed: {e}, falling back to hex"
+                        )
+                        result["telemetry"] = self._fallback_telemetry(ax25_payload)
+                else:
+                    result["telemetry"] = self._fallback_telemetry(ax25_payload)
+
+                result["success"] = True
+                result["raw"] = {
+                    "packet_hex": packet_bytes.hex(),
+                    "payload_hex": ax25_payload.hex(),
+                    "payload_length": len(ax25_payload),
+                }
+                return result
+
+            # If AX.25 parser failed (likely because GEOSCAN removed AX.25 FCS),
+            # attempt a lightweight AX.25 header extraction (no FCS) and run
+            # the AX.25 payload parser on the info field.
+            try:
+                if len(payload) >= 16:
+                    # Control/PID sanity
+                    ctl = payload[14]
+                    pid = payload[15]
+                    if ctl in (0x03, 0x13) and pid in (0xF0, 0xCF, 0xF3, 0x01):
+                        # Decode callsigns (shift >>1)
+                        dest_call = "".join(chr((payload[i] >> 1) & 0x7F) for i in range(6)).strip()
+                        dest_ssid = (payload[6] >> 1) & 0x0F
+                        src_call = "".join(
+                            chr((payload[i] >> 1) & 0x7F) for i in range(7, 13)
+                        ).strip()
+                        src_ssid = (payload[13] >> 1) & 0x0F
+                        info = payload[16:]
+                        logger.debug(
+                            "proprietary→AX25 lightweight header (no FCS) | src=%s-%d dst=%s-%d | info_len=%d",
+                            src_call,
+                            src_ssid,
+                            dest_call,
+                            dest_ssid,
+                            len(info),
+                        )
+
+                        # Build result frame and try payload parser by callsign
+                        result["parser"] = "ax25"
+                        result["frame"] = {
+                            "destination": f"{dest_call}-{dest_ssid}",
+                            "source": f"{src_call}-{src_ssid}",
+                            "control": hex(ctl),
+                            "pid": hex(pid),
+                            "repeaters": None,
+                        }
+                        payload_parser = self._select_payload_parser_ax25(
+                            f"{src_call}-{src_ssid}"
+                        ) or self._select_payload_parser_ax25(src_call)
+                        if payload_parser:
+                            try:
+                                data = payload_parser.parse(info)
+                                result["telemetry"] = data
+                                result["parser"] = f"ax25+{payload_parser.__class__.__name__}"
+                            except Exception as e:
+                                logger.warning(
+                                    "telemetry.parser: lightweight AX.25 payload parser failed: %s, falling back to hex",
+                                    e,
+                                )
+                                result["telemetry"] = self._fallback_telemetry(info)
+                        else:
+                            result["telemetry"] = self._fallback_telemetry(info)
+
+                        result["success"] = True
+                        result["raw"] = {
+                            "packet_hex": packet_bytes.hex(),
+                            "payload_hex": info.hex(),
+                            "payload_length": len(info),
+                        }
+                        return result
+            except Exception as e:
+                logger.warning("telemetry.parser: lightweight AX.25 header path error: %s", e)
+
+            # If no encapsulated AX.25 detected, try protocol-aware proprietary parser by satellite hint
+            logger.debug(
+                "proprietary→no AX25; trying protocol parser (sat_hint=%s, len=%d)",
+                sat_hint,
+                len(payload),
+            )
+            payload_parser = self._select_payload_parser_protocol(
+                protocol="proprietary", sat_hint=sat_hint, service_id=None, legacy_hint=parser_hint
+            )
+            if payload_parser:
+                try:
+                    data = payload_parser.parse(payload)
+                    result["telemetry"] = data
+                    result["parser"] = f"proprietary+{payload_parser.__class__.__name__}"
+                except Exception as e:
+                    logger.warning(f"Proprietary payload parser failed: {e}, falling back to hex")
+                    result["telemetry"] = self._fallback_telemetry(payload)
+            else:
+                # Best-effort: try GEOSCAN decoder automatically by payload length (66/74 bytes)
+                try:
+                    from .parsers.geoscan import GeoscanParser
+
+                    # GEOSCAN frames are commonly 66 or 74 bytes including CC11xx CRC.
+                    # After CRC removal, payload lengths often appear as 64 or 72 bytes.
+                    if len(payload) in (64, 66, 72, 74):
+                        parser = GeoscanParser()
+                        # Provide both actual payload len and a frame_size hint equal to
+                        # payload length, so parser can still choose a layout by sat name.
+                        data = parser.parse(payload, sat_name=sat_hint, frame_size=len(payload))
+                        result["telemetry"] = data
+                        result["parser"] = f"proprietary+{parser.__class__.__name__}"
+                    else:
+                        result["telemetry"] = self._fallback_telemetry(payload)
+                        result["parser"] = "raw"
+                except Exception:
+                    # If import or parsing fails, fall back to generic views
+                    result["telemetry"] = self._fallback_telemetry(payload)
+                    result["parser"] = "raw"
+
+            result["success"] = True
+            result["raw"] = {
+                "packet_hex": packet_bytes.hex(),
+                "payload_hex": payload.hex(),
+                "payload_length": len(payload),
+            }
+            return result
+
         # Unknown protocol -> raw analysis only
         result["parser"] = "raw"
         result["telemetry"] = self._fallback_telemetry(packet_bytes)
@@ -310,14 +501,25 @@ class TelemetryParser:
         if hint and hint in self.payload_parsers:
             return self.payload_parsers[hint]
 
-        # Try exact match on callsign
+        # Normalize callsign: remove control/non-printable characters and collapse whitespace
+        try:
+            cleaned = re.sub(r"[^A-Za-z0-9\-]", "", source_callsign or "")
+        except Exception:
+            cleaned = (source_callsign or "").replace("\x00", "").strip()
+
+        # Try exact match on original then cleaned
         if source_callsign in self.payload_parsers:
             return self.payload_parsers[source_callsign]
+        if cleaned in self.payload_parsers:
+            return self.payload_parsers[cleaned]
 
-        # Try pattern matching (e.g., TVL2-* for TEVEL satellites)
+        # Try base callsign before SSID (e.g., RS67S-0 → RS67S), using cleaned variant too
         base_callsign = source_callsign.split("-")[0]
         if base_callsign in self.payload_parsers:
             return self.payload_parsers[base_callsign]
+        cleaned_base = cleaned.split("-")[0] if cleaned else ""
+        if cleaned_base in self.payload_parsers:
+            return self.payload_parsers[cleaned_base]
 
         return None
 

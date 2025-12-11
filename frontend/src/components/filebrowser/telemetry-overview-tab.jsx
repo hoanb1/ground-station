@@ -87,43 +87,88 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
     const vfo = metadata.vfo || {};
     const decoder = metadata.decoder || {};
 
+    const decoderConfig = metadata.decoder_config || {};
+    const framing = decoderConfig.framing;
+    const payloadProtocol = decoderConfig.payload_protocol;
+    const geoscan = decoderConfig.geoscan || {};
+    const framingParams = decoderConfig.framing_params || {};
+    const telemetryParser = telemetry.parser || '';
+
+    const isGeoscan = framing === 'geoscan' || payloadProtocol === 'proprietary';
+    const hasEncapsulatedAx25 = typeof telemetryParser === 'string' && telemetryParser.startsWith('ax25');
+
+
     return (
         <Box>
             {/* Two Column Layout for remaining sections */}
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
                 {/* Left Column */}
                 <Box>
-                    {/* AX.25 Frame Information */}
-                    <InfoSection title="AX.25 Frame Information">
-                        <InfoRow
-                            label="Source"
-                            value={frame.source || ax25.from_callsign}
-                            mono
-                        />
-                        <InfoRow
-                            label="Destination"
-                            value={frame.destination || ax25.to_callsign}
-                            mono
-                        />
-                        <InfoRow
-                            label="Control"
-                            value={frame.control}
-                            mono
-                        />
-                        <InfoRow
-                            label="PID"
-                            value={frame.pid}
-                            mono
-                        />
-                        <InfoRow
-                            label="Parser"
-                            value={telemetry.parser || 'ax25'}
-                        />
-                        <InfoRow
-                            label=""
-                            value=""
-                        />
-                    </InfoSection>
+                    {/* Link-layer / Frame Information */}
+                    {isGeoscan ? (
+                        <InfoSection title="GEOSCAN Frame Information">
+                            <InfoRow label="Framing" value={framing || 'geoscan'} />
+                            <InfoRow label="Protocol" value={payloadProtocol || 'proprietary'} />
+                            <InfoRow
+                                label="Configured Frame Size"
+                                value={`${geoscan.frame_size || framingParams.frame_size || 66} bytes`}
+                            />
+                            <InfoRow
+                                label="Delivered Payload Length"
+                                value={`${telemetry.raw?.payload_length || packet.length_bytes || '-'} bytes`}
+                            />
+                            <InfoRow
+                                label="PN9 Descrambler"
+                                value={geoscan.pn9_descrambled === false ? 'No' : 'Yes'}
+                            />
+                            <InfoRow
+                                label="CC11xx CRC"
+                                value={(geoscan.cc11xx_crc || 'ok').toUpperCase()}
+                            />
+                            <InfoRow
+                                label="Syncword Threshold"
+                                value={`${geoscan.syncword_threshold ?? framingParams.syncword_threshold ?? 4}`}
+                            />
+                            <InfoRow label="Parser" value={telemetryParser || 'proprietary'} />
+                        </InfoSection>
+                    ) : (
+                        <InfoSection title="AX.25 Frame Information">
+                            <InfoRow
+                                label="Source"
+                                value={frame.source || ax25.from_callsign}
+                                mono
+                            />
+                            <InfoRow
+                                label="Destination"
+                                value={frame.destination || ax25.to_callsign}
+                                mono
+                            />
+                            <InfoRow
+                                label="Control"
+                                value={frame.control}
+                                mono
+                            />
+                            <InfoRow
+                                label="PID"
+                                value={frame.pid}
+                                mono
+                            />
+                            <InfoRow
+                                label="Parser"
+                                value={telemetryParser || 'ax25'}
+                            />
+                        </InfoSection>
+                    )}
+
+                    {/* Encapsulated AX.25 (when GEOSCAN carries an inner AX.25) */}
+                    {isGeoscan && hasEncapsulatedAx25 && (
+                        <InfoSection title="Encapsulated AX.25 Frame">
+                            <InfoRow label="Source" value={frame.source || ax25.from_callsign} mono />
+                            <InfoRow label="Destination" value={frame.destination || ax25.to_callsign} mono />
+                            <InfoRow label="Control" value={frame.control} mono />
+                            <InfoRow label="PID" value={frame.pid} mono />
+                        </InfoSection>
+                    )}
 
                     {/* Packet Metadata */}
                     <InfoSection title="Packet Metadata">
@@ -248,6 +293,29 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                                 </Box>
                             ) : null}
                         </>
+                    ) : isGeoscan ? (
+                        <>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    CC11xx CRC validated by GEOSCAN deframer
+                                </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                <Typography variant="body2">
+                                    PN9 descrambling applied
+                                </Typography>
+                            </Box>
+                            {hasEncapsulatedAx25 && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
+                                    <Typography variant="body2">
+                                        Encapsulated AX.25 frame decoded successfully
+                                    </Typography>
+                                </Box>
+                            )}
+                        </>
                     ) : (
                         <>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -278,6 +346,8 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                     <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
                         {decoder.type === ModulationType.LORA ? (
                             <>ℹ️ {getDecoderDisplay(decoder.type)} packets include PHY-layer CRC validation and Forward Error Correction (FEC). Invalid packets are automatically discarded by the {getDecoderDisplay(decoder.type)} decoder.</>
+                        ) : isGeoscan ? (
+                            <>ℹ️ GEOSCAN frames include TI CC11xx CRC and PN9 scrambling. The configured frame size typically includes a 2-byte CC11xx CRC that is removed after validation.</>
                         ) : (
                             <>ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.</>
                         )}

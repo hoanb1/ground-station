@@ -193,6 +193,7 @@ class FSKFlowgraph(gr.top_block):
         framing="ax25",  # 'ax25', 'usp', 'geoscan', 'doka', 'ax100_asm', 'ax100_rs'
         modulation_subtype="FSK",  # 'FSK', 'GFSK', or 'GMSK' (metadata only)
         logger=None,
+        framing_params=None,
     ):
         """
         Initialize FSK-family decoder flowgraph using gr-satellites FSK demodulator
@@ -227,6 +228,8 @@ class FSKFlowgraph(gr.top_block):
         self.framing = framing
         self.modulation_subtype = modulation_subtype
         self.logger = logger or logging.getLogger("fskdecoder")
+        # Framing-specific parameters (e.g., GEOSCAN frame_size); always a dict
+        self.framing_params = framing_params or {}
 
         # Accumulate samples in a buffer
         self.sample_buffer = np.array([], dtype=np.complex64)
@@ -711,6 +714,37 @@ class FSKDecoder(BaseDecoderProcess):
             "batch_interval": self.batch_interval,
         }
 
+    def _get_decoder_config_metadata(self) -> Dict[str, Any]:
+        """Return decoder config metadata extended with framing params.
+
+        Adds GEOSCAN-specific details so the UI can render a protocol-aware
+        dialog showing configured frame size, PN9/CRC status, etc.
+        """
+        payload_protocol = self._get_payload_protocol()
+        meta: Dict[str, Any] = {
+            "source": self.config_source,
+            "framing": self.framing,
+            "payload_protocol": payload_protocol,
+        }
+
+        # Include framing parameters when present (copy to avoid mutation)
+        if getattr(self, "framing_params", None):
+            meta["framing_params"] = dict(self.framing_params)
+
+        # GEOSCAN extras
+        if self.framing == "geoscan":
+            frame_size = int((self.framing_params or {}).get("frame_size", 66))
+            syncword_threshold = int((self.framing_params or {}).get("syncword_threshold", 4))
+            # geoscan_deframer emits only CRC-validated frames
+            meta["geoscan"] = {
+                "pn9_descrambled": True,
+                "cc11xx_crc": "ok",
+                "frame_size": frame_size,
+                "syncword_threshold": syncword_threshold,
+            }
+
+        return meta
+
     def _get_filename_params(self):
         """Return filename parameters"""
         return f"{self.baudrate}baud"
@@ -1086,6 +1120,7 @@ class FSKDecoder(BaseDecoderProcess):
                                 framing=self.framing,
                                 modulation_subtype=self.modulation_subtype,
                                 logger=self.logger,
+                                framing_params=self.framing_params,
                             )
                             flowgraph_started = True
 
