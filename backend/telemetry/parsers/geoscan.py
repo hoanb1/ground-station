@@ -64,15 +64,85 @@ class GeoscanParser:
     # Layouts can be keyed by (frame_size) or (satellite_name_lower)
     # Use precise per-satellite overrides when available.
     LAYOUTS: Dict[Any, List[Field]] = {
-        # Example (placeholders commented out; to be filled from PDF):
-        # 66: [
-        #     Field(name="vbat_v", offset=0x00, ftype="u16", scale=0.001, unit="V"),
-        #     Field(name="eps_temp_c", offset=0x02, ftype="i16", scale=0.1, unit="°C"),
-        # ],
-        # 74: [
-        #     Field(name="vbat_v", offset=0x00, ftype="u16", scale=0.001, unit="V"),
-        #     Field(name="board_temp_c", offset=0x02, ftype="i16", scale=0.1, unit="°C"),
-        # ],
+        # Generic GEOSCAN Type-I (74-byte frame → 72-byte payload)
+        # Full payload includes AX.25 header (16), then ID + EPS + OBC + COMMu
+        74: [
+            # AX.25 header (destination 0..5, dest SSID 6, source 7..12, src SSID 13, control 14, pid 15)
+            Field("ax25_control", 14, "u8"),
+            Field("ax25_pid", 15, "u8"),
+            # Mayak ID
+            Field("mayak_id", 16, "u8"),
+            # EPS
+            Field("eps_time_unix_s", 17, "u32"),
+            Field("eps_mode_enum", 21, "u8"),
+            Field("eps_reserve_22", 22, "u8"),
+            Field("eps_current_platform_a", 23, "u16", scale=0.001, unit="A"),
+            Field("eps_current_solar_a", 25, "u16", scale=0.001, unit="A"),
+            Field("v_cell_v", 27, "u16", scale=0.001, unit="V"),
+            Field("v_pack_v", 29, "u16", scale=0.001, unit="V"),
+            Field("eps_reserve_bitfield_31", 31, "u16"),
+            Field("temp_bat1_c", 33, "i8", unit="°C"),
+            Field("temp_bat2_c", 34, "i8", unit="°C"),
+            Field("eps_reserve_35", 35, "u16"),
+            Field("eps_reserve_bitfield_37", 37, "u8"),
+            Field("eps_reserve_38", 38, "u16"),
+            # OBC
+            Field("obc_reserve_40", 40, "u16"),
+            Field("obc_activity_raw", 42, "u8"),
+            Field("temp_x_p_c", 43, "i8", unit="°C"),
+            Field("temp_x_n_c", 44, "i8", unit="°C"),
+            Field("temp_y_p_c", 45, "i8", unit="°C"),
+            Field("temp_y_n_c", 46, "i8", unit="°C"),
+            Field("gnss_sat_count", 47, "u8"),
+            Field("obc_reserve_48_enum", 48, "u8"),
+            Field("obc_reserve_49", 49, "u8"),
+            Field("camera_media_files_count", 50, "u8"),
+            Field("obc_reserve_51_enum", 51, "u8"),
+            Field("obc_reserve_52_4b", 52, "u32"),
+            # COMMu
+            Field("commu_reserve_56_enum", 56, "u8"),
+            Field("vbus_v", 57, "u16", scale=0.001, unit="V"),
+            Field("commu_reserve_59", 59, "u16"),
+            Field("rssi_last_dbm", 61, "i8"),
+            Field("rssi_min_dbm", 62, "i8"),
+            Field("commu_reserve_63", 63, "u8"),
+            Field("commu_reserve_64", 64, "u8"),
+            Field("tx_packets_count", 65, "u8"),
+            Field("commu_reserve_66", 66, "u8"),
+            Field("commu_reserve_67_enum", 67, "u8"),
+            Field("commu_reserve_68_signed", 68, "i8"),
+            Field("qso_received_count", 69, "u8"),
+            Field("commu_reserve_70", 70, "u16"),
+        ],
+        # Generic GEOSCAN Type-I (66-byte frame → 64-byte payload)
+        # Keep same structure but payload is shorter (info field ~48 bytes). Fields which overflow
+        # the payload will be ignored by bounds checks in _decode_int.
+        66: [
+            Field("ax25_control", 14, "u8"),
+            Field("ax25_pid", 15, "u8"),
+            Field("mayak_id", 16, "u8"),
+            Field("eps_time_unix_s", 17, "u32"),
+            Field("eps_mode_enum", 21, "u8"),
+            Field("eps_reserve_22", 22, "u8"),
+            Field("eps_current_platform_a", 23, "u16", scale=0.001, unit="A"),
+            Field("eps_current_solar_a", 25, "u16", scale=0.001, unit="A"),
+            Field("v_cell_v", 27, "u16", scale=0.001, unit="V"),
+            Field("v_pack_v", 29, "u16", scale=0.001, unit="V"),
+            Field("eps_reserve_bitfield_31", 31, "u16"),
+            Field("temp_bat1_c", 33, "i8", unit="°C"),
+            Field("temp_bat2_c", 34, "i8", unit="°C"),
+            # OBC (partial, within 64 bytes)
+            Field("obc_reserve_40", 40, "u16"),
+            Field("obc_activity_raw", 42, "u8"),
+            Field("temp_x_p_c", 43, "i8", unit="°C"),
+            Field("temp_x_n_c", 44, "i8", unit="°C"),
+            Field("temp_y_p_c", 45, "i8", unit="°C"),
+            Field("temp_y_n_c", 46, "i8", unit="°C"),
+            Field("gnss_sat_count", 47, "u8"),
+            Field("obc_reserve_48_enum", 48, "u8"),
+            Field("obc_reserve_49", 49, "u8"),
+            Field("camera_media_files_count", 50, "u8"),
+        ],
     }
 
     def parse(
@@ -86,6 +156,18 @@ class GeoscanParser:
             "format": "geoscan",
             "length": len(payload),
         }
+
+        # Guard: image packet structure (Section 3.1). Detect image syncword 0x316F6B6F at offset 13
+        # (little-endian), which corresponds to bytes 6F 6B 6F 31.
+        try:
+            if len(payload) >= 17 and payload[13:17] == bytes([0x6F, 0x6B, 0x6F, 0x31]):
+                result["warning"] = (
+                    "GEOSCAN image packet detected (syncword 0x316F6B6F). "
+                    "Image payload is not parsed by the housekeeping decoder."
+                )
+                return result
+        except Exception:
+            pass
 
         # Choose layout priority: exact satellite match → frame_size → none
         layout: Optional[List[Field]] = None
