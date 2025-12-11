@@ -53,7 +53,7 @@ import RadioIcon from '@mui/icons-material/Radio';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Grid from "@mui/material/Grid";
 import React from "react";
-import ElevationDisplay from "../common/elevation-display.jsx";
+// ElevationDisplay not used in target page; using satelliteData for elevation per request
 
 const TargetSatelliteInfoIsland = () => {
     const { t } = useTranslation('target');
@@ -311,17 +311,9 @@ const TargetSatelliteInfoIsland = () => {
                                     Elevation
                                 </Typography>
                                 <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace', lineHeight: 1 }}>
-                                    {satelliteId && selectedSatellitePositions?.[satelliteId] ? (
-                                        <ElevationDisplay
-                                            elevation={selectedSatellitePositions[satelliteId].el}
-                                            trend={selectedSatellitePositions[satelliteId].trend}
-                                            timeToMaxEl={selectedSatellitePositions[satelliteId].timeToMaxEl}
-                                            elRate={selectedSatellitePositions[satelliteId].elRate}
-                                            showNegative={true}
-                                        />
-                                    ) : (
-                                        satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : '--'
-                                    )}
+                                    {satelliteData && satelliteData['position'] && satelliteData['position']['el'] !== undefined
+                                        ? `${satelliteData['position']['el'].toFixed(1)}°`
+                                        : '--'}
                                 </Typography>
                             </Box>
                         </Grid>
