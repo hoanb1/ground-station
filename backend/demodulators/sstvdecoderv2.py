@@ -1250,3 +1250,21 @@ class SSTVDecoderV2(BaseDecoderProcess):
             self._send_status_update(DecoderStatus.ERROR)
 
         logger.info(f"SSTV decoder v2 process stopped for {self.session_id}")
+
+        # Send final status with restart flag if applicable (parity with FSK decoder)
+        try:
+            final_status = "restart_requested" if self.should_restart() else "closed"
+            msg = {
+                "type": "decoder-status",
+                "status": final_status,
+                "decoder_type": "sstv",
+                "decoder_id": self.decoder_id,
+                "session_id": self.session_id,
+                "vfo": self.vfo,
+                "timestamp": time.time(),
+                "shm_segments": self.get_shm_segment_count(),
+                "restart_requested": self.should_restart(),
+            }
+            self.data_queue.put(msg, block=False)
+        except queue.Full:
+            pass
