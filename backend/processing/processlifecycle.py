@@ -554,6 +554,49 @@ class ProcessLifecycleManager:
 
         self.logger.info(f"Sent configuration update to SDR process for device {sdr_id}")
 
+        # If sample rate or center frequency changed, restart all decoders for this SDR
+        # so that they reinitialize DSP state (filters/decimation) with the new parameters.
+        if (old_sample_rate is not None and new_sample_rate != old_sample_rate) or (
+            old_center_freq is not None and new_center_freq != old_center_freq
+        ):
+            try:
+                decoders = process_info.get("decoders", {})
+                if not decoders:
+                    return
+
+                # Build a human-readable reason describing what changed
+                if (old_sample_rate is not None and new_sample_rate != old_sample_rate) and (
+                    old_center_freq is not None and new_center_freq != old_center_freq
+                ):
+                    reason = (
+                        f"sdr_rate_and_center_changed: rate {old_sample_rate} -> {new_sample_rate}, "
+                        f"center {old_center_freq} -> {new_center_freq}"
+                    )
+                elif old_sample_rate is not None and new_sample_rate != old_sample_rate:
+                    reason = f"sdr_sample_rate_changed: {old_sample_rate} -> {new_sample_rate}"
+                else:
+                    reason = f"sdr_center_changed: {old_center_freq} -> {new_center_freq}"
+
+                # Schedule async restarts for all session/VFO decoders on this SDR
+                for session_id, vfo_map in decoders.items():
+                    try:
+                        for vfo_number in list(vfo_map.keys()):
+                            self.logger.info(
+                                f"Restarting decoder due to SDR config change: {session_id} VFO{vfo_number} | {reason}"
+                            )
+                            # Use async helper to avoid blocking the event loop
+                            asyncio.create_task(
+                                self._restart_decoder_async(sdr_id, session_id, vfo_number, reason)
+                            )
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error scheduling decoder restarts for session {session_id} on SDR {sdr_id}: {e}"
+                        )
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to enumerate decoders for restart on SDR {sdr_id} after config change: {e}"
+                )
+
     async def _restart_decoder_async(self, sdr_id, session_id, vfo_number, reason):
         """
         Asynchronously restart a decoder that requested restart.
