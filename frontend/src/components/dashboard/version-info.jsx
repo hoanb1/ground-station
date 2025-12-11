@@ -1,6 +1,6 @@
 
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useEffect, useMemo } from 'react';
+import { useDispatch, useSelector, shallowEqual } from 'react-redux';
 import { Typography, Box, Chip, Tooltip } from '@mui/material';
 import { fetchVersionInfo } from './version-slice';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,20 @@ const VersionInfo = ({ minimal = false }) => {
     const dispatch = useDispatch();
     const { t } = useTranslation('dashboard');
     const { data, loading, error } = useSelector((state) => state.version);
+    // Select only static systemInfo fields to avoid re-renders on live metrics updates
+    const staticSystemInfo = useSelector(
+        (state) => ({
+            cpuArch: state.systemInfo?.cpu?.architecture,
+            coresLogical: state.systemInfo?.cpu?.cores?.logical,
+            coresPhysical: state.systemInfo?.cpu?.cores?.physical,
+            memTotal: state.systemInfo?.memory?.total_gb,
+            diskTotal: state.systemInfo?.disk?.total_gb,
+            osSystem: state.systemInfo?.os?.system,
+            osRelease: state.systemInfo?.os?.release,
+            osVersion: state.systemInfo?.os?.version,
+        }),
+        shallowEqual
+    );
     const hasFetchedRef = React.useRef(false);
 
     // Determine environment
@@ -25,7 +39,7 @@ const VersionInfo = ({ minimal = false }) => {
 
     if (minimal) {
         // Extract CPU architecture (e.g., x86_64 -> x64, aarch64 -> arm64)
-        const cpuArch = data?.system?.cpu?.architecture;
+        const cpuArch = staticSystemInfo.cpuArch;
         let archLabel = 'unknown';
         if (cpuArch) {
             if (cpuArch.includes('x86_64') || cpuArch.includes('amd64')) {
@@ -42,19 +56,19 @@ const VersionInfo = ({ minimal = false }) => {
         // Determine environment label
         const envLabel = environment === 'production' ? 'PROD' : 'DEV';
 
-        // Build tooltip content with system info
-        const tooltipContent = (
+        // Build tooltip content with system info (static values only)
+        const tooltipContent = useMemo(() => (
             <Box sx={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
                 <Box><strong>Version:</strong> {data?.version || t('version_info.unknown')}</Box>
                 <Box><strong>Build Date:</strong> {data?.buildDate || t('version_info.unknown')}</Box>
                 <Box><strong>Git Commit:</strong> {data?.gitCommit || t('version_info.unknown')}</Box>
                 <Box sx={{ mt: 0.5 }}><strong>Architecture:</strong> {cpuArch || 'unknown'}</Box>
-                <Box><strong>CPU Cores:</strong> {data?.system?.cpu?.cores?.logical || '?'} ({data?.system?.cpu?.cores?.physical || '?'} physical)</Box>
-                <Box><strong>Memory:</strong> {data?.system?.memory?.total_gb || '?'} GB ({data?.system?.memory?.usage_percent || '?'}% used)</Box>
-                <Box><strong>Disk:</strong> {data?.system?.disk?.total_gb || '?'} GB ({data?.system?.disk?.usage_percent || '?'}% used)</Box>
-                <Box><strong>OS:</strong> {data?.system?.os?.system || 'unknown'} {data?.system?.os?.release || ''}</Box>
+                <Box><strong>CPU Cores:</strong> {staticSystemInfo.coresLogical || '?'} ({staticSystemInfo.coresPhysical || '?'} physical)</Box>
+                <Box><strong>Memory (total):</strong> {staticSystemInfo.memTotal ?? '?'}{staticSystemInfo.memTotal != null ? ' GB' : ''}</Box>
+                <Box><strong>Disk (total):</strong> {staticSystemInfo.diskTotal ?? '?'}{staticSystemInfo.diskTotal != null ? ' GB' : ''}</Box>
+                <Box><strong>OS:</strong> {(staticSystemInfo.osSystem || 'unknown')} {(staticSystemInfo.osRelease || '')}</Box>
             </Box>
-        );
+        ), [data?.version, data?.buildDate, data?.gitCommit, cpuArch, staticSystemInfo, t]);
 
         return (
             <Tooltip title={tooltipContent} placement="bottom-start">
@@ -104,4 +118,4 @@ const VersionInfo = ({ minimal = false }) => {
     );
 };
 
-export default VersionInfo;
+export default React.memo(VersionInfo);

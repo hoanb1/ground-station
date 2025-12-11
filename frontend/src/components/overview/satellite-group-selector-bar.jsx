@@ -255,7 +255,8 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
             <Box
                 ref={containerRef}
                 sx={{
-                    display: 'flex',
+                    // Hide recent-group pills area on mobile
+                    display: { xs: 'none', sm: 'flex' },
                     gap: 1,
                     flex: 1,
                     overflow: 'hidden',
@@ -386,6 +387,7 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
                         bgcolor: 'action.hover',
                         borderRadius: '16px',
                         flexShrink: 0,
+                        ml: 'auto',
                         cursor: 'help',
                     }}
                 >

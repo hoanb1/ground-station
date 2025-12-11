@@ -155,8 +155,13 @@ function CustomAppTitle() {
                         <Box display="flex" alignItems="center" gap={1}>
                             <img src={GroundStationLogoGreenBlue} alt="Ground Station" width="30" height="30" />
                             <Typography variant="h6">Ground Station</Typography>
-                            {/* Hide version indicator on mobile/tablet; show only on desktop (lg+) */}
-                            <Box sx={{ display: { xs: 'none', md: 'none', lg: 'block' } }}>
+                            {/* Hide version indicator on phones and small tablets; show from ~768px and up */}
+                            <Box sx={{
+                                display: 'none',
+                                '@media (min-width:768px)': {
+                                    display: 'block',
+                                },
+                            }}>
                                 <VersionInfo minimal={true}/>
                             </Box>
                         </Box>

@@ -18,9 +18,11 @@
  */
 
 import Paper from "@mui/material/Paper";
-import { Box, Tabs, Tab } from "@mui/material";
+import { Box } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import React, { useState } from "react";
+import { tabsClasses } from '@mui/material/Tabs';
+import { AntTab, AntTabs } from "../common/common.jsx";
 import {
     GridLayoutStorageCard,
     ReduxPersistentSettingsCard,
@@ -46,17 +48,32 @@ const MaintenanceForm = () => {
     );
 
     return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0  }}>
+        <Paper elevation={3} sx={{ padding: 0, marginTop: 0  }}>
             <Box component="form" sx={{mt: 0}}>
-                <Tabs value={mainTab} onChange={(e, newValue) => setMainTab(newValue)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                    <Tab label="Frontend State" />
-                    <Tab label="Redux Inspector" />
-                    <Tab label="System Control" />
-                    <Tab label="Diagnostics" />
-                    <Tab label="Database" />
-                    <Tab label="Dependencies" />
-                    <Tab label="System Info" />
-                </Tabs>
+                <AntTabs
+                    value={mainTab}
+                    onChange={(e, newValue) => setMainTab(newValue)}
+                    sx={{
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        mb: 2,
+                        [`& .${tabsClasses.scrollButtons}`]: {
+                            '&.Mui-disabled': { opacity: 0.3 },
+                        },
+                    }}
+                    scrollButtons
+                    allowScrollButtonsMobile
+                    variant="scrollable"
+                    aria-label="maintenance tabs"
+                >
+                    <AntTab value={0} label="Frontend State" />
+                    <AntTab value={1} label="Redux Inspector" />
+                    <AntTab value={2} label="System Control" />
+                    <AntTab value={3} label="Diagnostics" />
+                    <AntTab value={4} label="Database" />
+                    <AntTab value={5} label="Dependencies" />
+                    <AntTab value={6} label="System Info" />
+                </AntTabs>
 
                 {/* Tab 0: Frontend State */}
                 <TabPanel value={mainTab} index={0}>
