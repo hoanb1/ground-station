@@ -487,20 +487,30 @@ class ProcessLifecycleManager:
         new_center_freq = config.get("center_freq")
 
         # If sample rate OR center frequency changed, flush all queues
-        if (old_sample_rate is not None and new_sample_rate != old_sample_rate) or (
-            old_center_freq is not None and new_center_freq != old_center_freq
-        ):
+        # Note: Treat None -> value (or value -> None) as a change as well so that
+        # the very first change after process start is detected.
+        if (new_sample_rate != old_sample_rate) or (new_center_freq != old_center_freq):
             # Log appropriate message based on what changed
-            if old_sample_rate is not None and new_sample_rate != old_sample_rate:
-                self.logger.info(
-                    f"Sample rate changing from {old_sample_rate/1e6:.2f} MHz to {new_sample_rate/1e6:.2f} MHz, "
-                    f"flushing all queues"
-                )
-            if old_center_freq is not None and new_center_freq != old_center_freq:
-                self.logger.info(
-                    f"Center frequency changing from {old_center_freq/1e6:.3f} MHz to {new_center_freq/1e6:.3f} MHz, "
-                    f"flushing all queues"
-                )
+            if new_sample_rate != old_sample_rate:
+                if old_sample_rate is not None and new_sample_rate is not None:
+                    self.logger.info(
+                        f"Sample rate changing from {old_sample_rate/1e6:.2f} MHz to {new_sample_rate/1e6:.2f} MHz, "
+                        f"flushing all queues"
+                    )
+                else:
+                    self.logger.info(
+                        f"Sample rate changing from {old_sample_rate} to {new_sample_rate}, flushing all queues"
+                    )
+            if new_center_freq != old_center_freq:
+                if old_center_freq is not None and new_center_freq is not None:
+                    self.logger.info(
+                        f"Center frequency changing from {old_center_freq/1e6:.3f} MHz to {new_center_freq/1e6:.3f} MHz, "
+                        f"flushing all queues"
+                    )
+                else:
+                    self.logger.info(
+                        f"Center frequency changing from {old_center_freq} to {new_center_freq}, flushing all queues"
+                    )
             # Flush demodulator queues
             self.demodulator_manager.flush_all_demodulator_queues(sdr_id)
 
@@ -556,23 +566,19 @@ class ProcessLifecycleManager:
 
         # If sample rate or center frequency changed, restart all decoders for this SDR
         # so that they reinitialize DSP state (filters/decimation) with the new parameters.
-        if (old_sample_rate is not None and new_sample_rate != old_sample_rate) or (
-            old_center_freq is not None and new_center_freq != old_center_freq
-        ):
+        if (new_sample_rate != old_sample_rate) or (new_center_freq != old_center_freq):
             try:
                 decoders = process_info.get("decoders", {})
                 if not decoders:
                     return
 
                 # Build a human-readable reason describing what changed
-                if (old_sample_rate is not None and new_sample_rate != old_sample_rate) and (
-                    old_center_freq is not None and new_center_freq != old_center_freq
-                ):
+                if (new_sample_rate != old_sample_rate) and (new_center_freq != old_center_freq):
                     reason = (
                         f"sdr_rate_and_center_changed: rate {old_sample_rate} -> {new_sample_rate}, "
                         f"center {old_center_freq} -> {new_center_freq}"
                     )
-                elif old_sample_rate is not None and new_sample_rate != old_sample_rate:
+                elif new_sample_rate != old_sample_rate:
                     reason = f"sdr_sample_rate_changed: {old_sample_rate} -> {new_sample_rate}"
                 else:
                     reason = f"sdr_center_changed: {old_center_freq} -> {new_center_freq}"
