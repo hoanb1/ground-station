@@ -26,6 +26,7 @@ from handlers.entities.sdr import handle_vfo_demodulator_state
 from processing.decoderregistry import decoder_registry
 from processing.processmanager import process_manager
 from server.startup import audio_queue
+from session.service import session_service
 from session.tracker import session_tracker
 from vfos.state import VFOManager
 
@@ -118,6 +119,19 @@ async def update_vfo_parameters(
         decoder=data.get("decoder"),
         locked_transmitter_id=data.get("locked_transmitter_id"),
     )
+
+    # Reflect UI VFO selection into SessionTracker via SessionService
+    if "selected" in data:
+        try:
+            if data.get("selected"):
+                # Selecting this VFO
+                await session_service.select_vfo(sid, vfo_id if vfo_id > 0 else None)
+            else:
+                # Deselecting this VFO
+                await session_service.select_vfo(sid, None)
+        except Exception:
+            # Be defensive; continue even if tracker update fails
+            logger.debug("SessionService.select_vfo update skipped due to error", exc_info=True)
 
     # Start/stop demodulator based on VFO state (after update)
     if vfo_id > 0:  # Valid VFO (not deselect-all case)

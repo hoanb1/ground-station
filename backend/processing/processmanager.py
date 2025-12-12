@@ -17,7 +17,7 @@
 import asyncio
 import logging
 import signal
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from common.constants import SocketEvents
 from monitoring.performancemonitor import PerformanceMonitor
@@ -196,6 +196,94 @@ class ProcessManager:
             bool: True if the process exists and is running, False otherwise
         """
         return sdr_id in self.processes and self.processes[sdr_id]["process"].is_alive()
+
+    # ==================== Read-only Introspection Helpers ====================
+
+    def list_sdrs(self) -> List[str]:
+        """Return a list of SDR IDs known to the manager (keys of the registry)."""
+        return list(self.processes.keys())
+
+    def get_sdr_status(self, sdr_id: str) -> Dict[str, Any]:
+        """Return a simple status dict for a given SDR id (alive flag, pid, name)."""
+        info: Dict[str, Any] = {"alive": False}
+        pinfo: Optional[Dict[str, Any]] = self.processes.get(sdr_id)
+        if not pinfo:
+            return info
+        proc = pinfo.get("process")
+        if proc is not None:
+            try:
+                info["alive"] = bool(proc.is_alive())
+                info["pid"] = getattr(proc, "pid", None)
+                info["name"] = getattr(proc, "name", None)
+            except Exception:
+                # Be defensive; return best-effort info
+                info["alive"] = False
+        return info
+
+    def list_all_consumers(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Return a JSON-safe snapshot of clients and per-session consumers for all SDRs.
+
+        Structure per SDR:
+        {
+          sdr_id: {
+            "clients": [session_id, ...],
+            "demodulators": { session_id: { vfo_number: class_name } },
+            "recorders": { session_id: class_name_or_none },
+            "decoders": { session_id: { vfo_number: class_name } }
+          }
+        }
+        """
+        result: Dict[str, Dict[str, Any]] = {}
+        for sdr_id, pinfo in self.processes.items():
+            entry: Dict[str, Any] = {
+                "clients": list(pinfo.get("clients", [])),
+                "demodulators": {},
+                "recorders": {},
+                "decoders": {},
+            }
+
+            # Demodulators: session_id -> {vfo_number: class_name}
+            for sid, vfos in pinfo.get("demodulators", {}).items():
+                entry["demodulators"][sid] = {}
+                for vfo_num, vfo_entry in getattr(vfos, "items", lambda: [])():
+                    # Prefer normalized "class_name" if present; fallback to instance type name
+                    if isinstance(vfo_entry, dict):
+                        class_name = vfo_entry.get("class_name")
+                        if not class_name:
+                            inst = vfo_entry.get("instance")
+                            class_name = type(inst).__name__ if inst else None
+                    else:
+                        class_name = type(vfo_entry).__name__ if vfo_entry else None
+                    entry["demodulators"][sid][vfo_num] = class_name
+
+            # Recorders: session_id -> class_name
+            for sid, rec_entry in pinfo.get("recorders", {}).items():
+                if isinstance(rec_entry, dict):
+                    class_name = rec_entry.get("class_name")
+                    if not class_name:
+                        inst = rec_entry.get("instance")
+                        class_name = type(inst).__name__ if inst else None
+                else:
+                    class_name = type(rec_entry).__name__ if rec_entry else None
+                entry["recorders"][sid] = class_name
+
+            # Decoders: session_id -> {vfo_number: class_name}
+            for sid, vfos in pinfo.get("decoders", {}).items():
+                entry["decoders"][sid] = {}
+                for vfo_num, vfo_entry in getattr(vfos, "items", lambda: [])():
+                    if isinstance(vfo_entry, dict):
+                        class_name = vfo_entry.get("class_name") or vfo_entry.get("decoder_type")
+                        if not class_name:
+                            inst = vfo_entry.get("instance")
+                            class_name = type(inst).__name__ if inst else None
+                    else:
+                        class_name = type(vfo_entry).__name__ if vfo_entry else None
+                    entry["decoders"][sid][vfo_num] = class_name
+
+            result[sdr_id] = entry
+
+        return result
 
     # ==================== Demodulator Methods ====================
 

@@ -583,17 +583,29 @@ class ProcessLifecycleManager:
                 else:
                     reason = f"sdr_center_changed: {old_center_freq} -> {new_center_freq}"
 
-                # Schedule async restarts for all session/VFO decoders on this SDR
+                # Snapshot the decoders we plan to restart to avoid races while iterating
+                restart_list = []
                 for session_id, vfo_map in decoders.items():
+                    for vfo_number, decoder_entry in list(vfo_map.items()):
+                        restart_list.append((session_id, vfo_number, decoder_entry))
+
+                # Stagger restarts slightly to reduce contention and race surface
+                for idx, (session_id, vfo_number, decoder_entry) in enumerate(restart_list):
                     try:
-                        for vfo_number in list(vfo_map.keys()):
-                            self.logger.info(
-                                f"Restarting decoder due to SDR config change: {session_id} VFO{vfo_number} | {reason}"
+                        self.logger.info(
+                            f"Restarting decoder due to SDR config change: {session_id} VFO{vfo_number} | {reason}"
+                        )
+                        # Use async helper to avoid blocking the event loop; add tiny stagger
+                        asyncio.create_task(
+                            self._restart_decoder_async(
+                                sdr_id,
+                                session_id,
+                                vfo_number,
+                                reason,
+                                decoder_entry,
+                                delay_ms=50 * idx,
                             )
-                            # Use async helper to avoid blocking the event loop
-                            asyncio.create_task(
-                                self._restart_decoder_async(sdr_id, session_id, vfo_number, reason)
-                            )
+                        )
                     except Exception as e:
                         self.logger.error(
                             f"Error scheduling decoder restarts for session {session_id} on SDR {sdr_id}: {e}"
@@ -603,7 +615,9 @@ class ProcessLifecycleManager:
                     f"Failed to enumerate decoders for restart on SDR {sdr_id} after config change: {e}"
                 )
 
-    async def _restart_decoder_async(self, sdr_id, session_id, vfo_number, reason):
+    async def _restart_decoder_async(
+        self, sdr_id, session_id, vfo_number, reason, decoder_entry=None, delay_ms=0
+    ):
         """
         Asynchronously restart a decoder that requested restart.
 
@@ -618,6 +632,10 @@ class ProcessLifecycleManager:
                 f"Handling decoder restart request for {session_id} VFO{vfo_number}: {reason}"
             )
 
+            # Optional small delay to let SDR reconfigure/settle and to stagger concurrent restarts
+            if delay_ms and delay_ms > 0:
+                await asyncio.sleep(delay_ms / 1000.0)
+
             # Get decoder entry to preserve configuration
             if sdr_id not in self.processes:
                 self.logger.error(f"Cannot restart decoder: SDR {sdr_id} not found")
@@ -626,11 +644,15 @@ class ProcessLifecycleManager:
             process_info = self.processes[sdr_id]
             decoders = process_info.get("decoders", {})
 
-            if session_id not in decoders or vfo_number not in decoders[session_id]:
-                self.logger.error(f"Cannot restart decoder: {session_id} VFO{vfo_number} not found")
-                return
-
-            decoder_entry = decoders[session_id][vfo_number]
+            # If decoder_entry not provided (e.g., restart request coming from queue), try to fetch it.
+            # Do NOT abort if it is missing from the live map: we may have a snapshot from caller.
+            if decoder_entry is None:
+                try:
+                    decoder_entry = decoders[session_id][vfo_number]
+                except Exception:
+                    self.logger.warning(
+                        f"Decoder entry not found in live map for {session_id} VFO{vfo_number}; proceeding with restart without presence guarantee"
+                    )
 
             # Use DecoderManager's restart method
             # Run in executor to avoid blocking the event loop

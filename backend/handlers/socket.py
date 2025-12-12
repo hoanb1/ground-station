@@ -19,9 +19,8 @@ from handlers.entities.databasebackup import (
 from handlers.entities.filebrowser import filebrowser_request_routing
 from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry
-from processing.utils import cleanup_sdr_session
 from server.shutdown import cleanup_everything
-from session.tracker import session_tracker
+from session.service import session_service
 
 # hold a list of sessions
 SESSIONS: Dict[str, Dict] = {}
@@ -58,9 +57,8 @@ def register_socketio_handlers(sio):
     async def disconnect(sid, environ):
         logger.info(f'Client {sid} from {SESSIONS[sid]["REMOTE_ADDR"]} disconnected')
         del SESSIONS[sid]
-        # Clean up session tracking
-        session_tracker.clear_session(sid)
-        await cleanup_sdr_session(sid)
+        # Clean up session via SessionService (stops processes and clears tracker)
+        await session_service.cleanup_session(sid)
 
     @sio.on("sdr_data")
     async def handle_sdr_data_requests(sid, cmd, data=None):

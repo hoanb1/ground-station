@@ -353,9 +353,15 @@ class DecoderManager:
             if session_id not in process_info["decoders"]:
                 process_info["decoders"][session_id] = {}
 
+            # Normalized decoder entry shape (Phase 3):
+            # processes[sdr_id]["decoders"][session_id][vfo_number] = {
+            #   "instance", "subscription_key", "class_name", "vfo_number",
+            #   optional flags and references used for cleanup.
+            # }
             decoder_info = {
                 "instance": decoder,
                 "decoder_type": decoder_class.__name__,
+                "class_name": decoder_class.__name__,
                 "internal_demod": internal_demod_created,  # Track if we created the demod
                 "vfo_number": vfo_number,  # Store VFO number for multi-VFO cleanup
                 "subscription_key": subscription_key_to_store,  # For raw IQ decoders
@@ -732,21 +738,44 @@ class DecoderManager:
 
             time.sleep(0.5)
 
-            # Start new decoder with same configuration
+            # Start new decoder with same configuration (with small retry/backoff for transient conditions)
             self.logger.info(f"Starting new decoder {session_id} VFO{vfo_number}...")
-            return self.start_decoder(
-                sdr_id=sdr_id,
-                session_id=session_id,
-                decoder_class=decoder_class,
-                data_queue=data_queue,
-                vfo=vfo_number,
-                config=decoder_config,
-                # Preserve other parameters that might have been used
-                satellite=decoder_config.satellite if hasattr(decoder_config, "satellite") else {},
-                transmitter=(
-                    decoder_config.transmitter if hasattr(decoder_config, "transmitter") else {}
-                ),
+            attempts = 3
+            backoffs = [0.0, 0.2, 0.5]  # seconds
+            for attempt in range(attempts):
+                if attempt > 0:
+                    self.logger.warning(
+                        f"Retrying decoder start {session_id} VFO{vfo_number} (attempt {attempt+1}/{attempts})"
+                    )
+                ok = self.start_decoder(
+                    sdr_id=sdr_id,
+                    session_id=session_id,
+                    decoder_class=decoder_class,
+                    data_queue=data_queue,
+                    vfo=vfo_number,
+                    config=decoder_config,
+                    # Preserve other parameters that might have been used
+                    satellite=(
+                        decoder_config.satellite if hasattr(decoder_config, "satellite") else {}
+                    ),
+                    transmitter=(
+                        decoder_config.transmitter if hasattr(decoder_config, "transmitter") else {}
+                    ),
+                )
+                if ok:
+                    return True
+                # backoff then retry
+                try:
+                    import time as _time
+
+                    _time.sleep(backoffs[min(attempt + 1, len(backoffs) - 1)])
+                except Exception:
+                    pass
+
+            self.logger.error(
+                f"Failed to start decoder after retries for {session_id} VFO{vfo_number}"
             )
+            return False
 
         except Exception as e:
             self.logger.error(f"Error restarting decoder {session_id} VFO{vfo_number}: {e}")

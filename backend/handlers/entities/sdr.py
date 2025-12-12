@@ -19,13 +19,8 @@ import crud
 from db import AsyncSessionLocal
 from handlers.entities.filebrowser import emit_file_browser_state
 from processing.processmanager import process_manager
-from processing.utils import (
-    active_sdr_clients,
-    add_sdr_session,
-    cleanup_sdr_session,
-    get_sdr_session,
-)
 from server.startup import audio_queue
+from session.service import session_service
 from session.tracker import session_tracker
 
 
@@ -141,14 +136,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     "offset_freq": offset_freq,
                 }
 
-                # Create an SDR session entry in memory
+                # Create or update SDR session via SessionService (also updates tracker)
                 logger.info(f"Creating an SDR session for client {client_id}")
-                add_sdr_session(client_id, sdr_config)
-
-                # Track session streaming in session_tracker
-                from session.tracker import session_tracker
-
-                session_tracker.register_session_streaming(client_id, sdr_id)
+                await session_service.configure_sdr(client_id, sdr_device, sdr_config)
 
                 # Check if other clients are already connected in the same room (SDR),
                 # if so then send them an update
@@ -207,16 +197,14 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                     sdr_device = sdr_device_reply["data"]
 
-                if client_id not in active_sdr_clients:
+                if not session_service.session_exists(client_id):
                     raise Exception(f"Client with id: {client_id} not registered")
 
-                sdr_config = get_sdr_session(client_id)
+                sdr_config = session_service.get_session_config(client_id)
                 logger.info(f"Starting streaming SDR data for client {client_id}")
 
                 # Start or join the SDR process
-                process_sdr_id = await process_manager.start_sdr_process(
-                    sdr_device, sdr_config, client_id
-                )
+                process_sdr_id = await session_service.start_streaming(client_id, sdr_device)
                 logger.info(
                     f"SDR process started for client {client_id} with process id: {process_sdr_id}"
                 )
@@ -252,18 +240,18 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                     sdr_device = sdr_device_reply["data"]
 
-                get_sdr_session(client_id)
+                _ = session_service.get_session_config(client_id)
 
                 if sdr_id:
-                    # Stop or leave the SDR process
-                    await process_manager.stop_sdr_process(sdr_id, client_id)
+                    # Stop or leave the SDR process (via service)
+                    await session_service.stop_streaming(client_id, sdr_id)
 
-                if client_id not in active_sdr_clients:
+                if not session_service.session_exists(client_id):
                     logger.error(f"Client {client_id} not registered while stopping SDR stream")
                     reply["success"] = False
 
                 # cleanup
-                await cleanup_sdr_session(client_id)
+                await session_service.cleanup_session(client_id)
 
                 await sio.emit("sdr-status", {"streaming": False}, room=client_id)
                 logger.info(f"Stopped streaming SDR data for client {client_id}")

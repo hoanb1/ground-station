@@ -6,7 +6,7 @@ from audio.audiobroadcaster import AudioBroadcaster
 from audio.audiostreamer import WebAudioStreamer
 from audio.transcriptionconsumer import TranscriptionConsumer
 from common.logger import logger
-from processing.utils import cleanup_sdr_session
+from session.service import session_service
 
 # Globals used by audio threads
 audio_consumer: Optional[WebAudioStreamer] = None
@@ -40,9 +40,9 @@ def cleanup_everything():
                 try:
                     event_loop = asyncio.get_event_loop()
                     if event_loop.is_running():
-                        asyncio.create_task(cleanup_sdr_session(sid))
+                        asyncio.create_task(session_service.cleanup_session(sid))
                     else:
-                        event_loop.run_until_complete(cleanup_sdr_session(sid))
+                        event_loop.run_until_complete(session_service.cleanup_session(sid))
                     logger.info(f"Cleaned up SDR session: {sid}")
                 except Exception as e:  # pragma: no cover - best effort cleanup
                     logger.warning(f"Error cleaning up SDR session {sid}: {e}")

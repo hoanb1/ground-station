@@ -72,6 +72,11 @@ class ConsumerManager:
         # Create storage key based on whether this is VFO-based or session-based
         # For demodulators with VFO number, store as nested dict: demodulators[session_id][vfo_number]
         # For recorders, store as: recorders[session_id]
+        # - Demodulators: processes[sdr_id]["demodulators"][session_id][vfo_number] =
+        #     {"instance", "subscription_key", "class_name"}
+        # - Recorders:    processes[sdr_id]["recorders"][session_id] =
+        #     {"instance", "subscription_key", "class_name"}
+
         if storage_key == "demodulators":
             if vfo_number is None:
                 self.logger.error(f"vfo_number is required for demodulators (session {session_id})")
@@ -181,12 +186,14 @@ class ConsumerManager:
                 process_info[storage_key][session_id][vfo_number] = {
                     "instance": consumer,
                     "subscription_key": subscription_key,
+                    "class_name": consumer_class.__name__,
                 }
             else:
                 # Recorders: store directly under session_id
                 process_info[storage_key][session_id] = {
                     "instance": consumer,
                     "subscription_key": subscription_key,
+                    "class_name": consumer_class.__name__,
                 }
 
             log_msg = (

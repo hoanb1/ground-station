@@ -20,7 +20,7 @@ Tracks which sessions are streaming from which SDRs and which VFOs they have sel
 """
 
 import logging
-from typing import Dict, Optional, Set
+from typing import Any, Dict, List, Optional, Set, TypedDict, cast
 
 logger = logging.getLogger("session-tracker")
 
@@ -53,8 +53,8 @@ class SessionTracker:
         # Map session_id -> sdr_id (which SDR this session is streaming from)
         self._session_sdr_map: Dict[str, str] = {}
 
-        # Map session_id -> vfo_id (which VFO this session has selected, "1"-"4" or "none")
-        self._session_vfo_map: Dict[str, str] = {}
+        # Map session_id -> vfo_number (normalized: 1-4 as int, or None if not selected)
+        self._session_vfo_map: Dict[str, Optional[int]] = {}
 
         # Map session_id -> rig_id (which rig this session is tracking)
         self._session_rig_map: Dict[str, str] = {}
@@ -90,14 +90,36 @@ class SessionTracker:
 
     def set_session_vfo(self, session_id: str, vfo_id: str) -> None:
         """
-        Set the VFO selection for a session.
+        Backward-compatible setter: accepts VFO as a string ("1"-"4" or "none")
+        and stores it internally as Optional[int].
 
         Args:
             session_id: Socket.IO session ID
             vfo_id: VFO number ("1", "2", "3", "4", or "none")
         """
-        self._session_vfo_map[session_id] = vfo_id
-        logger.debug(f"Set session {session_id} VFO to {vfo_id}")
+        vfo_number: Optional[int]
+        if vfo_id == "none" or vfo_id is None:
+            vfo_number = None
+        else:
+            try:
+                vfo_number = int(vfo_id)
+            except (TypeError, ValueError):
+                vfo_number = None
+        self._session_vfo_map[session_id] = vfo_number
+        logger.debug(f"Set session {session_id} VFO to {vfo_number}")
+
+    def set_session_vfo_int(self, session_id: str, vfo_number: Optional[int]) -> None:
+        """
+        Preferred setter: accepts VFO as Optional[int] (1-4 or None).
+
+        Args:
+            session_id: Socket.IO session ID
+            vfo_number: VFO number (1-4) or None for no selection
+        """
+        if vfo_number is not None and vfo_number not in {1, 2, 3, 4}:
+            raise ValueError("vfo_number must be in {1,2,3,4} or None")
+        self._session_vfo_map[session_id] = vfo_number
+        logger.debug(f"Set session {session_id} VFO (int) to {vfo_number}")
 
     def set_session_rig(self, session_id: str, rig_id: str) -> None:
         """
@@ -112,13 +134,25 @@ class SessionTracker:
 
     def get_session_vfo(self, session_id: str) -> Optional[str]:
         """
-        Get the VFO selection for a session.
+        Backward-compatible getter: returns VFO as string ("1"-"4") or "none".
 
         Args:
             session_id: Socket.IO session ID
 
         Returns:
-            VFO number or None if not set
+            VFO string or None if unknown session
+        """
+        v = self._session_vfo_map.get(session_id, None)
+        if v is None:
+            # If the session exists but v is None, return "none" for legacy callers
+            if session_id in self._session_vfo_map:
+                return "none"
+            return None
+        return str(v)
+
+    def get_session_vfo_int(self, session_id: str) -> Optional[int]:
+        """
+        Preferred getter: returns VFO as Optional[int] (1-4) or None.
         """
         return self._session_vfo_map.get(session_id)
 
@@ -168,13 +202,134 @@ class SessionTracker:
         Returns:
             Dict mapping session_id -> vfo_id for sessions with VFOs selected
         """
-        result = {}
+        result: Dict[str, str] = {}
         for session_id, rid in self._session_rig_map.items():
             if rid == rig_id:
-                vfo_id = self._session_vfo_map.get(session_id)
-                if vfo_id and vfo_id != "none":
-                    result[session_id] = vfo_id
+                vfo_number = self._session_vfo_map.get(session_id)
+                if vfo_number is not None:
+                    result[session_id] = str(vfo_number)
         return result
+
+    def get_runtime_snapshot(self, process_manager) -> Dict[str, Any]:
+        """
+        Build a read-only snapshot of current sessions, their relationships, and
+        runtime workloads by querying ProcessManager introspection APIs.
+
+        Returns:
+            Dict with keys "sessions" and "sdrs" providing a JSON-safe view.
+        """
+
+        # Typed views for mypy-safe mutation below
+        class ConsumersEntry(TypedDict):
+            clients: List[str]
+            demodulators: Dict[str, Dict[int, Optional[str]]]
+            recorders: Dict[str, Optional[str]]
+            decoders: Dict[str, Dict[int, Optional[str]]]
+
+        class SdrSnapshot(TypedDict):
+            alive: bool
+            clients: List[str]
+            demodulators: Dict[str, Dict[int, Optional[str]]]
+            recorders: Dict[str, Optional[str]]
+            decoders: Dict[str, Dict[int, Optional[str]]]
+
+        sessions: Dict[str, Dict[str, Any]] = {}
+        for sid in self.get_all_sessions():
+            sess_sdr_id = self.get_session_sdr(sid)
+            rig_id = self.get_session_rig(sid)
+            vfo_int = self.get_session_vfo_int(sid)
+            sessions[sid] = {
+                "sdr_id": sess_sdr_id,
+                "rig_id": rig_id,
+                "vfo": vfo_int,  # normalized int or None
+            }
+
+        # Query ProcessManager for process/consumer state
+        sdrs: Dict[str, SdrSnapshot] = {}
+        try:
+            sdr_ids = process_manager.list_sdrs()
+        except AttributeError:
+            # Fallback in case introspection method is not available yet
+            sdr_ids = list(getattr(process_manager, "processes", {}).keys())
+
+        for raw_id in sdr_ids:
+            # Be robust to untyped/None ids coming from process_manager
+            if not isinstance(raw_id, str):
+                continue
+            dev_id = raw_id
+            try:
+                status = process_manager.get_sdr_status(dev_id)
+            except AttributeError:
+                status = {"alive": process_manager.is_sdr_process_running(dev_id)}
+
+            sdrs[dev_id] = {
+                "alive": bool(status.get("alive", False)),
+                "clients": [],
+                "demodulators": {},
+                "recorders": {},
+                "decoders": {},
+            }
+
+        all_consumers: Dict[str, ConsumersEntry] = {}
+        try:
+            all_consumers = cast(Dict[str, ConsumersEntry], process_manager.list_all_consumers())
+        except AttributeError:
+            # Last-resort fallback to raw structures for compatibility
+            pm_procs = getattr(process_manager, "processes", {})
+            for raw_sid, pinfo in pm_procs.items():
+                # Skip non-string IDs defensively
+                if not isinstance(raw_sid, str):
+                    continue
+                proc_sdr_id = raw_sid
+                entry: ConsumersEntry = {
+                    "clients": list(cast(List[str], pinfo.get("clients", []))),
+                    "demodulators": {},
+                    "recorders": {},
+                    "decoders": {},
+                }
+                # Demodulators
+                for sid, vfos in pinfo.get("demodulators", {}).items():
+                    entry["demodulators"][sid] = {}
+                    for vfo_num, vfo_entry in getattr(vfos, "items", lambda: [])():
+                        inst = vfo_entry.get("instance")
+                        # vfo_num is expected to be int; guard otherwise
+                        if isinstance(vfo_num, int):
+                            entry["demodulators"][sid][vfo_num] = (
+                                type(inst).__name__ if inst else None
+                            )
+                # Recorders
+                for sid, rec_entry in pinfo.get("recorders", {}).items():
+                    inst = rec_entry.get("instance") if isinstance(rec_entry, dict) else rec_entry
+                    entry["recorders"][sid] = type(inst).__name__ if inst else None
+                # Decoders
+                for sid, vfos in pinfo.get("decoders", {}).items():
+                    entry["decoders"][sid] = {}
+                    for vfo_num, vfo_entry in getattr(vfos, "items", lambda: [])():
+                        inst = vfo_entry.get("instance")
+                        if isinstance(vfo_num, int):
+                            entry["decoders"][sid][vfo_num] = type(inst).__name__ if inst else None
+                all_consumers[proc_sdr_id] = entry
+
+        # Merge consumer info
+        for raw_sid, data in all_consumers.items():
+            # Ensure we only use string keys for sdrs mapping
+            if not isinstance(raw_sid, str):
+                continue
+            merge_sdr_id = raw_sid
+            if merge_sdr_id not in sdrs:
+                sdrs[merge_sdr_id] = {
+                    "alive": False,
+                    "clients": [],
+                    "demodulators": {},
+                    "recorders": {},
+                    "decoders": {},
+                }
+            sdrs[merge_sdr_id]["clients"] = data["clients"]
+            sdrs[merge_sdr_id]["demodulators"] = data["demodulators"]
+            sdrs[merge_sdr_id]["recorders"] = data["recorders"]
+            sdrs[merge_sdr_id]["decoders"] = data["decoders"]
+
+        return {"sessions": sessions, "sdrs": sdrs}
 
     def clear_session(self, session_id: str) -> None:
         """
