@@ -275,10 +275,17 @@ class BaseDecoder:
             except Exception:
                 sat_hint = None
 
+            # Provide parser hint with framing and resolved frame_size so proprietary parsers
+            # (e.g., GEOSCAN) can deterministically choose the correct layout (66/74).
+            parser_hint = {
+                "framing": getattr(self, "framing", None),
+                "frame_size": (getattr(self, "framing_params", None) or {}).get("frame_size"),
+            }
             telemetry_result = self.telemetry_parser.parse(
                 packet_data,
                 protocol_hint=protocol_hint,
                 sat_hint=sat_hint,
+                parser_hint=parser_hint,
             )
             if telemetry_result.get("success"):
                 logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
