@@ -44,6 +44,7 @@ import decodersReducer from '../decoders/decoders-slice.jsx';
 import libraryVersionsReducer from '../settings/library-versions-slice.jsx';
 import performanceReducer from '../performance/performance-slice.jsx';
 import systemInfoReducer from '../settings/system-info-slice.jsx';
+import sessionsReducer from '../settings/sessions-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
 import passesCleanupMiddleware from '../overview/passes-cleanup-middleware.jsx';
 
@@ -279,6 +280,7 @@ export const store = configureStore({
         libraryVersions: persistedLibraryVersionsReducer,
         performance: persistedPerformanceReducer,
         systemInfo: persistedSystemInfoReducer,
+        sessions: sessionsReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>

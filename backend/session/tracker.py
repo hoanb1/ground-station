@@ -64,6 +64,9 @@ class SessionTracker:
         # Cleared when tracking stops to allow re-initialization on next tracking start
         self._vfo_initialized: Dict[str, bool] = {}
 
+        # Map session_id -> ip address (set on Socket.IO connect)
+        self._session_ip_map: Dict[str, str] = {}
+
         logger.info("SessionTracker initialized")
 
     def register_session_streaming(self, session_id: str, sdr_id: str) -> None:
@@ -87,6 +90,27 @@ class SessionTracker:
         if session_id in self._session_sdr_map:
             sdr_id = self._session_sdr_map.pop(session_id)
             logger.debug(f"Unregistered session {session_id} from streaming SDR {sdr_id}")
+
+    def set_session_ip(self, session_id: str, ip_address: Optional[str]) -> None:
+        """
+        Set the remote IP address associated with a session.
+
+        Args:
+            session_id: Socket.IO session ID
+            ip_address: Remote address (may be None)
+        """
+        if ip_address:
+            self._session_ip_map[session_id] = ip_address
+            logger.debug(f"Set session {session_id} IP to {ip_address}")
+        else:
+            # If empty/None provided, clear any existing entry
+            self._session_ip_map.pop(session_id, None)
+
+    def get_session_ip(self, session_id: str) -> Optional[str]:
+        """
+        Get the remote IP address for a session if known.
+        """
+        return self._session_ip_map.get(session_id)
 
     def set_session_vfo(self, session_id: str, vfo_id: str) -> None:
         """
@@ -238,10 +262,12 @@ class SessionTracker:
             sess_sdr_id = self.get_session_sdr(sid)
             rig_id = self.get_session_rig(sid)
             vfo_int = self.get_session_vfo_int(sid)
+            ip_addr = self.get_session_ip(sid)
             sessions[sid] = {
                 "sdr_id": sess_sdr_id,
                 "rig_id": rig_id,
                 "vfo": vfo_int,  # normalized int or None
+                "ip": ip_addr,
             }
 
         # Query ProcessManager for process/consumer state

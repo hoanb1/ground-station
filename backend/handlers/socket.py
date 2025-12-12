@@ -6,7 +6,15 @@ from typing import Dict
 from common.logger import logger
 
 # Import all entity modules to register their handlers
-from handlers.entities import groups, hardware, locations, preferences, satellites, systeminfo
+from handlers.entities import (
+    groups,
+    hardware,
+    locations,
+    preferences,
+    satellites,
+    sessions,
+    systeminfo,
+)
 from handlers.entities import tlesources as tle_sources
 from handlers.entities import tracking, transmitters, vfo
 from handlers.entities.databasebackup import (
@@ -21,6 +29,7 @@ from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry
 from server.shutdown import cleanup_everything
 from session.service import session_service
+from session.tracker import session_tracker
 
 # hold a list of sessions
 SESSIONS: Dict[str, Dict] = {}
@@ -38,6 +47,7 @@ def _register_all_handlers():
     tracking.register_handlers(handler_registry)
     vfo.register_handlers(handler_registry)
     systeminfo.register_handlers(handler_registry)
+    sessions.register_handlers(handler_registry)
 
 
 # Register all handlers at module load time
@@ -49,13 +59,29 @@ def register_socketio_handlers(sio):
 
     @sio.on("connect")
     async def connect(sid, environ, auth=None):
-        client_ip = environ.get("REMOTE_ADDR")
+        # Prefer reverse-proxy header if present, else fall back to REMOTE_ADDR
+        xff = environ.get("HTTP_X_FORWARDED_FOR") or environ.get("X-Forwarded-For")
+        if xff:
+            # Take the first IP in the comma-separated list
+            client_ip = xff.split(",")[0].strip()
+        else:
+            client_ip = environ.get("REMOTE_ADDR")
         logger.info(f"Client {sid} from {client_ip} connected, auth: {auth}")
         SESSIONS[sid] = environ
+        # Persist IP into SessionTracker so snapshots can include it
+        try:
+            session_tracker.set_session_ip(sid, client_ip)
+        except Exception:
+            logger.debug("Failed to set session IP in tracker", exc_info=True)
 
     @sio.on("disconnect")
     async def disconnect(sid, environ):
         logger.info(f'Client {sid} from {SESSIONS[sid]["REMOTE_ADDR"]} disconnected')
+        try:
+            # Clear stored IP for the session
+            session_tracker.set_session_ip(sid, None)
+        except Exception:
+            logger.debug("Failed to clear session IP in tracker", exc_info=True)
         del SESSIONS[sid]
         # Clean up session via SessionService (stops processes and clears tracker)
         await session_service.cleanup_session(sid)

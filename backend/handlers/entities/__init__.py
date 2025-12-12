@@ -13,7 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-"""Entity-based handlers for Socket.IO requests."""
+"""Entity-based handlers for Socket.IO requests.
+
+This package exposes each entity module so callers can import them via
+`from handlers.entities import <module>` and have module-level registration
+run as expected.
+"""
 
 from . import tlesources  # noqa: F401
 from . import (
@@ -24,6 +29,8 @@ from . import (
     preferences,
     satellites,
     sdr,
+    sessions,
+    systeminfo,
     tracking,
     transmitters,
     vfo,
@@ -31,7 +38,7 @@ from . import (
 
 __all__ = [
     "satellites",
-    "tlesources.py",
+    "tlesources",
     "groups",
     "hardware",
     "locations",
@@ -41,4 +48,6 @@ __all__ = [
     "filebrowser",
     "sdr",
     "vfo",
+    "systeminfo",
+    "sessions",
 ]

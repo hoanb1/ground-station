@@ -27,3 +27,4 @@ export { default as LibraryVersionsCard } from './library-versions-card.jsx';
 export { default as ReduxStateInspectorCard } from './redux-state-inspector-card.jsx';
 export { default as DatabaseBackupCard } from './database-backup-card.jsx';
 export { default as SystemInfoCard } from './system-info-card.jsx';
+export { default as SessionSnapshotCard } from './session-snapshot-card.jsx';

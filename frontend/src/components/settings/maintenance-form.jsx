@@ -33,7 +33,8 @@ import {
     LibraryVersionsCard,
     ReduxStateInspectorCard,
     DatabaseBackupCard,
-    SystemInfoCard
+    SystemInfoCard,
+    SessionSnapshotCard
 } from './maintenance/index.jsx';
 
 const MaintenanceForm = () => {
@@ -73,6 +74,7 @@ const MaintenanceForm = () => {
                     <AntTab value={4} label="Database" />
                     <AntTab value={5} label="Dependencies" />
                     <AntTab value={6} label="System Info" />
+                    <AntTab value={7} label="Sessions" />
                 </AntTabs>
 
                 {/* Tab 0: Frontend State */}
@@ -142,6 +144,15 @@ const MaintenanceForm = () => {
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12 }}>
                             <SystemInfoCard />
+                        </Grid>
+                    </Grid>
+                </TabPanel>
+
+                {/* Tab 7: Sessions Snapshot */}
+                <TabPanel value={mainTab} index={7}>
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12 }}>
+                            <SessionSnapshotCard />
                         </Grid>
                     </Grid>
                 </TabPanel>

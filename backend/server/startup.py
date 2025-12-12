@@ -23,6 +23,7 @@ from processing.processmanager import process_manager
 from server import shutdown
 from server.firsttime import first_time_initialization, run_initial_sync
 from server.scheduler import start_scheduler, stop_scheduler
+from server.sessionsnapshot import start_session_runtime_emitter
 from server.systeminfo import start_system_info_emitter
 from server.version import get_full_version_info
 from tracker.messages import handle_tracker_messages
@@ -99,6 +100,10 @@ async def lifespan(fastapiapp: FastAPI):
 
     # Start live system-info emitter task (registers into background_tasks)
     start_system_info_emitter(sio, background_tasks)
+
+    # Start session runtime snapshot emitter supervisor (registers into background_tasks)
+    # This follows the same background-task pattern
+    start_session_runtime_emitter(sio, background_tasks)
 
     try:
         yield
