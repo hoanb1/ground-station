@@ -27,6 +27,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
 import { alpha } from '@mui/material/styles';
 import { setPacketsDrawerOpen, setPacketsDrawerHeight } from './waterfall-slice';
 import { getDecoderDisplay, getModulationDisplay, ModulationType } from '../../constants/modulations';
@@ -448,37 +449,11 @@ const DecodedPacketsDrawer = () => {
                     }
                     placement="top"
                 >
-                    <Chip
-                        label="✓"
-                        size="small"
-                        sx={{
-                            height: '20px',
-                            width: '30px',
-                            fontSize: '0.65rem',
-                            fontWeight: 600,
-                            backgroundColor: alpha(theme.palette.success.main, 0.15),
-                            border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
-                            color: 'success.main',
-                        }}
-                    />
+                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.1rem' }} />
                 </Tooltip>
             ) : (
                 <Tooltip title="No telemetry" placement="top">
-                    <Chip
-                        icon={<CloseIcon sx={{ fontSize: '0.9rem' }} />}
-                        size="small"
-                        label=""
-                        sx={{
-                            height: '20px',
-                            width: '30px',
-                            fontSize: '0.65rem',
-                            fontWeight: 600,
-                            backgroundColor: alpha(theme.palette.text.disabled, 0.08),
-                            border: `1px solid ${alpha(theme.palette.text.disabled, 0.2)}`,
-                            color: 'text.disabled',
-                            '& .MuiChip-icon': { ml: '4px', mr: 0 },
-                        }}
-                    />
+                    <CloseIcon sx={{ color: 'text.disabled', fontSize: '1.1rem' }} />
                 </Tooltip>
             )
         },
