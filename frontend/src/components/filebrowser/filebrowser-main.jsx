@@ -732,11 +732,18 @@ export default function FilebrowserMain() {
                     </Button>
                 </Box>
             ) : (
-                <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-                    gap: 2
-                }}>
+            <Box sx={{
+                display: 'grid',
+                // Responsive columns: mobile→1, tablet→2–3, desktop→4–5
+                gridTemplateColumns: {
+                    xs: 'repeat(1, minmax(0, 1fr))',
+                    sm: 'repeat(2, minmax(0, 1fr))',
+                    md: 'repeat(5, minmax(0, 1fr))',
+                    lg: 'repeat(5, minmax(0, 1fr))',
+                    xl: 'repeat(5, minmax(0, 1fr))',
+                },
+                gap: 2
+            }}>
                     {displayItems.map((item) => {
                         const isRecording = item.type === 'recording';
                         const key = isRecording ? item.name : item.filename;
