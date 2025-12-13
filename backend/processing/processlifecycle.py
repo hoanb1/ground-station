@@ -803,9 +803,71 @@ class ProcessLifecycleManager:
                                         if "decoders" in process_info:
                                             if session_id in process_info["decoders"]:
                                                 if vfo in process_info["decoders"][session_id]:
-                                                    process_info["decoders"][session_id][vfo][
-                                                        "stats"
-                                                    ] = data["perf_stats"]
+                                                    entry = process_info["decoders"][session_id][
+                                                        vfo
+                                                    ]
+                                                    # Only overwrite stats with newer snapshots to avoid stale regressions
+                                                    incoming_ts = data.get("timestamp") or 0
+                                                    prev_ts = entry.get("stats_timestamp") or 0
+                                                    # As a fallback, also compare last_activity if timestamps are missing
+                                                    incoming_last = data["perf_stats"].get(
+                                                        "last_activity", 0
+                                                    )
+                                                    prev_last = entry.get("stats", {}).get(
+                                                        "last_activity", 0
+                                                    )
+
+                                                    is_newer = False
+                                                    if incoming_ts and incoming_ts >= prev_ts:
+                                                        is_newer = True
+                                                    elif (
+                                                        not incoming_ts
+                                                        and incoming_last >= prev_last
+                                                    ):
+                                                        is_newer = True
+
+                                                    if is_newer:
+                                                        entry["stats"] = data["perf_stats"]
+                                                        entry["stats_timestamp"] = incoming_ts
+                                                    else:
+                                                        # Drop stale/out-of-order snapshot and warn
+                                                        # Build a brief reason for easier troubleshooting
+                                                        reason = []
+                                                        if (
+                                                            incoming_ts
+                                                            and prev_ts
+                                                            and incoming_ts < prev_ts
+                                                        ):
+                                                            reason.append(
+                                                                f"older message timestamp (incoming={incoming_ts:.6f} < prev={prev_ts:.6f})"
+                                                            )
+                                                        if (
+                                                            not incoming_ts
+                                                        ) and incoming_last < prev_last:
+                                                            reason.append(
+                                                                f"regressing last_activity (incoming={incoming_last:.6f} < prev={prev_last:.6f})"
+                                                            )
+                                                        reason_str = (
+                                                            "; ".join(reason) or "stale snapshot"
+                                                        )
+
+                                                        self.logger.warning(
+                                                            (
+                                                                "Dropping stale/out-of-order decoder-stats for %s VFO%s: %s. "
+                                                                "Stored ts=%.6f last_activity=%.6f; incoming ts=%s last_activity=%.6f"
+                                                            ),
+                                                            session_id,
+                                                            vfo,
+                                                            reason_str,
+                                                            float(prev_ts or 0),
+                                                            float(prev_last or 0),
+                                                            (
+                                                                f"{incoming_ts:.6f}"
+                                                                if incoming_ts
+                                                                else "None"
+                                                            ),
+                                                            float(incoming_last or 0),
+                                                        )
 
                                 # Send to specific session only
                                 await self.sio.emit(
