@@ -54,6 +54,8 @@ class ProcessLifecycleManager:
         self.demodulator_manager = demodulator_manager
         self.recorder_manager = recorder_manager
         self.decoder_manager = decoder_manager
+        # Per-(SDR, session, VFO) restart serialization locks
+        self._restart_locks = {}
 
     async def get_center_frequency(self, sdr_id):
         """
@@ -645,31 +647,51 @@ class ProcessLifecycleManager:
             decoders = process_info.get("decoders", {})
 
             # If decoder_entry not provided (e.g., restart request coming from queue), try to fetch it.
-            # Do NOT abort if it is missing from the live map: we may have a snapshot from caller.
             if decoder_entry is None:
-                try:
-                    decoder_entry = decoders[session_id][vfo_number]
-                except Exception:
+                decoder_entry = decoders.get(session_id, {}).get(vfo_number)
+                if decoder_entry is None:
                     self.logger.warning(
-                        f"Decoder entry not found in live map for {session_id} VFO{vfo_number}; proceeding with restart without presence guarantee"
+                        f"Decoder entry not found in live map for {session_id} VFO{vfo_number}; aborting restart"
                     )
+                    return
 
-            # Use DecoderManager's restart method
-            # Run in executor to avoid blocking the event loop
-            loop = asyncio.get_event_loop()
-            success = await loop.run_in_executor(
-                None,
-                self.decoder_manager._restart_decoder,
-                sdr_id,
-                session_id,
-                vfo_number,
-                decoder_entry,
-            )
+            # Mark restart in progress to prevent duplicate restarts
+            try:
+                if session_id in decoders and vfo_number in decoders.get(session_id, {}):
+                    decoders[session_id][vfo_number]["restart_in_progress"] = True
+            except Exception:
+                pass
 
-            if success:
-                self.logger.info(f"Successfully restarted decoder {session_id} VFO{vfo_number}")
-            else:
-                self.logger.error(f"Failed to restart decoder {session_id} VFO{vfo_number}")
+            # Serialize restarts per (sdr, session, vfo)
+            key = (sdr_id, session_id, vfo_number)
+            lock = self._restart_locks.get(key)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._restart_locks[key] = lock
+
+            async with lock:
+                # Use DecoderManager's restart method in a thread pool
+                loop = asyncio.get_event_loop()
+                success = await loop.run_in_executor(
+                    None,
+                    self.decoder_manager._restart_decoder,
+                    sdr_id,
+                    session_id,
+                    vfo_number,
+                    decoder_entry,
+                )
+
+                if success:
+                    self.logger.info(f"Successfully restarted decoder {session_id} VFO{vfo_number}")
+                else:
+                    self.logger.error(f"Failed to restart decoder {session_id} VFO{vfo_number}")
+
+            # Clear restart-in-progress flag
+            try:
+                if session_id in decoders and vfo_number in decoders.get(session_id, {}):
+                    decoders[session_id][vfo_number].pop("restart_in_progress", None)
+            except Exception:
+                pass
 
         except Exception as e:
             self.logger.error(f"Error restarting decoder {session_id} VFO{vfo_number}: {e}")
@@ -773,6 +795,19 @@ class ProcessLifecycleManager:
                                     f"Decoder {session_id} VFO{vfo_number} requests restart: {reason} "
                                     f"(SHM segments: {shm_count})"
                                 )
+
+                                # Mark restart-in-progress to avoid duplicate restart triggers
+                                try:
+                                    decoders = process_info.get("decoders", {})
+                                    if (
+                                        session_id in decoders
+                                        and vfo_number in decoders[session_id]
+                                    ):
+                                        decoders[session_id][vfo_number][
+                                            "restart_in_progress"
+                                        ] = True
+                                except Exception:
+                                    pass
 
                                 # Restart the decoder asynchronously without blocking the queue monitor
                                 asyncio.create_task(

@@ -616,59 +616,18 @@ class DecoderManager:
 
     def check_and_restart_decoders(self):
         """
-        Check all active decoders for restart requests and restart them if needed.
+        Deprecated: restart handling is centralized in ProcessLifecycleManager.
 
-        This should be called periodically (e.g., every 10 seconds) to monitor
-        decoder health and handle automatic restarts when SHM thresholds are exceeded.
+        As of 2025-12, decoder restarts are orchestrated exclusively by
+        ProcessLifecycleManager based on explicit "decoder-restart-request"
+        messages from decoder processes. This method now acts as a no-op to
+        avoid double restart races.
 
         Returns:
-            int: Number of decoders restarted
+            int: Always 0 (no restarts performed)
         """
-        restarted_count = 0
-
-        for sdr_id, process_info in self.processes.items():
-            decoders = process_info.get("decoders", {})
-
-            for session_id, session_decoders in decoders.items():
-                for vfo_num, decoder_entry in list(session_decoders.items()):
-                    decoder_instance = decoder_entry.get("instance")
-
-                    if not decoder_instance:
-                        continue
-
-                    # Check if decoder is a multiprocessing-based decoder with restart support
-                    if not hasattr(decoder_instance, "should_restart"):
-                        continue
-
-                    # Check if restart is requested
-                    try:
-                        if decoder_instance.should_restart():
-                            shm_count = (
-                                decoder_instance.get_shm_segment_count()
-                                if hasattr(decoder_instance, "get_shm_segment_count")
-                                else "unknown"
-                            )
-                            self.logger.warning(
-                                f"Decoder {session_id} VFO{vfo_num} requests restart "
-                                f"(SHM segments: {shm_count})"
-                            )
-
-                            # Restart the decoder
-                            if self._restart_decoder(sdr_id, session_id, vfo_num, decoder_entry):
-                                restarted_count += 1
-                                self.logger.info(
-                                    f"Successfully restarted decoder {session_id} VFO{vfo_num}"
-                                )
-                            else:
-                                self.logger.error(
-                                    f"Failed to restart decoder {session_id} VFO{vfo_num}"
-                                )
-                    except Exception as e:
-                        self.logger.error(
-                            f"Error checking restart status for decoder {session_id} VFO{vfo_num}: {e}"
-                        )
-
-        return restarted_count
+        # Intentionally disabled to avoid duplicate restart handling.
+        return 0
 
     def _restart_decoder(self, sdr_id, session_id, vfo_number, decoder_entry):
         """
