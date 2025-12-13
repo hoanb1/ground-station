@@ -143,6 +143,54 @@ class GeoscanParser:
             Field("obc_reserve_49", 49, "u8"),
             Field("camera_media_files_count", 50, "u8"),
         ],
+        # NEW: GEOSCAN Type-I ax25-info view (for 74-byte frames with AX.25 header)
+        # Offsets relative to the start of the AX.25 info field (length typically 56 bytes):
+        # ID = 0; EPS = 1..23; OBC = 24..39; COMMu = 40..55
+        ("ax25_info", 74): [
+            # ID
+            Field("mayak_id", 0, "u8"),
+            # EPS
+            Field("eps_time_unix_s", 1, "u32"),
+            Field("eps_mode_enum", 5, "u8"),
+            Field("eps_reserve_22", 6, "u8"),
+            Field("eps_current_platform_a", 7, "u16", scale=0.001, unit="A"),
+            Field("eps_current_solar_a", 9, "u16", scale=0.001, unit="A"),
+            Field("v_cell_v", 11, "u16", scale=0.001, unit="V"),
+            Field("v_pack_v", 13, "u16", scale=0.001, unit="V"),
+            Field("eps_reserve_bitfield_31", 15, "u16"),
+            Field("temp_bat1_c", 17, "i8", unit="°C"),
+            Field("temp_bat2_c", 18, "i8", unit="°C"),
+            Field("eps_reserve_35", 19, "u16"),
+            Field("eps_reserve_bitfield_37", 21, "u8"),
+            Field("eps_reserve_38", 22, "u16"),
+            # OBC
+            Field("obc_reserve_40", 24, "u16"),
+            Field("obc_activity_raw", 26, "u8"),
+            Field("temp_x_p_c", 27, "i8", unit="°C"),
+            Field("temp_x_n_c", 28, "i8", unit="°C"),
+            Field("temp_y_p_c", 29, "i8", unit="°C"),
+            Field("temp_y_n_c", 30, "i8", unit="°C"),
+            Field("gnss_sat_count", 31, "u8"),
+            Field("obc_reserve_48_enum", 32, "u8"),
+            Field("obc_reserve_49", 33, "u8"),
+            Field("camera_media_files_count", 34, "u8"),
+            Field("obc_reserve_51_enum", 35, "u8"),
+            Field("obc_reserve_52_4b", 36, "u32"),
+            # COMMu (fits exactly within 56 bytes window 40..55)
+            Field("commu_reserve_56_enum", 40, "u8"),
+            Field("vbus_v", 41, "u16", scale=0.001, unit="V"),
+            Field("commu_reserve_59", 43, "u16"),
+            Field("rssi_last_dbm", 45, "i8"),
+            Field("rssi_min_dbm", 46, "i8"),
+            Field("commu_reserve_63", 47, "u8"),
+            Field("commu_reserve_64", 48, "u8"),
+            Field("tx_packets_count", 49, "u8"),
+            Field("commu_reserve_66", 50, "u8"),
+            Field("commu_reserve_67_enum", 51, "u8"),
+            Field("commu_reserve_68_signed", 52, "i8"),
+            Field("qso_received_count", 53, "u8"),
+            Field("commu_reserve_70", 54, "u16"),
+        ],
     }
 
     def parse(
@@ -169,11 +217,19 @@ class GeoscanParser:
         except Exception:
             pass
 
-        # Choose layout priority: exact satellite match → frame_size → none
+        # Choose layout priority: exact satellite match → AX.25-info view (when applicable) → frame_size → none
         layout: Optional[List[Field]] = None
         if sat_name:
             key = (sat_name or "").strip().lower()
             layout = self.LAYOUTS.get(key)
+        # Heuristic: if payload length <= 56 and caller hinted 74, we are likely parsing
+        # the AX.25 info field from a 74-byte Type-I. Use the ax25-info layout.
+        if layout is None and frame_size in (74,):
+            try:
+                if len(payload) <= 56 and ("ax25" in (sat_name or "").lower() or True):
+                    layout = self.LAYOUTS.get(("ax25_info", 74))
+            except Exception:
+                pass
         if layout is None and frame_size is not None:
             layout = self.LAYOUTS.get(frame_size)
 

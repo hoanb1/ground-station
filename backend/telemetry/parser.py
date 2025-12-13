@@ -127,31 +127,8 @@ class TelemetryParser:
         self.payload_parsers: Dict[Any, Any] = {}  # protocol-aware registry
         logger.debug("Telemetry parser initialized (protocol-agnostic)")
 
-        # Built-in registrations for common encapsulated cases
-        # GEOSCAN missions that encapsulate AX.25 (e.g., STRATOSAT-TK 1 / RS52S)
-        try:
-            from .parsers.rs52s import RS52SGeoscanAx25Parser
-
-            rs52s_parser = RS52SGeoscanAx25Parser()
-            # Register by exact callsign and base callsign
-            self.register_payload_parser("RS52S", rs52s_parser)
-            self.register_payload_parser("RS52S-0", rs52s_parser)
-        except Exception:
-            # Optional: if file not present, continue without RS52S mapping
-            pass
-
-        # COLIBRI-S (RS67S) Type-I beacon: AX.25 header inside GEOSCAN, 72-byte payload
-        try:
-            from .parsers.colibri_s import ColibriSGeoscanAx25Parser
-
-            colibri_parser = ColibriSGeoscanAx25Parser()
-            # Register by common callsigns
-            self.register_payload_parser("RS67S", colibri_parser)
-            self.register_payload_parser("RS67S-0", colibri_parser)
-            # Some stations may label source as COLIBRI-S; register by name as well
-            self.register_payload_parser("COLIBRI-S", colibri_parser)
-        except Exception:
-            pass
+        # Note: We no longer register per-satellite GEOSCAN AX.25 payload parsers.
+        # All GEOSCAN missions are decoded via generic 66/74-byte layouts in GeoscanParser.
 
     def register_payload_parser(self, identifier, parser):
         """
@@ -192,6 +169,21 @@ class TelemetryParser:
             }
         """
         result: Dict[str, Any] = {"parser": None, "success": False}
+
+        # Helper: coerce a parser_hint frame_size into an int when possible
+        def _coerce_frame_size(hint: Optional[Any]) -> Optional[int]:
+            try:
+                if isinstance(hint, dict):
+                    val = hint.get("frame_size")
+                else:
+                    val = None
+                if isinstance(val, int):
+                    return val
+                if isinstance(val, str):
+                    return int(val)
+            except Exception:
+                return None
+            return None
 
         # Choose protocol
         protocol = None
@@ -316,8 +308,7 @@ class TelemetryParser:
             payload = packet_bytes
 
             # Some proprietary link-layers (e.g., GEOSCAN) encapsulate an AX.25 frame inside.
-            # Try parsing as AX.25 first; if it succeeds, use that. This is more robust than
-            # relying on a heuristic and gracefully falls back on failure.
+            # Try parsing as AX.25 first to extract callsigns and the info field.
             try:
                 ax25_result = self.ax25_parser.parse(payload)
                 logger.debug(
@@ -333,7 +324,7 @@ class TelemetryParser:
                 )
                 ax25_result = {"success": False}
             if ax25_result.get("success"):
-                result["parser"] = "ax25"
+                # Build AX.25 frame header for metadata
                 result["frame"] = {
                     "destination": ax25_result["destination"],
                     "source": ax25_result["source"],
@@ -342,20 +333,21 @@ class TelemetryParser:
                     "repeaters": ax25_result.get("repeaters"),
                 }
                 ax25_payload = ax25_result["payload"]
-                payload_parser = self._select_payload_parser_ax25(
-                    ax25_result["source"], parser_hint
-                )
-                if payload_parser:
-                    try:
-                        telemetry_data = payload_parser.parse(ax25_payload)
-                        result["telemetry"] = telemetry_data
-                        result["parser"] = f"ax25+{payload_parser.__class__.__name__}"
-                    except Exception as e:
-                        logger.warning(
-                            f"Encapsulated AX.25 payload parser failed: {e}, falling back to hex"
-                        )
-                        result["telemetry"] = self._fallback_telemetry(ax25_payload)
-                else:
+                # GEOSCAN universal path: use GeoscanParser on the AX.25 info field with frame_size hint
+                try:
+                    from .parsers.geoscan import GeoscanParser
+
+                    fs_hint = _coerce_frame_size(parser_hint)
+                    parser = GeoscanParser()
+                    data = parser.parse(
+                        ax25_payload,
+                        sat_name=sat_hint,
+                        frame_size=fs_hint or len(ax25_payload),
+                    )
+                    result["telemetry"] = data
+                    result["parser"] = f"proprietary+{parser.__class__.__name__}"
+                except Exception as e:
+                    logger.warning(f"GeoscanParser failed on AX.25 info: {e}, falling back to hex")
                     result["telemetry"] = self._fallback_telemetry(ax25_payload)
 
                 result["success"] = True
@@ -392,8 +384,7 @@ class TelemetryParser:
                             len(info),
                         )
 
-                        # Build result frame and try payload parser by callsign
-                        result["parser"] = "ax25"
+                        # Build result frame for metadata
                         result["frame"] = {
                             "destination": f"{dest_call}-{dest_ssid}",
                             "source": f"{src_call}-{src_ssid}",
@@ -401,21 +392,24 @@ class TelemetryParser:
                             "pid": hex(pid),
                             "repeaters": None,
                         }
-                        payload_parser = self._select_payload_parser_ax25(
-                            f"{src_call}-{src_ssid}"
-                        ) or self._select_payload_parser_ax25(src_call)
-                        if payload_parser:
-                            try:
-                                data = payload_parser.parse(info)
-                                result["telemetry"] = data
-                                result["parser"] = f"ax25+{payload_parser.__class__.__name__}"
-                            except Exception as e:
-                                logger.warning(
-                                    "telemetry.parser: lightweight AX.25 payload parser failed: %s, falling back to hex",
-                                    e,
-                                )
-                                result["telemetry"] = self._fallback_telemetry(info)
-                        else:
+                        # Universal GEOSCAN path: run GeoscanParser on AX.25 info field with frame_size hint
+                        try:
+                            from .parsers.geoscan import GeoscanParser
+
+                            fs_hint = _coerce_frame_size(parser_hint)
+                            parser = GeoscanParser()
+                            data = parser.parse(
+                                info,
+                                sat_name=sat_hint,
+                                frame_size=fs_hint or len(info),
+                            )
+                            result["telemetry"] = data
+                            result["parser"] = f"proprietary+{parser.__class__.__name__}"
+                        except Exception as e:
+                            logger.warning(
+                                "telemetry.parser: GeoscanParser on AX.25 info failed: %s; falling back to hex",
+                                e,
+                            )
                             result["telemetry"] = self._fallback_telemetry(info)
 
                         result["success"] = True
@@ -434,38 +428,24 @@ class TelemetryParser:
                 sat_hint,
                 len(payload),
             )
-            payload_parser = self._select_payload_parser_protocol(
-                protocol="proprietary", sat_hint=sat_hint, service_id=None, legacy_hint=parser_hint
-            )
-            if payload_parser:
-                try:
-                    data = payload_parser.parse(payload)
-                    result["telemetry"] = data
-                    result["parser"] = f"proprietary+{payload_parser.__class__.__name__}"
-                except Exception as e:
-                    logger.warning(f"Proprietary payload parser failed: {e}, falling back to hex")
-                    result["telemetry"] = self._fallback_telemetry(payload)
-            else:
-                # Best-effort: try GEOSCAN decoder automatically by payload length (66/74 bytes)
-                try:
-                    from .parsers.geoscan import GeoscanParser
+            # Universal proprietary path: try GeoscanParser (66/74) with frame_size hint
+            try:
+                from .parsers.geoscan import GeoscanParser
 
-                    # GEOSCAN frames are commonly 66 or 74 bytes including CC11xx CRC.
-                    # After CRC removal, payload lengths often appear as 64 or 72 bytes.
-                    if len(payload) in (64, 66, 72, 74):
-                        parser = GeoscanParser()
-                        # Provide both actual payload len and a frame_size hint equal to
-                        # payload length, so parser can still choose a layout by sat name.
-                        data = parser.parse(payload, sat_name=sat_hint, frame_size=len(payload))
-                        result["telemetry"] = data
-                        result["parser"] = f"proprietary+{parser.__class__.__name__}"
-                    else:
-                        result["telemetry"] = self._fallback_telemetry(payload)
-                        result["parser"] = "raw"
-                except Exception:
-                    # If import or parsing fails, fall back to generic views
-                    result["telemetry"] = self._fallback_telemetry(payload)
-                    result["parser"] = "raw"
+                fs_hint2 = _coerce_frame_size(parser_hint)
+
+                parser = GeoscanParser()
+                data = parser.parse(
+                    payload,
+                    sat_name=sat_hint,
+                    frame_size=fs_hint2 or len(payload),
+                )
+                result["telemetry"] = data
+                result["parser"] = f"proprietary+{parser.__class__.__name__}"
+            except Exception:
+                # If import or parsing fails, fall back to generic views
+                result["telemetry"] = self._fallback_telemetry(payload)
+                result["parser"] = "raw"
 
             result["success"] = True
             result["raw"] = {
