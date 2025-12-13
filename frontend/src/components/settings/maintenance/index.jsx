@@ -28,3 +28,4 @@ export { default as ReduxStateInspectorCard } from './redux-state-inspector-card
 export { default as DatabaseBackupCard } from './database-backup-card.jsx';
 export { default as SystemInfoCard } from './system-info-card.jsx';
 export { default as SessionSnapshotCard } from './session-snapshot-card.jsx';
+export { default as EventLogConsoleCard } from './event-log-console-card.jsx';

@@ -40,6 +40,7 @@
     "moment-timezone": "^0.5.48",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-json-view-lite": "^2.5.0",
     "react-full-screen": "^1.1.1",
     "react-grid-layout": "^1.5.1",
     "react-i18next": "^15.2.0",

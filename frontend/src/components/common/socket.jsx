@@ -92,6 +92,19 @@ export const SocketProvider = ({ children }) => {
     // Store original emit function
     const originalEmitRef = useRef(null);
 
+    // Debug listeners for event log console
+    // Each entry: { fn: (msg)=>void, includeOutgoing: boolean }
+    const debugListenersRef = useRef(new Set());
+
+    const addDebugListener = useCallback((fn, options = { includeOutgoing: false }) => {
+        const entry = { fn, includeOutgoing: !!options.includeOutgoing };
+        debugListenersRef.current.add(entry);
+        // Return unsubscribe
+        return () => {
+            debugListenersRef.current.delete(entry);
+        };
+    }, []);
+
     const handleTokenChange = useCallback((token) => {
         setToken(token);
     }, []);
@@ -277,30 +290,55 @@ export const SocketProvider = ({ children }) => {
             originalEmitRef.current = socket.emit;
         }
 
-        if (collectStats) {
-            // Override emit to track outgoing messages
-            socket.emit = function(...args) {
-                const messageSize = calculateMessageSize(args);
-                trackApplicationTraffic('sent', messageSize);
-                return originalEmitRef.current.apply(this, args);
-            };
+        // Unified emit wrapper: handles stats (if enabled) and debug notifications (if any)
+        socket.emit = function(eventName, ...args) {
+            try {
+                if (collectStats) {
+                    const messageSize = calculateMessageSize([eventName, ...args]);
+                    trackApplicationTraffic('sent', messageSize);
+                }
+                // Notify debug listeners interested in outgoing
+                if (debugListenersRef.current.size > 0) {
+                    const ts = Date.now();
+                    debugListenersRef.current.forEach(entry => {
+                        if (entry.includeOutgoing) {
+                            try { entry.fn({ direction: 'out', event: eventName, args, ts }); } catch (e) { /* noop */ }
+                        }
+                    });
+                }
+            } catch (e) {
+                // do nothing
+            }
+            return originalEmitRef.current.apply(this, [eventName, ...args]);
+        };
 
-            // Track all incoming messages using onAny
-            const handleIncomingMessage = (eventName, ...args) => {
-                const messageSize = calculateMessageSize([eventName, ...args]);
-                trackApplicationTraffic('received', messageSize);
-            };
+        // Track all incoming messages using onAny
+        const handleIncomingMessage = (eventName, ...args) => {
+            try {
+                if (collectStats) {
+                    const messageSize = calculateMessageSize([eventName, ...args]);
+                    trackApplicationTraffic('received', messageSize);
+                }
+                if (debugListenersRef.current.size > 0) {
+                    const ts = Date.now();
+                    debugListenersRef.current.forEach(entry => {
+                        try { entry.fn({ direction: 'in', event: eventName, args, ts }); } catch (e) { /* noop */ }
+                    });
+                }
+            } catch (e) {
+                // ignore
+            }
+        };
 
-            socket.onAny(handleIncomingMessage);
+        socket.onAny(handleIncomingMessage);
 
-            return () => {
-                // Remove the listener
-                socket.offAny(handleIncomingMessage);
-            };
-        } else {
-            // Restore original emit function when not collecting
-            socket.emit = originalEmitRef.current;
-        }
+        return () => {
+            // Remove the listener; keep emit wrapper in place (safe) but restore on unmount
+            socket.offAny(handleIncomingMessage);
+            if (originalEmitRef.current) {
+                socket.emit = originalEmitRef.current;
+            }
+        };
     }, [socket, collectStats, calculateMessageSize, trackApplicationTraffic]);
 
     // Reset stats when collectStats changes
@@ -491,6 +529,7 @@ export const SocketProvider = ({ children }) => {
             trafficStatsRef,
             getSocketIOEngineStats,
             setCollectStats,
+            addDebugListener,
         }}>
             {children}
         </SocketContext.Provider>
