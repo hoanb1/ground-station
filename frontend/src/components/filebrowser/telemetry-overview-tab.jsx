@@ -95,7 +95,9 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
     const telemetryParser = telemetry.parser || '';
 
     const isGeoscan = framing === 'geoscan' || payloadProtocol === 'proprietary';
-    const hasEncapsulatedAx25 = typeof telemetryParser === 'string' && telemetryParser.startsWith('ax25');
+    // Encapsulated AX.25 detection: show AX.25 frame whenever telemetry.frame carries
+    // source/destination, regardless of which payload parser produced values.
+    const hasEncapsulatedAx25 = Boolean((telemetry?.frame && telemetry.frame.source && telemetry.frame.destination));
 
 
     return (

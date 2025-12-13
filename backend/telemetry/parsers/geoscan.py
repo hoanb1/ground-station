@@ -143,6 +143,40 @@ class GeoscanParser:
             Field("obc_reserve_49", 49, "u8"),
             Field("camera_media_files_count", 50, "u8"),
         ],
+        # GEOSCAN Type-I ax25-info view for 66-byte frames (AX.25 info is typically 48 bytes)
+        # Offsets relative to the start of the AX.25 info field (length typically 48 bytes):
+        # ID = 0; EPS = 1..23; OBC = 24..47 (no COMMu in 48 bytes window)
+        ("ax25_info", 66): [
+            # ID
+            Field("mayak_id", 0, "u8"),
+            # EPS
+            Field("eps_time_unix_s", 1, "u32"),
+            Field("eps_mode_enum", 5, "u8"),
+            Field("eps_reserve_22", 6, "u8"),
+            Field("eps_current_platform_a", 7, "u16", scale=0.001, unit="A"),
+            Field("eps_current_solar_a", 9, "u16", scale=0.001, unit="A"),
+            Field("v_cell_v", 11, "u16", scale=0.001, unit="V"),
+            Field("v_pack_v", 13, "u16", scale=0.001, unit="V"),
+            Field("eps_reserve_bitfield_31", 15, "u16"),
+            Field("temp_bat1_c", 17, "i8", unit="°C"),
+            Field("temp_bat2_c", 18, "i8", unit="°C"),
+            Field("eps_reserve_35", 19, "u16"),
+            Field("eps_reserve_bitfield_37", 21, "u8"),
+            Field("eps_reserve_38", 22, "u16"),
+            # OBC (fits within 48 bytes window 24..47)
+            Field("obc_reserve_40", 24, "u16"),
+            Field("obc_activity_raw", 26, "u8"),
+            Field("temp_x_p_c", 27, "i8", unit="°C"),
+            Field("temp_x_n_c", 28, "i8", unit="°C"),
+            Field("temp_y_p_c", 29, "i8", unit="°C"),
+            Field("temp_y_n_c", 30, "i8", unit="°C"),
+            Field("gnss_sat_count", 31, "u8"),
+            Field("obc_reserve_48_enum", 32, "u8"),
+            Field("obc_reserve_49", 33, "u8"),
+            Field("camera_media_files_count", 34, "u8"),
+            Field("obc_reserve_51_enum", 35, "u8"),
+            Field("obc_reserve_52_4b", 36, "u32"),
+        ],
         # NEW: GEOSCAN Type-I ax25-info view (for 74-byte frames with AX.25 header)
         # Offsets relative to the start of the AX.25 info field (length typically 56 bytes):
         # ID = 0; EPS = 1..23; OBC = 24..39; COMMu = 40..55
