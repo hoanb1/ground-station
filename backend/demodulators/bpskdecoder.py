@@ -296,8 +296,10 @@ class BPSKFlowgraph(gr.top_block):
             if len(self.sample_buffer) == 0:
                 return
             samples_to_process = self.sample_buffer.copy()
-            # Keep a small tail for continuity while processing
-            tail_samples = int(self.sample_rate * 0.1)  # 100ms tail
+            # Keep a tail for continuity while processing.
+            # Increase overlap to reduce chances of dropping frames that straddle batches.
+            # 0.5s tail chosen as a practical default for 9600 baud frames (configurable in future).
+            tail_samples = int(self.sample_rate * 0.5)  # 500ms tail
             if len(self.sample_buffer) > tail_samples:
                 self.sample_buffer = self.sample_buffer[-tail_samples:]
             else:
