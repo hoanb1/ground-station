@@ -16,6 +16,8 @@
 
 import logging
 import multiprocessing
+import os
+import signal
 
 from audio.audiobroadcaster import AudioBroadcaster
 from processing.decoderconfigservice import decoder_config_service
@@ -643,6 +645,36 @@ class DecoderManager:
             bool: True if restart successful, False otherwise
         """
         try:
+            # Helper: immediately and forcefully kill a decoder process
+            def _force_kill_decoder(decoder_proc, decoder_name: str):
+                try:
+                    pid = getattr(decoder_proc, "pid", None)
+                    # Try terminate first (best effort)
+                    try:
+                        decoder_proc.terminate()
+                    except Exception:
+                        pass
+
+                    # Immediate SIGKILL to guarantee exit
+                    if pid:
+                        try:
+                            os.kill(pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            # Already gone
+                            pass
+                        except Exception as e:
+                            self.logger.warning(
+                                f"Failed to SIGKILL {decoder_name} (pid={pid}): {e}"
+                            )
+
+                    # Best-effort short join to reap the process
+                    try:
+                        decoder_proc.join(timeout=0.2)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    self.logger.warning(f"Error while force-killing decoder {decoder_name}: {e}")
+
             # Extract configuration from decoder entry
             decoder_config = decoder_entry.get("config")
             if not decoder_config:
@@ -685,17 +717,31 @@ class DecoderManager:
                 self.logger.error(f"No data queue found for SDR {sdr_id}")
                 return False
 
-            # Stop the existing decoder
-            self.logger.info(f"Stopping decoder {session_id} VFO{vfo_number} for restart...")
-            if not self.stop_decoder(sdr_id, session_id, vfo_number):
-                self.logger.warning(
-                    "Failed to stop decoder cleanly, proceeding with restart anyway"
+            # Force kill any existing decoder process for this VFO immediately
+            try:
+                live_entry = (
+                    self.processes.get(sdr_id, {})
+                    .get("decoders", {})
+                    .get(session_id, {})
+                    .get(vfo_number)
                 )
+                if isinstance(live_entry, dict) and "instance" in live_entry:
+                    dec_instance = live_entry["instance"]
+                    dec_name = type(dec_instance).__name__
+                    self.logger.warning(
+                        f"Force-killing existing decoder for {session_id} VFO{vfo_number} before restart"
+                    )
+                    _force_kill_decoder(dec_instance, dec_name)
 
-            # Small delay to ensure process cleanup
-            import time
-
-            time.sleep(0.5)
+                    # Remove from maps to avoid stale references
+                    try:
+                        del self.processes[sdr_id]["decoders"][session_id][vfo_number]
+                        if not self.processes[sdr_id]["decoders"][session_id]:
+                            del self.processes[sdr_id]["decoders"][session_id]
+                    except Exception:
+                        pass
+            except Exception as e:
+                self.logger.warning(f"Error while attempting to force-kill existing decoder: {e}")
 
             # Start new decoder with same configuration (with small retry/backoff for transient conditions)
             self.logger.info(f"Starting new decoder {session_id} VFO{vfo_number}...")
