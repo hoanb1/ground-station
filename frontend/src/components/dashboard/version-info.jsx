@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector, shallowEqual } from 'react-redux';
 import { Typography, Box, Chip, Tooltip } from '@mui/material';
 import { fetchVersionInfo } from './version-slice';
@@ -57,7 +57,7 @@ const VersionInfo = ({ minimal = false }) => {
         const envLabel = environment === 'production' ? 'PROD' : 'DEV';
 
         // Build tooltip content with system info (static values only)
-        const tooltipContent = useMemo(() => (
+        const tooltipContent = (
             <Box sx={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
                 <Box><strong>Version:</strong> {data?.version || t('version_info.unknown')}</Box>
                 <Box><strong>Build Date:</strong> {data?.buildDate || t('version_info.unknown')}</Box>
@@ -68,7 +68,7 @@ const VersionInfo = ({ minimal = false }) => {
                 <Box><strong>Disk (total):</strong> {staticSystemInfo.diskTotal ?? '?'}{staticSystemInfo.diskTotal != null ? ' GB' : ''}</Box>
                 <Box><strong>OS:</strong> {(staticSystemInfo.osSystem || 'unknown')} {(staticSystemInfo.osRelease || '')}</Box>
             </Box>
-        ), [data?.version, data?.buildDate, data?.gitCommit, cpuArch, staticSystemInfo, t]);
+        );
 
         return (
             <Tooltip title={tooltipContent} placement="bottom-start">
