@@ -244,7 +244,7 @@ const EventLogConsoleCard = () => {
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} sx={{ mb: 2 }}>
                 <Stack direction="row" spacing={1}>
                     <Button variant="contained" color={isPlaying ? 'secondary' : 'primary'} startIcon={isPlaying ? <StopIcon/> : <PlayArrowIcon/>} onClick={onTogglePlay}>
-                        {isPlaying ? 'Stop' : 'Play'}
+                        {isPlaying ? 'Stop' : 'listen'}
                     </Button>
                     <Button variant="outlined" startIcon={<ClearAllIcon/>} onClick={onClear}>
                         Clear
