@@ -45,20 +45,20 @@ const MaintenanceForm = () => {
     // TabPanel component for tab content
     const TabPanel = ({ children, value, index }) => (
         <div role="tabpanel" hidden={value !== index}>
-            {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
+            {value === index && <Box sx={{ py: 0 }}>{children}</Box>}
         </div>
     );
 
     return (
-        <Paper elevation={3} sx={{ padding: 0, marginTop: 0  }}>
-            <Box component="form" sx={{mt: 0}}>
+        <Paper elevation={0} sx={{ padding: 0, marginTop: 0  }}>
+            <Box component="form" sx={{ mt: 0, p: 0, bgcolor: 'background.paper' }}>
                 <AntTabs
                     value={mainTab}
                     onChange={(e, newValue) => setMainTab(newValue)}
                     sx={{
                         borderBottom: 1,
                         borderColor: 'divider',
-                        mb: 2,
+                        mb: 0,
                         [`& .${tabsClasses.scrollButtons}`]: {
                             '&.Mui-disabled': { opacity: 0.3 },
                         },

@@ -22,6 +22,14 @@ from PIL import Image
 from scipy import signal
 from scipy.signal.windows import hann
 
+# Optional process title support (parity with other decoders)
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except Exception:
+    HAS_SETPROCTITLE = False
+
 from demodulators.basedecoderprocess import BaseDecoderProcess
 
 logger = logging.getLogger("sstvdecoderv2")
@@ -881,6 +889,12 @@ class SSTVDecoderV2(BaseDecoderProcess):
 
     def run(self):
         """Main process loop - receives IQ, demodulates FM, decodes SSTV"""
+        # Set process title for easier discovery via `ps`/`pgrep`
+        if HAS_SETPROCTITLE:
+            try:
+                setproctitle.setproctitle(f"Ground Station - SSTV Decoder (VFO {self.vfo})")
+            except Exception:
+                pass
         logger.info(f"SSTV decoder v2 process started for {self.session_id}")
 
         # Initialize stats in subprocess
