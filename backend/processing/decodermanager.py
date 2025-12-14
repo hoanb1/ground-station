@@ -18,6 +18,8 @@ import logging
 import multiprocessing
 import os
 import signal
+import threading
+import time
 
 from audio.audiobroadcaster import AudioBroadcaster
 from processing.decoderconfigservice import decoder_config_service
@@ -42,6 +44,38 @@ class DecoderManager:
         self.logger = logging.getLogger("decoder-manager")
         self.processes = processes
         self.demodulator_manager = demodulator_manager
+        # Single-flight guard for starts per (SDR, session, VFO)
+        self._start_locks = {}
+        # Track start-in-progress and last-start timestamps to coalesce near-simultaneous starts
+        self._start_in_progress = {}
+        self._last_start_ts = {}
+        # Fixed debounce window (ms) for coalescing near-simultaneous non-restart starts
+        self._debounce_ms = 250
+
+    def _force_kill_process(self, proc: multiprocessing.Process, name: str) -> None:
+        """Immediately terminate and SIGKILL a multiprocessing.Process, best-effort join."""
+        try:
+            pid = getattr(proc, "pid", None)
+            # Best-effort terminate first
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+            # Unconditional SIGKILL to guarantee exit
+            if pid:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                except Exception as e:
+                    self.logger.warning(f"Failed to SIGKILL {name} (pid={pid}): {e}")
+            # Short reap
+            try:
+                proc.join(timeout=0.2)
+            except Exception:
+                pass
+        except Exception as e:
+            self.logger.warning(f"Error while force-killing process {name}: {e}")
 
     def start_decoder(
         self, sdr_id, session_id, decoder_class, data_queue, audio_out_queue=None, **kwargs
@@ -72,35 +106,92 @@ class DecoderManager:
 
         process_info = self.processes[sdr_id]
 
-        # Extract VFO number from kwargs if provided
+        # Extract VFO number and caller tag from kwargs if provided
         vfo_number = kwargs.get("vfo")
+        caller = kwargs.pop("caller", "unknown")
 
         # Check if decoder already exists for this session and VFO
         decoders_dict = process_info.get("decoders", {})
         session_decoders = decoders_dict.get(session_id, {})
 
-        # Check if this specific VFO has a decoder
-        if vfo_number and vfo_number in session_decoders:
-            existing_entry = session_decoders[vfo_number]
-            existing = (
-                existing_entry.get("instance")
-                if isinstance(existing_entry, dict)
-                else existing_entry
-            )
-            # If same type, just return success (already running)
-            if isinstance(existing, decoder_class):
-                self.logger.debug(
-                    f"{decoder_class.__name__} already running for session {session_id} VFO {vfo_number}"
-                )
-                return True
-            else:
-                # Different type, stop the old one first
-                self.logger.info(
-                    f"Switching from {type(existing).__name__} to {decoder_class.__name__} for session {session_id} VFO {vfo_number}"
-                )
-                self.stop_decoder(sdr_id, session_id, vfo_number)
+        # Single-flight guard per (SDR, session, VFO)
+        lock_key = (sdr_id, session_id, vfo_number)
+        lock = self._start_locks.get(lock_key)
+        if lock is None:
+            lock = threading.Lock()
+            self._start_locks[lock_key] = lock
 
-        try:
+        with lock:
+            # Debounce/suppress non-restart callers if a start just happened or is in progress
+            key = (sdr_id, session_id, vfo_number)
+            now_ms = int(time.time() * 1000)
+            in_progress = bool(self._start_in_progress.get(key, False))
+            last_ts = int(self._last_start_ts.get(key, 0))
+            if caller != "restart":
+                if in_progress or (now_ms - last_ts) < self._debounce_ms:
+                    return True
+
+                # Proceed with start logic
+                # Check if this specific VFO has a decoder
+                if vfo_number and vfo_number in session_decoders:
+                    existing_entry = session_decoders[vfo_number]
+                    existing = (
+                        existing_entry.get("instance")
+                        if isinstance(existing_entry, dict)
+                        else existing_entry
+                    )
+                    existing_type = type(existing).__name__ if existing is not None else None
+                    existing_alive = (
+                        bool(getattr(existing, "is_alive", lambda: False)()) if existing else False
+                    )
+
+                    if existing is not None and existing_alive:
+                        if isinstance(existing, decoder_class):
+                            # Already running same type
+                            if caller != "restart":
+                                return True
+                            # Restart wants to replace even same type
+                            self.logger.warning(
+                                f"Force-replacing alive {existing_type} for {session_id} VFO{vfo_number} due to restart (pid={getattr(existing, 'pid', None)})"
+                            )
+                            self._force_kill_process(existing, existing_type or "Decoder")
+                            try:
+                                del decoders_dict[session_id][vfo_number]
+                                if not decoders_dict[session_id]:
+                                    del decoders_dict[session_id]
+                            except Exception:
+                                pass
+                        else:
+                            # Different type is alive
+                            if caller != "restart":
+                                self.logger.warning(
+                                    f"Duplicate start prevented for {session_id} VFO{vfo_number}: "
+                                    f"existing {existing_type} (pid={getattr(existing, 'pid', None)}) alive; caller={caller}"
+                                )
+                                return True
+                            # Restart path: force-kill existing first
+                            self.logger.warning(
+                                f"Force-killing existing decoder before restart for {session_id} VFO{vfo_number}: "
+                                f"{existing_type} (pid={getattr(existing, 'pid', None)})"
+                            )
+                            self._force_kill_process(existing, existing_type or "Decoder")
+                            try:
+                                del decoders_dict[session_id][vfo_number]
+                                if not decoders_dict[session_id]:
+                                    del decoders_dict[session_id]
+                            except Exception:
+                                pass
+                    else:
+                        # Not alive; if stale map entry exists, drop it so we can start fresh
+                        if existing is not None and caller == "restart":
+                            try:
+                                del decoders_dict[session_id][vfo_number]
+                                if not decoders_dict[session_id]:
+                                    del decoders_dict[session_id]
+                            except Exception:
+                                pass
+
+            # If we reach here and an existing different-type was present but not alive, we can proceed.
 
             # Find decoder name by reverse lookup on class
             decoder_name = None
@@ -282,6 +373,8 @@ class DecoderManager:
                 decoder = decoder_class(iq_queue, data_queue, session_id, **decoder_kwargs)
                 decoder.start()
 
+                # No verbose debug logging by default
+
                 # Store the subscription key for cleanup
                 subscription_key_to_store = subscription_key
                 audio_broadcaster_instance = None  # Raw IQ decoders don't use audio broadcaster
@@ -389,12 +482,9 @@ class DecoderManager:
             self.logger.info(
                 f"Started {decoder_class.__name__} for session {session_id} on device {sdr_id}"
             )
+            # Record last start timestamp for debounce
+            self._last_start_ts[key] = int(time.time() * 1000)
             return True
-
-        except Exception as e:
-            self.logger.error(f"Error starting {decoder_class.__name__}: {str(e)}")
-            self.logger.exception(e)
-            return False
 
     def stop_decoder(self, sdr_id, session_id, vfo_number=None):
         """
@@ -733,7 +823,58 @@ class DecoderManager:
                     )
                     _force_kill_decoder(dec_instance, dec_name)
 
-                    # Remove from maps to avoid stale references
+                    # Perform resource cleanup similar to graceful stop to avoid stale subscriptions
+                    try:
+                        process_info_local = self.processes.get(sdr_id, {})
+                        needs_raw_iq = bool(live_entry.get("needs_raw_iq", False))
+                        subscription_key = live_entry.get("subscription_key")
+                        audio_broadcaster = live_entry.get("audio_broadcaster")
+                        ui_subscription_key = live_entry.get("ui_subscription_key")
+                        internal_demod = bool(live_entry.get("internal_demod", False))
+
+                        if needs_raw_iq and subscription_key:
+                            # Unsubscribe from IQ broadcaster to release the old queue
+                            iq_broadcaster = process_info_local.get("iq_broadcaster")
+                            if iq_broadcaster:
+                                try:
+                                    iq_broadcaster.unsubscribe(subscription_key)
+                                    self.logger.debug(
+                                        f"Unsubscribed {subscription_key} from IQBroadcaster during restart cleanup"
+                                    )
+                                except Exception:
+                                    # Best effort; don't block restart
+                                    pass
+                        else:
+                            # Audio path: unsubscribe decoder and UI, then stop broadcaster
+                            if audio_broadcaster:
+                                try:
+                                    audio_broadcaster.unsubscribe(f"decoder:{session_id}")
+                                except Exception:
+                                    pass
+                                if ui_subscription_key:
+                                    try:
+                                        audio_broadcaster.unsubscribe(ui_subscription_key)
+                                    except Exception:
+                                        pass
+                                try:
+                                    audio_broadcaster.stop()
+                                except Exception:
+                                    pass
+
+                            # Stop internal demodulator if we created one for this decoder
+                            if internal_demod:
+                                try:
+                                    self.demodulator_manager.stop_demodulator(
+                                        sdr_id, session_id, vfo_number
+                                    )
+                                except Exception:
+                                    pass
+
+                    except Exception:
+                        # Swallow cleanup errors to ensure restart proceeds
+                        pass
+
+                    # Remove from maps to avoid stale references (after cleanup)
                     try:
                         del self.processes[sdr_id]["decoders"][session_id][vfo_number]
                         if not self.processes[sdr_id]["decoders"][session_id]:
@@ -759,6 +900,7 @@ class DecoderManager:
                     data_queue=data_queue,
                     vfo=vfo_number,
                     config=decoder_config,
+                    caller="restart",
                     # Preserve other parameters that might have been used
                     satellite=(
                         decoder_config.satellite if hasattr(decoder_config, "satellite") else {}

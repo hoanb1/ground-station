@@ -17,6 +17,7 @@
 import asyncio
 import logging
 import multiprocessing
+import os
 
 import numpy as np
 
@@ -54,6 +55,15 @@ class ProcessLifecycleManager:
         self.demodulator_manager = demodulator_manager
         self.recorder_manager = recorder_manager
         self.decoder_manager = decoder_manager
+        # Optional trace logging toggle
+        try:
+            self._trace = str(os.environ.get("GS_DECODER_TRACE", "")).lower() in (
+                "1",
+                "true",
+                "yes",
+            )
+        except Exception:
+            self._trace = False
         # Per-(SDR, session, VFO) restart serialization locks
         self._restart_locks = {}
 
@@ -633,6 +643,7 @@ class ProcessLifecycleManager:
             self.logger.info(
                 f"Handling decoder restart request for {session_id} VFO{vfo_number}: {reason}"
             )
+            # Debug tracing removed for production cleanliness
 
             # Optional small delay to let SDR reconfigure/settle and to stagger concurrent restarts
             if delay_ms and delay_ms > 0:
@@ -654,6 +665,7 @@ class ProcessLifecycleManager:
                         f"Decoder entry not found in live map for {session_id} VFO{vfo_number}; aborting restart"
                     )
                     return
+            # Removed verbose pre-kill snapshot debug logging
 
             # Mark restart in progress to prevent duplicate restarts
             try:
@@ -685,6 +697,8 @@ class ProcessLifecycleManager:
                     self.logger.info(f"Successfully restarted decoder {session_id} VFO{vfo_number}")
                 else:
                     self.logger.error(f"Failed to restart decoder {session_id} VFO{vfo_number}")
+
+                # Removed verbose post-start snapshot debug logging
 
             # Clear restart-in-progress flag
             try:

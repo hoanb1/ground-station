@@ -591,6 +591,10 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
             decoder_kwargs["satellite"] = satellite_info
             decoder_kwargs["transmitter"] = transmitter_info
 
+        # Tag caller for tracing/idempotency in DecoderManager (single-flight guard)
+        # Note: ProcessManager.start_decoder forwards **kwargs to DecoderManager.start_decoder
+        # so we include a 'caller' hint.
+        decoder_kwargs["caller"] = "vfo.py:update_vfo_parameters"
         success = process_manager.start_decoder(**decoder_kwargs)
 
         if success:
