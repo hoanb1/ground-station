@@ -18,7 +18,7 @@
  */
 
 import React, { useState } from 'react';
-import { Paper, Typography, Divider, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert, AlertTitle, CircularProgress } from '@mui/material';
+import { Typography, Divider, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert, AlertTitle, CircularProgress } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { useSocket } from "../../common/socket.jsx";
@@ -60,11 +60,10 @@ const ServiceControlCard = () => {
 
     return (
         <>
-            <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    Service Control
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+                Service Control
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
 
                 <Alert severity="warning" sx={{ mb: 2 }}>
                     <AlertTitle>{t('maintenance.service_control_title')}</AlertTitle>
@@ -103,7 +102,6 @@ const ServiceControlCard = () => {
                         </Grid>
                     )}
                 </Grid>
-            </Paper>
 
             {/* Service Restart Confirmation Dialog */}
             <Dialog open={confirmRestartOpen} onClose={() => setConfirmRestartOpen(false)}>

@@ -17,16 +17,29 @@
  *
  */
 
-import React, { useState } from 'react';
-import { Paper, Typography, Divider, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert, AlertTitle, Backdrop, Box, CircularProgress } from '@mui/material';
+import React, {useState} from 'react';
+import {
+    Typography,
+    Divider,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Alert,
+    AlertTitle,
+    Backdrop,
+    Box,
+    CircularProgress
+} from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { useTranslation } from 'react-i18next';
-import { gridLayoutStoreName as overviewGridLayoutName } from "../../overview/main-layout.jsx";
-import { gridLayoutStoreName as targetGridLayoutName } from "../../target/main-layout.jsx";
-import { gridLayoutStoreName as waterfallGridLayoutName } from "../../waterfall/main-layout.jsx";
+import {useTranslation} from 'react-i18next';
+import {gridLayoutStoreName as overviewGridLayoutName} from "../../overview/main-layout.jsx";
+import {gridLayoutStoreName as targetGridLayoutName} from "../../target/main-layout.jsx";
+import {gridLayoutStoreName as waterfallGridLayoutName} from "../../waterfall/main-layout.jsx";
 
 const GridLayoutStorageCard = () => {
-    const { t } = useTranslation('settings');
+    const {t} = useTranslation('settings');
     const [confirmClearLayoutOpen, setConfirmClearLayoutOpen] = useState(false);
     const [isReloading, setIsReloading] = useState(false);
 
@@ -45,108 +58,108 @@ const GridLayoutStorageCard = () => {
 
     return (
         <>
-            <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    Grid Layout Storage
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+                Grid Layout Storage
+            </Typography>
+            <Divider sx={{mb: 2}}/>
 
-                <Grid container spacing={2} columns={16}>
-                    <Grid size={16}>
-                        <Alert severity="warning" sx={{ mb: 2 }}>
-                            <AlertTitle>Clear All Grid Layouts</AlertTitle>
-                            This will reset all grid layouts below to their defaults. Use individual buttons to clear specific layouts only.
-                        </Alert>
-                    </Grid>
-
-                    <Grid size={10}>
-                        {t('maintenance.clear_layout')}
-                        <Typography variant="body2" color="text.secondary">
-                            Clears all grid layouts (all layouts below)
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="contained"
-                            color="error"
-                            onClick={() => setConfirmClearLayoutOpen(true)}
-                            fullWidth
-                            size="small"
-                        >
-                            {t('maintenance.clear_layout_button')}
-                        </Button>
-                    </Grid>
-
-                    <Grid size={16}>
-                        <Divider sx={{ my: 2 }} />
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Or clear individual layouts:
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear Overview Grid Layout
-                        <Typography variant="body2" color="text.secondary">
-                            Resets the widget layout on the Overview page
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={() => localStorage.setItem(overviewGridLayoutName, null)}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear Target Grid Layout
-                        <Typography variant="body2" color="text.secondary">
-                            Resets the widget layout on the Target page
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={() => localStorage.setItem(targetGridLayoutName, null)}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear Waterfall Grid Layout
-                        <Typography variant="body2" color="text.secondary">
-                            Resets the widget layout on the Waterfall page
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={() => localStorage.setItem(waterfallGridLayoutName, null)}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
+            <Grid container spacing={2} columns={16}>
+                <Grid size={16}>
+                    <Alert severity="warning" sx={{mb: 2}}>
+                        <AlertTitle>Clear All Grid Layouts</AlertTitle>
+                        This will reset all grid layouts below to their defaults. Use individual buttons to clear
+                        specific layouts only.
+                    </Alert>
                 </Grid>
-            </Paper>
+
+                <Grid size={10}>
+                    {t('maintenance.clear_layout')}
+                    <Typography variant="body2" color="text.secondary">
+                        Clears all grid layouts (all layouts below)
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => setConfirmClearLayoutOpen(true)}
+                        fullWidth
+                        size="small"
+                    >
+                        {t('maintenance.clear_layout_button')}
+                    </Button>
+                </Grid>
+
+                <Grid size={16}>
+                    <Divider sx={{my: 2}}/>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Or clear individual layouts:
+                    </Typography>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear Overview Grid Layout
+                    <Typography variant="body2" color="text.secondary">
+                        Resets the widget layout on the Overview page
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => localStorage.setItem(overviewGridLayoutName, null)}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear Target Grid Layout
+                    <Typography variant="body2" color="text.secondary">
+                        Resets the widget layout on the Target page
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => localStorage.setItem(targetGridLayoutName, null)}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear Waterfall Grid Layout
+                    <Typography variant="body2" color="text.secondary">
+                        Resets the widget layout on the Waterfall page
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => localStorage.setItem(waterfallGridLayoutName, null)}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+            </Grid>
 
             {/* Clear Layout Confirmation Dialog */}
             <Dialog open={confirmClearLayoutOpen} onClose={() => setConfirmClearLayoutOpen(false)}>
                 <DialogTitle>Clear All Grid Layouts?</DialogTitle>
                 <DialogContent>
-                    <Alert severity="info" sx={{ mb: 2 }}>
+                    <Alert severity="info" sx={{mb: 2}}>
                         <AlertTitle>Local Browser Cache Only</AlertTitle>
-                        This will only clear layout preferences stored in your browser's local storage. No backend data will be affected.
+                        This will only clear layout preferences stored in your browser's local storage. No backend data
+                        will be affected.
                     </Alert>
                     <Typography paragraph>
                         This will reset all widget layouts to their defaults on the following pages:
@@ -170,12 +183,12 @@ const GridLayoutStorageCard = () => {
 
             {/* Reload Spinner Overlay */}
             <Backdrop
-                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+                sx={{color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1}}
                 open={isReloading}
             >
-                <Box sx={{ textAlign: 'center' }}>
-                    <CircularProgress color="inherit" size={60} />
-                    <Typography variant="h6" sx={{ mt: 2 }}>
+                <Box sx={{textAlign: 'center'}}>
+                    <CircularProgress color="inherit" size={60}/>
+                    <Typography variant="h6" sx={{mt: 2}}>
                         Reloading...
                     </Typography>
                 </Box>

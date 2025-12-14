@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Paper, Typography, Divider, Chip, TextField, Stack } from '@mui/material';
+import { Typography, Divider, Chip, TextField, Stack, Paper } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useSocket } from '../../common/socket.jsx';
 import { setRuntimeSnapshot } from '../sessions-slice.jsx';
@@ -84,7 +84,7 @@ const SessionSnapshotCard = () => {
     };
 
     return (
-        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+        <>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
                 <Typography variant="h6">Active Sessions & Runtime Snapshot</Typography>
                 <Stack direction="row" spacing={1}>
@@ -151,7 +151,7 @@ const SessionSnapshotCard = () => {
                 <KeyValue label="Socket Connected" value={socket?.connected ? 'yes' : 'no'} />
                 <KeyValue label="Update Mode" value="auto (3s)" />
             </Stack>
-        </Paper>
+        </>
     );
 };
 

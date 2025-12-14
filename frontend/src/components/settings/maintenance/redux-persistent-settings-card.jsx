@@ -17,13 +17,26 @@
  *
  */
 
-import React, { useState } from 'react';
-import { Paper, Typography, Divider, Button, Dialog, DialogTitle, DialogContent, DialogActions, Alert, AlertTitle, Backdrop, Box, CircularProgress } from '@mui/material';
+import React, {useState} from 'react';
+import {
+    Typography,
+    Divider,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Alert,
+    AlertTitle,
+    Backdrop,
+    Box,
+    CircularProgress
+} from '@mui/material';
 import Grid from '@mui/material/Grid';
-import { useTranslation } from 'react-i18next';
+import {useTranslation} from 'react-i18next';
 
 const ReduxPersistentSettingsCard = () => {
-    const { t } = useTranslation('settings');
+    const {t} = useTranslation('settings');
     const [confirmClearReduxOpen, setConfirmClearReduxOpen] = useState(false);
     const [isReloading, setIsReloading] = useState(false);
 
@@ -89,164 +102,164 @@ const ReduxPersistentSettingsCard = () => {
 
     return (
         <>
-            <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                    Redux Persistent Settings
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+                Redux Persistent Settings
+            </Typography>
+            <Divider sx={{mb: 2}}/>
 
-                <Grid container spacing={2} columns={16}>
-                    <Grid size={16}>
-                        <Alert severity="warning" sx={{ mb: 2 }}>
-                            <AlertTitle>Clear All Redux Settings</AlertTitle>
-                            This will reset all application settings below to their defaults. Use individual buttons to clear specific settings only.
-                        </Alert>
-                    </Grid>
-
-                    <Grid size={10}>
-                        {t('maintenance.clear_redux')}
-                        <Typography variant="body2" color="text.secondary">
-                            Clears all Redux persistent data (all settings below)
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="contained"
-                            color="error"
-                            onClick={() => setConfirmClearReduxOpen(true)}
-                            fullWidth
-                            size="small"
-                        >
-                            {t('maintenance.clear_redux_button')}
-                        </Button>
-                    </Grid>
-
-                    <Grid size={16}>
-                        <Divider sx={{ my: 2 }} />
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Or clear individual settings:
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear File Browser Settings
-                        <Typography variant="body2" color="text.secondary">
-                            Resets page size, sorting, filters, and view mode
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={clearFileBrowserPersist}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear Waterfall Settings
-                        <Typography variant="body2" color="text.secondary">
-                            Resets frequency, gain, sample rate, colormap, FFT settings
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={clearWaterfallPersist}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear VFO Settings
-                        <Typography variant="body2" color="text.secondary">
-                            Resets all VFO markers, frequencies, modes, and active states
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={clearVfoPersist}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear Preferences
-                        <Typography variant="body2" color="text.secondary">
-                            Resets all user preferences like timezone, theme, etc.
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={clearPreferencesPersist}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear Overview Satellite Selection
-                        <Typography variant="body2" color="text.secondary">
-                            Resets selected satellite group and satellite in overview page
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={clearOverviewSatTrackPersist}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
-
-                    <Grid size={10}>
-                        Clear Camera Selection
-                        <Typography variant="body2" color="text.secondary">
-                            Resets selected camera and camera ID
-                        </Typography>
-                    </Grid>
-                    <Grid size={6}>
-                        <Button
-                            variant="outlined"
-                            color="warning"
-                            onClick={clearCameraPersist}
-                            fullWidth
-                            size="small"
-                        >
-                            Clear
-                        </Button>
-                    </Grid>
+            <Grid container spacing={2} columns={16}>
+                <Grid size={16}>
+                    <Alert severity="warning" sx={{mb: 2}}>
+                        <AlertTitle>Clear All Redux Settings</AlertTitle>
+                        This will reset all application settings below to their defaults. Use individual buttons to
+                        clear specific settings only.
+                    </Alert>
                 </Grid>
-            </Paper>
+
+                <Grid size={10}>
+                    {t('maintenance.clear_redux')}
+                    <Typography variant="body2" color="text.secondary">
+                        Clears all Redux persistent data (all settings below)
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => setConfirmClearReduxOpen(true)}
+                        fullWidth
+                        size="small"
+                    >
+                        {t('maintenance.clear_redux_button')}
+                    </Button>
+                </Grid>
+
+                <Grid size={16}>
+                    <Divider sx={{my: 2}}/>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Or clear individual settings:
+                    </Typography>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear File Browser Settings
+                    <Typography variant="body2" color="text.secondary">
+                        Resets page size, sorting, filters, and view mode
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={clearFileBrowserPersist}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear Waterfall Settings
+                    <Typography variant="body2" color="text.secondary">
+                        Resets frequency, gain, sample rate, colormap, FFT settings
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={clearWaterfallPersist}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear VFO Settings
+                    <Typography variant="body2" color="text.secondary">
+                        Resets all VFO markers, frequencies, modes, and active states
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={clearVfoPersist}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear Preferences
+                    <Typography variant="body2" color="text.secondary">
+                        Resets all user preferences like timezone, theme, etc.
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={clearPreferencesPersist}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear Overview Satellite Selection
+                    <Typography variant="body2" color="text.secondary">
+                        Resets selected satellite group and satellite in overview page
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={clearOverviewSatTrackPersist}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+
+                <Grid size={10}>
+                    Clear Camera Selection
+                    <Typography variant="body2" color="text.secondary">
+                        Resets selected camera and camera ID
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={clearCameraPersist}
+                        fullWidth
+                        size="small"
+                    >
+                        Clear
+                    </Button>
+                </Grid>
+            </Grid>
 
             {/* Clear Redux Persist Confirmation Dialog */}
             <Dialog open={confirmClearReduxOpen} onClose={() => setConfirmClearReduxOpen(false)}>
                 <DialogTitle>Clear All Redux Persistent State?</DialogTitle>
                 <DialogContent>
-                    <Alert severity="info" sx={{ mb: 2 }}>
+                    <Alert severity="info" sx={{mb: 2}}>
                         <AlertTitle>Local Browser Cache Only</AlertTitle>
-                        This will only clear application settings stored in your browser's local storage. No backend data (satellites, rigs, rotators, recordings, etc.) will be deleted.
+                        This will only clear application settings stored in your browser's local storage. No backend
+                        data (satellites, rigs, rotators, recordings, etc.) will be deleted.
                     </Alert>
-                    <Alert severity="warning" sx={{ mb: 2 }}>
+                    <Alert severity="warning" sx={{mb: 2}}>
                         <AlertTitle>Warning</AlertTitle>
                         This action will reset ALL local application settings to their defaults!
                     </Alert>
@@ -269,7 +282,8 @@ const ReduxPersistentSettingsCard = () => {
                         <li>File browser settings</li>
                     </ul>
                     <Typography paragraph>
-                        <strong>You will need to refresh the page after clearing.</strong> The application will re-fetch all configuration data from the backend. Are you sure you want to continue?
+                        <strong>You will need to refresh the page after clearing.</strong> The application will re-fetch
+                        all configuration data from the backend. Are you sure you want to continue?
                     </Typography>
                 </DialogContent>
                 <DialogActions>
@@ -282,12 +296,12 @@ const ReduxPersistentSettingsCard = () => {
 
             {/* Reload Spinner Overlay */}
             <Backdrop
-                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+                sx={{color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1}}
                 open={isReloading}
             >
-                <Box sx={{ textAlign: 'center' }}>
-                    <CircularProgress color="inherit" size={60} />
-                    <Typography variant="h6" sx={{ mt: 2 }}>
+                <Box sx={{textAlign: 'center'}}>
+                    <CircularProgress color="inherit" size={60}/>
+                    <Typography variant="h6" sx={{mt: 2}}>
                         Reloading...
                     </Typography>
                 </Box>

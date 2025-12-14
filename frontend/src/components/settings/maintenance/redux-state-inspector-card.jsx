@@ -19,7 +19,7 @@
 
 import React, { useState, useMemo, memo } from 'react';
 import {
-    Paper, Typography, Divider, Button, TextField, Alert, AlertTitle,
+    Typography, Divider, Button, TextField, Alert, AlertTitle,
     Tabs, Tab, Box, IconButton, Collapse, Dialog, DialogTitle,
     DialogContent, DialogActions, Tooltip, Chip, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
@@ -264,30 +264,29 @@ const ReduxStateInspectorCard = () => {
 
     return (
         <>
-            <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6">
-                        Redux State Inspector
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Tooltip title="Copy entire state">
-                            <IconButton onClick={() => copyToClipboard(fullState)} color={copySuccess ? 'success' : 'default'}>
-                                <ContentCopyIcon />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Download state as JSON">
-                            <IconButton onClick={downloadState}>
-                                <DownloadIcon />
-                            </IconButton>
-                        </Tooltip>
-                    </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                    Redux State Inspector
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Tooltip title="Copy entire state">
+                        <IconButton onClick={() => copyToClipboard(fullState)} color={copySuccess ? 'success' : 'default'}>
+                            <ContentCopyIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Download state as JSON">
+                        <IconButton onClick={downloadState}>
+                            <DownloadIcon />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
-                <Divider sx={{ mb: 2 }} />
+            </Box>
+            <Divider sx={{ mb: 2 }} />
 
-                <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
-                    <Tab label="Inspector" />
-                    <Tab label="Raw JSON" />
-                </Tabs>
+            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
+                <Tab label="Inspector" />
+                <Tab label="Raw JSON" />
+            </Tabs>
 
                 {/* Tab 0: Inspector with View and Edit side by side */}
                 {activeTab === 0 && (
@@ -430,7 +429,6 @@ const ReduxStateInspectorCard = () => {
                         />
                     </Box>
                 )}
-            </Paper>
 
             {/* Confirmation Dialog */}
             <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>

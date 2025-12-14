@@ -21,7 +21,6 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import {
     Card,
-    CardContent,
     Typography,
     Box,
     Stack,
@@ -51,37 +50,34 @@ const SystemInfoCard = () => {
 
     if (!systemInfo) {
         return (
-            <Card>
-                <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                        System Information
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        System information not available yet. Ensure the UI is connected to the backend.
-                    </Typography>
-                </CardContent>
-            </Card>
+            <>
+                <Typography variant="h6" gutterBottom>
+                    System Information
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                    System information not available yet. Ensure the UI is connected to the backend.
+                </Typography>
+            </>
         );
     }
 
     return (
-        <Card>
-            <CardContent>
-                <Typography variant="h6" gutterBottom>
-                    System Information
-                </Typography>
+        <>
+            <Typography variant="h6" gutterBottom>
+                System Information
+            </Typography>
 
-                {/* Responsive CSS grid ensures equal-width cards per row */}
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gap: 2,
-                        alignItems: 'stretch',
-                        // Auto-fit ensures items share the available row width equally,
-                        // and last row items expand to fill remaining space
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                    }}
-                >
+            {/* Responsive CSS grid ensures equal-width cards per row */}
+            <Box
+                sx={{
+                    display: 'grid',
+                    gap: 2,
+                    alignItems: 'stretch',
+                    // Auto-fit ensures items share the available row width equally,
+                    // and last row items expand to fill remaining space
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                }}
+            >
                     {/* CPU Information */}
                     {systemInfo.cpu && (
                         <Box sx={{ display: 'flex' }}>
@@ -541,9 +537,8 @@ const SystemInfoCard = () => {
                             </Card>
                         </Box>
                     )}
-                </Box>
-            </CardContent>
-        </Card>
+            </Box>
+        </>
     );
 };
 

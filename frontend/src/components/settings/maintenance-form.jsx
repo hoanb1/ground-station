@@ -45,7 +45,7 @@ const MaintenanceForm = () => {
     // TabPanel component for tab content
     const TabPanel = ({ children, value, index }) => (
         <div role="tabpanel" hidden={value !== index}>
-            {value === index && <Box sx={{ py: 0 }}>{children}</Box>}
+            {value === index && <Paper elevation={1} sx={{ p: 2 }}>{children}</Paper>}
         </div>
     );
 

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Paper, Typography, Divider, Button, Alert, CircularProgress, Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Typography, Divider, Button, Alert, CircularProgress, Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSocket } from "../../common/socket.jsx";
 import { useDispatch, useSelector } from 'react-redux';
@@ -41,7 +41,7 @@ const LibraryVersionsCard = () => {
     };
 
     return (
-        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+        <>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                     Library Versions
@@ -204,7 +204,7 @@ const LibraryVersionsCard = () => {
                     )}
                 </>
             )}
-        </Paper>
+        </>
     );
 };
 

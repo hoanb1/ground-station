@@ -19,8 +19,6 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Card,
-    CardContent,
     Typography,
     Button,
     Table,
@@ -233,14 +231,12 @@ const DatabaseBackupCard = () => {
 
     return (
         <>
-            <Card>
-                <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                        Database Backup & Restore
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Manage full database backups and individual table operations
-                    </Typography>
+            <Typography variant="h6" gutterBottom>
+                Database Backup & Restore
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Manage full database backups and individual table operations
+            </Typography>
 
                     {/* Full Database Backup/Restore Section */}
                     <Box sx={{ mb: 3 }}>
@@ -273,7 +269,7 @@ const DatabaseBackupCard = () => {
                         </Box>
                     </Box>
 
-                    <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 3 }} />
 
                     {/* Individual Table Operations Section */}
                     <Box>
@@ -340,8 +336,6 @@ const DatabaseBackupCard = () => {
                             </TableContainer>
                         )}
                     </Box>
-                </CardContent>
-            </Card>
 
             <Dialog open={restoreDialog.open} onClose={() => setRestoreDialog({ open: false, table: null })}>
                 <DialogTitle>Restore Table: {restoreDialog.table}</DialogTitle>

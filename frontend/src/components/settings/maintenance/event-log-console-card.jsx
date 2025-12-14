@@ -13,7 +13,6 @@ import {
     FormControlLabel,
     InputLabel,
     MenuItem,
-    Paper,
     Select,
     Stack,
     TextField,
@@ -33,7 +32,9 @@ const HARD_CAP = 5000;
 function isBinary(val) {
     if (!val) return false;
     if (val instanceof ArrayBuffer) return true;
-    if (typeof Buffer !== 'undefined' && val instanceof Buffer) return true;
+    // Guarded Buffer check for environments where Buffer is available (e.g., Electron)
+    const GBuffer = typeof globalThis !== 'undefined' ? globalThis.Buffer : undefined;
+    if (GBuffer && typeof GBuffer.isBuffer === 'function' && GBuffer.isBuffer(val)) return true;
     if (ArrayBuffer.isView(val)) return true; // TypedArrays
     return false;
 }
@@ -143,8 +144,7 @@ const EventLogConsoleCard = () => {
     const nextIdRef = useRef(1);
     const unsubscribeRef = useRef(null);
     const listEndRef = useRef(null);
-    const pendingRef = useRef([]);
-    const rafRef = useRef(0);
+    // Removed burst/throttle logic: handle messages immediately
 
     // Theme-aware styles for react-json-view-lite
     const jsonStyles = useMemo(() => {
@@ -166,19 +166,12 @@ const EventLogConsoleCard = () => {
         }
     }, []);
 
-    // Batching to avoid too many re-renders
-    const flushPending = useCallback(() => {
-        rafRef.current = 0;
-        if (pendingRef.current.length === 0) return;
+    // Append a single entry immediately and trim to current limit
+    const appendEntry = useCallback((entry) => {
         setEntries(prev => {
-            const next = prev.concat(pendingRef.current);
-            pendingRef.current = [];
-            // Trim to min(limit, HARD_CAP)
+            const next = prev.concat(entry);
             const maxLen = Math.min(limit, HARD_CAP);
-            if (next.length > maxLen) {
-                return next.slice(next.length - maxLen);
-            }
-            return next;
+            return next.length > maxLen ? next.slice(next.length - maxLen) : next;
         });
     }, [limit]);
 
@@ -206,24 +199,19 @@ const EventLogConsoleCard = () => {
             const unsubscribe = addDebugListener((msg) => {
                 // Default only incoming; outgoing only if checkbox is enabled
                 if (msg.direction === 'out' && !includeOutgoing) return;
-                // Batch
-                // Assign stable id once when receiving the message
-                pendingRef.current.push({ ...msg, id: nextIdRef.current++ });
-                if (!rafRef.current) {
-                    rafRef.current = requestAnimationFrame(flushPending);
-                }
+                // Assign stable id once when receiving the message and append immediately
+                appendEntry({ ...msg, id: nextIdRef.current++ });
             }, { includeOutgoing });
             unsubscribeRef.current = () => {
-                try { unsubscribe(); } catch (e) { /* noop */ }
+                try { unsubscribe(); } catch (e) { /* ignore errors during unsubscribe */ void e; }
             };
             setIsPlaying(true);
         }
-    }, [isPlaying, addDebugListener, includeOutgoing, limit, flushPending]);
+    }, [isPlaying, addDebugListener, includeOutgoing, limit, appendEntry]);
 
     // On unmount, cleanup
     useEffect(() => () => {
         if (unsubscribeRef.current) unsubscribeRef.current();
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
     }, []);
 
     // Changing includeOutgoing while playing should resubscribe to apply option
@@ -232,15 +220,11 @@ const EventLogConsoleCard = () => {
         if (unsubscribeRef.current) unsubscribeRef.current();
         const unsubscribe = addDebugListener((msg) => {
             if (msg.direction === 'out' && !includeOutgoing) return;
-            // Ensure each message gets a stable id in this subscription too
-            pendingRef.current.push({ ...msg, id: nextIdRef.current++ });
-            if (!rafRef.current) {
-                rafRef.current = requestAnimationFrame(flushPending);
-            }
+            // Ensure each message gets a stable id and append immediately
+            appendEntry({ ...msg, id: nextIdRef.current++ });
         }, { includeOutgoing });
-        unsubscribeRef.current = () => { try { unsubscribe(); } catch (e) {} };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [includeOutgoing]);
+        unsubscribeRef.current = () => { try { unsubscribe(); } catch (e) { /* ignore errors during unsubscribe */ void e; } };
+    }, [includeOutgoing, appendEntry]);
 
     const onClear = useCallback(() => {
         setEntries([]);
@@ -251,7 +235,7 @@ const EventLogConsoleCard = () => {
     }, [entries, filter]);
 
     return (
-        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+        <>
             <Typography variant="h6" gutterBottom>
                 Message log
             </Typography>
@@ -281,7 +265,7 @@ const EventLogConsoleCard = () => {
                 <TextField size="small" label="Filter (event or payload)" value={filter} onChange={(e) => setFilter(e.target.value)} fullWidth />
             </Stack>
 
-            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, maxHeight: '60vh', overflow: 'auto' }}>
+            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, minHeight: '30vh', maxHeight: '60vh', overflow: 'auto' }}>
                 <Stack spacing={1}>
                     {visibleEntries.map((e) => (
                         <LogEntryRow key={e.direction === 'marker' ? `m-${e.id ?? e.ts}` : (e.id ?? e.ts)} entry={e} jsonStyles={jsonStyles} />
@@ -289,7 +273,7 @@ const EventLogConsoleCard = () => {
                     <div ref={listEndRef} />
                 </Stack>
             </Box>
-        </Paper>
+        </>
     );
 };
 

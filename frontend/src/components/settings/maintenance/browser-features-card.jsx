@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Paper, Typography, Divider, Alert, CircularProgress } from '@mui/material';
+import { Typography, Divider, Alert, CircularProgress } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -208,7 +208,7 @@ const BrowserFeaturesCard = () => {
     }, []);
 
     return (
-        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+        <>
             <Typography variant="h6" gutterBottom>
                 Browser Features & Diagnostics
             </Typography>
@@ -286,7 +286,7 @@ const BrowserFeaturesCard = () => {
                     </Grid>
                 )}
             </Grid>
-        </Paper>
+        </>
     );
 };
 

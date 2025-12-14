@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Paper, Typography, Divider } from '@mui/material';
+import { Typography, Divider } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { useSocket } from "../../common/socket.jsx";
 
@@ -12,7 +12,7 @@ const SocketInfoCard = () => {
     const { socket } = useSocket();
 
     return (
-        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+        <>
             <Typography variant="h6" gutterBottom>
                 Socket.IO Connection Information
             </Typography>
@@ -108,7 +108,7 @@ const SocketInfoCard = () => {
                     </Typography>
                 </Grid>
             </Grid>
-        </Paper>
+        </>
     );
 };
 
