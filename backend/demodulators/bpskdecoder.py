@@ -31,7 +31,7 @@
 #    - Allows decoding off-center signals in recordings and multiple simultaneous signals
 #
 # 2. BATCHED PROCESSING WITH FRESH FLOWGRAPHS:
-#    - Processes samples in configurable batches (default 3 seconds via batch_interval parameter)
+#    - Processes samples in configurable batches (default 10 seconds via batch_interval parameter)
 #    - Creates a NEW gr.top_block for each batch to avoid GNU Radio 3.10 reconnection issues
 #    - Hierarchical blocks (bpsk_demodulator, ax25_deframer) cannot be reconnected
 #    - Aggressive cleanup in finally block prevents shared memory exhaustion
@@ -48,10 +48,11 @@
 #    - Binary slicer, NRZI decode, G3RUH descrambler, HDLC deframing
 #
 # 4. KEY PARAMETERS:
-#    - Batch interval: 3 seconds default (configurable, balance between latency and signal lock time)
-#    - FLL bandwidth: 250 Hz (handles frequency drift and residual offset)
-#    - Costas bandwidth: 100 Hz (carrier phase tracking)
-#    - Sample rate: Automatically calculated based on baudrate (typically 8x oversampling)
+#    - Batch interval: 10 seconds default (configurable, balance between latency and signal lock time)
+#    - Batch overlap: 5 seconds (50% overlap to capture signals at batch boundaries)
+#    - FLL bandwidth: 75 Hz (handles residual offset after doppler compensation)
+#    - Costas bandwidth: 35 Hz (carrier phase tracking)
+#    - Sample rate: Automatically calculated based on baudrate (10x oversampling)
 #
 # 5. FEATURES:
 #    - Supports AX.25 (G3RUH) and DOKA (CCSDS) framing
@@ -92,6 +93,10 @@ from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 
 logger = logging.getLogger("bpskdecoder")
+
+# Global configuration parameters for batch processing
+BATCH_INTERVAL_SECONDS = 5.0  # Batch processing interval
+BATCH_OVERLAP_SECONDS = 0.5  # Overlap between batches (tail retention)
 
 
 class DecoderStatus(Enum):
@@ -305,8 +310,7 @@ class BPSKFlowgraph(gr.top_block):
             samples_to_process = self.sample_buffer.copy()
             # Keep a tail for continuity while processing.
             # Increase overlap to reduce chances of dropping frames that straddle batches.
-            # 0.5s tail chosen as a practical default for 9600 baud frames (configurable in future).
-            tail_samples = int(self.sample_rate * 0.5)  # 500ms tail
+            tail_samples = int(self.sample_rate * BATCH_OVERLAP_SECONDS)
             if len(self.sample_buffer) > tail_samples:
                 self.sample_buffer = self.sample_buffer[-tail_samples:]
             else:
@@ -335,14 +339,14 @@ class BPSKFlowgraph(gr.top_block):
             source = blocks.vector_source_c(samples_to_process.tolist(), repeat=False)
 
             # Create fresh instances of demodulator and deframer
-            # Use MUCH wider FLL bandwidth to handle VFO drift/offset
-            # Standard 25 Hz is too narrow for real-world VFO drift
+            # Optimized for LOW SNR signals (6-7 dB) - use wider loops for lock acquisition
+            # and tracking through fades, with looser timing constraints
             options = argparse.Namespace(
                 rrc_alpha=0.35,
-                fll_bw=250,  # Increased from 25 Hz to 250 Hz for better tracking
-                clk_bw=0.06,
-                clk_limit=0.004,
-                costas_bw=100,  # Increased from 50 Hz to 100 Hz
+                fll_bw=200,  # Wide for low SNR lock acquisition (compromise between 75 and 250)
+                clk_bw=0.08,  # Moderate bandwidth for symbol rate tracking
+                clk_limit=0.005,  # Moderate timing deviation tolerance
+                costas_bw=80,  # Wider for better lock at low SNR (compromise between 35 and 100)
                 f_offset=0,
                 disable_fll=False,
                 manchester_block_size=32,
@@ -501,7 +505,7 @@ class BPSKDecoder(BaseDecoderProcess):
         config,  # Pre-resolved DecoderConfig from DecoderConfigService (contains all params + metadata)
         output_dir="data/decoded",
         vfo=None,
-        batch_interval=5.0,  # Batch processing interval in seconds
+        batch_interval=BATCH_INTERVAL_SECONDS,  # Batch processing interval in seconds
         packet_size=256,  # Optional override for packet size
         shm_monitor_interval=10,  # Check SHM every 60 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
@@ -699,11 +703,11 @@ class BPSKDecoder(BaseDecoderProcess):
     def _get_demodulator_params_metadata(self):
         """Return BPSK demodulator parameters"""
         return {
-            "fll_bandwidth_hz": 250,
-            "costas_bandwidth_hz": 100,
+            "fll_bandwidth_hz": 200,
+            "costas_bandwidth_hz": 80,
             "rrc_alpha": 0.35,
-            "clock_recovery_bandwidth": 0.06,
-            "clock_recovery_limit": 0.004,
+            "clock_recovery_bandwidth": 0.08,
+            "clock_recovery_limit": 0.005,
         }
 
     def _get_payload_protocol(self):
@@ -1033,7 +1037,7 @@ class BPSKDecoder(BaseDecoderProcess):
                             self.sdr_center_freq = sdr_center
 
                             # Calculate decimation factor for optimal samples per symbol
-                            # Target 8-10 samples per symbol
+                            # Target 8 samples per symbol
                             target_sps = 8
                             target_sample_rate = self.baudrate * target_sps
                             decimation = int(self.sdr_sample_rate / target_sample_rate)
