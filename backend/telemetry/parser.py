@@ -127,9 +127,6 @@ class TelemetryParser:
         self.payload_parsers: Dict[Any, Any] = {}  # protocol-aware registry
         logger.debug("Telemetry parser initialized (protocol-agnostic)")
 
-        # Note: We no longer register per-satellite GEOSCAN AX.25 payload parsers.
-        # All GEOSCAN missions are decoded via generic 66/74-byte layouts in GeoscanParser.
-
     def register_payload_parser(self, identifier, parser):
         """
         Register a satellite-specific payload parser
@@ -477,9 +474,17 @@ class TelemetryParser:
         Returns:
             Parser object or None
         """
-        # Try hint first
-        if hint and hint in self.payload_parsers:
-            return self.payload_parsers[hint]
+        # Try hint first (legacy path): only if hashable/simple types
+        # Recent callers may pass a dict (e.g., {"framing": ..., "frame_size": ...})
+        # which is unhashable and should not be used as a registry key here.
+        if isinstance(hint, (str, int, tuple)):
+            if hint in self.payload_parsers:
+                return self.payload_parsers[hint]
+        elif isinstance(hint, dict):
+            # Optionally extract a legacy token if provided (best-effort, non-fatal)
+            legacy = hint.get("parser") or hint.get("framing")
+            if isinstance(legacy, (str, int, tuple)) and legacy in self.payload_parsers:
+                return self.payload_parsers[legacy]
 
         # Normalize callsign: remove control/non-printable characters and collapse whitespace
         try:

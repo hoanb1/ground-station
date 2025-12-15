@@ -107,22 +107,31 @@ class DecoderStatus(Enum):
 
 
 class BPSKMessageHandler(gr.basic_block):
-    """Message handler to receive PDU messages from HDLC deframer"""
+    """Message handler to receive PDU messages from HDLC/CCSDS deframers
+
+    Notes:
+      - We only wrap frames with AX.25 HDLC flags when framing == 'ax25'.
+      - For CCSDS/DOKA, we forward raw bytes as-is.
+    """
 
     def __init__(
         self,
         callback,
-        shm_monitor_interval=10,  # Check SHM every 60 seconds
-        shm_restart_threshold=1000,  # Restart when segments exceed this
+        logger: logging.Logger | None = None,
+        framing: str = "ax25",
+        shm_monitor_interval=10,  # kept for signature parity
+        shm_restart_threshold=1000,  # kept for signature parity
     ):
         gr.basic_block.__init__(self, name="bpsk_message_handler", in_sig=None, out_sig=None)
         self.callback = callback
+        self.logger = logger or logging.getLogger("bpskdecoder")
+        self.framing = framing
         self.message_port_register_in(gr.pmt.intern("in"))
         self.set_msg_handler(gr.pmt.intern("in"), self.handle_msg)
         self.packets_decoded = 0
 
     def handle_msg(self, msg):
-        """Handle incoming PDU messages from HDLC deframer"""
+        """Handle incoming PDU messages from deframer (AX.25 or CCSDS)"""
         try:
             # Extract packet data from PDU
             if gr.pmt.is_pair(msg):
@@ -136,43 +145,41 @@ class BPSKMessageHandler(gr.basic_block):
 
             if isinstance(packet_data, bytes):
                 self.packets_decoded += 1
-                logger.info(
-                    f"BPSK decoded packet #{self.packets_decoded}: {len(packet_data)} bytes"
-                )
-
-                # Parse and log AX.25 callsigns
                 callsigns = None
-                try:
-                    if len(packet_data) >= 14:
-                        dest_call = "".join(
-                            chr((packet_data[i] >> 1) & 0x7F) for i in range(6)
-                        ).strip()
-                        dest_ssid = (packet_data[6] >> 1) & 0x0F
-                        src_call = "".join(
-                            chr((packet_data[i] >> 1) & 0x7F) for i in range(7, 13)
-                        ).strip()
-                        src_ssid = (packet_data[13] >> 1) & 0x0F
-                        callsigns = {
-                            "from": f"{src_call}-{src_ssid}",
-                            "to": f"{dest_call}-{dest_ssid}",
-                        }
-                        logger.info(
-                            f"  Callsigns: {dest_call}-{dest_ssid} <- {src_call}-{src_ssid}"
-                        )
-                        logger.info(f"  First 20 bytes: {packet_data[:20].hex()}")
-                except Exception as parse_err:
-                    logger.debug(f"Could not parse callsigns: {parse_err}")
 
-                # Add HDLC flags for compatibility
-                packet_with_flags = bytes([0x7E]) + packet_data + bytes([0x7E])
+                # AX.25/USP callsign parsing and HDLC flag wrapping only when AX.25 framing
+                if self.framing == "ax25":
+                    try:
+                        if len(packet_data) >= 14:
+                            dest_call = "".join(
+                                chr((packet_data[i] >> 1) & 0x7F) for i in range(6)
+                            ).strip()
+                            dest_ssid = (packet_data[6] >> 1) & 0x0F
+                            src_call = "".join(
+                                chr((packet_data[i] >> 1) & 0x7F) for i in range(7, 13)
+                            ).strip()
+                            src_ssid = (packet_data[13] >> 1) & 0x0F
+                            callsigns = {
+                                "from": f"{src_call}-{src_ssid}",
+                                "to": f"{dest_call}-{dest_ssid}",
+                            }
+                    except Exception:
+                        # Silent failure on callsign parsing; downstream may still parse
+                        pass
+
+                # Output bytes according to framing
+                out_bytes = packet_data
+                if self.framing == "ax25":
+                    # Add HDLC flags for compatibility with AX.25 parsers
+                    out_bytes = bytes([0x7E]) + packet_data + bytes([0x7E])
 
                 if self.callback:
-                    self.callback(packet_with_flags, callsigns)
+                    self.callback(out_bytes, callsigns)
             else:
-                logger.warning(f"Unexpected packet data type: {type(packet_data)}")
+                self.logger.warning(f"Unexpected packet data type: {type(packet_data)}")
 
         except Exception as e:
-            logger.error(f"Error handling message: {e}")
+            self.logger.error(f"Error handling message: {e}")
             import traceback
 
             traceback.print_exc()
@@ -382,8 +389,12 @@ class BPSKFlowgraph(gr.top_block):
                 f"Frame: {frame_info} | VFO: {self.batch_vfo_center:.0f}Hz, BW={self.batch_vfo_bandwidth:.0f}Hz"
             )
 
-            # Create message handler for this batch
-            msg_handler = BPSKMessageHandler(self.callback)
+            # Create message handler for this batch (pass framing and logger)
+            msg_handler = BPSKMessageHandler(
+                self.callback,
+                logger=logging.getLogger("bpskdecoder"),
+                framing=self.framing,
+            )
 
             # Build flowgraph
             tb.connect(source, demod, deframer)
