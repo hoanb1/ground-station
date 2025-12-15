@@ -71,11 +71,11 @@ const humanizePastTime = (timestamp) => {
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
     const [, setForceUpdate] = useState(0);
 
-    // Force component to update every 10 seconds
+    // Force component to update every 5 seconds
     useEffect(() => {
         const interval = setInterval(() => {
             setForceUpdate(prev => prev + 1);
-        }, 10000); // 10 seconds
+        }, 5000); // 5 seconds
         return () => clearInterval(interval);
     }, []);
 
