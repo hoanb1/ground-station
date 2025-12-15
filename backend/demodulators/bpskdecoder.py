@@ -339,14 +339,14 @@ class BPSKFlowgraph(gr.top_block):
             source = blocks.vector_source_c(samples_to_process.tolist(), repeat=False)
 
             # Create fresh instances of demodulator and deframer
-            # Optimized for LOW SNR signals (6-7 dB) - use wider loops for lock acquisition
-            # and tracking through fades, with looser timing constraints
+            # Optimized for LOW SNR signals (6-7 dB) - balanced bandwidth for lock acquisition
+            # 200/80 Hz settings provided best results in testing
             options = argparse.Namespace(
                 rrc_alpha=0.35,
-                fll_bw=200,  # Wide for low SNR lock acquisition (compromise between 75 and 250)
+                fll_bw=200,  # Balanced FLL bandwidth for low SNR (best tested setting)
                 clk_bw=0.08,  # Moderate bandwidth for symbol rate tracking
                 clk_limit=0.005,  # Moderate timing deviation tolerance
-                costas_bw=80,  # Wider for better lock at low SNR (compromise between 35 and 100)
+                costas_bw=80,  # Balanced Costas bandwidth for low SNR (best tested setting)
                 f_offset=0,
                 disable_fll=False,
                 manchester_block_size=32,
