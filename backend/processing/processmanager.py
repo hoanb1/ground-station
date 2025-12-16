@@ -61,11 +61,8 @@ class ProcessManager:
 
         # Start background task to emit performance metrics to UI
         self._metrics_emission_task = None
-        # Start background task to emit session runtime snapshot to UI
-        self._session_snapshot_task = None
         if self.sio:
             self._start_metrics_emission()
-            self._start_session_snapshot_emission()
 
         # Set up signal handlers
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -83,8 +80,6 @@ class ProcessManager:
 
         # Try to start metrics emission (will be deferred if no event loop)
         self._start_metrics_emission()
-        # Try to start session snapshot emission as well
-        self._start_session_snapshot_emission()
 
     def get_audio_consumer(self):
         """Get the global audio consumer from shutdown module."""
@@ -141,84 +136,6 @@ class ProcessManager:
                 self.logger.exception(e)
                 # Continue running even if there's an error
                 await asyncio.sleep(2.0)
-
-    # ==================== Session Runtime Snapshot Emission ====================
-
-    def _start_session_snapshot_emission(self):
-        """
-        Start background task to emit session runtime snapshots to UI every ~3 seconds.
-
-        Note: This must be called from within an async context (running event loop).
-        If called during module initialization, it will be deferred until set_sio() is called
-        when an event loop exists.
-        """
-        try:
-            asyncio.get_running_loop()
-            if self.sio and not self._session_snapshot_task:
-                self._session_snapshot_task = asyncio.create_task(
-                    self._emit_session_runtime_snapshot()
-                )
-                self.logger.debug("Started session runtime snapshot emission task")
-        except RuntimeError:
-            # No event loop yet; will be started later
-            self.logger.debug(
-                "Event loop not running yet, session snapshot emission will be started later"
-            )
-
-    async def _emit_session_runtime_snapshot(self):
-        """Background task that emits session/runtime snapshot periodically to all clients."""
-        while True:
-            try:
-                # Build snapshot using SessionService if available, else fallback to tracker
-                try:
-                    from session.service import session_service  # lazy import
-
-                    snapshot = session_service.get_runtime_snapshot()
-                except Exception:
-                    # Fallback
-                    from session.tracker import session_tracker  # lazy import
-
-                    snapshot = session_tracker.get_runtime_snapshot(self)
-                # Enrich with per-session IPs from SessionTracker if not present
-                try:
-                    from session.tracker import session_tracker  # lazy import
-
-                    if isinstance(snapshot, dict):
-                        sessions_map = snapshot.get("sessions") or {}
-                        if isinstance(sessions_map, dict):
-                            for _sid, entry in sessions_map.items():
-                                if isinstance(entry, dict) and "ip" not in entry:
-                                    entry["ip"] = session_tracker.get_session_ip(_sid)
-                except Exception:
-                    # Best effort enrichment; ignore errors
-                    pass
-
-                if self.sio and snapshot is not None:
-                    await self.sio.emit("session-runtime-snapshot", snapshot)
-            except Exception as e:
-                self.logger.error(f"Error emitting session runtime snapshot: {e}")
-                self.logger.exception(e)
-            finally:
-                # Emit roughly every 3 seconds as requested
-                await asyncio.sleep(3.0)
-
-    # Public entrypoint to (re)start session snapshot emission when an event loop is guaranteed
-    def start_session_snapshot_emission(self):
-        """Public wrapper to start session snapshot emission task safely.
-
-        Can be called from places where we know an event loop is running
-        (e.g., inside a Socket.IO event handler like 'connect').
-        """
-        try:
-            asyncio.get_running_loop()
-            # Re-set sio on lifecycle manager just in case set_sio wasn't called
-            if self.sio and not self._session_snapshot_task:
-                self._start_session_snapshot_emission()
-        except RuntimeError:
-            # No running loop; will be started later by set_sio/start_monitoring
-            self.logger.debug(
-                "start_session_snapshot_emission called without running loop; deferring"
-            )
 
     # ==================== Process Lifecycle Methods ====================
 

@@ -137,17 +137,18 @@ async def cleanup_sdr_session(sid):
             proc_manager = get_process_manager()
             await proc_manager.stop_sdr_process(sdr_id, sid)
 
-        # Clear all session data from SessionTracker
-        session_tracker.clear_session(sid)
-
         # Remove client from active clients
         del active_sdr_clients[sid]
 
     else:
-        logger.warning(
-            f"Client {sid} not found in active clients. "
-            f"Current active clients: {list(active_sdr_clients.keys())} (cleanup_sdr_session)"
+        logger.debug(
+            f"Client {sid} not found in active clients during cleanup. "
+            f"This is normal for sessions that never started streaming."
         )
+
+    # Always clear session data from SessionTracker, regardless of whether
+    # the session was in active_sdr_clients (session may have connected but never streamed)
+    session_tracker.clear_session(sid)
 
 
 async def get_local_soapy_sdr_devices():

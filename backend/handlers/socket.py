@@ -66,24 +66,35 @@ def register_socketio_handlers(sio):
             client_ip = xff.split(",")[0].strip()
         else:
             client_ip = environ.get("REMOTE_ADDR")
+
+        # Extract additional client metadata from HTTP headers
+        user_agent = environ.get("HTTP_USER_AGENT")
+        origin = environ.get("HTTP_ORIGIN")
+        referer = environ.get("HTTP_REFERER")
+
         logger.info(f"Client {sid} from {client_ip} connected, auth: {auth}")
         SESSIONS[sid] = environ
-        # Persist IP into SessionTracker so snapshots can include it
+
+        # Persist client metadata into SessionTracker so snapshots can include it
         try:
-            session_tracker.set_session_ip(sid, client_ip)
+            import time
+
+            session_tracker.set_session_metadata(
+                sid,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                origin=origin,
+                referer=referer,
+                connected_at=time.time(),
+            )
         except Exception:
-            logger.debug("Failed to set session IP in tracker", exc_info=True)
+            logger.debug("Failed to set session metadata in tracker", exc_info=True)
 
     @sio.on("disconnect")
     async def disconnect(sid, environ):
         logger.info(f'Client {sid} from {SESSIONS[sid]["REMOTE_ADDR"]} disconnected')
-        try:
-            # Clear stored IP for the session
-            session_tracker.set_session_ip(sid, None)
-        except Exception:
-            logger.debug("Failed to clear session IP in tracker", exc_info=True)
         del SESSIONS[sid]
-        # Clean up session via SessionService (stops processes and clears tracker)
+        # Clean up session via SessionService (stops processes and clears tracker including metadata)
         await session_service.cleanup_session(sid)
 
     @sio.on("sdr_data")

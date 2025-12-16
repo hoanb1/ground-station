@@ -25,6 +25,16 @@ from typing import Any, Dict, List, Optional, Set, TypedDict, cast
 logger = logging.getLogger("session-tracker")
 
 
+class ClientMetadata(TypedDict, total=False):
+    """Client metadata collected from socket connection."""
+
+    ip: Optional[str]
+    user_agent: Optional[str]
+    origin: Optional[str]
+    referer: Optional[str]
+    connected_at: Optional[float]
+
+
 class SessionTracker:
     """
     Tracks active sessions and their streaming/VFO state.
@@ -65,7 +75,11 @@ class SessionTracker:
         self._vfo_initialized: Dict[str, bool] = {}
 
         # Map session_id -> ip address (set on Socket.IO connect)
+        # DEPRECATED: Use _session_metadata instead
         self._session_ip_map: Dict[str, str] = {}
+
+        # Map session_id -> client metadata (IP, user agent, etc.)
+        self._session_metadata: Dict[str, ClientMetadata] = {}
 
         logger.info("SessionTracker initialized")
 
@@ -91,9 +105,61 @@ class SessionTracker:
             sdr_id = self._session_sdr_map.pop(session_id)
             logger.debug(f"Unregistered session {session_id} from streaming SDR {sdr_id}")
 
+    def set_session_metadata(
+        self,
+        session_id: str,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        origin: Optional[str] = None,
+        referer: Optional[str] = None,
+        connected_at: Optional[float] = None,
+    ) -> None:
+        """
+        Set client metadata for a session.
+
+        Args:
+            session_id: Socket.IO session ID
+            ip_address: Remote IP address
+            user_agent: HTTP User-Agent header
+            origin: HTTP Origin header
+            referer: HTTP Referer header
+            connected_at: Unix timestamp of connection
+        """
+        if session_id not in self._session_metadata:
+            self._session_metadata[session_id] = {}
+
+        metadata = self._session_metadata[session_id]
+        if ip_address is not None:
+            metadata["ip"] = ip_address
+            # Keep legacy map in sync for backward compatibility
+            self._session_ip_map[session_id] = ip_address
+        if user_agent is not None:
+            metadata["user_agent"] = user_agent
+        if origin is not None:
+            metadata["origin"] = origin
+        if referer is not None:
+            metadata["referer"] = referer
+        if connected_at is not None:
+            metadata["connected_at"] = connected_at
+
+        logger.debug(f"Updated metadata for session {session_id}: {metadata}")
+
+    def get_session_metadata(self, session_id: str) -> Optional[ClientMetadata]:
+        """
+        Get all client metadata for a session.
+
+        Args:
+            session_id: Socket.IO session ID
+
+        Returns:
+            ClientMetadata dict or None if session not found
+        """
+        return self._session_metadata.get(session_id)
+
     def set_session_ip(self, session_id: str, ip_address: Optional[str]) -> None:
         """
         Set the remote IP address associated with a session.
+        DEPRECATED: Use set_session_metadata() instead.
 
         Args:
             session_id: Socket.IO session ID
@@ -101,15 +167,25 @@ class SessionTracker:
         """
         if ip_address:
             self._session_ip_map[session_id] = ip_address
+            # Also update in metadata for consistency
+            if session_id not in self._session_metadata:
+                self._session_metadata[session_id] = {}
+            self._session_metadata[session_id]["ip"] = ip_address
             logger.debug(f"Set session {session_id} IP to {ip_address}")
         else:
             # If empty/None provided, clear any existing entry
             self._session_ip_map.pop(session_id, None)
+            if session_id in self._session_metadata:
+                self._session_metadata[session_id].pop("ip", None)
 
     def get_session_ip(self, session_id: str) -> Optional[str]:
         """
         Get the remote IP address for a session if known.
+        DEPRECATED: Use get_session_metadata() instead.
         """
+        # Try metadata first, fall back to legacy map
+        if session_id in self._session_metadata:
+            return self._session_metadata[session_id].get("ip")
         return self._session_ip_map.get(session_id)
 
     def set_session_vfo(self, session_id: str, vfo_id: str) -> None:
@@ -256,18 +332,19 @@ class SessionTracker:
             demodulators: Dict[str, Dict[int, Optional[str]]]
             recorders: Dict[str, Optional[str]]
             decoders: Dict[str, Dict[int, Optional[str]]]
+            device: Optional[Dict[str, Any]]
 
         sessions: Dict[str, Dict[str, Any]] = {}
         for sid in self.get_all_sessions():
             sess_sdr_id = self.get_session_sdr(sid)
             rig_id = self.get_session_rig(sid)
             vfo_int = self.get_session_vfo_int(sid)
-            ip_addr = self.get_session_ip(sid)
+            metadata = self.get_session_metadata(sid)
             sessions[sid] = {
                 "sdr_id": sess_sdr_id,
                 "rig_id": rig_id,
                 "vfo": vfo_int,  # normalized int or None
-                "ip": ip_addr,
+                "metadata": metadata if metadata else {},
             }
 
         # Query ProcessManager for process/consumer state
@@ -288,12 +365,22 @@ class SessionTracker:
             except AttributeError:
                 status = {"alive": process_manager.is_sdr_process_running(dev_id)}
 
+            # Get device info from process manager if available
+            device_info = None
+            try:
+                pm_procs = getattr(process_manager, "processes", {})
+                if dev_id in pm_procs:
+                    device_info = pm_procs[dev_id].get("device")
+            except Exception:
+                pass
+
             sdrs[dev_id] = {
                 "alive": bool(status.get("alive", False)),
                 "clients": [],
                 "demodulators": {},
                 "recorders": {},
                 "decoders": {},
+                "device": device_info,
             }
 
         all_consumers: Dict[str, ConsumersEntry] = {}
@@ -343,12 +430,22 @@ class SessionTracker:
                 continue
             merge_sdr_id = raw_sid
             if merge_sdr_id not in sdrs:
+                # Get device info from process manager if available
+                device_info = None
+                try:
+                    pm_procs = getattr(process_manager, "processes", {})
+                    if merge_sdr_id in pm_procs:
+                        device_info = pm_procs[merge_sdr_id].get("device")
+                except Exception:
+                    pass
+
                 sdrs[merge_sdr_id] = {
                     "alive": False,
                     "clients": [],
                     "demodulators": {},
                     "recorders": {},
                     "decoders": {},
+                    "device": device_info,
                 }
             sdrs[merge_sdr_id]["clients"] = data["clients"]
             sdrs[merge_sdr_id]["demodulators"] = data["demodulators"]
@@ -367,6 +464,8 @@ class SessionTracker:
         self._session_sdr_map.pop(session_id, None)
         self._session_vfo_map.pop(session_id, None)
         self._session_rig_map.pop(session_id, None)
+        self._session_ip_map.pop(session_id, None)
+        self._session_metadata.pop(session_id, None)
         logger.debug(f"Cleared all data for session {session_id}")
 
     def get_all_sessions(self) -> Set[str]:
@@ -380,6 +479,7 @@ class SessionTracker:
         all_sessions.update(self._session_sdr_map.keys())
         all_sessions.update(self._session_vfo_map.keys())
         all_sessions.update(self._session_rig_map.keys())
+        all_sessions.update(self._session_metadata.keys())
         return all_sessions
 
     def mark_vfo_initialized(self, session_id: str, vfo_number: int) -> None:

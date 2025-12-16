@@ -1,62 +1,58 @@
 """
-Background task to ensure the session runtime snapshot emitter is running.
+Background task to emit session runtime snapshots over Socket.IO.
 
-Follows the same startup task pattern as other background emitters:
-- Expose a single `start_session_runtime_emitter(sio, background_tasks)` function
-  that registers an asyncio.Task into the provided `background_tasks` set.
-
-This task does not itself emit snapshots. Instead, it ensures the
-ProcessManager's internal snapshot emission loop is started (and keeps
-checking periodically). The actual emission cadence and payload are
-handled by ProcessManager, which publishes the `session-runtime-snapshot`
-event every ~3 seconds when running.
+This module follows the same startup task pattern as systeminfo.py: expose a
+single `start_session_runtime_emitter(sio, background_tasks)` function that
+registers an asyncio.Task into the provided `background_tasks` set.
 """
 
 import asyncio
-import os
 from typing import Set
 
 from common.logger import logger
-from processing.processmanager import process_manager
 
 
 def start_session_runtime_emitter(sio, background_tasks: Set[asyncio.Task]) -> asyncio.Task:
-    """Start a lightweight supervisor loop that (re)starts the snapshot emitter.
+    """Start the session runtime snapshot emitter loop and register it in background_tasks.
 
-    This mirrors the pattern in server/systeminfo.py: it registers a background
-    task in the shared `background_tasks` set so it can be cancelled during
-    FastAPI lifespan shutdown.
+    Emits 'session-runtime-snapshot' every 1 second to all connected clients.
+    The snapshot includes all active sessions, their metadata, and SDR consumer state.
     """
 
-    async def _ensure_snapshot_emitter_loop():
-        # Allow overriding check interval via env if desired; default every 3s
-        interval = float(os.environ.get("SESSION_RUNTIME_POLL_INTERVAL_SECONDS", 3.0))
+    async def _session_snapshot_loop():
+        interval = 1.0  # Emit every 1 second for real-time monitoring
 
         while True:
             try:
-                # Make sure ProcessManager knows about the Socket.IO server
+                # Build snapshot using SessionService if available, else fallback to tracker
+                snapshot = None
                 try:
-                    process_manager.set_sio(sio)
-                except Exception:
-                    logger.debug("ProcessManager.set_sio failed in session emitter", exc_info=True)
+                    from session.service import session_service
 
-                # Start (idempotent) the session snapshot emission loop
-                try:
-                    process_manager.start_session_snapshot_emission()
-                except Exception:
-                    logger.debug(
-                        "Could not start session snapshot emission (will retry)",
-                        exc_info=True,
-                    )
+                    snapshot = session_service.get_runtime_snapshot()
+                except Exception as e:
+                    logger.debug(f"SessionService unavailable, using tracker fallback: {e}")
+                    # Fallback to tracker
+                    try:
+                        from processing.processmanager import process_manager
+                        from session.tracker import session_tracker
+
+                        snapshot = session_tracker.get_runtime_snapshot(process_manager)
+                    except Exception as e2:
+                        logger.debug(f"Tracker fallback also failed: {e2}")
+
+                # Emit the snapshot to all connected clients
+                if snapshot is not None:
+                    await sio.emit("session-runtime-snapshot", snapshot)
 
                 await asyncio.sleep(interval)
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Session runtime emitter supervisor error: {e}")
+                logger.error(f"Session runtime snapshot emitter error: {e}")
                 await asyncio.sleep(interval)
 
-    task = asyncio.create_task(_ensure_snapshot_emitter_loop())
+    task = asyncio.create_task(_session_snapshot_loop())
     background_tasks.add(task)
-    logger.info("Session runtime emitter supervisor task started")
+    logger.info("Session runtime snapshot emitter task started (1s interval)")
     return task

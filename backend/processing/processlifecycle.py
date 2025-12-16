@@ -349,6 +349,7 @@ class ProcessLifecycleManager:
                 "recorders": {},  # Will store recorder threads per session (separate from demodulators)
                 "decoders": {},  # Will store decoder threads per session (SSTV, AFSK, Morse, etc.)
                 "fft_stats": {},  # Latest stats from FFT processor
+                "device": sdr_device,  # Store device info for runtime snapshots
             }
 
             # Send initial configuration

@@ -250,8 +250,8 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     logger.error(f"Client {client_id} not registered while stopping SDR stream")
                     reply["success"] = False
 
-                # cleanup
-                await session_service.cleanup_session(client_id)
+                # Note: We do NOT cleanup the session here - the session should persist
+                # until the socket disconnects. Only stop streaming updates the state.
 
                 await sio.emit("sdr-status", {"streaming": False}, room=client_id)
                 logger.info(f"Stopped streaming SDR data for client {client_id}")

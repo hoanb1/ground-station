@@ -72,6 +72,8 @@ class SessionService:
         if sdr_id:
             pm = get_process_manager()
             await pm.stop_sdr_process(sdr_id, session_id)
+            # Unregister streaming relationship from tracker, but keep the session alive
+            session_tracker.unregister_session_streaming(session_id)
 
     async def select_vfo(self, session_id: str, vfo_number: Optional[int]) -> None:
         """Update the selected VFO in SessionTracker (normalized Optional[int])."""

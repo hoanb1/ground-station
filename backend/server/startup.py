@@ -101,8 +101,7 @@ async def lifespan(fastapiapp: FastAPI):
     # Start live system-info emitter task (registers into background_tasks)
     start_system_info_emitter(sio, background_tasks)
 
-    # Start session runtime snapshot emitter supervisor (registers into background_tasks)
-    # This follows the same background-task pattern
+    # Start session runtime snapshot emitter task (registers into background_tasks)
     start_session_runtime_emitter(sio, background_tasks)
 
     try:
