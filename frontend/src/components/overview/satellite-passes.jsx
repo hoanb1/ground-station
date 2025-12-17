@@ -39,6 +39,7 @@ import {
     fetchSatellitesByGroupId,
     setPasses,
     setSelectedSatelliteId,
+    setPassesTablePageSize,
 } from './overview-slice.jsx';
 import {Typography, Box, IconButton, Tooltip} from '@mui/material';
 import {useGridApiRef} from '@mui/x-data-grid';
@@ -118,7 +119,7 @@ const DurationFormatter = React.memo(function DurationFormatter({params, value, 
     }
 });
 
-const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false, orbitProjectionDuration = 240}) {
+const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false, orbitProjectionDuration = 240, pageSize = 10, onPageSizeChange}) {
     const apiRef = useGridApiRef();
     const store = useStore();
     const { t, i18n } = useTranslation('overview');
@@ -511,8 +512,16 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
             }}
             density={"compact"}
             rows={passes}
+            paginationModel={{
+                pageSize: pageSize,
+                page: 0,
+            }}
+            onPaginationModelChange={(model) => {
+                if (onPageSizeChange && model.pageSize !== pageSize) {
+                    onPageSizeChange(model.pageSize);
+                }
+            }}
             initialState={{
-                pagination: {paginationModel: {pageSize: 10}},
                 sorting: {
                     sortModel: [{field: 'event_start', sort: 'asc'}],
                 },
@@ -524,8 +533,6 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                 },
             }}
             columns={columns}
-            pageSize={10}
-            rowsPerPageOptions={[5, 10, 20]}
         />
     );
 }, (prevProps, nextProps) => {
@@ -533,7 +540,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
     return (
         prevProps.passes === nextProps.passes &&
         prevProps.passesLoading === nextProps.passesLoading &&
-        prevProps.orbitProjectionDuration === nextProps.orbitProjectionDuration
+        prevProps.orbitProjectionDuration === nextProps.orbitProjectionDuration &&
+        prevProps.pageSize === nextProps.pageSize
     );
 });
 
@@ -553,7 +561,8 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         passesLoading,
         nextPassesHours,
         orbitProjectionDuration,
-        gridEditable
+        gridEditable,
+        passesTablePageSize
     } = useSelector(state => state.overviewSatTrack);
 
     const minHeight = 200;
@@ -624,6 +633,10 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         dispatch(setSelectedSatelliteId(parseInt(noradId)));
     }
 
+    const handlePageSizeChange = (newPageSize) => {
+        dispatch(setPassesTablePageSize(newPageSize));
+    };
+
     return (
         <>
             <TitleBar
@@ -679,6 +692,8 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                         passesLoading={passesLoading}
                         onRowClick={handleOnRowClick}
                         orbitProjectionDuration={orbitProjectionDuration}
+                        pageSize={passesTablePageSize}
+                        onPageSizeChange={handlePageSizeChange}
                     />
                 </div>
             </div>

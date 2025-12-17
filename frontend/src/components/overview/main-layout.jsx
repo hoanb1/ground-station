@@ -181,7 +181,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
     const defaultLayouts = {
         "lg": [{
             "w": 6,
-            "h": 17,
+            "h": 13,
             "x": 0,
             "y": 0,
             "i": "map",
@@ -192,7 +192,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 12,
             "h": 8,
             "x": 0,
-            "y": 23,
+            "y": 18,
             "i": "passes",
             "minH": 7,
             "moved": false,
@@ -200,7 +200,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 17,
+            "h": 13,
             "x": 10,
             "y": 0,
             "i": "sat-info",
@@ -208,11 +208,11 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 4, "h": 17, "x": 6, "y": 0, "i": "satellite-group", "moved": false, "static": false}, {
+        }, {"w": 4, "h": 13, "x": 6, "y": 0, "i": "satellite-group", "moved": false, "static": false}, {
             "w": 12,
-            "h": 6,
+            "h": 5,
             "x": 0,
-            "y": 17,
+            "y": 13,
             "i": "timeline",
             "moved": false,
             "static": false
@@ -228,7 +228,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 9,
+            "h": 8,
             "x": 0,
             "y": 36,
             "i": "passes",
@@ -240,7 +240,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 2,
             "h": 14,
             "x": 0,
-            "y": 45,
+            "y": 44,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
@@ -266,7 +266,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 6,
-            "h": 9,
+            "h": 8,
             "x": 0,
             "y": 32,
             "i": "passes",
@@ -278,7 +278,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 6,
             "h": 12,
             "x": 0,
-            "y": 41,
+            "y": 40,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
@@ -343,9 +343,9 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 10,
-            "h": 9,
+            "h": 8,
             "x": 0,
-            "y": 31,
+            "y": 29,
             "i": "passes",
             "minH": 7,
             "moved": false,
@@ -361,9 +361,9 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 10, "h": 8, "x": 0, "y": 23, "i": "satellite-group", "moved": false, "static": false}, {
+        }, {"w": 10, "h": 7, "x": 0, "y": 22, "i": "satellite-group", "moved": false, "static": false}, {
             "w": 10,
-            "h": 6,
+            "h": 5,
             "x": 0,
             "y": 17,
             "i": "timeline",
