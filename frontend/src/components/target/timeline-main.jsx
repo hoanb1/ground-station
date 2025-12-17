@@ -489,8 +489,8 @@ const SatellitePassTimelineComponent = ({
             <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
               <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                 {satelliteName
-                  ? `${satelliteName} - Visibility curves for the next ${initialTimeWindowHours.toFixed(0)} hours`
-                  : `Visibility curves for the next ${initialTimeWindowHours.toFixed(0)} hours`
+                  ? `${satelliteName} - passes for the next ${initialTimeWindowHours.toFixed(0)} hours`
+                  : `Passes for the next ${initialTimeWindowHours.toFixed(0)} hours`
                 }
               </Typography>
               <Typography variant="caption" sx={{
