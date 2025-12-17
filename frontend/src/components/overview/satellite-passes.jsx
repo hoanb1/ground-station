@@ -125,6 +125,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
     const { t, i18n } = useTranslation('overview');
     const currentLanguage = i18n.language;
     const dataGridLocale = currentLanguage === 'el' ? elGR : enUS;
+    const [page, setPage] = useState(0);
 
     // Convert minutes to hours for display
     const projectionHours = Math.round(orbitProjectionDuration / 60);
@@ -514,10 +515,11 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
             rows={passes}
             paginationModel={{
                 pageSize: pageSize,
-                page: 0,
+                page: page,
             }}
             onPaginationModelChange={(model) => {
-                if (onPageSizeChange) {
+                setPage(model.page);
+                if (onPageSizeChange && model.pageSize !== pageSize) {
                     onPageSizeChange(model.pageSize);
                 }
             }}
