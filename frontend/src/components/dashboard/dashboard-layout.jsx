@@ -615,7 +615,7 @@ export default function Layout() {
     );
 
     return (
-        <Box sx={{ display: 'flex' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', overflow: 'hidden' }}>
             <CssBaseline />
             <CustomAppBar position="fixed" open={open}>
                 <Toolbar>
@@ -660,9 +660,7 @@ export default function Layout() {
                 open={open}
                 sx={{
                     display: { xs: 'none', sm: 'block' },
-                    '& .MuiDrawer-paper': {
-                        position: 'fixed',
-                    }
+                    flexShrink: 0,
                 }}
             >
                 {drawerContent(open)}
@@ -672,8 +670,8 @@ export default function Layout() {
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    width: '100%',
                     mt: '52px',
+                    minWidth: 0,
                 }}
             >
                 {connected ? <Outlet /> : <ConnectionOverlay />}

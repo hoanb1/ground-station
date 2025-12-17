@@ -49,10 +49,11 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
     const selectedSatellitePositions = useSelector(state => state.overviewSatTrack.selectedSatellitePositions);
     const recentGroups = useSelector(state => state.overviewSatTrack.recentSatelliteGroups);
 
-    const [visibleCount, setVisibleCount] = useState(MAX_RECENT_GROUPS);
+    const [visiblePillIds, setVisiblePillIds] = useState(new Set());
     const [anchorEl, setAnchorEl] = useState(null);
     const containerRef = useRef(null);
-    const pillRefs = useRef([]);
+    const pillRefs = useRef(new Map());
+    const observerRef = useRef(null);
 
     // Load recent groups from localStorage on mount and store in Redux
     useEffect(() => {
@@ -111,48 +112,62 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
           })
         : satGroups.slice(0, MAX_RECENT_GROUPS).map(g => ({ id: g.id, name: g.name, type: g.type, satelliteCount: g.satellite_ids?.length || 0 }));
 
-    // Calculate how many pills can fit based on container width
+    // Use IntersectionObserver to detect which pills are visible
     useEffect(() => {
         if (!containerRef.current || pillGroups.length === 0) return;
 
-        const calculateVisiblePills = () => {
-            const container = containerRef.current;
-            if (!container) return;
+        // Create observer with threshold to detect when pills start to overflow
+        const observer = new IntersectionObserver(
+            (entries) => {
+                // Batch updates to prevent excessive re-renders
+                const updates = {};
+                entries.forEach((entry) => {
+                    const pillId = entry.target.getAttribute('data-pill-id');
+                    const isFullyVisible = entry.isIntersecting && entry.intersectionRatio >= 0.95;
+                    updates[pillId] = isFullyVisible;
+                });
 
-            const containerWidth = container.offsetWidth;
-            let accumulatedWidth = 0;
-            const gap = 8; // gap between pills in pixels
-            const moreButtonWidth = 80; // estimated width of "+X more" button
-            let count = 0;
+                setVisiblePillIds((prev) => {
+                    const newSet = new Set(prev);
+                    let changed = false;
 
-            // Measure each pill until we run out of space
-            for (let i = 0; i < pillRefs.current.length; i++) {
-                const pill = pillRefs.current[i];
-                if (!pill) continue;
+                    Object.entries(updates).forEach(([pillId, isVisible]) => {
+                        if (isVisible && !newSet.has(pillId)) {
+                            newSet.add(pillId);
+                            changed = true;
+                        } else if (!isVisible && newSet.has(pillId)) {
+                            newSet.delete(pillId);
+                            changed = true;
+                        }
+                    });
 
-                const pillWidth = pill.offsetWidth + gap;
-
-                // Check if adding this pill plus the "more" button would exceed container width
-                if (accumulatedWidth + pillWidth + (i < pillGroups.length - 1 ? moreButtonWidth : 0) > containerWidth) {
-                    break;
-                }
-
-                accumulatedWidth += pillWidth;
-                count++;
+                    // Only return new Set if something actually changed
+                    return changed ? newSet : prev;
+                });
+            },
+            {
+                root: containerRef.current,
+                threshold: [0, 0.95, 1],
+                rootMargin: '0px',
             }
+        );
 
-            // Ensure at least MIN_PILLS_VISIBLE are shown
-            setVisibleCount(Math.max(MIN_PILLS_VISIBLE, count));
+        observerRef.current = observer;
+
+        // Small delay to ensure DOM is ready
+        const timeoutId = setTimeout(() => {
+            // Observe all current pills
+            pillRefs.current.forEach((element) => {
+                if (element) {
+                    observer.observe(element);
+                }
+            });
+        }, 100);
+
+        return () => {
+            clearTimeout(timeoutId);
+            observer.disconnect();
         };
-
-        // Initial calculation
-        calculateVisiblePills();
-
-        // Recalculate on resize
-        const resizeObserver = new ResizeObserver(calculateVisiblePills);
-        resizeObserver.observe(containerRef.current);
-
-        return () => resizeObserver.disconnect();
     }, [pillGroups]);
 
     const handleMoreClick = (event) => {
@@ -163,8 +178,8 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
         setAnchorEl(null);
     };
 
-    const visiblePills = pillGroups.slice(0, visibleCount);
-    const hiddenPills = pillGroups.slice(visibleCount);
+    // Determine which pills are hidden (not visible in container)
+    const hiddenPills = pillGroups.filter(group => !visiblePillIds.has(group.id));
     const hasHiddenPills = hiddenPills.length > 0;
 
     // Count satellites with positive elevation (visible satellites)
@@ -191,6 +206,8 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
                 height: '64px',
                 minHeight: '64px',
                 maxHeight: '64px',
+                maxWidth: '100%',
+                overflow: 'hidden',
             }}
         >
             <FormControl
@@ -253,65 +270,64 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
             </FormControl>
 
             <Box
-                ref={containerRef}
                 sx={{
                     // Hide recent-group pills area on mobile
                     display: { xs: 'none', sm: 'flex' },
-                    gap: 1,
                     flex: 1,
-                    overflow: 'hidden',
                     alignItems: 'center',
+                    minWidth: 0,
+                    position: 'relative',
+                    gap: 1,
                 }}
             >
-                {/* Hidden pills for measurement */}
-                <Box sx={{ position: 'absolute', visibility: 'hidden', display: 'flex', gap: 1, pointerEvents: 'none' }}>
-                    {pillGroups.map((group, index) => (
+                {/* Scrollable container for pills */}
+                <Box
+                    ref={containerRef}
+                    sx={{
+                        display: 'flex',
+                        gap: 1,
+                        alignItems: 'center',
+                        overflow: 'hidden',
+                        flex: 1,
+                        minWidth: 0,
+                    }}
+                >
+                    {/* All pills - let IntersectionObserver determine visibility */}
+                    {pillGroups.map((group) => (
                         <Button
-                            key={`measure-${group.id}`}
-                            ref={el => pillRefs.current[index] = el}
-                            variant="outlined"
+                            key={group.id}
+                            data-pill-id={group.id}
+                            ref={(el) => {
+                                if (el) {
+                                    pillRefs.current.set(group.id, el);
+                                } else {
+                                    pillRefs.current.delete(group.id);
+                                }
+                            }}
+                            variant={selectedSatGroupId === group.id ? "contained" : "outlined"}
                             size="small"
+                            onClick={() => handleRecentGroupClick(group.id)}
                             sx={{
+                                flexShrink: 0,
                                 textTransform: 'none',
                                 borderRadius: '16px',
                                 px: 2,
                             }}
                         >
                             {group.name}
-                            <Box component="span" sx={{ ml: 1, opacity: 0.7, fontWeight: 'bold' }}>
+                            <Box
+                                component="span"
+                                sx={{
+                                    ml: 1,
+                                    opacity: 0.7,
+                                    fontWeight: 'bold',
+                                }}
+                            >
                                 {group.satelliteCount}
                             </Box>
                         </Button>
                     ))}
                 </Box>
-
-                {/* Visible pills */}
-                {visiblePills.map((group) => (
-                    <Button
-                        key={group.id}
-                        variant={selectedSatGroupId === group.id ? "contained" : "outlined"}
-                        size="small"
-                        onClick={() => handleRecentGroupClick(group.id)}
-                        sx={{
-                            flexShrink: 0,
-                            textTransform: 'none',
-                            borderRadius: '16px',
-                            px: 2,
-                        }}
-                    >
-                        {group.name}
-                        <Box
-                            component="span"
-                            sx={{
-                                ml: 1,
-                                opacity: 0.7,
-                                fontWeight: 'bold',
-                            }}
-                        >
-                            {group.satelliteCount}
-                        </Box>
-                    </Button>
-                ))}
 
                 {/* "More" button */}
                 {hasHiddenPills && (
