@@ -70,6 +70,20 @@ const SatellitePassTimelineComponent = ({
   const [hoverPosition, setHoverPosition] = useState(null);
   const [hoverTime, setHoverTime] = useState(null);
 
+  // Current time state - update periodically to trigger re-renders for active pass highlighting
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Update current time every 30 seconds to refresh active pass highlighting
+  React.useEffect(() => {
+    if (!highlightActivePasses) return; // Only run if highlighting is enabled
+
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [highlightActivePasses]);
+
   // Pan state - use refs to avoid re-renders during panning
   const [isPanning, setIsPanning] = useState(false);
   const panStartXRef = useRef(null);
@@ -390,7 +404,7 @@ const SatellitePassTimelineComponent = ({
       activePassObj,
       geoIndices,
     };
-  }, [satellitePasses, activePass, timeWindowHours, timeWindowStart, timezone, groundStationLocation, showSunShading, showSunMarkers, singlePassMode, passId, minLabelInterval]);
+  }, [satellitePasses, activePass, timeWindowHours, timeWindowStart, timezone, groundStationLocation, showSunShading, showSunMarkers, singlePassMode, passId, minLabelInterval, currentTime]);
 
   // Event handlers
   const {
