@@ -498,17 +498,8 @@ const SatellitePassTimelineComponent = ({
                 color: 'text.secondary',
                 opacity: 0.7
               }}>
-                ({filteredPassesCount} {filteredPassesCount === 1 ? 'pass' : 'passes'})
+                ({filteredPassesCount} {filteredPassesCount === 1 ? 'pass' : 'passes'}{cachedOverride ? ', cached' : ''})
               </Typography>
-              {cachedOverride && (
-                <Typography variant="caption" sx={{
-                  fontStyle: 'italic',
-                  color: 'text.secondary',
-                  opacity: 0.7
-                }}>
-                  (cached)
-                </Typography>
-              )}
             </Box>
             {!singlePassMode && (
               <Box sx={{ display: 'flex', gap: 0.5 }}>

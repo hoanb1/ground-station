@@ -666,17 +666,8 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                             color: 'text.secondary',
                             opacity: 0.7
                         }}>
-                            ({passes.length} {passes.length === 1 ? 'pass' : 'passes'})
+                            ({passes.length} {passes.length === 1 ? 'pass' : 'passes'}{passesAreCached ? `, ${t('passes_table.cached')}` : ''})
                         </Typography>
-                        {passesAreCached && (
-                            <Typography variant="caption" sx={{
-                                fontStyle: 'italic',
-                                color: 'text.secondary',
-                                opacity: 0.7
-                            }}>
-                                {t('passes_table.cached')}
-                            </Typography>
-                        )}
                     </Box>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <Tooltip title="Refresh passes (force recalculate)">
