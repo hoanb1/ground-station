@@ -533,7 +533,7 @@ const SatellitePassTimelineComponent = ({
                   position: 'absolute',
                   left: `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${leftPercent / 100})`,
                   width: `calc((100% - ${Y_AXIS_WIDTH}px) * ${widthPercent / 100})`,
-                  top: `${Y_AXIS_TOP_MARGIN}px`,
+                  top: 0,
                   bottom: `${X_AXIS_HEIGHT}px`,
                   backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.15)',
                   pointerEvents: 'none',
