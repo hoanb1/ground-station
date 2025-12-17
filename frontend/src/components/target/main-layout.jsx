@@ -41,6 +41,7 @@ import {
     setGridEditable,
     getTrackingStateFromBackend,
     setSatelliteId,
+    fetchNextPasses,
 } from './target-slice.jsx'
 import TargetSatelliteInfoIsland from "./satellite-info.jsx";
 import NextPassesIsland from "./next-passes.jsx";
@@ -195,6 +196,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
         sliderTimeOffset,
         openMapSettingsDialog,
         showGrid,
+        nextPassesHours,
     } = useSelector(state => state.targetSatTrack);
 
     const satellitePosition = useSelector(satellitePositionSelector);
@@ -213,6 +215,18 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
     const coverageRef = useRef(null);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
+
+    // Handler for refreshing timeline passes
+    const handleRefreshTimelinePasses = () => {
+        if (noradId) {
+            dispatch(fetchNextPasses({
+                socket,
+                noradId: noradId,
+                hours: nextPassesHours,
+                forceRecalculate: true
+            }));
+        }
+    };
 
     // default layout if none in localStorage
     const defaultLayouts = {
@@ -435,7 +449,12 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             <TargetSatelliteTransmittersIsland/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="timeline">
-            <SatellitePassTimeline timeWindowHours={24} satelliteName={satelliteName}/>
+            <SatellitePassTimeline
+                timeWindowHours={nextPassesHours}
+                satelliteName={satelliteName}
+                labelType="peak"
+                onRefresh={handleRefreshTimelinePasses}
+            />
         </StyledIslandParentNoScrollbar>,
         // <StyledIslandParentScrollbar key="video">
         //     <CameraView/>

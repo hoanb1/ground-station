@@ -256,7 +256,7 @@ def run_events_calculation(
 
 
 async def fetch_next_events_for_group(
-    group_id: str, hours: float = 2.0, above_el=0, step_minutes=1
+    group_id: str, hours: float = 2.0, above_el=0, step_minutes=1, force_recalculate: bool = False
 ):
     """
     Fetches the next satellite events for a given group of satellites within a specified
@@ -274,6 +274,8 @@ async def fetch_next_events_for_group(
     :param step_minutes: The interval in minutes at which satellite positions are queried.
         Defaults to 1.
     :type step_minutes: int
+    :param force_recalculate: If True, bypass cache and force fresh calculation. Defaults to False.
+    :type force_recalculate: bool
     :return: A dictionary containing the success status, input parameters for the request,
         and the list of satellite events for the group.
     :rtype: dict
@@ -318,24 +320,28 @@ async def fetch_next_events_for_group(
             )
 
             # Check cache BEFORE spawning worker process (main process only, no IPC)
+            # Skip cache if force_recalculate is True
             current_time = time.time()
             result = None
 
-            try:
-                if cache_key in _cache:
-                    calculation_time, valid_until, cached_result = _cache[cache_key]
+            if not force_recalculate:
+                try:
+                    if cache_key in _cache:
+                        calculation_time, valid_until, cached_result = _cache[cache_key]
 
-                    if current_time < valid_until:
-                        result = {
-                            "success": cached_result["success"],
-                            "forecast_hours": hours,
-                            "data": cached_result["data"],
-                            "cached": True,
-                        }
-            except Exception as cache_error:
-                logger.error(
-                    f"Cache error for group_id={group_id}: {cache_error} (fetch_next_events_for_group)"
-                )
+                        if current_time < valid_until:
+                            result = {
+                                "success": cached_result["success"],
+                                "forecast_hours": hours,
+                                "data": cached_result["data"],
+                                "cached": True,
+                            }
+                except Exception as cache_error:
+                    logger.error(
+                        f"Cache error for group_id={group_id}: {cache_error} (fetch_next_events_for_group)"
+                    )
+            else:
+                logger.info(f"Force recalculate requested, skipping cache for group_id={group_id}")
 
             # If no cache hit, spawn worker to calculate
             if result is None:
@@ -381,6 +387,15 @@ async def fetch_next_events_for_group(
                     for sat in satellites
                 }
 
+                # Create a lookup dict for full satellite data (for elevation curve calculation)
+                satellite_data_lookup = {sat["norad_id"]: sat for sat in satellites}
+                home_location = {"lat": homelat, "lon": homelon}
+
+                # Get current time to determine which passes should be extended
+                from datetime import timezone as dt_timezone
+
+                current_time_dt = datetime.now(dt_timezone.utc)
+
                 # Add satellite names, transmitters and counts to events
                 for event in events_data:
                     event["name"] = satellite_info[event["norad_id"]]["name"]
@@ -389,6 +404,38 @@ async def fetch_next_events_for_group(
                         "transmitter_count"
                     ]
                     event["id"] = f"{event['id']}_{event['norad_id']}_{event['event_start']}"
+
+                    # Calculate elevation curve for this pass
+                    # Check if pass is active or upcoming within 2 hours
+                    event_start = datetime.fromisoformat(
+                        event["event_start"].replace("Z", "+00:00")
+                    )
+                    event_end = datetime.fromisoformat(event["event_end"].replace("Z", "+00:00"))
+
+                    # Calculate time until pass starts (negative if already started)
+                    time_until_start = (
+                        event_start - current_time_dt
+                    ).total_seconds() / 60  # minutes
+                    # Calculate time since pass ended (negative if not yet ended)
+                    time_since_end = (current_time_dt - event_end).total_seconds() / 60  # minutes
+
+                    # Extend if: pass is active OR starts within next 2 hours OR ended less than 30 min ago
+                    should_extend = (time_until_start <= 120) and (time_since_end <= 30)
+                    extend_start_minutes = 30 if should_extend else 0
+
+                    # Get satellite data for this event
+                    satellite_data = satellite_data_lookup[event["norad_id"]]
+
+                    # Calculate elevation curve
+                    elevation_curve = _calculate_elevation_curve(
+                        satellite_data,
+                        home_location,
+                        event["event_start"],
+                        event["event_end"],
+                        extend_start_minutes=extend_start_minutes,
+                    )
+                    event["elevation_curve"] = elevation_curve
+
                     events.append(event)
 
                 reply["success"] = True
@@ -424,7 +471,7 @@ async def fetch_next_events_for_group(
 
 
 async def fetch_next_events_for_satellite(
-    norad_id: int, hours: float = 2.0, above_el=0, step_minutes=1
+    norad_id: int, hours: float = 2.0, above_el=0, step_minutes=1, force_recalculate: bool = False
 ):
     """
     This function fetches the next satellite events for a specified satellite within a specified
@@ -442,6 +489,8 @@ async def fetch_next_events_for_satellite(
     :param step_minutes: The interval in minutes at which satellite positions are queried.
         Defaults to 1.
     :type step_minutes: int
+    :param force_recalculate: If True, bypass cache and force fresh calculation. Defaults to False.
+    :type force_recalculate: bool
     :return: A dictionary containing the success status, input parameters for the request,
         and the list of satellite events with elevation curves.
     :rtype: dict
@@ -484,24 +533,28 @@ async def fetch_next_events_for_satellite(
             )
 
             # Check cache BEFORE spawning worker process (main process only, no IPC)
+            # Skip cache if force_recalculate is True
             current_time = time.time()
             result = None
 
-            try:
-                if cache_key in _cache:
-                    calculation_time, valid_until, cached_result = _cache[cache_key]
+            if not force_recalculate:
+                try:
+                    if cache_key in _cache:
+                        calculation_time, valid_until, cached_result = _cache[cache_key]
 
-                    if current_time < valid_until:
-                        result = {
-                            "success": cached_result["success"],
-                            "forecast_hours": hours,
-                            "data": cached_result["data"],
-                            "cached": True,
-                        }
-            except Exception as cache_error:
-                logger.error(
-                    f"Cache error for norad_id={norad_id}: {cache_error} (fetch_next_events_for_satellite)"
-                )
+                        if current_time < valid_until:
+                            result = {
+                                "success": cached_result["success"],
+                                "forecast_hours": hours,
+                                "data": cached_result["data"],
+                                "cached": True,
+                            }
+                except Exception as cache_error:
+                    logger.error(
+                        f"Cache error for norad_id={norad_id}: {cache_error} (fetch_next_events_for_satellite)"
+                    )
+            else:
+                logger.info(f"Force recalculate requested, skipping cache for norad_id={norad_id}")
 
             # If no cache hit, spawn worker to calculate
             if result is None:

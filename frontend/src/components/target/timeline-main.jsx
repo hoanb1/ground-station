@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { useSelector } from 'react-redux';
-import { Box, Typography, Tooltip, useTheme, IconButton } from '@mui/material';
+import { useSelector, useDispatch } from 'react-redux';
+import { Box, Typography, Tooltip, useTheme, IconButton, CircularProgress } from '@mui/material';
 import { TitleBar, getClassNamesBasedOnGridEditing } from '../common/common.jsx';
 import { useTranslation } from 'react-i18next';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import SunCalc from 'suncalc';
 
 // Import from extracted modules
@@ -24,9 +25,19 @@ const SatellitePassTimelineComponent = ({
   passId = null, // New prop: specific pass ID to show (optional, used with singlePassMode)
   showTitleBar = true, // New prop: if false, hide the title bar
   minLabelInterval = null, // New prop: minimum interval between labels in hours (null = auto-calculate)
+  passesOverride = null, // New prop: override passes from Redux (for overview page)
+  activePassOverride = null, // New prop: override active pass from Redux
+  gridEditableOverride = null, // New prop: override gridEditable from Redux
+  labelType = false, // New prop: 'name' for satellite name, 'peak' for elevation value, false for no labels
+  cachedOverride = null, // New prop: override cached flag (for overview page)
+  labelVerticalOffset = 150, // New prop: percentage offset for label positioning (higher = further above peak)
+  loading = false, // New prop: show loading overlay
+  nextPassesHours = null, // New prop: forecast window in hours (null = use initialTimeWindowHours)
+  onRefresh = null, // New prop: callback for refresh button
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('target');
+  const dispatch = useDispatch();
 
   // Zoom state: time window configuration
   const [timeWindowHours, setTimeWindowHours] = useState(initialTimeWindowHours);
@@ -51,9 +62,14 @@ const SatellitePassTimelineComponent = ({
   const touchStartZoomLevelRef = useRef(null);
 
   // Get satellite passes from Redux store with proper equality checks
-  const satellitePasses = useSelector((state) => state.targetSatTrack.satellitePasses);
-  const activePass = useSelector((state) => state.targetSatTrack.activePass);
-  const gridEditable = useSelector((state) => state.targetSatTrack.gridEditable);
+  // Allow override from props for multi-satellite view (overview page)
+  const satellitePassesFromRedux = useSelector((state) => state.targetSatTrack.satellitePasses);
+  const activePassFromRedux = useSelector((state) => state.targetSatTrack.activePass);
+  const gridEditableFromRedux = useSelector((state) => state.targetSatTrack.gridEditable);
+
+  const satellitePasses = passesOverride !== null ? passesOverride : satellitePassesFromRedux;
+  const activePass = activePassOverride !== undefined ? activePassOverride : activePassFromRedux;
+  const gridEditable = gridEditableOverride !== null ? gridEditableOverride : gridEditableFromRedux;
   const groundStationLocation = useSelector((state) => state.location.location);
 
   // Get timezone from preferences - memoized selector to avoid re-renders
@@ -361,6 +377,8 @@ const SatellitePassTimelineComponent = ({
     timezone,
     startTime,
     endTime,
+    pastOffsetHours,
+    nextPassesHours: nextPassesHours !== null ? nextPassesHours : initialTimeWindowHours,
   });
 
   return (
@@ -376,13 +394,39 @@ const SatellitePassTimelineComponent = ({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
-            <Box sx={{display: 'flex', alignItems: 'center'}}>
+            <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
               <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                {satelliteName && t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours.toFixed(1) })}
+                {satelliteName
+                  ? `${satelliteName} - Visibility curves for the next ${initialTimeWindowHours.toFixed(0)} hours`
+                  : `Visibility curves for the next ${initialTimeWindowHours.toFixed(0)} hours`
+                }
               </Typography>
+              {cachedOverride && (
+                <Typography variant="caption" sx={{
+                  fontStyle: 'italic',
+                  color: 'text.secondary',
+                  opacity: 0.7
+                }}>
+                  (cached)
+                </Typography>
+              )}
             </Box>
             {!singlePassMode && (
               <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {onRefresh && (
+                  <Tooltip title="Refresh passes (force recalculate)">
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={onRefresh}
+                        disabled={loading}
+                        sx={{ padding: '2px' }}
+                      >
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                )}
                 <Tooltip title={t('timeline.zoomIn')}>
                   <span>
                     <IconButton
@@ -489,7 +533,7 @@ const SatellitePassTimelineComponent = ({
                   position: 'absolute',
                   left: `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${leftPercent / 100})`,
                   width: `calc((100% - ${Y_AXIS_WIDTH}px) * ${widthPercent / 100})`,
-                  top: 0,
+                  top: `${Y_AXIS_TOP_MARGIN}px`,
                   bottom: `${X_AXIS_HEIGHT}px`,
                   backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.15)',
                   pointerEvents: 'none',
@@ -586,7 +630,7 @@ const SatellitePassTimelineComponent = ({
                 height: '100%',
               }}
             >
-              <PassCurve pass={pass} startTime={startTime} endTime={endTime} />
+              <PassCurve pass={pass} startTime={startTime} endTime={endTime} labelType={labelType} labelVerticalOffset={labelVerticalOffset} />
             </Box>
           ))}
 
@@ -718,6 +762,26 @@ const SatellitePassTimelineComponent = ({
             ))}
           </TimelineAxis>
         </TimelineCanvas>
+
+        {/* Loading overlay */}
+        {loading && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+          >
+            <CircularProgress size={40} thickness={4} />
+          </Box>
+        )}
       </TimelineContent>
     </TimelineContainer>
   );

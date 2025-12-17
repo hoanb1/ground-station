@@ -26,6 +26,8 @@ export const useTimelineEvents = ({
   timezone,
   startTime,
   endTime,
+  pastOffsetHours = PAST_OFFSET_HOURS,
+  nextPassesHours = initialTimeWindowHours,
 }) => {
 
   const handleMouseMove = useCallback((e) => {
@@ -48,8 +50,23 @@ export const useTimelineEvents = ({
       const totalMs = timeWindowHours * 60 * 60 * 1000;
       const timeShift = -(deltaPercentage / 100) * totalMs;
 
-      const newStartTime = new Date(panStartTimeRef.current + timeShift);
-      setTimeWindowStart(newStartTime.getTime());
+      const calculatedStartTime = panStartTimeRef.current + timeShift;
+      const calculatedEndTime = calculatedStartTime + totalMs;
+
+      // Apply forecast window boundaries
+      const now = Date.now();
+      const minViewStartTime = now - (pastOffsetHours * 3600000);
+      const maxViewEndTime = now + (nextPassesHours * 3600000);
+
+      // Constrain the view to stay within boundaries
+      let boundedStartTime = calculatedStartTime;
+      if (calculatedStartTime < minViewStartTime) {
+        boundedStartTime = minViewStartTime;
+      } else if (calculatedEndTime > maxViewEndTime) {
+        boundedStartTime = maxViewEndTime - totalMs;
+      }
+
+      setTimeWindowStart(boundedStartTime);
       // Don't return here, continue to update crosshair
     }
 
@@ -112,7 +129,7 @@ export const useTimelineEvents = ({
 
     setHoverPosition({ x: percentage, y: yPercentage, elevation: actualElevation });
     setHoverTime(timeAtPosition);
-  }, [isPanning, timeWindowHours, timeWindowStart, timelineData, panStartXRef, panStartTimeRef, setTimeWindowStart, setHoverPosition, setHoverTime]);
+  }, [isPanning, timeWindowHours, timeWindowStart, timelineData, panStartXRef, panStartTimeRef, setTimeWindowStart, setHoverPosition, setHoverTime, pastOffsetHours, nextPassesHours, startTime, endTime]);
 
   const handleMouseLeave = useCallback(() => {
     setHoverPosition(null);
@@ -214,8 +231,23 @@ export const useTimelineEvents = ({
       const totalMs = timeWindowHours * 60 * 60 * 1000;
       const timeShift = -(deltaPercentage / 100) * totalMs;
 
-      const newStartTime = new Date(panStartTimeRef.current + timeShift);
-      setTimeWindowStart(newStartTime.getTime());
+      const calculatedStartTime = panStartTimeRef.current + timeShift;
+      const calculatedEndTime = calculatedStartTime + totalMs;
+
+      // Apply forecast window boundaries
+      const now = Date.now();
+      const minViewStartTime = now - (pastOffsetHours * 3600000);
+      const maxViewEndTime = now + (nextPassesHours * 3600000);
+
+      // Constrain the view to stay within boundaries
+      let boundedStartTime = calculatedStartTime;
+      if (calculatedStartTime < minViewStartTime) {
+        boundedStartTime = minViewStartTime;
+      } else if (calculatedEndTime > maxViewEndTime) {
+        boundedStartTime = maxViewEndTime - totalMs;
+      }
+
+      setTimeWindowStart(boundedStartTime);
     } else if (e.touches.length === 2 && lastTouchDistanceRef.current !== null && touchStartTimeRef.current !== null && touchStartZoomLevelRef.current !== null) {
       // Two touches - pinch zoom
       const touch1 = e.touches[0];
@@ -250,7 +282,7 @@ export const useTimelineEvents = ({
       setTimeWindowHours(newTimeWindowHours);
       setTimeWindowStart(newStartTime.getTime());
     }
-  }, [isPanning, timeWindowHours, initialTimeWindowHours, panStartXRef, panStartTimeRef, lastTouchDistanceRef, touchStartTimeRef, touchStartZoomLevelRef, setTimeWindowStart, setTimeWindowHours]);
+  }, [isPanning, timeWindowHours, initialTimeWindowHours, panStartXRef, panStartTimeRef, lastTouchDistanceRef, touchStartTimeRef, touchStartZoomLevelRef, setTimeWindowStart, setTimeWindowHours, pastOffsetHours, nextPassesHours]);
 
   const handleTouchEnd = useCallback((e) => {
     if (e.touches.length === 0) {

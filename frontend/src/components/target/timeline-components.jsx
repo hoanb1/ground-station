@@ -6,7 +6,7 @@ import { Y_AXIS_WIDTH, X_AXIS_HEIGHT, Y_AXIS_TOP_MARGIN, elevationToYPercent } f
 /**
  * PassCurve component - Renders a single satellite pass as an SVG path
  */
-export const PassCurve = ({ pass, startTime, endTime }) => {
+export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVerticalOffset = 150 }) => {
   const theme = useTheme();
 
   // Color based on peak altitude
@@ -122,58 +122,138 @@ export const PassCurve = ({ pass, startTime, endTime }) => {
     return null;
   }
 
+  // Find the peak point (highest elevation) for the label
+  let peakPoint = null;
+  let peakElevation = -Infinity;
+
+  if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+    pass.elevation_curve.forEach((point) => {
+      const pointTime = new Date(point.time).getTime();
+      if (pointTime >= startTime.getTime() && pointTime <= endTime.getTime()) {
+        if (point.elevation > peakElevation) {
+          peakElevation = point.elevation;
+          peakPoint = point;
+        }
+      }
+    });
+  }
+
+  // Calculate peak position in chart coordinates
+  let peakX = null;
+  let peakY = null;
+  if (peakPoint) {
+    const totalDuration = endTime.getTime() - startTime.getTime();
+    const pointTime = new Date(peakPoint.time).getTime();
+    peakX = ((pointTime - startTime.getTime()) / totalDuration) * 100;
+    peakY = elevationToYPercent(peakPoint.elevation);
+  } else if (pass.peak_altitude) {
+    // Fallback: use middle of pass with peak_altitude
+    peakX = pass.left + (pass.width / 2);
+    peakY = elevationToYPercent(pass.peak_altitude);
+  }
+
   return (
-    <svg
-      style={{
-        position: 'absolute',
-        top: `${Y_AXIS_TOP_MARGIN}px`,
-        left: `${Y_AXIS_WIDTH}px`,
-        width: `calc(100% - ${Y_AXIS_WIDTH}px)`,
-        height: `calc(100% - ${X_AXIS_HEIGHT + Y_AXIS_TOP_MARGIN}px)`,
-        pointerEvents: 'none',
-      }}
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-    >
-      {pathDataSegments.map((pathData, segmentIndex) => {
-        // Create SVG path from points
-        const pathString = pathData.map((point, i) => {
-          const [x, y] = point.split(',');
-          return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-        }).join(' ');
+    <>
+      <svg
+        style={{
+          position: 'absolute',
+          top: `${Y_AXIS_TOP_MARGIN}px`,
+          left: `${Y_AXIS_WIDTH}px`,
+          width: `calc(100% - ${Y_AXIS_WIDTH}px)`,
+          height: `calc(100% - ${X_AXIS_HEIGHT + Y_AXIS_TOP_MARGIN}px)`,
+          pointerEvents: 'none',
+        }}
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
+        {pathDataSegments.map((pathData, segmentIndex) => {
+          // Create SVG path from points
+          const pathString = pathData.map((point, i) => {
+            const [x, y] = point.split(',');
+            return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+          }).join(' ');
 
-        // Get first and last X coordinates for closing the fill path
-        const firstX = pathData[0].split(',')[0];
-        const lastX = pathData[pathData.length - 1].split(',')[0];
-        const bottomY = 100; // 0° elevation at bottom
+          // Get first and last X coordinates for closing the fill path
+          const firstX = pathData[0].split(',')[0];
+          const lastX = pathData[pathData.length - 1].split(',')[0];
+          const bottomY = 100; // 0° elevation at bottom
 
-        // Create closed path for fill area
-        const fillPath = `${pathString} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
+          // Create closed path for fill area
+          const fillPath = `${pathString} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
+
+          return (
+            <g key={segmentIndex}>
+              {/* Fill area */}
+              <path
+                d={fillPath}
+                fill={getColor()}
+                fillOpacity={0.15}
+                stroke="none"
+                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+              />
+              {/* Stroke line */}
+              <path
+                d={pathString}
+                stroke={getColor()}
+                strokeWidth="0.5"
+                fill="none"
+                opacity={pass.isCurrent ? 1 : 0.8}
+                vectorEffect="non-scaling-stroke"
+                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+              />
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Label at peak - type and size based on labelType and elevation */}
+      {labelType && peakX !== null && peakY !== null && peakElevation >= 0 && (() => {
+        // Determine if we should show the label based on elevation threshold
+        if (labelType === 'name' && peakElevation < 25) return null; // Don't show name labels below 25°
+        if (labelType === 'peak' && peakElevation < 10) return null; // Don't show peak labels below 10°
+
+        // Determine label content
+        let labelContent = '';
+        if (labelType === 'name') {
+          labelContent = pass.name;
+        } else if (labelType === 'peak') {
+          labelContent = `${peakElevation.toFixed(0)}°`;
+        }
+
+        if (!labelContent) return null;
+
+        // Determine label size based on elevation (for 'name' labels)
+        let fontSize = '0.7rem';
+        if (labelType === 'name' && peakElevation < 45) {
+          fontSize = '0.6rem'; // Smaller font for low elevation passes (30-45°)
+        }
 
         return (
-          <g key={segmentIndex}>
-            {/* Fill area */}
-            <path
-              d={fillPath}
-              fill={getColor()}
-              fillOpacity={0.15}
-              stroke="none"
-              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-            />
-            {/* Stroke line */}
-            <path
-              d={pathString}
-              stroke={getColor()}
-              strokeWidth="0.5"
-              fill="none"
-              opacity={pass.isCurrent ? 1 : 0.8}
-              vectorEffect="non-scaling-stroke"
-              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-            />
-          </g>
+          <Box
+            sx={{
+              position: 'absolute',
+              left: `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${peakX / 100})`,
+              top: `calc(${Y_AXIS_TOP_MARGIN}px + (100% - ${Y_AXIS_TOP_MARGIN}px - ${X_AXIS_HEIGHT}px) * ${peakY / 100})`,
+              transform: `translate(-50%, -${labelVerticalOffset}%)`,
+              fontSize: fontSize,
+              fontWeight: 'bold',
+              color: getColor(),
+              backgroundColor: theme.palette.background.paper,
+              padding: '2px 6px',
+              borderRadius: '3px',
+              border: `1px solid ${getColor()}`,
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              zIndex: 25,
+              opacity: 0.9,
+              boxShadow: theme.shadows[1],
+            }}
+          >
+            {labelContent}
+          </Box>
         );
-      })}
-    </svg>
+      })()}
+    </>
   );
 };
 

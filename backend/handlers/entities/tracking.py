@@ -193,7 +193,7 @@ async def fetch_next_passes(
 
     Args:
         sio: Socket.IO server instance
-        data: NORAD ID and forecast hours
+        data: NORAD ID, forecast hours, and optional force_recalculate flag
         logger: Logger instance
         sid: Socket.IO session ID
 
@@ -202,11 +202,14 @@ async def fetch_next_passes(
     """
     norad_id = data.get("norad_id", None) if data else None
     hours = data.get("hours", 4.0) if data else 4.0
+    force_recalculate = data.get("force_recalculate", False) if data else False
     logger.info(
-        f"Handling request from client_id={sid}, norad_id={norad_id}, hours={hours} "
-        f"(get_next_passes)"
+        f"Handling request from client_id={sid}, norad_id={norad_id}, hours={hours}, "
+        f"force_recalculate={force_recalculate} (get_next_passes)"
     )
-    next_passes = await fetch_next_events_for_satellite(norad_id=norad_id, hours=hours)
+    next_passes = await fetch_next_events_for_satellite(
+        norad_id=norad_id, hours=hours, force_recalculate=force_recalculate
+    )
     return {
         "success": next_passes["success"],
         "data": next_passes.get("data", []),

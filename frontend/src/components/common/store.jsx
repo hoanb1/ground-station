@@ -46,7 +46,6 @@ import performanceReducer from '../performance/performance-slice.jsx';
 import systemInfoReducer from '../settings/system-info-slice.jsx';
 import sessionsReducer from '../settings/sessions-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
-import passesCleanupMiddleware from '../overview/passes-cleanup-middleware.jsx';
 
 
 // Persist configuration for waterfall slice
@@ -290,7 +289,7 @@ export const store = configureStore({
                 warnAfter: 256,
                 ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
             },
-        }).concat(backendSyncMiddleware, passesCleanupMiddleware),
+        }).concat(backendSyncMiddleware),
 });
 
 //export default store;

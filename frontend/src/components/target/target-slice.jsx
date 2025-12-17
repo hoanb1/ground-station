@@ -138,9 +138,13 @@ export const setTrackingStateInBackend = createAsyncThunk(
 
 export const fetchNextPasses = createAsyncThunk(
     'targetSatTrack/fetchNextPasses',
-    async ({socket, noradId, hours}, {getState, rejectWithValue}) => {
+    async ({socket, noradId, hours, forceRecalculate = false}, {getState, rejectWithValue}) => {
         return new Promise((resolve, reject) => {
-            socket.emit('data_request', 'fetch-next-passes', {'norad_id': noradId, 'hours': hours}, (response) => {
+            socket.emit('data_request', 'fetch-next-passes', {
+                'norad_id': noradId,
+                'hours': hours,
+                'force_recalculate': forceRecalculate
+            }, (response) => {
                 if (response.success) {
                     resolve(response.data);
                 } else {

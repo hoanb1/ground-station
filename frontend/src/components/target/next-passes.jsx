@@ -29,10 +29,12 @@ import {
 import {DataGrid, gridClasses, useGridApiRef} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
 import {darken, lighten, styled} from "@mui/material/styles";
-import {Box, Typography} from '@mui/material';
+import {Box, Typography, IconButton, Tooltip} from '@mui/material';
 import ProgressFormatter from "../overview/progressbar-widget.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { fetchNextPasses } from './target-slice.jsx';
 
 
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
@@ -367,6 +369,17 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
     const minHeight = 200;
     const maxHeight = 400;
 
+    const handleRefreshPasses = () => {
+        if (satelliteId) {
+            dispatch(fetchNextPasses({
+                socket,
+                noradId: satelliteId,
+                hours: nextPassesHours,
+                forceRecalculate: true
+            }));
+        }
+    };
+
     useEffect(() => {
         const target = containerRef.current;
         const observer = new ResizeObserver((entries) => {
@@ -396,6 +409,20 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                             {t('next_passes.title', { name: satelliteData['details']['name'], hours: nextPassesHours })}
                         </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title="Refresh passes (force recalculate)">
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={handleRefreshPasses}
+                                    disabled={passesLoading || !satelliteId}
+                                    sx={{ padding: '2px' }}
+                                >
+                                    <RefreshIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                     </Box>
                 </Box>
             </TitleBar>

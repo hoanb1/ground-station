@@ -2,7 +2,7 @@
 
 export const Y_AXIS_WIDTH = 25; // Width of elevation axis in pixels
 export const X_AXIS_HEIGHT = 30; // Height of time axis in pixels
-export const Y_AXIS_TOP_MARGIN = 20; // Top margin to prevent 90° label clipping
+export const Y_AXIS_TOP_MARGIN = 25; // Top margin to prevent 90° label clipping
 export const ZOOM_FACTOR = 1.3; // Zoom step multiplier (higher = bigger steps)
 
 /**

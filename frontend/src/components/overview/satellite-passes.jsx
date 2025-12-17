@@ -40,7 +40,7 @@ import {
     setPasses,
     setSelectedSatelliteId,
 } from './overview-slice.jsx';
-import {Typography, Box} from '@mui/material';
+import {Typography, Box, IconButton, Tooltip} from '@mui/material';
 import {useGridApiRef} from '@mui/x-data-grid';
 import {darken, lighten, styled} from '@mui/material/styles';
 import {Chip} from "@mui/material";
@@ -50,6 +50,7 @@ import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
 import ElevationDisplay from "../common/elevation-display.jsx";
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 
 const TimeFormatter = React.memo(function TimeFormatter({params, value}) {
@@ -559,6 +560,17 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     const maxHeight = 400;
     const [columnUpdateKey, setColumnUpdateKey] = useState(0);
 
+    const handleRefreshPasses = () => {
+        if (selectedSatGroupId) {
+            dispatch(fetchNextPassesForGroup({
+                socket,
+                selectedSatGroupId,
+                hours: nextPassesHours,
+                forceRecalculate: true
+            }));
+        }
+    };
+
     useEffect(() => {
         if (selectedSatGroupId) {
             const currentParams = `${selectedSatGroupId}-${nextPassesHours}`;
@@ -624,10 +636,33 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 }}
             >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
-                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                            {t('passes_table.title', { hours: nextPassesHours })} {passesAreCached ? t('passes_table.cached') : ""}
+                            {t('passes_table.title', { hours: nextPassesHours })}
                         </Typography>
+                        {passesAreCached && (
+                            <Typography variant="caption" sx={{
+                                fontStyle: 'italic',
+                                color: 'text.secondary',
+                                opacity: 0.7
+                            }}>
+                                {t('passes_table.cached')}
+                            </Typography>
+                        )}
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title="Refresh passes (force recalculate)">
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={handleRefreshPasses}
+                                    disabled={passesLoading || !selectedSatGroupId}
+                                    sx={{ padding: '2px' }}
+                                >
+                                    <RefreshIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                     </Box>
                 </Box>
             </TitleBar>

@@ -193,7 +193,7 @@ async def fetch_next_passes_for_group(
 
     Args:
         sio: Socket.IO server instance
-        data: Group ID and forecast hours
+        data: Group ID, forecast hours, and optional force_recalculate flag
         logger: Logger instance
         sid: Socket.IO session ID
 
@@ -202,11 +202,14 @@ async def fetch_next_passes_for_group(
     """
     group_id = data.get("group_id", None) if data else None
     hours = data.get("hours", 2.0) if data else 2.0
+    force_recalculate = data.get("force_recalculate", False) if data else False
     logger.info(
-        f"Handling request from client_id={sid}, group_id={group_id}, hours={hours} "
-        f"(get_next_passes_for_group)"
+        f"Handling request from client_id={sid}, group_id={group_id}, hours={hours}, "
+        f"force_recalculate={force_recalculate} (get_next_passes_for_group)"
     )
-    next_passes = await fetch_next_events_for_group(group_id=group_id, hours=hours)
+    next_passes = await fetch_next_events_for_group(
+        group_id=group_id, hours=hours, force_recalculate=force_recalculate
+    )
     return {
         "success": next_passes["success"],
         "data": next_passes.get("data", []),

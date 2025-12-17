@@ -124,9 +124,13 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
 
 export const fetchNextPassesForGroup = createAsyncThunk(
     'overviewPasses/fetchNextPassesForGroup',
-    async ({ socket, selectedSatGroupId, hours }, { getState, rejectWithValue }) => {
+    async ({ socket, selectedSatGroupId, hours, forceRecalculate = false }, { getState, rejectWithValue }) => {
         return new Promise((resolve, reject) => {
-            socket.emit('data_request', 'fetch-next-passes-for-group', {group_id: selectedSatGroupId, hours: hours}, (response) => {
+            socket.emit('data_request', 'fetch-next-passes-for-group', {
+                group_id: selectedSatGroupId,
+                hours: hours,
+                force_recalculate: forceRecalculate
+            }, (response) => {
                 if (response.success) {
                     resolve({passes: response.data, cached: response.cached, forecast_hours: response.forecast_hours});
                 } else {
@@ -347,22 +351,7 @@ const overviewSlice = createSlice({
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
                 const {passes, cached, forecast_hours} = action.payload;
 
-                // Filter out expired passes (more than 1 minute old)
-                const now = new Date();
-                const filteredPasses = passes.filter(pass => {
-                    // Keep geostationary/geosynchronous satellites
-                    if (pass.is_geostationary || pass.is_geosynchronous) {
-                        return true;
-                    }
-
-                    const eventEnd = new Date(pass.event_end);
-                    const timeSinceEnd = now - eventEnd;
-
-                    // Keep passes that haven't ended or ended less than 1 minute ago
-                    return timeSinceEnd <= 60000;
-                });
-
-                state.passes = filteredPasses;
+                state.passes = passes;
                 state.passesAreCached = cached;
                 state.passesLoading = false;
             })
