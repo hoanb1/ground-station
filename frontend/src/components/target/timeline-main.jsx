@@ -47,6 +47,19 @@ const SatellitePassTimelineComponent = ({
     return now.getTime() - (pastOffsetHours * 60 * 60 * 1000);
   });
 
+  // Refs to hold current values for event handlers (to avoid recreating handlers on every change)
+  const timeWindowHoursRef = useRef(timeWindowHours);
+  const timeWindowStartRef = useRef(timeWindowStart);
+
+  // Update refs when state changes
+  React.useEffect(() => {
+    timeWindowHoursRef.current = timeWindowHours;
+  }, [timeWindowHours]);
+
+  React.useEffect(() => {
+    timeWindowStartRef.current = timeWindowStart;
+  }, [timeWindowStart]);
+
   // Mouse hover state
   const [hoverPosition, setHoverPosition] = useState(null);
   const [hoverTime, setHoverTime] = useState(null);
@@ -60,6 +73,9 @@ const SatellitePassTimelineComponent = ({
   const lastTouchDistanceRef = useRef(null);
   const touchStartTimeRef = useRef(null);
   const touchStartZoomLevelRef = useRef(null);
+
+  // Ref for canvas to attach non-passive touch listeners
+  const canvasRef = useRef(null);
 
   // Get satellite passes from Redux store with proper equality checks
   // Allow override from props for multi-satellite view (overview page)
@@ -365,6 +381,8 @@ const SatellitePassTimelineComponent = ({
     setTimeWindowHours,
     timeWindowStart,
     setTimeWindowStart,
+    timeWindowHoursRef,
+    timeWindowStartRef,
     timelineData,
     setHoverPosition,
     setHoverTime,
@@ -380,6 +398,36 @@ const SatellitePassTimelineComponent = ({
     pastOffsetHours,
     nextPassesHours: nextPassesHours !== null ? nextPassesHours : initialTimeWindowHours,
   });
+
+  // Store handlers in refs that can be updated without recreating listeners
+  const handlersRef = useRef({ handleTouchStart, handleTouchMove, handleTouchEnd });
+
+  // Update handlers ref when they change
+  React.useEffect(() => {
+    handlersRef.current = { handleTouchStart, handleTouchMove, handleTouchEnd };
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+
+  // Attach non-passive touch event listeners ONCE (stable wrapper functions)
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Wrapper functions that call the latest handlers from ref
+    const wrappedTouchStart = (e) => handlersRef.current.handleTouchStart(e);
+    const wrappedTouchMove = (e) => handlersRef.current.handleTouchMove(e);
+    const wrappedTouchEnd = (e) => handlersRef.current.handleTouchEnd(e);
+
+    // Add touch listeners with { passive: false } to allow preventDefault()
+    canvas.addEventListener('touchstart', wrappedTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', wrappedTouchMove, { passive: false });
+    canvas.addEventListener('touchend', wrappedTouchEnd, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('touchstart', wrappedTouchStart);
+      canvas.removeEventListener('touchmove', wrappedTouchMove);
+      canvas.removeEventListener('touchend', wrappedTouchEnd);
+    };
+  }, []); // Empty deps - only run once
 
   return (
     <TimelineContainer>
@@ -470,17 +518,15 @@ const SatellitePassTimelineComponent = ({
       )}
       <TimelineContent>
         <TimelineCanvas
+          ref={canvasRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onWheel={handleWheel}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
           sx={{
             cursor: isPanning ? 'grabbing' : 'grab',
-            touchAction: 'none', // Prevent default touch behavior
+            touchAction: 'pan-y', // Allow vertical scrolling, prevent horizontal
           }}
         >
           {/* Container for grid lines - matches chart area only */}
@@ -628,6 +674,7 @@ const SatellitePassTimelineComponent = ({
                 left: 0,
                 width: '100%',
                 height: '100%',
+                pointerEvents: 'none',
               }}
             >
               <PassCurve pass={pass} startTime={startTime} endTime={endTime} labelType={labelType} labelVerticalOffset={labelVerticalOffset} />

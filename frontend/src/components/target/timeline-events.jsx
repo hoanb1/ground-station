@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Y_AXIS_WIDTH, ZOOM_FACTOR } from './timeline-constants.jsx';
 
 // Internal constant for past offset (30 minutes)
@@ -14,6 +14,8 @@ export const useTimelineEvents = ({
   setTimeWindowHours,
   timeWindowStart,
   setTimeWindowStart,
+  timeWindowHoursRef,
+  timeWindowStartRef,
   timelineData,
   setHoverPosition,
   setHoverTime,
@@ -29,6 +31,44 @@ export const useTimelineEvents = ({
   pastOffsetHours = PAST_OFFSET_HOURS,
   nextPassesHours = initialTimeWindowHours,
 }) => {
+  // Refs for touch direction detection
+  const touchStartXRef = useRef(null);
+  const touchStartYRef = useRef(null);
+  const touchDirectionDeterminedRef = useRef(false);
+
+  // Use requestAnimationFrame for smooth updates during gestures
+  const rafIdRef = useRef(null);
+  const isGestureActiveRef = useRef(false);
+
+  // Cache getBoundingClientRect during gestures to avoid forced layout recalculations
+  const cachedRectRef = useRef(null);
+
+  // RAF-based update function for smooth gestures
+  const scheduleUpdate = useCallback((updates) => {
+    // Update refs immediately
+    if (updates.timeWindowHours !== undefined) {
+      timeWindowHoursRef.current = updates.timeWindowHours;
+    }
+    if (updates.timeWindowStart !== undefined) {
+      timeWindowStartRef.current = updates.timeWindowStart;
+    }
+
+    // Cancel any pending RAF
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+    }
+
+    // Schedule state update for next frame
+    rafIdRef.current = requestAnimationFrame(() => {
+      if (updates.timeWindowHours !== undefined) {
+        setTimeWindowHours(updates.timeWindowHours);
+      }
+      if (updates.timeWindowStart !== undefined) {
+        setTimeWindowStart(updates.timeWindowStart);
+      }
+      rafIdRef.current = null;
+    });
+  }, [setTimeWindowHours, setTimeWindowStart]);
 
   const handleMouseMove = useCallback((e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -186,17 +226,27 @@ export const useTimelineEvents = ({
   };
 
   const handleTouchStart = useCallback((e) => {
-    if (e.touches.length === 1) {
-      // Single touch - start panning
-      const touch = e.touches[0];
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
+    // Cache rect at start of gesture
+    cachedRectRef.current = e.currentTarget.getBoundingClientRect();
 
-      setIsPanning(true);
+    if (e.touches.length === 1) {
+      // Single touch - record starting position but don't commit to panning yet
+      const touch = e.touches[0];
+      const rect = cachedRectRef.current;
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+
+      // Store initial touch position to detect scroll direction
       panStartXRef.current = x;
-      const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
-      panStartTimeRef.current = currentStartTime.getTime();
-      touchStartTimeRef.current = currentStartTime.getTime();
+      panStartTimeRef.current = timeWindowStartRef.current ? timeWindowStartRef.current : new Date().getTime();
+      touchStartTimeRef.current = panStartTimeRef.current;
+
+      // Store Y position to detect vertical vs horizontal movement
+      touchStartXRef.current = x;
+      touchStartYRef.current = y;
+      touchDirectionDeterminedRef.current = false;
+
+      // Don't set isPanning yet - wait for touchmove to determine direction
     } else if (e.touches.length === 2) {
       // Two touches - start pinch zoom
       const touch1 = e.touches[0];
@@ -209,50 +259,92 @@ export const useTimelineEvents = ({
       lastTouchDistanceRef.current = distance;
       setIsPanning(false);
 
+      // Clear single-touch tracking to prevent interference
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      touchDirectionDeterminedRef.current = false;
+
       // Store current time window start and zoom level for pinch zoom
-      const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
+      const currentStartTime = timeWindowStartRef.current ? new Date(timeWindowStartRef.current) : new Date();
       touchStartTimeRef.current = currentStartTime.getTime();
-      touchStartZoomLevelRef.current = timeWindowHours; // Store CURRENT zoom level
+      touchStartZoomLevelRef.current = timeWindowHoursRef.current; // Store CURRENT zoom level
     }
-  }, [timeWindowStart, timeWindowHours, setIsPanning, panStartXRef, panStartTimeRef, touchStartTimeRef, lastTouchDistanceRef, touchStartZoomLevelRef]);
+  }, [setIsPanning]);
 
   const handleTouchMove = useCallback((e) => {
-    e.preventDefault();
-
-    if (e.touches.length === 1 && isPanning && panStartXRef.current !== null && panStartTimeRef.current !== null) {
-      // Single touch - panning
+    if (e.touches.length === 1) {
       const touch = e.touches[0];
-      const rect = e.currentTarget.getBoundingClientRect();
+      const rect = cachedRectRef.current || e.currentTarget.getBoundingClientRect();
       const x = touch.clientX - rect.left;
-      const deltaX = x - panStartXRef.current;
-      const availableWidth = rect.width - Y_AXIS_WIDTH;
-      const deltaPercentage = (deltaX / availableWidth) * 100;
+      const y = touch.clientY - rect.top;
 
-      const totalMs = timeWindowHours * 60 * 60 * 1000;
-      const timeShift = -(deltaPercentage / 100) * totalMs;
+      // Detect scroll direction on first move
+      if (!touchDirectionDeterminedRef.current && touchStartXRef.current !== null && touchStartYRef.current !== null) {
+        const deltaX = Math.abs(x - touchStartXRef.current);
+        const deltaY = Math.abs(y - touchStartYRef.current);
 
-      const calculatedStartTime = panStartTimeRef.current + timeShift;
-      const calculatedEndTime = calculatedStartTime + totalMs;
+        // Threshold to determine if user is scrolling (5px)
+        if (deltaX > 5 || deltaY > 5) {
+          touchDirectionDeterminedRef.current = true;
 
-      // Apply forecast window boundaries
-      const now = Date.now();
-      const minViewStartTime = now - (pastOffsetHours * 3600000);
-      const maxViewEndTime = now + (nextPassesHours * 3600000);
-
-      // Constrain the view to stay within boundaries
-      let boundedStartTime = calculatedStartTime;
-      if (calculatedStartTime < minViewStartTime) {
-        boundedStartTime = minViewStartTime;
-      } else if (calculatedEndTime > maxViewEndTime) {
-        boundedStartTime = maxViewEndTime - totalMs;
+          // If more vertical than horizontal movement, allow page scroll
+          if (deltaY > deltaX) {
+            // Vertical scroll - don't prevent default, let page scroll
+            touchStartXRef.current = null;
+            touchStartYRef.current = null;
+            return;
+          } else {
+            // Horizontal movement detected - start timeline panning and prevent default
+            e.preventDefault();
+            setIsPanning(true);
+          }
+        } else {
+          // Movement too small - don't prevent default yet, allow browser to handle it
+          // This allows vertical scroll to work naturally
+          return;
+        }
       }
 
-      setTimeWindowStart(boundedStartTime);
+      // Only handle horizontal panning if we've committed to it
+      if (isPanning && panStartXRef.current !== null && panStartTimeRef.current !== null) {
+        // Prevent default for horizontal panning
+        e.preventDefault();
+
+        const deltaX = x - panStartXRef.current;
+        const availableWidth = rect.width - Y_AXIS_WIDTH;
+        const deltaPercentage = (deltaX / availableWidth) * 100;
+
+        const totalMs = timeWindowHoursRef.current * 60 * 60 * 1000;
+        const timeShift = -(deltaPercentage / 100) * totalMs;
+
+        const calculatedStartTime = panStartTimeRef.current + timeShift;
+        const calculatedEndTime = calculatedStartTime + totalMs;
+
+        // Apply forecast window boundaries
+        const now = Date.now();
+        const minViewStartTime = now - (pastOffsetHours * 3600000);
+        const maxViewEndTime = now + (nextPassesHours * 3600000);
+
+        // Constrain the view to stay within boundaries
+        let boundedStartTime = calculatedStartTime;
+        if (calculatedStartTime < minViewStartTime) {
+          boundedStartTime = minViewStartTime;
+        } else if (calculatedEndTime > maxViewEndTime) {
+          boundedStartTime = maxViewEndTime - totalMs;
+        }
+
+        scheduleUpdate({ timeWindowStart: boundedStartTime });
+      } else if (isPanning) {
+        // We're in panning mode but refs are missing - still prevent default
+        e.preventDefault();
+      }
     } else if (e.touches.length === 2 && lastTouchDistanceRef.current !== null && touchStartTimeRef.current !== null && touchStartZoomLevelRef.current !== null) {
+      // Prevent default for pinch zoom - ALWAYS
+      e.preventDefault();
       // Two touches - pinch zoom
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
-      const rect = e.currentTarget.getBoundingClientRect();
+      const rect = cachedRectRef.current || e.currentTarget.getBoundingClientRect();
 
       const currentDistance = Math.hypot(
         touch2.clientX - touch1.clientX,
@@ -279,10 +371,15 @@ export const useTimelineEvents = ({
       const newTotalMs = newTimeWindowHours * 60 * 60 * 1000;
       const newStartTime = new Date(timeAtCenter.getTime() - (percentage / 100) * newTotalMs);
 
-      setTimeWindowHours(newTimeWindowHours);
-      setTimeWindowStart(newStartTime.getTime());
+      scheduleUpdate({
+        timeWindowHours: newTimeWindowHours,
+        timeWindowStart: newStartTime.getTime()
+      });
+    } else if (e.touches.length === 2) {
+      // Two fingers but refs not set up - still prevent default to avoid browser gestures
+      e.preventDefault();
     }
-  }, [isPanning, timeWindowHours, initialTimeWindowHours, panStartXRef, panStartTimeRef, lastTouchDistanceRef, touchStartTimeRef, touchStartZoomLevelRef, setTimeWindowStart, setTimeWindowHours, pastOffsetHours, nextPassesHours]);
+  }, [isPanning, setIsPanning, initialTimeWindowHours, scheduleUpdate, pastOffsetHours, nextPassesHours]);
 
   const handleTouchEnd = useCallback((e) => {
     if (e.touches.length === 0) {
@@ -290,19 +387,32 @@ export const useTimelineEvents = ({
       lastTouchDistanceRef.current = null;
       panStartXRef.current = null;
       panStartTimeRef.current = null;
+
+      // Clean up touch tracking
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      touchDirectionDeterminedRef.current = false;
+      cachedRectRef.current = null; // Clear cached rect
     } else if (e.touches.length === 1) {
-      // Went from 2 touches to 1, restart panning
+      // Went from 2 touches to 1, restart panning detection
       lastTouchDistanceRef.current = null;
       const touch = e.touches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
 
-      setIsPanning(true);
+      // Reset for new single-touch gesture
+      setIsPanning(false);
       panStartXRef.current = x;
-      const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
+      const currentStartTime = timeWindowStartRef.current ? new Date(timeWindowStartRef.current) : new Date();
       panStartTimeRef.current = currentStartTime.getTime();
+
+      // Store new touch start position for direction detection
+      touchStartXRef.current = x;
+      touchStartYRef.current = y;
+      touchDirectionDeterminedRef.current = false;
     }
-  }, [timeWindowStart, setIsPanning, lastTouchDistanceRef, panStartXRef, panStartTimeRef]);
+  }, [setIsPanning]);
 
   const formatHoverTime = (date) => {
     if (!date) return '';

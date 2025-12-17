@@ -189,7 +189,7 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
                 fill={getColor()}
                 fillOpacity={0.15}
                 stroke="none"
-                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                style={{ pointerEvents: 'none' }}
               />
               {/* Stroke line */}
               <path
@@ -199,7 +199,7 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
                 fill="none"
                 opacity={pass.isCurrent ? 1 : 0.8}
                 vectorEffect="non-scaling-stroke"
-                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                style={{ pointerEvents: 'none' }}
               />
             </g>
           );
