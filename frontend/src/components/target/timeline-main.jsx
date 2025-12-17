@@ -486,8 +486,14 @@ const SatellitePassTimelineComponent = ({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
-            <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-              <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+            <Box sx={{display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1}}>
+              <Typography variant="subtitle2" sx={{
+                fontWeight: 'bold',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                minWidth: 0
+              }}>
                 {satelliteName
                   ? `${satelliteName} - passes for the next ${initialTimeWindowHours.toFixed(0)} hours`
                   : `Passes for the next ${initialTimeWindowHours.toFixed(0)} hours`
@@ -496,7 +502,9 @@ const SatellitePassTimelineComponent = ({
               <Typography variant="caption" sx={{
                 fontStyle: 'italic',
                 color: 'text.secondary',
-                opacity: 0.7
+                opacity: 0.7,
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}>
                 ({filteredPassesCount} {filteredPassesCount === 1 ? 'pass' : 'passes'}{cachedOverride ? ', cached' : ''})
               </Typography>

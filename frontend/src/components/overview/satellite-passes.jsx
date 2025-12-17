@@ -657,14 +657,22 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 }}
             >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                        <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1}}>
+                        <Typography variant="subtitle2" sx={{
+                            fontWeight: 'bold',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            minWidth: 0
+                        }}>
                             {t('passes_table.title', { hours: nextPassesHours })}
                         </Typography>
                         <Typography variant="caption" sx={{
                             fontStyle: 'italic',
                             color: 'text.secondary',
-                            opacity: 0.7
+                            opacity: 0.7,
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0
                         }}>
                             ({passes.length} {passes.length === 1 ? 'pass' : 'passes'}{passesAreCached ? `, ${t('passes_table.cached')}` : ''})
                         </Typography>
