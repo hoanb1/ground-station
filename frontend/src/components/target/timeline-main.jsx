@@ -7,6 +7,7 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import SunCalc from 'suncalc';
 
 // Import from extracted modules
@@ -35,6 +36,10 @@ const SatellitePassTimelineComponent = ({
   nextPassesHours = null, // New prop: forecast window in hours (null = use initialTimeWindowHours)
   onRefresh = null, // New prop: callback for refresh button
   showHoverElevation = true, // New prop: if true, show elevation label on hover line (false for overview page)
+  showGeoToggle = false, // New prop: if true, show toggle button for geostationary satellites (overview only)
+  showGeostationarySatellites = false, // New prop: if true, show geostationary satellites
+  onToggleGeostationary = null, // New prop: callback for geostationary toggle
+  highlightActivePasses = false, // New prop: if true, make active passes solid and inactive passes dashed/less opaque
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('target');
@@ -339,8 +344,12 @@ const SatellitePassTimelineComponent = ({
         const left = ((clampedStart - startTime.getTime()) / totalDuration) * 100;
         const width = ((clampedEnd - clampedStart) / totalDuration) * 100;
 
-        // Check if pass is currently active using Redux activePass
-        const isCurrent = activePass && pass.id === activePass.id;
+        // Check if pass is currently active:
+        // 1. First check Redux activePass (for single satellite tracking page)
+        // 2. Fall back to time-based check: current time is between event_start and event_end
+        const nowTime = now.getTime();
+        const isCurrent = (activePass && pass.id === activePass.id) ||
+                         (nowTime >= passStart.getTime() && nowTime <= passEnd.getTime());
 
         return {
           ...pass,
@@ -484,6 +493,23 @@ const SatellitePassTimelineComponent = ({
             </Box>
             {!singlePassMode && (
               <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {showGeoToggle && geoIndices && geoIndices.size > 0 && (
+                  <Tooltip title={showGeostationarySatellites ? "Hide geostationary satellites" : "Show geostationary satellites"}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={onToggleGeostationary}
+                        disabled={loading}
+                        sx={{
+                          padding: '2px',
+                          color: showGeostationarySatellites ? theme.palette.primary.main : theme.palette.text.secondary,
+                        }}
+                      >
+                        <SatelliteAltIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                )}
                 {onRefresh && (
                   <Tooltip title="Refresh passes (force recalculate)">
                     <span>
@@ -688,34 +714,45 @@ const SatellitePassTimelineComponent = ({
           )}
 
           {/* Pass curves */}
-          {timelineData.map((pass) => {
-            const geoIndex = geoIndices.has(pass.id) ? geoIndices.get(pass.id) : null;
-            const totalGeoSats = geoIndices.size;
+          {timelineData
+            .filter((pass) => {
+              // Filter out geostationary satellites if toggle is off
+              if (!geoIndices) return true;
+              const isGeo = geoIndices.has(pass.id);
+              if (isGeo && !showGeostationarySatellites) {
+                return false;
+              }
+              return true;
+            })
+            .map((pass) => {
+              const geoIndex = geoIndices && geoIndices.has(pass.id) ? geoIndices.get(pass.id) : null;
+              const totalGeoSats = geoIndices ? geoIndices.size : 0;
 
-            return (
-              <Box
-                key={pass.id}
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  pointerEvents: 'none',
-                }}
-              >
-                <PassCurve
-                  pass={pass}
-                  startTime={startTime}
-                  endTime={endTime}
-                  labelType={labelType}
-                  labelVerticalOffset={labelVerticalOffset}
-                  geoIndex={geoIndex}
-                  totalGeoSats={totalGeoSats}
-                />
-              </Box>
-            );
-          })}
+              return (
+                <Box
+                  key={pass.id}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <PassCurve
+                    pass={pass}
+                    startTime={startTime}
+                    endTime={endTime}
+                    labelType={labelType}
+                    labelVerticalOffset={labelVerticalOffset}
+                    geoIndex={geoIndex}
+                    totalGeoSats={totalGeoSats}
+                    highlightActivePasses={highlightActivePasses}
+                  />
+                </Box>
+              );
+            })}
 
           {/* Current time marker - only show when satellite passes exist */}
           {satellitePasses && satellitePasses.length > 0 && (

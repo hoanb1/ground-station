@@ -39,6 +39,7 @@ import {
     setGridEditable,
     setMapZoomLevel,
     fetchNextPassesForGroup,
+    setShowGeostationarySatellites,
 } from './overview-slice.jsx';
 import NextPassesGroupIsland from "./satellite-passes.jsx";
 import WeatherDisplay from "./weather-card.jsx";
@@ -61,6 +62,7 @@ const OverviewTimelineWrapper = React.memo(() => {
     const passesAreCached = useSelector((state) => state.overviewSatTrack.passesAreCached);
     const passesLoading = useSelector((state) => state.overviewSatTrack.passesLoading);
     const selectedSatGroupId = useSelector((state) => state.overviewSatTrack.selectedSatGroupId);
+    const showGeostationarySatellites = useSelector((state) => state.overviewSatTrack.showGeostationarySatellites);
 
     const handleRefreshPasses = () => {
         if (selectedSatGroupId) {
@@ -71,6 +73,10 @@ const OverviewTimelineWrapper = React.memo(() => {
                 forceRecalculate: true
             }));
         }
+    };
+
+    const handleToggleGeostationary = () => {
+        dispatch(setShowGeostationarySatellites(!showGeostationarySatellites));
     };
 
     return (
@@ -87,6 +93,10 @@ const OverviewTimelineWrapper = React.memo(() => {
             nextPassesHours={nextPassesHours} // Pass forecast window for pan boundaries
             onRefresh={handleRefreshPasses}
             showHoverElevation={false} // Hide elevation label on overview page
+            showGeoToggle={true} // Show geostationary toggle button on overview
+            showGeostationarySatellites={showGeostationarySatellites} // Toggle state from Redux
+            onToggleGeostationary={handleToggleGeostationary} // Toggle handler
+            highlightActivePasses={true} // Highlight active passes with solid lines
         />
     );
 });

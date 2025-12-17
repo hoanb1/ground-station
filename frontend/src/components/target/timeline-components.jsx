@@ -6,7 +6,7 @@ import { Y_AXIS_WIDTH, X_AXIS_HEIGHT, Y_AXIS_TOP_MARGIN, elevationToYPercent } f
 /**
  * PassCurve component - Renders a single satellite pass as an SVG path
  */
-export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVerticalOffset = 150, geoIndex = null, totalGeoSats = null }) => {
+export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVerticalOffset = 150, geoIndex = null, totalGeoSats = null, highlightActivePasses = false }) => {
   const theme = useTheme();
 
   // Color based on peak altitude
@@ -205,7 +205,7 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
               <path
                 d={fillPath}
                 fill={getColor()}
-                fillOpacity={0.15}
+                fillOpacity={highlightActivePasses ? (pass.isCurrent ? 0.15 : 0.08) : 0.15}
                 stroke="none"
                 style={{ pointerEvents: 'none' }}
               />
@@ -214,8 +214,9 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
                 d={pathString}
                 stroke={getColor()}
                 strokeWidth="0.5"
+                strokeDasharray={highlightActivePasses ? (pass.isCurrent ? "0" : "2,2") : "0"}
                 fill="none"
-                opacity={pass.isCurrent ? 1 : 0.8}
+                opacity={highlightActivePasses ? (pass.isCurrent ? 1 : 0.8) : (pass.isCurrent ? 1 : 0.8)}
                 vectorEffect="non-scaling-stroke"
                 style={{ pointerEvents: 'none' }}
               />

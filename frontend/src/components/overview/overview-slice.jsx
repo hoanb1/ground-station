@@ -214,8 +214,12 @@ const overviewSlice = createSlice({
             decayed: false,
         },
         recentSatelliteGroups: [],
+        showGeostationarySatellites: false, // Default off - hide geostationary satellites
     },
     reducers: {
+        setShowGeostationarySatellites(state, action) {
+            state.showGeostationarySatellites = action.payload;
+        },
         setShowPastOrbitPath(state, action) {
             state.showPastOrbitPath = action.payload;
         },
@@ -414,6 +418,7 @@ const overviewSlice = createSlice({
 });
 
 export const {
+    setShowGeostationarySatellites,
     setShowPastOrbitPath,
     setShowFutureOrbitPath,
     setShowSatelliteCoverage,
