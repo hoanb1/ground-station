@@ -129,13 +129,19 @@ test.describe('Accessibility - Focus Management', () => {
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
-    // Tab multiple times
+    // Tab multiple times and collect unique element identifiers
     const positions = [];
     for (let i = 0; i < 10; i++) {
       await page.keyboard.press('Tab');
       const focused = await page.locator(':focus');
-      const text = await focused.textContent();
-      positions.push(text);
+      // Use aria-label, title, or element type + text to identify element
+      const identifier = await focused.evaluate(el => {
+        return el.getAttribute('aria-label') ||
+               el.getAttribute('title') ||
+               el.tagName + ':' + el.textContent?.trim() ||
+               el.outerHTML.substring(0, 100);
+      });
+      positions.push(identifier);
     }
 
     // Focus should move (not be trapped)

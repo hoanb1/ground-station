@@ -542,7 +542,7 @@ export default function Layout() {
     const drawerContent = (isExpanded) => (
         <>
             <Toolbar />
-            <Box sx={{ overflow: 'auto', mt: 1 }}>
+            <Box component="nav" role="navigation" aria-label="Main navigation" sx={{ overflow: 'auto', mt: 1 }}>
                 <List>
                     {navigation.map((item, index) => {
                         if (item.kind === 'header') {
@@ -570,7 +570,12 @@ export default function Layout() {
 
                         return (
                             <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-                                <Tooltip title={!isExpanded ? item.title : ''} placement="right">
+                                <Tooltip
+                                    title={!isExpanded ? item.title : ''}
+                                    placement="right"
+                                    disableFocusListener
+                                    disableTouchListener
+                                >
                                     <ListItemButton
                                         onClick={() => handleNavigation(item.segment)}
                                         selected={isActive}
@@ -643,6 +648,10 @@ export default function Layout() {
                 ModalProps={{
                     keepMounted: true, // Better open performance on mobile
                 }}
+                PaperProps={{
+                    role: 'navigation',
+                    'aria-label': 'Mobile navigation',
+                }}
                 sx={{
                     display: { xs: 'block', sm: 'none' },
                     '& .MuiDrawer-paper': {
@@ -658,6 +667,14 @@ export default function Layout() {
             <CustomDrawer
                 variant="permanent"
                 open={open}
+                PaperProps={{
+                    role: 'navigation',
+                    'aria-label': 'Desktop navigation',
+                }}
+                ModalProps={{
+                    disableEnforceFocus: true,
+                    disableAutoFocus: true,
+                }}
                 sx={{
                     display: { xs: 'none', sm: 'block' },
                     flexShrink: 0,
