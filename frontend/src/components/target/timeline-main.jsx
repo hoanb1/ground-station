@@ -94,7 +94,7 @@ const SatellitePassTimelineComponent = ({
     return timezonePref ? timezonePref.value : 'UTC';
   }, (prev, next) => prev === next); // Use equality check
 
-  const { timelineData, timeLabels, startTime, endTime, sunData, activePassObj } = useMemo(() => {
+  const { timelineData, timeLabels, startTime, endTime, sunData, activePassObj, geoIndices } = useMemo(() => {
     const now = new Date();
 
     // In single-pass mode, determine the active pass and set time window accordingly
@@ -350,6 +350,27 @@ const SatellitePassTimelineComponent = ({
       })
       .filter(Boolean);
 
+    // Detect geostationary/geosynchronous satellites
+    // These satellites stay above the horizon continuously (first and last points are positive)
+    const geoIndices = new Map();
+    let geoCounter = 0;
+
+    passes.forEach((pass) => {
+      if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+        // Check if first and last points in the elevation curve are above horizon
+        const firstPoint = pass.elevation_curve[0];
+        const lastPoint = pass.elevation_curve[pass.elevation_curve.length - 1];
+
+        if (firstPoint.elevation > 0 && lastPoint.elevation > 0) {
+          console.log(`Detected geostationary/geosynchronous: ${pass.name}, first: ${firstPoint.elevation.toFixed(2)}°, last: ${lastPoint.elevation.toFixed(2)}°`);
+          geoIndices.set(pass.id, geoCounter);
+          geoCounter++;
+        }
+      }
+    });
+
+    console.log(`Total geostationary/geosynchronous satellites detected: ${geoIndices.size}`);
+
     return {
       timelineData: passes,
       timeLabels: labels,
@@ -357,6 +378,7 @@ const SatellitePassTimelineComponent = ({
       endTime,
       sunData,
       activePassObj,
+      geoIndices,
     };
   }, [satellitePasses, activePass, timeWindowHours, timeWindowStart, timezone, groundStationLocation, showSunShading, showSunMarkers, singlePassMode, passId, minLabelInterval]);
 
@@ -665,21 +687,34 @@ const SatellitePassTimelineComponent = ({
           )}
 
           {/* Pass curves */}
-          {timelineData.map((pass) => (
-            <Box
-              key={pass.id}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                pointerEvents: 'none',
-              }}
-            >
-              <PassCurve pass={pass} startTime={startTime} endTime={endTime} labelType={labelType} labelVerticalOffset={labelVerticalOffset} />
-            </Box>
-          ))}
+          {timelineData.map((pass) => {
+            const geoIndex = geoIndices.has(pass.id) ? geoIndices.get(pass.id) : null;
+            const totalGeoSats = geoIndices.size;
+
+            return (
+              <Box
+                key={pass.id}
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                }}
+              >
+                <PassCurve
+                  pass={pass}
+                  startTime={startTime}
+                  endTime={endTime}
+                  labelType={labelType}
+                  labelVerticalOffset={labelVerticalOffset}
+                  geoIndex={geoIndex}
+                  totalGeoSats={totalGeoSats}
+                />
+              </Box>
+            );
+          })}
 
           {/* Current time marker - only show when satellite passes exist */}
           {satellitePasses && satellitePasses.length > 0 && (

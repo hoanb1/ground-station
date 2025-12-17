@@ -6,7 +6,7 @@ import { Y_AXIS_WIDTH, X_AXIS_HEIGHT, Y_AXIS_TOP_MARGIN, elevationToYPercent } f
 /**
  * PassCurve component - Renders a single satellite pass as an SVG path
  */
-export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVerticalOffset = 150 }) => {
+export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVerticalOffset = 150, geoIndex = null, totalGeoSats = null }) => {
   const theme = useTheme();
 
   // Color based on peak altitude
@@ -141,7 +141,25 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
   // Calculate peak position in chart coordinates
   let peakX = null;
   let peakY = null;
-  if (peakPoint) {
+
+  // For geostationary satellites with horizontal distribution
+  // Check if this pass was identified as geostationary (geoIndex will be non-null)
+  if (geoIndex !== null && totalGeoSats !== null && totalGeoSats > 1) {
+    // Distribute horizontally across the timeline, avoiding edges
+    // Use 20% margins on each side = 60% usable space
+    // Distribute satellites evenly within that space, with additional padding from the margins
+    const marginPercent = 20;
+    const usableSpacePercent = 60;
+    const spacing = usableSpacePercent / (totalGeoSats + 1);
+    peakX = marginPercent + (spacing * (geoIndex + 1));
+    peakY = elevationToYPercent(peakElevation);
+    console.log(`GEO satellite ${pass.name}: index=${geoIndex}, total=${totalGeoSats}, peakX=${peakX}%`);
+  } else if (geoIndex !== null && totalGeoSats === 1) {
+    // Single geostationary satellite - place at center
+    peakX = 50;
+    peakY = elevationToYPercent(peakElevation);
+    console.log(`Single GEO satellite ${pass.name}: peakX=${peakX}%`);
+  } else if (peakPoint) {
     const totalDuration = endTime.getTime() - startTime.getTime();
     const pointTime = new Date(peakPoint.time).getTime();
     peakX = ((pointTime - startTime.getTime()) / totalDuration) * 100;
