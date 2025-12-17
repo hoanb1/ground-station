@@ -661,6 +661,13 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                             {t('passes_table.title', { hours: nextPassesHours })}
                         </Typography>
+                        <Typography variant="caption" sx={{
+                            fontStyle: 'italic',
+                            color: 'text.secondary',
+                            opacity: 0.7
+                        }}>
+                            ({passes.length} {passes.length === 1 ? 'pass' : 'passes'})
+                        </Typography>
                         {passesAreCached && (
                             <Typography variant="caption" sx={{
                                 fontStyle: 'italic',

@@ -439,6 +439,18 @@ const SatellitePassTimelineComponent = ({
     handlersRef.current = { handleTouchStart, handleTouchMove, handleTouchEnd };
   }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
+  // Calculate filtered passes count for display
+  const filteredPassesCount = React.useMemo(() => {
+    return timelineData.filter((pass) => {
+      if (!geoIndices) return true;
+      const isGeo = geoIndices.has(pass.id);
+      if (isGeo && !showGeostationarySatellites) {
+        return false;
+      }
+      return true;
+    }).length;
+  }, [timelineData, geoIndices, showGeostationarySatellites]);
+
   // Attach non-passive touch event listeners ONCE (stable wrapper functions)
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -480,6 +492,13 @@ const SatellitePassTimelineComponent = ({
                   ? `${satelliteName} - Visibility curves for the next ${initialTimeWindowHours.toFixed(0)} hours`
                   : `Visibility curves for the next ${initialTimeWindowHours.toFixed(0)} hours`
                 }
+              </Typography>
+              <Typography variant="caption" sx={{
+                fontStyle: 'italic',
+                color: 'text.secondary',
+                opacity: 0.7
+              }}>
+                ({filteredPassesCount} {filteredPassesCount === 1 ? 'pass' : 'passes'})
               </Typography>
               {cachedOverride && (
                 <Typography variant="caption" sx={{
