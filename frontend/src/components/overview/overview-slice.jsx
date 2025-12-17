@@ -216,6 +216,7 @@ const overviewSlice = createSlice({
         recentSatelliteGroups: [],
         showGeostationarySatellites: false, // Default off - hide geostationary satellites
         passesTablePageSize: 5, // Default page size for passes table
+        satellitesTablePageSize: 50, // Default page size for satellites table
     },
     reducers: {
         setShowGeostationarySatellites(state, action) {
@@ -223,6 +224,9 @@ const overviewSlice = createSlice({
         },
         setPassesTablePageSize(state, action) {
             state.passesTablePageSize = action.payload;
+        },
+        setSatellitesTablePageSize(state, action) {
+            state.satellitesTablePageSize = action.payload;
         },
         setShowPastOrbitPath(state, action) {
             state.showPastOrbitPath = action.payload;
@@ -424,6 +428,7 @@ const overviewSlice = createSlice({
 export const {
     setShowGeostationarySatellites,
     setPassesTablePageSize,
+    setSatellitesTablePageSize,
     setShowPastOrbitPath,
     setShowFutureOrbitPath,
     setShowSatelliteCoverage,

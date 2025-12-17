@@ -34,6 +34,7 @@ import ElevationDisplay from "../common/elevation-display.jsx";
 import {
     setSelectedSatelliteId,
     setSatellitesTableColumnVisibility,
+    setSatellitesTablePageSize,
     setSelectedSatGroupId,
     fetchSatellitesByGroupId,
     fetchSatelliteGroups,
@@ -55,10 +56,13 @@ const MemoizedStyledDataGrid = React.memo(({
                                                columnVisibility,
                                                onColumnVisibilityChange,
                                                selectedSatellitePositionsRef,
+                                               pageSize = 50,
+                                               onPageSizeChange,
                                             }) => {
     const { t, i18n } = useTranslation('overview');
     const currentLanguage = i18n.language;
     const dataGridLocale = currentLanguage === 'el' ? elGR : enUS;
+    const [page, setPage] = useState(0);
 
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
@@ -418,19 +422,25 @@ const MemoizedStyledDataGrid = React.memo(({
             }}
             density={"compact"}
             rows={satellites || []}
+            paginationModel={{
+                pageSize: pageSize,
+                page: page,
+            }}
+            onPaginationModelChange={(model) => {
+                setPage(model.page);
+                if (onPageSizeChange && model.pageSize !== pageSize) {
+                    onPageSizeChange(model.pageSize);
+                }
+            }}
             initialState={{
-                pagination: { paginationModel: { pageSize: 50 } },
                 sorting: {
                     sortModel: [{ field: 'elevation', sort: 'desc' }],
                 },
                 columns: {
                     columnVisibilityModel: columnVisibility,
                 },
-
             }}
             columns={columns}
-            pageSize={50}
-            rowsPerPageOptions={[5, 10, 20, 50]}
         />
     );
 });
@@ -457,6 +467,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
     const selectedSatGroupId = useSelector(state => state.overviewSatTrack.selectedSatGroupId);
     const columnVisibility = useSelector(state => state.overviewSatTrack.satellitesTableColumnVisibility);
+    const satellitesTablePageSize = useSelector(state => state.overviewSatTrack.satellitesTablePageSize);
     const satGroups = useSelector(state => state.overviewSatTrack.satGroups);
     const passesLoading = useSelector(state => state.overviewSatTrack.passesLoading);
 
@@ -528,6 +539,10 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
         dispatch(setSatellitesTableColumnVisibility(newModel));
     }, [dispatch]);
 
+    const handlePageSizeChange = useCallback((newPageSize) => {
+        dispatch(setSatellitesTablePageSize(newPageSize));
+    }, [dispatch]);
+
     return (
         <>
             <TitleBar
@@ -578,6 +593,8 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                             columnVisibility={columnVisibility}
                             onColumnVisibilityChange={handleColumnVisibilityChange}
                             selectedSatellitePositionsRef={selectedSatellitePositionsRef}
+                            pageSize={satellitesTablePageSize}
+                            onPageSizeChange={handlePageSizeChange}
                         />
                     )}
                 </div>
