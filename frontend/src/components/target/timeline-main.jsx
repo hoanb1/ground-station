@@ -145,6 +145,31 @@ const SatellitePassTimelineComponent = ({
   const gridEditable = gridEditableOverride !== null ? gridEditableOverride : gridEditableFromRedux;
   const groundStationLocation = useSelector((state) => state.location.location);
 
+  // Adjust initial time window based on actual pass data (only once on mount)
+  const hasAdjustedInitialWindow = useRef(false);
+  React.useEffect(() => {
+    if (hasAdjustedInitialWindow.current || !satellitePasses || satellitePasses.length === 0) {
+      return;
+    }
+
+    // Find the latest pass end time from the data
+    const now = Date.now();
+    const latestPassEnd = Math.max(...satellitePasses.map(pass => new Date(pass.event_end).getTime()));
+
+    // Start time: now - pastOffsetHours (same as current timeWindowStart)
+    const startTime = now - (pastOffsetHours * 60 * 60 * 1000);
+
+    // Calculate hours based on actual data range
+    const calculatedHours = (latestPassEnd - startTime) / (60 * 60 * 1000);
+
+    // If calculated hours is less than current timeWindowHours, adjust it to fit data
+    if (calculatedHours < timeWindowHours) {
+      setTimeWindowHours(calculatedHours);
+    }
+
+    hasAdjustedInitialWindow.current = true;
+  }, [satellitePasses, pastOffsetHours, timeWindowHours]);
+
   // Get timezone from preferences - memoized selector to avoid re-renders
   const timezone = useSelector((state) => {
     const timezonePref = state.preferences.preferences.find((pref) => pref.name === 'timezone');
@@ -576,6 +601,15 @@ const SatellitePassTimelineComponent = ({
                 flexShrink: 0
               }}>
                 ({filteredPassesCount} {filteredPassesCount === 1 ? 'pass' : 'passes'}{cachedOverride ? ', cached' : ''})
+              </Typography>
+              <Typography variant="caption" sx={{
+                fontStyle: 'italic',
+                color: 'text.secondary',
+                opacity: 0.6,
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}>
+                [{startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: timezone })} - {endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: timezone })}]
               </Typography>
             </Box>
             {!singlePassMode && (
