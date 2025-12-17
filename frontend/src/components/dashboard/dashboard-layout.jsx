@@ -19,23 +19,31 @@
 
 
 import Stack from "@mui/material/Stack";
-import {DashboardLayout, ThemeSwitcher} from "@toolpad/core/DashboardLayout";
+import {ThemeSwitcher} from "@toolpad/core/DashboardLayout";
 import Typography from "@mui/material/Typography";
 import PropTypes from "prop-types";
 import * as React from "react";
-import {Outlet} from "react-router";
+import {Outlet, useNavigate, useLocation} from "react-router";
 import {
+    AppBar,
     Avatar,
     Backdrop,
     Box,
     Button,
+    CssBaseline,
     Divider,
+    Drawer,
     IconButton,
+    List,
+    ListItem,
+    ListItemButton,
     ListItemIcon,
     ListItemText,
     MenuItem,
     MenuList,
-    useTheme
+    Toolbar,
+    useTheme,
+    styled
 } from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
 import {GroundStationLogoGreenBlue} from "../common/dataurl-icons.jsx";
@@ -63,7 +71,55 @@ import VersionInfo from "./version-info.jsx";
 import VersionUpdateOverlay from "./version-update-overlay.jsx";
 import SatelliteSyncPopover from "./tlesync-popover.jsx";
 import PerformanceMetricsDialog from "../performance/performance-metrics-dialog.jsx";
+import MenuIcon from '@mui/icons-material/Menu';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import {getNavigation} from "../../config/navigation.jsx";
 
+// Drawer widths
+const drawerWidthExpanded = 240;
+const drawerWidthCollapsed = 56;
+
+// Styled components
+const openedMixin = (theme) => ({
+    width: drawerWidthExpanded,
+    transition: theme.transitions.create('width', {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.enteringScreen,
+    }),
+    overflowX: 'hidden',
+});
+
+const closedMixin = (theme) => ({
+    transition: theme.transitions.create('width', {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.leavingScreen,
+    }),
+    overflowX: 'hidden',
+    width: drawerWidthCollapsed,
+});
+
+const CustomDrawer = styled(Drawer, { shouldForwardProp: (prop) => prop !== 'open' })(
+    ({ theme, open }) => ({
+        width: open ? drawerWidthExpanded : drawerWidthCollapsed,
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+        boxSizing: 'border-box',
+        ...(open && {
+            ...openedMixin(theme),
+            '& .MuiDrawer-paper': openedMixin(theme),
+        }),
+        ...(!open && {
+            ...closedMixin(theme),
+            '& .MuiDrawer-paper': closedMixin(theme),
+        }),
+    }),
+);
+
+const CustomAppBar = styled(AppBar, {
+    shouldForwardProp: (prop) => prop !== 'open',
+})(({ theme, open }) => ({
+    zIndex: theme.zIndex.drawer + 1,
+}));
 
 function DashboardEditor() {
     const theme = useTheme();
@@ -365,8 +421,16 @@ const createPreviewComponent = (mini) => {
 };
 
 export default function Layout() {
+    const theme = useTheme();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const location = useLocation();
     const { socket } = useSocket();
+    const { t } = useTranslation();
+    const [open, setOpen] = React.useState(false);
+    const [mobileOpen, setMobileOpen] = React.useState(false);
+    const [navigation, setNavigation] = React.useState(getNavigation());
+
     const {
         connecting,
         connected,
@@ -383,6 +447,11 @@ export default function Layout() {
     const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
     const streamingTimeoutRef = useRef(null);
     const currentStreamingVFORef = useRef(null);
+
+    // Update navigation when language changes or state changes
+    React.useEffect(() => {
+        setNavigation(getNavigation());
+    }, [t]);
 
     useEffect(() => {
         console.info('Initializing audio...');
@@ -440,25 +509,177 @@ export default function Layout() {
         };
     }, [socket, playAudioSamples, dispatch]);
 
-    return (
-        <DashboardLayout
-            sx={{
-                '& .MuiToolbar-root': {
-                    //boxShadow: '4px 8px 8px rgba(0, 0, 0, 0.35)',
-                },
-            }}
-            defaultSidebarCollapsed
-            slots={{
-                appTitle: CustomAppTitle,
-                toolbarActions: ToolbarActions,
-                toolbarAccount: () => {},
-                //sidebarFooter: SidebarFooterAccount,
-                sidebarFooter: () => {}
-            }}>
-            {connected? <Outlet />: <ConnectionOverlay />}
-            {hasVersionChanged && <VersionUpdateOverlay />}
-            <PerformanceMetricsDialog />
+    const handleDrawerToggle = () => {
+        // On mobile, toggle the temporary drawer
+        if (window.innerWidth < 600) {
+            setMobileOpen(!mobileOpen);
+        } else {
+            // On desktop, toggle between collapsed/expanded
+            setOpen(!open);
+        }
+    };
 
-        </DashboardLayout>
+    const handleMobileDrawerClose = () => {
+        setMobileOpen(false);
+    };
+
+    const handleNavigation = (segment) => {
+        navigate(`/${segment}`);
+        // Close mobile drawer after navigation
+        if (window.innerWidth < 600) {
+            setMobileOpen(false);
+        }
+    };
+
+    const isActiveRoute = (segment) => {
+        const currentPath = location.pathname.slice(1); // Remove leading slash
+        if (segment === '' && currentPath === '') return true;
+        if (segment && currentPath.startsWith(segment)) return true;
+        return false;
+    };
+
+    // Drawer content component
+    const drawerContent = (isExpanded) => (
+        <>
+            <Toolbar />
+            <Box sx={{ overflow: 'auto', mt: 1 }}>
+                <List>
+                    {navigation.map((item, index) => {
+                        if (item.kind === 'header') {
+                            return isExpanded ? (
+                                <ListItem key={index} sx={{ pt: 2, pb: 1 }}>
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontWeight: 'bold',
+                                            color: 'text.secondary',
+                                            pl: 2
+                                        }}
+                                    >
+                                        {item.title}
+                                    </Typography>
+                                </ListItem>
+                            ) : null;
+                        }
+
+                        if (item.kind === 'divider') {
+                            return <Divider key={index} sx={{ my: 1 }} />;
+                        }
+
+                        const isActive = isActiveRoute(item.segment);
+
+                        return (
+                            <ListItem key={index} disablePadding sx={{ display: 'block' }}>
+                                <Tooltip title={!isExpanded ? item.title : ''} placement="right">
+                                    <ListItemButton
+                                        onClick={() => handleNavigation(item.segment)}
+                                        selected={isActive}
+                                        sx={{
+                                            minHeight: 40,
+                                            justifyContent: isExpanded ? 'flex-start' : 'center',
+                                            px: isExpanded ? 2 : 0,
+                                            py: 0.75,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <ListItemIcon
+                                            sx={{
+                                                minWidth: 0,
+                                                mr: isExpanded ? 2 : 0,
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                            }}
+                                        >
+                                            {item.icon}
+                                        </ListItemIcon>
+                                        {isExpanded && (
+                                            <ListItemText
+                                                primary={item.title}
+                                                sx={{
+                                                    '& .MuiTypography-root': {
+                                                        fontSize: '0.875rem'
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    </ListItemButton>
+                                </Tooltip>
+                            </ListItem>
+                        );
+                    })}
+                </List>
+            </Box>
+        </>
+    );
+
+    return (
+        <Box sx={{ display: 'flex' }}>
+            <CssBaseline />
+            <CustomAppBar position="fixed" open={open}>
+                <Toolbar>
+                    <IconButton
+                        color="inherit"
+                        aria-label="toggle drawer"
+                        onClick={handleDrawerToggle}
+                        edge="start"
+                        sx={{ mr: 2 }}
+                    >
+                        {open ? <ChevronLeftIcon /> : <MenuIcon />}
+                    </IconButton>
+                    <Box sx={{ flexGrow: 1 }}>
+                        <CustomAppTitle />
+                    </Box>
+                    <ToolbarActions />
+                </Toolbar>
+            </CustomAppBar>
+
+            {/* Mobile drawer - temporary */}
+            <Drawer
+                variant="temporary"
+                open={mobileOpen}
+                onClose={handleMobileDrawerClose}
+                ModalProps={{
+                    keepMounted: true, // Better open performance on mobile
+                }}
+                sx={{
+                    display: { xs: 'block', sm: 'none' },
+                    '& .MuiDrawer-paper': {
+                        width: drawerWidthExpanded,
+                        boxSizing: 'border-box',
+                    },
+                }}
+            >
+                {drawerContent(true)}
+            </Drawer>
+
+            {/* Desktop drawer - permanent */}
+            <CustomDrawer
+                variant="permanent"
+                open={open}
+                sx={{
+                    display: { xs: 'none', sm: 'block' },
+                    '& .MuiDrawer-paper': {
+                        position: 'fixed',
+                    }
+                }}
+            >
+                {drawerContent(open)}
+            </CustomDrawer>
+
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                    width: '100%',
+                    mt: '52px',
+                }}
+            >
+                {connected ? <Outlet /> : <ConnectionOverlay />}
+                {hasVersionChanged && <VersionUpdateOverlay />}
+                <PerformanceMetricsDialog />
+            </Box>
+        </Box>
     );
 }
