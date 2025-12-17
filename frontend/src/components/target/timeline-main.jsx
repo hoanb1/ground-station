@@ -100,7 +100,8 @@ const SatellitePassTimelineComponent = ({
   // Track container width to maintain pixels-per-hour ratio on resize
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(null);
-  const pixelsPerHourRef = useRef(null);
+  const TARGET_PIXELS_PER_HOUR = 200; // Target scale: 100 pixels per hour
+  const pixelsPerHourRef = useRef(TARGET_PIXELS_PER_HOUR);
 
   // Observe container width changes
   React.useEffect(() => {
@@ -110,9 +111,10 @@ const SatellitePassTimelineComponent = ({
     const resizeObserver = new ResizeObserver((entries) => {
       const newWidth = entries[0].contentRect.width;
 
-      // On first measurement, calculate and store the pixels-per-hour ratio
-      if (pixelsPerHourRef.current === null) {
-        pixelsPerHourRef.current = newWidth / timeWindowHours;
+      // On first measurement, calculate initial timeWindowHours based on target scale
+      if (containerWidth === null) {
+        const initialHours = newWidth / TARGET_PIXELS_PER_HOUR;
+        setTimeWindowHours(initialHours);
         setContainerWidth(newWidth);
       } else {
         // On subsequent resizes, adjust zoom to maintain pixels-per-hour ratio
@@ -130,7 +132,7 @@ const SatellitePassTimelineComponent = ({
     return () => {
       resizeObserver.disconnect();
     };
-  }, []); // Empty deps - only set up once
+  }, [containerWidth]); // Depend on containerWidth to know if it's first measurement
 
   // Get satellite passes from Redux store with proper equality checks
   // Allow override from props for multi-satellite view (overview page)
@@ -354,17 +356,35 @@ const SatellitePassTimelineComponent = ({
         }
       }
 
+      // Calculate container width to determine label format and culling
+      const estimatedContainerWidth = containerWidth || window.innerWidth;
+      const isMobile = estimatedContainerWidth < 600;
+      const minLabelSpacing = isMobile ? 45 : 55; // Minimum pixels between labels (tighter for more frequency)
+
+      // Determine time format based on screen size
+      const timeFormatOptions = isMobile
+        ? { hour: 'numeric', minute: '2-digit', timeZone: timezone } // Compact: "12:00 PM" -> "12:00 PM"
+        : { hour: '2-digit', minute: '2-digit', timeZone: timezone }; // Full: "12:00 PM"
+
+      // Generate all potential labels
+      const potentialLabels = [];
       for (let i = 0; i <= timeWindowHours; i += labelInterval) {
         const time = new Date(startTime.getTime() + i * 60 * 60 * 1000);
         const position = (i / timeWindowHours) * 100; // Position as percentage
-        labels.push({
-          text: time.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: timezone
-          }),
-          position: position
+        potentialLabels.push({
+          text: time.toLocaleTimeString('en-US', timeFormatOptions),
+          position: position,
+          positionPixels: (position / 100) * estimatedContainerWidth
         });
+      }
+
+      // Cull overlapping labels
+      let lastLabelPosition = -Infinity;
+      for (const label of potentialLabels) {
+        if (label.positionPixels - lastLabelPosition >= minLabelSpacing) {
+          labels.push(label);
+          lastLabelPosition = label.positionPixels;
+        }
       }
     }
 
