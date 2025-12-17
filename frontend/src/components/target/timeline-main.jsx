@@ -53,6 +53,9 @@ const SatellitePassTimelineComponent = ({
     return now.getTime() - (pastOffsetHours * 60 * 60 * 1000);
   });
 
+  // Track the actual initial time window hours after adjustment
+  const actualInitialTimeWindowHours = useRef(initialTimeWindowHours);
+
   // Refs to hold current values for event handlers (to avoid recreating handlers on every change)
   const timeWindowHoursRef = useRef(timeWindowHours);
   const timeWindowStartRef = useRef(timeWindowStart);
@@ -165,6 +168,7 @@ const SatellitePassTimelineComponent = ({
     // If calculated hours is less than current timeWindowHours, adjust it to fit data
     if (calculatedHours < timeWindowHours) {
       setTimeWindowHours(calculatedHours);
+      actualInitialTimeWindowHours.current = calculatedHours; // Store the adjusted value
     }
 
     hasAdjustedInitialWindow.current = true;
@@ -512,7 +516,7 @@ const SatellitePassTimelineComponent = ({
     timelineData,
     setHoverPosition,
     setHoverTime,
-    initialTimeWindowHours,
+    initialTimeWindowHours: actualInitialTimeWindowHours.current,
     panStartXRef,
     panStartTimeRef,
     lastTouchDistanceRef,
@@ -522,7 +526,7 @@ const SatellitePassTimelineComponent = ({
     startTime,
     endTime,
     pastOffsetHours,
-    nextPassesHours: nextPassesHours !== null ? nextPassesHours : initialTimeWindowHours,
+    nextPassesHours: nextPassesHours !== null ? nextPassesHours : actualInitialTimeWindowHours.current,
   });
 
   // Store handlers in refs that can be updated without recreating listeners
@@ -662,7 +666,7 @@ const SatellitePassTimelineComponent = ({
                     <IconButton
                       size="small"
                       onClick={handleZoomOut}
-                      disabled={timeWindowHours >= initialTimeWindowHours}
+                      disabled={timeWindowHours >= actualInitialTimeWindowHours.current}
                       sx={{ padding: '2px' }}
                     >
                       <ZoomOutIcon fontSize="small" />
@@ -674,7 +678,11 @@ const SatellitePassTimelineComponent = ({
                     <IconButton
                       size="small"
                       onClick={handleResetZoom}
-                      disabled={timeWindowHours === initialTimeWindowHours && timeWindowStart === null}
+                      disabled={
+                        timeWindowHours === actualInitialTimeWindowHours.current &&
+                        timeWindowStart !== null &&
+                        Math.abs(timeWindowStart - (Date.now() - (pastOffsetHours * 60 * 60 * 1000))) < 60000
+                      }
                       sx={{ padding: '2px' }}
                     >
                       <RestartAltIcon fontSize="small" />

@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import { Y_AXIS_WIDTH, ZOOM_FACTOR } from './timeline-constants.jsx';
 
 // Internal constant for past offset (30 minutes)
-const PAST_OFFSET_HOURS = 0.5;
+const PAST_OFFSET_HOURS = 0.1;
 
 /**
  * Custom hook that returns all event handlers for the timeline component
