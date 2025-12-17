@@ -230,7 +230,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 2,
             "h": 8,
             "x": 0,
-            "y": 36,
+            "y": 35,
             "i": "passes",
             "minH": 7,
             "moved": false,
@@ -240,15 +240,15 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 2,
             "h": 14,
             "x": 0,
-            "y": 44,
+            "y": 43,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 2, "h": 12, "x": 0, "y": 24, "i": "satellite-group", "moved": false, "static": false}, {
+        }, {"w": 2, "h": 12, "x": 0, "y": 23, "i": "satellite-group", "moved": false, "static": false}, {
             "w": 2,
-            "h": 7,
+            "h": 6,
             "x": 0,
             "y": 17,
             "i": "timeline",
@@ -304,18 +304,9 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 3,
-            "x": 0,
-            "y": 17,
-            "i": "satselector",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
             "h": 9,
             "x": 0,
-            "y": 20,
+            "y": 23,
             "i": "passes",
             "minH": 7,
             "moved": false,
@@ -325,12 +316,20 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
             "w": 2,
             "h": 14,
             "x": 0,
-            "y": 29,
+            "y": 45,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {"w": 2, "h": 13, "x": 0, "y": 32, "i": "satellite-group", "moved": false, "static": false}, {
+            "w": 2,
+            "h": 6,
+            "x": 0,
+            "y": 17,
+            "i": "timeline",
+            "moved": false,
+            "static": false
         }],
         "md": [{
             "w": 7,
