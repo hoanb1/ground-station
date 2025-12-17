@@ -97,6 +97,41 @@ const SatellitePassTimelineComponent = ({
   // Ref for canvas to attach non-passive touch listeners
   const canvasRef = useRef(null);
 
+  // Track container width to maintain pixels-per-hour ratio on resize
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(null);
+  const pixelsPerHourRef = useRef(null);
+
+  // Observe container width changes
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const newWidth = entries[0].contentRect.width;
+
+      // On first measurement, calculate and store the pixels-per-hour ratio
+      if (pixelsPerHourRef.current === null) {
+        pixelsPerHourRef.current = newWidth / timeWindowHours;
+        setContainerWidth(newWidth);
+      } else {
+        // On subsequent resizes, adjust zoom to maintain pixels-per-hour ratio
+        const targetPixelsPerHour = pixelsPerHourRef.current;
+        const newTimeWindowHours = newWidth / targetPixelsPerHour;
+
+        // Update time window to maintain the same scale
+        setTimeWindowHours(newTimeWindowHours);
+        setContainerWidth(newWidth);
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []); // Empty deps - only set up once
+
   // Get satellite passes from Redux store with proper equality checks
   // Allow override from props for multi-satellite view (overview page)
   const satellitePassesFromRedux = useSelector((state) => state.targetSatTrack.satellitePasses);
@@ -597,7 +632,7 @@ const SatellitePassTimelineComponent = ({
           </Box>
         </TitleBar>
       )}
-      <TimelineContent>
+      <TimelineContent ref={containerRef}>
         <TimelineCanvas
           ref={canvasRef}
           onMouseMove={handleMouseMove}
