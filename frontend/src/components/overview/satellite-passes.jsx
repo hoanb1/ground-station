@@ -40,6 +40,7 @@ import {
     setPasses,
     setSelectedSatelliteId,
     setPassesTablePageSize,
+    setPassesTableSortModel,
 } from './overview-slice.jsx';
 import {Typography, Box, IconButton, Tooltip} from '@mui/material';
 import {useGridApiRef} from '@mui/x-data-grid';
@@ -119,7 +120,7 @@ const DurationFormatter = React.memo(function DurationFormatter({params, value, 
     }
 });
 
-const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false, orbitProjectionDuration = 240, pageSize = 10, onPageSizeChange}) {
+const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false, orbitProjectionDuration = 240, pageSize = 10, onPageSizeChange, sortModel, onSortModelChange}) {
     const apiRef = useGridApiRef();
     const store = useStore();
     const { t, i18n } = useTranslation('overview');
@@ -523,10 +524,9 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                     onPageSizeChange(model.pageSize);
                 }
             }}
+            sortModel={sortModel}
+            onSortModelChange={onSortModelChange}
             initialState={{
-                sorting: {
-                    sortModel: [{field: 'event_start', sort: 'asc'}],
-                },
                 columns: {
                     columnVisibilityModel: {
                         is_geostationary: false,
@@ -543,7 +543,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         prevProps.passes === nextProps.passes &&
         prevProps.passesLoading === nextProps.passesLoading &&
         prevProps.orbitProjectionDuration === nextProps.orbitProjectionDuration &&
-        prevProps.pageSize === nextProps.pageSize
+        prevProps.pageSize === nextProps.pageSize &&
+        prevProps.sortModel === nextProps.sortModel
     );
 });
 
@@ -564,7 +565,8 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         nextPassesHours,
         orbitProjectionDuration,
         gridEditable,
-        passesTablePageSize
+        passesTablePageSize,
+        passesTableSortModel
     } = useSelector(state => state.overviewSatTrack);
 
     const minHeight = 200;
@@ -639,6 +641,10 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         dispatch(setPassesTablePageSize(newPageSize));
     };
 
+    const handleSortModelChange = (newSortModel) => {
+        dispatch(setPassesTableSortModel(newSortModel));
+    };
+
     return (
         <>
             <TitleBar
@@ -696,6 +702,8 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                         orbitProjectionDuration={orbitProjectionDuration}
                         pageSize={passesTablePageSize}
                         onPageSizeChange={handlePageSizeChange}
+                        sortModel={passesTableSortModel}
+                        onSortModelChange={handleSortModelChange}
                     />
                 </div>
             </div>

@@ -35,6 +35,7 @@ import {
     setSelectedSatelliteId,
     setSatellitesTableColumnVisibility,
     setSatellitesTablePageSize,
+    setSatellitesTableSortModel,
     setSelectedSatGroupId,
     fetchSatellitesByGroupId,
     fetchSatelliteGroups,
@@ -58,6 +59,8 @@ const MemoizedStyledDataGrid = React.memo(({
                                                selectedSatellitePositionsRef,
                                                pageSize = 50,
                                                onPageSizeChange,
+                                               sortModel,
+                                               onSortModelChange,
                                             }) => {
     const { t, i18n } = useTranslation('overview');
     const currentLanguage = i18n.language;
@@ -432,10 +435,9 @@ const MemoizedStyledDataGrid = React.memo(({
                     onPageSizeChange(model.pageSize);
                 }
             }}
+            sortModel={sortModel}
+            onSortModelChange={onSortModelChange}
             initialState={{
-                sorting: {
-                    sortModel: [{ field: 'elevation', sort: 'desc' }],
-                },
                 columns: {
                     columnVisibilityModel: columnVisibility,
                 },
@@ -468,6 +470,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const selectedSatGroupId = useSelector(state => state.overviewSatTrack.selectedSatGroupId);
     const columnVisibility = useSelector(state => state.overviewSatTrack.satellitesTableColumnVisibility);
     const satellitesTablePageSize = useSelector(state => state.overviewSatTrack.satellitesTablePageSize);
+    const satellitesTableSortModel = useSelector(state => state.overviewSatTrack.satellitesTableSortModel);
     const satGroups = useSelector(state => state.overviewSatTrack.satGroups);
     const passesLoading = useSelector(state => state.overviewSatTrack.passesLoading);
 
@@ -543,6 +546,10 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
         dispatch(setSatellitesTablePageSize(newPageSize));
     }, [dispatch]);
 
+    const handleSortModelChange = useCallback((newSortModel) => {
+        dispatch(setSatellitesTableSortModel(newSortModel));
+    }, [dispatch]);
+
     return (
         <>
             <TitleBar
@@ -595,6 +602,8 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                             selectedSatellitePositionsRef={selectedSatellitePositionsRef}
                             pageSize={satellitesTablePageSize}
                             onPageSizeChange={handlePageSizeChange}
+                            sortModel={satellitesTableSortModel}
+                            onSortModelChange={handleSortModelChange}
                         />
                     )}
                 </div>
