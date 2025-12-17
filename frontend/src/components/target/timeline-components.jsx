@@ -264,7 +264,7 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
               whiteSpace: 'nowrap',
               pointerEvents: 'none',
               zIndex: 25,
-              opacity: 0.9,
+              opacity: highlightActivePasses ? (pass.isCurrent ? 0.9 : 0.5) : 0.9,
               boxShadow: theme.shadows[1],
             }}
           >
