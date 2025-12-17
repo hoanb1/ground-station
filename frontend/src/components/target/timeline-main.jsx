@@ -18,7 +18,7 @@ import { useTimelineEvents } from './timeline-events.jsx';
 
 const SatellitePassTimelineComponent = ({
   timeWindowHours: initialTimeWindowHours = 8,
-  pastOffsetHours = 0.5, // Hours to offset into the past on initial render (30 minutes)
+  pastOffsetHours = 0.1, // Hours to offset into the past on initial render (30 minutes)
   showSunShading = true,
   showSunMarkers = true,
   satelliteName = null,
