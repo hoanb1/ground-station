@@ -86,6 +86,7 @@ const OverviewTimelineWrapper = React.memo(() => {
             loading={passesLoading} // Show loading indicator
             nextPassesHours={nextPassesHours} // Pass forecast window for pan boundaries
             onRefresh={handleRefreshPasses}
+            showHoverElevation={false} // Hide elevation label on overview page
         />
     );
 });

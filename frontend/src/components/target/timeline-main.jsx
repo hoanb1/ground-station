@@ -34,6 +34,7 @@ const SatellitePassTimelineComponent = ({
   loading = false, // New prop: show loading overlay
   nextPassesHours = null, // New prop: forecast window in hours (null = use initialTimeWindowHours)
   onRefresh = null, // New prop: callback for refresh button
+  showHoverElevation = true, // New prop: if true, show elevation label on hover line (false for overview page)
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('target');
@@ -769,7 +770,7 @@ const SatellitePassTimelineComponent = ({
                   {formatHoverTime(hoverTime)}
                 </Box>
                 {/* Elevation marker on curve */}
-                {hoverPosition.elevation !== null && elevationYPercent !== null && (
+                {showHoverElevation && hoverPosition.elevation !== null && elevationYPercent !== null && (
                   <Box
                     sx={{
                       position: 'absolute',
