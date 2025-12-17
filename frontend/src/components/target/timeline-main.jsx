@@ -105,27 +105,40 @@ const SatellitePassTimelineComponent = ({
   const [containerWidth, setContainerWidth] = useState(null);
   const TARGET_PIXELS_PER_HOUR = 200; // Target scale: 100 pixels per hour
   const pixelsPerHourRef = useRef(TARGET_PIXELS_PER_HOUR);
+  const isLayoutStableRef = useRef(false); // Track if layout has stabilized
 
   // Observe container width changes
   React.useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    // Debounce timer to detect when layout has stabilized
+    let stabilizeTimer = null;
+
     const resizeObserver = new ResizeObserver((entries) => {
       const newWidth = entries[0].contentRect.width;
 
-      // On first measurement, calculate initial timeWindowHours based on target scale
+      // On first measurement, just store the width
       if (containerWidth === null) {
-        const initialHours = newWidth / TARGET_PIXELS_PER_HOUR;
-        setTimeWindowHours(initialHours);
         setContainerWidth(newWidth);
-      } else {
-        // On subsequent resizes, adjust zoom to maintain pixels-per-hour ratio
+
+        // Wait for layout to stabilize before locking in the pixels-per-hour ratio
+        clearTimeout(stabilizeTimer);
+        stabilizeTimer = setTimeout(() => {
+          const finalWidth = container.getBoundingClientRect().width;
+          pixelsPerHourRef.current = finalWidth / initialTimeWindowHours;
+          isLayoutStableRef.current = true;
+        }, 150); // Wait 150ms for layout to settle
+      } else if (isLayoutStableRef.current) {
+        // Only adjust time window after layout has stabilized
         const targetPixelsPerHour = pixelsPerHourRef.current;
         const newTimeWindowHours = newWidth / targetPixelsPerHour;
 
         // Update time window to maintain the same scale
         setTimeWindowHours(newTimeWindowHours);
+        setContainerWidth(newWidth);
+      } else {
+        // Layout still settling, just update width tracking
         setContainerWidth(newWidth);
       }
     });
@@ -133,9 +146,10 @@ const SatellitePassTimelineComponent = ({
     resizeObserver.observe(container);
 
     return () => {
+      clearTimeout(stabilizeTimer);
       resizeObserver.disconnect();
     };
-  }, [containerWidth]); // Depend on containerWidth to know if it's first measurement
+  }, [containerWidth, initialTimeWindowHours]); // Depend on containerWidth to know if it's first measurement
 
   // Get satellite passes from Redux store with proper equality checks
   // Allow override from props for multi-satellite view (overview page)
@@ -149,9 +163,17 @@ const SatellitePassTimelineComponent = ({
   const groundStationLocation = useSelector((state) => state.location.location);
 
   // Adjust initial time window based on actual pass data (only once on mount)
-  const hasAdjustedInitialWindow = useRef(false);
+  // Skip this adjustment if nextPassesHours is explicitly provided (e.g., from overview page)
+  const [hasAdjustedInitialWindow, setHasAdjustedInitialWindow] = useState(false);
   React.useEffect(() => {
-    if (hasAdjustedInitialWindow.current || !satellitePasses || satellitePasses.length === 0) {
+    // Don't adjust if nextPassesHours is explicitly provided (overview page scenario)
+    if (nextPassesHours !== null) {
+      actualInitialTimeWindowHours.current = initialTimeWindowHours;
+      setHasAdjustedInitialWindow(true);
+      return;
+    }
+
+    if (hasAdjustedInitialWindow || !satellitePasses || satellitePasses.length === 0) {
       return;
     }
 
@@ -171,8 +193,8 @@ const SatellitePassTimelineComponent = ({
       actualInitialTimeWindowHours.current = calculatedHours; // Store the adjusted value
     }
 
-    hasAdjustedInitialWindow.current = true;
-  }, [satellitePasses, pastOffsetHours, timeWindowHours]);
+    setHasAdjustedInitialWindow(true);
+  }, [satellitePasses, pastOffsetHours, timeWindowHours, hasAdjustedInitialWindow, nextPassesHours, initialTimeWindowHours]);
 
   // Get timezone from preferences - memoized selector to avoid re-renders
   const timezone = useSelector((state) => {
