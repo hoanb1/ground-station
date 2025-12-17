@@ -359,12 +359,12 @@ const SatellitePassTimelineComponent = ({
       // Calculate container width to determine label format and culling
       const estimatedContainerWidth = containerWidth || window.innerWidth;
       const isMobile = estimatedContainerWidth < 600;
-      const minLabelSpacing = isMobile ? 45 : 55; // Minimum pixels between labels (tighter for more frequency)
+      const minLabelSpacing = isMobile ? 45 : 35; // Minimum pixels between labels (denser on desktop)
 
-      // Determine time format based on screen size
+      // Determine time format based on screen size (24-hour format)
       const timeFormatOptions = isMobile
-        ? { hour: 'numeric', minute: '2-digit', timeZone: timezone } // Compact: "12:00 PM" -> "12:00 PM"
-        : { hour: '2-digit', minute: '2-digit', timeZone: timezone }; // Full: "12:00 PM"
+        ? { hour: 'numeric', minute: '2-digit', hour12: false, timeZone: timezone } // Compact: "13:00"
+        : { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: timezone }; // Full: "13:00"
 
       // Generate all potential labels
       const potentialLabels = [];
