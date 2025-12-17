@@ -517,7 +517,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                 page: 0,
             }}
             onPaginationModelChange={(model) => {
-                if (onPageSizeChange && model.pageSize !== pageSize) {
+                if (onPageSizeChange) {
                     onPageSizeChange(model.pageSize);
                 }
             }}

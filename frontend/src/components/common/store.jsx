@@ -156,7 +156,7 @@ const targetSatTrackPersistConfig = {
 const overviewSatTrackPersistConfig = {
     key: 'overviewSatTrack',
     storage,
-    whitelist: ['selectedSatGroupId', 'selectedSatelliteId', 'satellitesTableColumnVisibility']
+    whitelist: ['selectedSatGroupId', 'selectedSatelliteId', 'satellitesTableColumnVisibility', 'passesTablePageSize', 'showGeostationarySatellites']
 };
 
 // Persist configuration for the dashboard slice
