@@ -42,11 +42,18 @@ import {
     setPassesTablePageSize,
     setPassesTableSortModel,
 } from './overview-slice.jsx';
-import {Typography, Box, IconButton, Tooltip} from '@mui/material';
-import {useGridApiRef} from '@mui/x-data-grid';
+import {Typography, Box, IconButton, Tooltip, Button, useMediaQuery, useTheme} from '@mui/material';
+import {useGridApiRef, GridPagination} from '@mui/x-data-grid';
 import {darken, lighten, styled} from '@mui/material/styles';
 import {Chip} from "@mui/material";
 import {useStore} from 'react-redux';
+import {
+    gridPageCountSelector,
+    gridPageSelector,
+    useGridApiContext,
+    useGridSelector,
+    selectedGridRowsCountSelector,
+} from '@mui/x-data-grid';
 import ProgressFormatter from "./progressbar-widget.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
@@ -54,6 +61,109 @@ import ElevationDisplay from "../common/elevation-display.jsx";
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
+
+const CustomPagination = () => {
+    const apiRef = useGridApiContext();
+    const page = useGridSelector(apiRef, gridPageSelector);
+    const pageCount = useGridSelector(apiRef, gridPageCountSelector);
+    const selectedRowCount = useGridSelector(apiRef, selectedGridRowsCountSelector);
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+    const isMedium = useMediaQuery(theme.breakpoints.down('lg'));
+
+    const handlePageChange = (newPage) => {
+        apiRef.current.setPage(newPage);
+    };
+
+    // Calculate which page buttons to show
+    const getPageNumbers = () => {
+        const maxButtons = isMobile ? 5 : isTablet ? 8 : 12;
+        const pages = [];
+
+        if (pageCount <= maxButtons) {
+            // Show all pages if they fit
+            for (let i = 0; i < pageCount; i++) {
+                pages.push(i);
+            }
+        } else {
+            // Show pages around current page
+            const halfWindow = Math.floor(maxButtons / 2);
+            let start = Math.max(0, page - halfWindow);
+            let end = Math.min(pageCount - 1, start + maxButtons - 1);
+
+            // Adjust start if we're near the end
+            if (end - start < maxButtons - 1) {
+                start = Math.max(0, end - maxButtons + 1);
+            }
+
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+        }
+
+        return pages;
+    };
+
+    const pageNumbers = getPageNumbers();
+
+    return (
+        <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            width: '100%',
+            p: 1,
+            gap: 2,
+            height: '52px',
+            minHeight: '52px',
+            maxHeight: '52px',
+            position: 'relative',
+            overflow: 'hidden',
+        }}>
+            <Box sx={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-start', minWidth: 0, alignItems: 'center', height: '100%' }}>
+                {selectedRowCount > 0 && (
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', lineHeight: 1 }}>
+                        {selectedRowCount} pass{selectedRowCount !== 1 ? 'es' : ''} selected
+                    </Typography>
+                )}
+            </Box>
+            <Box sx={{
+                position: 'absolute',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                gap: 0.5,
+                flexWrap: 'nowrap',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                alignItems: 'center',
+                height: '100%',
+            }}>
+                {pageNumbers.map((pageNum) => (
+                    <Button
+                        key={pageNum}
+                        size="small"
+                        variant={page === pageNum ? 'contained' : 'outlined'}
+                        onClick={() => handlePageChange(pageNum)}
+                        sx={{
+                            minWidth: isMobile ? '32px' : '40px',
+                            px: isMobile ? 0.5 : 1,
+                            py: 0.5,
+                            height: '32px',
+                        }}
+                    >
+                        {pageNum + 1}
+                    </Button>
+                ))}
+            </Box>
+            <Box sx={{ flex: '1 1 0', display: isMedium ? 'none' : 'flex', justifyContent: 'flex-end', minWidth: 0, alignItems: 'center', height: '100%', overflow: 'hidden' }}>
+                <Box sx={{ transform: 'scale(0.9)', transformOrigin: 'right center' }}>
+                    <GridPagination />
+                </Box>
+            </Box>
+        </Box>
+    );
+};
 
 const TimeFormatter = React.memo(function TimeFormatter({params, value}) {
     const [, setForceUpdate] = useState(0);
@@ -511,6 +621,10 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                     fontStyle: 'italic',
                     color: 'text.secondary',
                 },
+                '& .MuiDataGrid-selectedRowCount': {
+                    visibility: 'hidden',
+                    position: 'absolute',
+                },
             }}
             density={"compact"}
             rows={passes}
@@ -535,6 +649,9 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                 },
             }}
             columns={columns}
+            slots={{
+                pagination: CustomPagination,
+            }}
         />
     );
 }, (prevProps, nextProps) => {
