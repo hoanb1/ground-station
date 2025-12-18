@@ -347,29 +347,46 @@ const VfoAccordion = ({
                                 const decoderInfo = getVFODecoderInfo(vfoIndex);
                                 const vfo = vfoMarkers[vfoIndex];
 
-                                if (!vfo || !vfo.decoder || vfo.decoder === 'none' || !decoderInfo) {
-                                    return null;
+                                // Determine what to display
+                                let statusText = '—';
+                                let borderColor = 'divider';
+                                let textColor = 'text.disabled';
+
+                                if (vfo && vfo.decoder && vfo.decoder !== 'none') {
+                                    if (decoderInfo) {
+                                        const info = decoderInfo.info || {};
+                                        const status = decoderInfo.status || 'unknown';
+
+                                        // Build compact status string
+                                        const parts = [];
+
+                                        if (info.packets_decoded !== undefined) {
+                                            parts.push(`PKT:${info.packets_decoded}`);
+                                        }
+
+                                        if (info.signal_power_dbfs !== undefined) {
+                                            parts.push(`${info.signal_power_dbfs.toFixed(1)}dB`);
+                                        }
+
+                                        if (info.buffer_samples !== undefined) {
+                                            parts.push(`BUF:${(info.buffer_samples / 1000).toFixed(0)}k`);
+                                        }
+
+                                        statusText = parts.length > 0 ? parts.join(' • ') : 'Decoding...';
+                                        borderColor = status === 'decoding' ? 'success.dark' : 'warning.dark';
+                                        textColor = 'text.secondary';
+                                    } else {
+                                        // Decoder selected but not running
+                                        statusText = `${vfo.decoder.toUpperCase()} - Not Active`;
+                                        borderColor = 'warning.dark';
+                                        textColor = 'warning.main';
+                                    }
+                                } else {
+                                    // No decoder selected
+                                    statusText = 'No Decoder';
+                                    borderColor = 'divider';
+                                    textColor = 'text.disabled';
                                 }
-
-                                const info = decoderInfo.info || {};
-                                const status = decoderInfo.status || 'unknown';
-
-                                // Build compact status string
-                                const parts = [];
-
-                                if (info.packets_decoded !== undefined) {
-                                    parts.push(`PKT:${info.packets_decoded}`);
-                                }
-
-                                if (info.signal_power_dbfs !== undefined) {
-                                    parts.push(`${info.signal_power_dbfs.toFixed(1)}dB`);
-                                }
-
-                                if (info.buffer_samples !== undefined) {
-                                    parts.push(`BUF:${(info.buffer_samples / 1000).toFixed(0)}k`);
-                                }
-
-                                const statusText = parts.join(' • ');
 
                                 return (
                                     <Box sx={{
@@ -379,19 +396,19 @@ const VfoAccordion = ({
                                         backgroundColor: 'rgba(0, 0, 0, 0.2)',
                                         borderRadius: 0.5,
                                         border: '1px solid',
-                                        borderColor: status === 'decoding' ? 'success.dark' : 'warning.dark'
+                                        borderColor: borderColor
                                     }}>
                                         <Typography
                                             variant="caption"
                                             sx={{
                                                 fontSize: '0.7rem',
                                                 fontFamily: 'monospace',
-                                                color: 'text.secondary',
+                                                color: textColor,
                                                 display: 'block',
                                                 textAlign: 'center'
                                             }}
                                         >
-                                            {statusText || 'Decoding...'}
+                                            {statusText}
                                         </Typography>
                                     </Box>
                                 );
