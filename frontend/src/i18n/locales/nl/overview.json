@@ -24,7 +24,7 @@
   },
   "passes_table": {
     "title": "Overvluchten voor de komende {{hours}} uur",
-    "cached": "(gecachet)",
+    "cached": "gecachet",
     "name": "Naam",
     "peak_elevation": "Piek elevatie",
     "current_elevation": "Huidige Elevatie",

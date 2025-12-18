@@ -24,7 +24,7 @@
   },
   "passes_table": {
     "title": "Διελεύσεις για τις επόμενες {{hours}} ώρες",
-    "cached": "(αποθηκευμένο)",
+    "cached": "αποθηκευμένο",
     "name": "Ονομα",
     "peak_elevation": "Μέγιστη ύψωση",
     "current_elevation": "Τρέχουσα Υψωση",

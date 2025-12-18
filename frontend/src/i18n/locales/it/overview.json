@@ -24,7 +24,7 @@
   },
   "passes_table": {
     "title": "Passaggi per le prossime {{hours}} ore",
-    "cached": "(cache)",
+    "cached": "cache",
     "name": "Nome",
     "peak_elevation": "Elevazione massima",
     "current_elevation": "Elevazione Corrente",

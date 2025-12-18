@@ -24,7 +24,7 @@
   },
   "passes_table": {
     "title": "Überflüge für die nächsten {{hours}} Stunden",
-    "cached": "(zwischengespeichert)",
+    "cached": "zwischengespeichert",
     "name": "Name",
     "peak_elevation": "Maximale Elevation",
     "current_elevation": "Aktuelle Elevation",

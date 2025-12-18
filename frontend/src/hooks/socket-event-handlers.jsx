@@ -251,8 +251,11 @@ export const useSocketEventHandlers = (socket) => {
 
                 case 'delete-recording':
                 case 'delete-snapshot':
-                case 'delete-decoded':
                     toast.success(state.message || t('notifications.file_browser.item_deleted'));
+                    break;
+
+                case 'delete-decoded':
+                    // No toast notification for decoded packet deletion
                     break;
 
                 case 'recording-started':
