@@ -102,6 +102,17 @@ const VfoAccordion = ({
     // Get streaming VFO from Redux state
     const streamingVFO = useSelector(state => state.vfo.streamingVFO);
 
+    // Get active decoders from Redux state
+    const activeDecoders = useSelector(state => state.decoders.active || {});
+    const currentSessionId = useSelector(state => state.decoders.currentSessionId);
+
+    // Get decoder info for a specific VFO
+    const getVFODecoderInfo = (vfoIndex) => {
+        if (!currentSessionId || !vfoIndex) return null;
+        const decoderKey = `${currentSessionId}_vfo${vfoIndex}`;
+        return activeDecoders[decoderKey] || null;
+    };
+
     // Format decoder parameters into short notation
     const formatDecoderParamsSummary = (vfoIndex) => {
         const vfo = vfoMarkers[vfoIndex];
@@ -330,6 +341,62 @@ const VfoAccordion = ({
                                         size={"large"}/>
                                 </Box>
                             </Box>
+
+                            {/* Decoder Status Display - Compact */}
+                            {(() => {
+                                const decoderInfo = getVFODecoderInfo(vfoIndex);
+                                const vfo = vfoMarkers[vfoIndex];
+
+                                if (!vfo || !vfo.decoder || vfo.decoder === 'none' || !decoderInfo) {
+                                    return null;
+                                }
+
+                                const info = decoderInfo.info || {};
+                                const status = decoderInfo.status || 'unknown';
+
+                                // Build compact status string
+                                const parts = [];
+
+                                if (info.packets_decoded !== undefined) {
+                                    parts.push(`PKT:${info.packets_decoded}`);
+                                }
+
+                                if (info.signal_power_dbfs !== undefined) {
+                                    parts.push(`${info.signal_power_dbfs.toFixed(1)}dB`);
+                                }
+
+                                if (info.buffer_samples !== undefined) {
+                                    parts.push(`BUF:${(info.buffer_samples / 1000).toFixed(0)}k`);
+                                }
+
+                                const statusText = parts.join(' • ');
+
+                                return (
+                                    <Box sx={{
+                                        mt: 1,
+                                        px: 1,
+                                        py: 0.5,
+                                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                        borderRadius: 0.5,
+                                        border: '1px solid',
+                                        borderColor: status === 'decoding' ? 'success.dark' : 'warning.dark'
+                                    }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                fontSize: '0.7rem',
+                                                fontFamily: 'monospace',
+                                                color: 'text.secondary',
+                                                display: 'block',
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            {statusText || 'Decoding...'}
+                                        </Typography>
+                                    </Box>
+                                );
+                            })()}
+
                             {/* Lock to Transmitter Dropdown */}
                             <Box sx={{ mt: 2 }}>
                                 <FormControl fullWidth size="small" disabled={!vfoActive[vfoIndex]}
