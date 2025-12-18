@@ -77,10 +77,11 @@ async def update_vfo_parameters(
         "baudrate",
         "deviation",
         "framing",
-        "differential",  # FSK/BPSK/etc (future)
+        "framing_params",  # Framing-specific parameters (e.g., GEOSCAN frame_size)
+        "differential",  # FSK/BPSK/etc
         "af_carrier",
         "pipeline",
-        "target_sample_rate",  # Other decoders (future)
+        "target_sample_rate",  # Other decoders
     ]
 
     for key in decoder_param_keys:

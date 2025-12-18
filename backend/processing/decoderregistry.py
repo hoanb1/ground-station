@@ -118,7 +118,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
-                restart_on_params=[],  # TODO: Add FSK-specific parameters (baudrate, deviation, framing)
+                restart_on_params=["baudrate", "deviation", "framing", "framing_params"],
                 description="Frequency Shift Keying decoder (FSK/GFSK/GMSK)",
             ),
             "gmsk": DecoderCapabilities(
@@ -129,7 +129,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
-                restart_on_params=[],  # TODO: Add GMSK-specific parameters (baudrate, deviation, framing)
+                restart_on_params=["baudrate", "deviation", "framing", "framing_params"],
                 description="Gaussian Minimum Shift Keying decoder (alias to FSK)",
             ),
             "gfsk": DecoderCapabilities(
@@ -140,7 +140,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
-                restart_on_params=[],  # TODO: Add GFSK-specific parameters (baudrate, deviation, framing)
+                restart_on_params=["baudrate", "deviation", "framing", "framing_params"],
                 description="Gaussian Frequency Shift Keying decoder",
             ),
             "bpsk": DecoderCapabilities(
@@ -151,7 +151,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,  # 20 kHz typical
                 supports_transmitter_config=True,
-                restart_on_params=[],  # TODO: Add BPSK-specific parameters (baudrate, differential, framing)
+                restart_on_params=["baudrate", "differential", "framing", "framing_params"],
                 description="Binary Phase Shift Keying decoder",
             ),
             "weather": DecoderCapabilities(

@@ -83,6 +83,11 @@ const DecoderParamsDialog = ({
                     {Object.entries(decoderParams).map(([paramKey, paramDef]) => {
                         const currentValue = vfo.parameters?.[paramKey] ?? paramDef.default;
 
+                        // Handle conditional visibility
+                        if (paramDef.visibleWhen && !paramDef.visibleWhen(vfo.parameters || {})) {
+                            return null;
+                        }
+
                         return (
                             <Box key={paramKey} sx={{ mb: 2.5 }}>
                                 {paramDef.type === 'select' && (

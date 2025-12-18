@@ -118,7 +118,32 @@ const VfoAccordion = ({
             return `SF${sf} BW${bwKhz}kHz CR4/${cr + 4}`;
         }
 
-        // Add other decoders here in the future
+        if (decoder === 'fsk') {
+            const baudrate = params.fsk_baudrate ?? 9600;
+            const framing = params.fsk_framing ?? 'ax25';
+            return `${baudrate}bd ${framing.toUpperCase()}`;
+        }
+
+        if (decoder === 'gmsk') {
+            const baudrate = params.gmsk_baudrate ?? 9600;
+            const framing = params.gmsk_framing ?? 'ax25';
+            return `${baudrate}bd ${framing.toUpperCase()}`;
+        }
+
+        if (decoder === 'gfsk') {
+            const baudrate = params.gfsk_baudrate ?? 9600;
+            const framing = params.gfsk_framing ?? 'ax25';
+            return `${baudrate}bd ${framing.toUpperCase()}`;
+        }
+
+        if (decoder === 'bpsk') {
+            const baudrate = params.bpsk_baudrate ?? 9600;
+            const framing = params.bpsk_framing ?? 'ax25';
+            const differential = params.bpsk_differential ?? false;
+            return `${baudrate}bd ${framing.toUpperCase()}${differential ? ' DIFF' : ''}`;
+        }
+
+        // Default for decoders without parameters
         return 'Configure...';
     };
 
