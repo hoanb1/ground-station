@@ -284,7 +284,7 @@ async def fetch_next_events_for_group(
     assert group_id, f"Group id is required ({group_id}, {type(group_id)})"
 
     start_time = time.time()
-    reply: Dict[str, Union[bool, None, list, Dict]] = {
+    reply: Dict[str, Union[bool, None, list, Dict, str]] = {
         "success": None,
         "data": None,
         "parameters": None,
@@ -295,6 +295,13 @@ async def fetch_next_events_for_group(
         f"Calculating events for group_id={group_id}, hours={hours}, "
         f"above_el={above_el}, step_minutes={step_minutes} (fetch_next_events_for_group)"
     )
+
+    # Calculate the time window for pass calculations
+    from datetime import timedelta
+    from datetime import timezone as dt_timezone
+
+    calculation_start = datetime.now(dt_timezone.utc)
+    calculation_end = calculation_start + timedelta(hours=hours)
 
     async with AsyncSessionLocal() as dbsession:
         try:
@@ -448,6 +455,8 @@ async def fetch_next_events_for_group(
                 reply["data"] = events
                 reply["forecast_hours"] = result.get("forecast_hours", hours)
                 reply["cached"] = result.get("cached", False)
+                reply["pass_range_start"] = calculation_start.isoformat()
+                reply["pass_range_end"] = calculation_end.isoformat()
 
                 elapsed_ms = (time.time() - start_time) * 1000
                 logger.info(

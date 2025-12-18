@@ -132,7 +132,13 @@ export const fetchNextPassesForGroup = createAsyncThunk(
                 force_recalculate: forceRecalculate
             }, (response) => {
                 if (response.success) {
-                    resolve({passes: response.data, cached: response.cached, forecast_hours: response.forecast_hours});
+                    resolve({
+                        passes: response.data,
+                        cached: response.cached,
+                        forecast_hours: response.forecast_hours,
+                        pass_range_start: response.pass_range_start,
+                        pass_range_end: response.pass_range_end
+                    });
                 } else {
                     reject(rejectWithValue('Failed getting next passes'));
                 }
@@ -205,6 +211,8 @@ const overviewSlice = createSlice({
         passes: [],
         passesAreCached: false,
         passesLoading: false,
+        passesRangeStart: null,
+        passesRangeEnd: null,
         openMapSettingsDialog: false,
         nextPassesHours: 4.0,
         satellitesTableColumnVisibility: {
@@ -369,10 +377,12 @@ const overviewSlice = createSlice({
                 state.passesLoading = true;
             })
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
-                const {passes, cached, forecast_hours} = action.payload;
+                const {passes, cached, forecast_hours, pass_range_start, pass_range_end} = action.payload;
 
                 state.passes = passes;
                 state.passesAreCached = cached;
+                state.passesRangeStart = pass_range_start;
+                state.passesRangeEnd = pass_range_end;
                 state.passesLoading = false;
             })
             .addCase(fetchNextPassesForGroup.rejected, (state, action) => {

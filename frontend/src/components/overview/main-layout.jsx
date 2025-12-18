@@ -63,6 +63,8 @@ const OverviewTimelineWrapper = React.memo(() => {
     const passesLoading = useSelector((state) => state.overviewSatTrack.passesLoading);
     const selectedSatGroupId = useSelector((state) => state.overviewSatTrack.selectedSatGroupId);
     const showGeostationarySatellites = useSelector((state) => state.overviewSatTrack.showGeostationarySatellites);
+    const passesRangeStart = useSelector((state) => state.overviewSatTrack.passesRangeStart);
+    const passesRangeEnd = useSelector((state) => state.overviewSatTrack.passesRangeEnd);
 
     const handleRefreshPasses = () => {
         if (selectedSatGroupId) {
@@ -97,6 +99,8 @@ const OverviewTimelineWrapper = React.memo(() => {
             showGeostationarySatellites={showGeostationarySatellites} // Toggle state from Redux
             onToggleGeostationary={handleToggleGeostationary} // Toggle handler
             highlightActivePasses={true} // Highlight active passes with solid lines
+            forceTimeWindowStart={passesRangeStart} // Force timeline to use calculation window start
+            forceTimeWindowEnd={passesRangeEnd} // Force timeline to use calculation window end
         />
     );
 });

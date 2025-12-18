@@ -30,6 +30,8 @@ export const useTimelineEvents = ({
   endTime,
   pastOffsetHours = PAST_OFFSET_HOURS,
   nextPassesHours = initialTimeWindowHours,
+  forceTimeWindowStart = null,
+  forceTimeWindowEnd = null,
 }) => {
   // Refs for touch direction detection
   const touchStartXRef = useRef(null);
@@ -93,10 +95,19 @@ export const useTimelineEvents = ({
       const calculatedStartTime = panStartTimeRef.current + timeShift;
       const calculatedEndTime = calculatedStartTime + totalMs;
 
-      // Apply forecast window boundaries
-      const now = Date.now();
-      const minViewStartTime = now - (pastOffsetHours * 3600000);
-      const maxViewEndTime = now + (nextPassesHours * 3600000);
+      // Apply boundaries based on forced time window or forecast window
+      let minViewStartTime, maxViewEndTime;
+
+      if (forceTimeWindowStart && forceTimeWindowEnd) {
+        // Use forced time window boundaries
+        minViewStartTime = new Date(forceTimeWindowStart).getTime();
+        maxViewEndTime = new Date(forceTimeWindowEnd).getTime();
+      } else {
+        // Use default forecast window boundaries
+        const now = Date.now();
+        minViewStartTime = now - (pastOffsetHours * 3600000);
+        maxViewEndTime = now + (nextPassesHours * 3600000);
+      }
 
       // Constrain the view to stay within boundaries
       let boundedStartTime = calculatedStartTime;
@@ -320,10 +331,19 @@ export const useTimelineEvents = ({
         const calculatedStartTime = panStartTimeRef.current + timeShift;
         const calculatedEndTime = calculatedStartTime + totalMs;
 
-        // Apply forecast window boundaries
-        const now = Date.now();
-        const minViewStartTime = now - (pastOffsetHours * 3600000);
-        const maxViewEndTime = now + (nextPassesHours * 3600000);
+        // Apply boundaries based on forced time window or forecast window
+        let minViewStartTime, maxViewEndTime;
+
+        if (forceTimeWindowStart && forceTimeWindowEnd) {
+          // Use forced time window boundaries
+          minViewStartTime = new Date(forceTimeWindowStart).getTime();
+          maxViewEndTime = new Date(forceTimeWindowEnd).getTime();
+        } else {
+          // Use default forecast window boundaries
+          const now = Date.now();
+          minViewStartTime = now - (pastOffsetHours * 3600000);
+          maxViewEndTime = now + (nextPassesHours * 3600000);
+        }
 
         // Constrain the view to stay within boundaries
         let boundedStartTime = calculatedStartTime;
@@ -430,16 +450,41 @@ export const useTimelineEvents = ({
   };
 
   const handleZoomOut = () => {
-    const newTimeWindowHours = Math.min(initialTimeWindowHours, timeWindowHours * ZOOM_FACTOR);
-    setTimeWindowHours(newTimeWindowHours);
+    // If forced time window is set, zoom out to that window
+    if (forceTimeWindowStart && forceTimeWindowEnd) {
+      const forcedStart = new Date(forceTimeWindowStart).getTime();
+      const forcedEnd = new Date(forceTimeWindowEnd).getTime();
+      const forcedWindowHours = (forcedEnd - forcedStart) / (60 * 60 * 1000);
+
+      const newTimeWindowHours = Math.min(forcedWindowHours, timeWindowHours * ZOOM_FACTOR);
+      setTimeWindowHours(newTimeWindowHours);
+
+      // If we're zooming to the full forced window, align to it
+      if (newTimeWindowHours >= forcedWindowHours) {
+        setTimeWindowStart(forcedStart);
+      }
+    } else {
+      const newTimeWindowHours = Math.min(initialTimeWindowHours, timeWindowHours * ZOOM_FACTOR);
+      setTimeWindowHours(newTimeWindowHours);
+    }
   };
 
   const handleResetZoom = useCallback(() => {
-    setTimeWindowHours(initialTimeWindowHours);
-    // Set start time to 30 minutes in the past
-    const now = new Date();
-    setTimeWindowStart(now.getTime() - (PAST_OFFSET_HOURS * 60 * 60 * 1000));
-  }, [initialTimeWindowHours, setTimeWindowHours, setTimeWindowStart]);
+    // If forced time window is set, reset to that window
+    if (forceTimeWindowStart && forceTimeWindowEnd) {
+      const forcedStart = new Date(forceTimeWindowStart).getTime();
+      const forcedEnd = new Date(forceTimeWindowEnd).getTime();
+      const forcedWindowHours = (forcedEnd - forcedStart) / (60 * 60 * 1000);
+
+      setTimeWindowHours(forcedWindowHours);
+      setTimeWindowStart(forcedStart);
+    } else {
+      setTimeWindowHours(initialTimeWindowHours);
+      // Set start time to 30 minutes in the past
+      const now = new Date();
+      setTimeWindowStart(now.getTime() - (PAST_OFFSET_HOURS * 60 * 60 * 1000));
+    }
+  }, [initialTimeWindowHours, setTimeWindowHours, setTimeWindowStart, forceTimeWindowStart, forceTimeWindowEnd]);
 
   return {
     handleMouseMove,

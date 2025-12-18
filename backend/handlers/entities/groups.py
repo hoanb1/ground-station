@@ -215,6 +215,8 @@ async def fetch_next_passes_for_group(
         "data": next_passes.get("data", []),
         "cached": next_passes.get("cached", False),
         "forecast_hours": next_passes.get("forecast_hours", 4.0),
+        "pass_range_start": next_passes.get("pass_range_start"),
+        "pass_range_end": next_passes.get("pass_range_end"),
     }
 
 

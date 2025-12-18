@@ -40,6 +40,8 @@ const SatellitePassTimelineComponent = ({
   showGeostationarySatellites = false, // New prop: if true, show geostationary satellites
   onToggleGeostationary = null, // New prop: callback for geostationary toggle
   highlightActivePasses = false, // New prop: if true, make active passes solid and inactive passes dashed/less opaque
+  forceTimeWindowStart = null, // New prop: force timeline window start (ISO datetime string)
+  forceTimeWindowEnd = null, // New prop: force timeline window end (ISO datetime string)
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('target');
@@ -549,6 +551,8 @@ const SatellitePassTimelineComponent = ({
     endTime,
     pastOffsetHours,
     nextPassesHours: nextPassesHours !== null ? nextPassesHours : actualInitialTimeWindowHours.current,
+    forceTimeWindowStart,
+    forceTimeWindowEnd,
   });
 
   // Store handlers in refs that can be updated without recreating listeners
@@ -688,7 +692,11 @@ const SatellitePassTimelineComponent = ({
                     <IconButton
                       size="small"
                       onClick={handleZoomOut}
-                      disabled={timeWindowHours >= actualInitialTimeWindowHours.current}
+                      disabled={
+                        forceTimeWindowStart && forceTimeWindowEnd
+                          ? timeWindowHours >= ((new Date(forceTimeWindowEnd).getTime() - new Date(forceTimeWindowStart).getTime()) / (60 * 60 * 1000))
+                          : timeWindowHours >= actualInitialTimeWindowHours.current
+                      }
                       sx={{ padding: '2px' }}
                     >
                       <ZoomOutIcon fontSize="small" />
@@ -701,9 +709,17 @@ const SatellitePassTimelineComponent = ({
                       size="small"
                       onClick={handleResetZoom}
                       disabled={
-                        timeWindowHours === actualInitialTimeWindowHours.current &&
-                        timeWindowStart !== null &&
-                        Math.abs(timeWindowStart - (Date.now() - (pastOffsetHours * 60 * 60 * 1000))) < 60000
+                        forceTimeWindowStart && forceTimeWindowEnd
+                          ? (
+                              timeWindowHours === ((new Date(forceTimeWindowEnd).getTime() - new Date(forceTimeWindowStart).getTime()) / (60 * 60 * 1000)) &&
+                              timeWindowStart !== null &&
+                              Math.abs(timeWindowStart - new Date(forceTimeWindowStart).getTime()) < 60000
+                            )
+                          : (
+                              timeWindowHours === actualInitialTimeWindowHours.current &&
+                              timeWindowStart !== null &&
+                              Math.abs(timeWindowStart - (Date.now() - (pastOffsetHours * 60 * 60 * 1000))) < 60000
+                            )
                       }
                       sx={{ padding: '2px' }}
                     >
