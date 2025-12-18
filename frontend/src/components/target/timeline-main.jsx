@@ -48,15 +48,38 @@ const SatellitePassTimelineComponent = ({
   const dispatch = useDispatch();
 
   // Zoom state: time window configuration
-  const [timeWindowHours, setTimeWindowHours] = useState(initialTimeWindowHours);
-  // Initialize with past offset: start time = now - pastOffsetHours
+  // If forced time window is provided, use it; otherwise use initialTimeWindowHours
+  const [timeWindowHours, setTimeWindowHours] = useState(() => {
+    if (forceTimeWindowStart && forceTimeWindowEnd) {
+      const forcedStart = new Date(forceTimeWindowStart).getTime();
+      const forcedEnd = new Date(forceTimeWindowEnd).getTime();
+      const hours = (forcedEnd - forcedStart) / (60 * 60 * 1000);
+      console.log('[Timeline] Initial state - using forced hours:', hours);
+      return hours;
+    }
+    console.log('[Timeline] Initial state - using initialTimeWindowHours:', initialTimeWindowHours);
+    return initialTimeWindowHours;
+  });
+
+  // Initialize with forced time window start if provided, otherwise use past offset
   const [timeWindowStart, setTimeWindowStart] = useState(() => {
+    if (forceTimeWindowStart) {
+      const start = new Date(forceTimeWindowStart).getTime();
+      console.log('[Timeline] Initial state - using forced start:', new Date(start));
+      return start;
+    }
     const now = new Date();
-    return now.getTime() - (pastOffsetHours * 60 * 60 * 1000);
+    const start = now.getTime() - (pastOffsetHours * 60 * 60 * 1000);
+    console.log('[Timeline] Initial state - using now - pastOffset:', new Date(start));
+    return start;
   });
 
   // Track the actual initial time window hours after adjustment
-  const actualInitialTimeWindowHours = useRef(initialTimeWindowHours);
+  const actualInitialTimeWindowHours = useRef(
+    forceTimeWindowStart && forceTimeWindowEnd
+      ? (new Date(forceTimeWindowEnd).getTime() - new Date(forceTimeWindowStart).getTime()) / (60 * 60 * 1000)
+      : initialTimeWindowHours
+  );
 
   // Refs to hold current values for event handlers (to avoid recreating handlers on every change)
   const timeWindowHoursRef = useRef(timeWindowHours);
@@ -70,6 +93,26 @@ const SatellitePassTimelineComponent = ({
   React.useEffect(() => {
     timeWindowStartRef.current = timeWindowStart;
   }, [timeWindowStart]);
+
+  // Update time window when forced values change
+  React.useEffect(() => {
+    console.log('[Timeline] forceTimeWindowStart:', forceTimeWindowStart);
+    console.log('[Timeline] forceTimeWindowEnd:', forceTimeWindowEnd);
+    if (forceTimeWindowStart && forceTimeWindowEnd) {
+      const forcedStart = new Date(forceTimeWindowStart).getTime();
+      const forcedEnd = new Date(forceTimeWindowEnd).getTime();
+      const forcedWindowHours = (forcedEnd - forcedStart) / (60 * 60 * 1000);
+
+      console.log('[Timeline] Setting forced window - start:', new Date(forcedStart), 'end:', new Date(forcedEnd), 'hours:', forcedWindowHours);
+      setTimeWindowHours(forcedWindowHours);
+      setTimeWindowStart(forcedStart);
+      actualInitialTimeWindowHours.current = forcedWindowHours;
+
+      // Reset layout stability so ResizeObserver will recalculate with correct forced window values
+      isLayoutStableRef.current = false;
+      setContainerWidth(null); // Force re-initialization of ResizeObserver
+    }
+  }, [forceTimeWindowStart, forceTimeWindowEnd]);
 
   // Mouse hover state
   const [hoverPosition, setHoverPosition] = useState(null);
@@ -128,19 +171,28 @@ const SatellitePassTimelineComponent = ({
         clearTimeout(stabilizeTimer);
         stabilizeTimer = setTimeout(() => {
           const finalWidth = container.getBoundingClientRect().width;
-          pixelsPerHourRef.current = finalWidth / initialTimeWindowHours;
+          // Use current timeWindowHours (which might be from forced window) instead of initialTimeWindowHours
+          pixelsPerHourRef.current = finalWidth / timeWindowHours;
           isLayoutStableRef.current = true;
         }, 150); // Wait 150ms for layout to settle
       } else if (isLayoutStableRef.current) {
         // Only adjust time window after layout has stabilized
-        const targetPixelsPerHour = pixelsPerHourRef.current;
-        const newTimeWindowHours = newWidth / targetPixelsPerHour;
+        // BUT: Don't adjust if forced window is set - just track width changes
+        if (forceTimeWindowStart && forceTimeWindowEnd) {
+          console.log('[Timeline] ResizeObserver - forced window active, not adjusting hours. Width:', newWidth);
+          setContainerWidth(newWidth);
+        } else {
+          const targetPixelsPerHour = pixelsPerHourRef.current;
+          const newTimeWindowHours = newWidth / targetPixelsPerHour;
 
-        // Update time window to maintain the same scale
-        setTimeWindowHours(newTimeWindowHours);
-        setContainerWidth(newWidth);
+          console.log('[Timeline] ResizeObserver adjusting window hours:', newTimeWindowHours, 'from width:', newWidth, 'pixelsPerHour:', targetPixelsPerHour);
+          // Update time window to maintain the same scale
+          setTimeWindowHours(newTimeWindowHours);
+          setContainerWidth(newWidth);
+        }
       } else {
         // Layout still settling, just update width tracking
+        console.log('[Timeline] ResizeObserver - layout still settling, width:', newWidth);
         setContainerWidth(newWidth);
       }
     });
@@ -151,7 +203,7 @@ const SatellitePassTimelineComponent = ({
       clearTimeout(stabilizeTimer);
       resizeObserver.disconnect();
     };
-  }, [containerWidth, initialTimeWindowHours]); // Depend on containerWidth to know if it's first measurement
+  }, [containerWidth, timeWindowHours]); // Depend on containerWidth and timeWindowHours
 
   // Get satellite passes from Redux store with proper equality checks
   // Allow override from props for multi-satellite view (overview page)
@@ -166,8 +218,16 @@ const SatellitePassTimelineComponent = ({
 
   // Adjust initial time window based on actual pass data (only once on mount)
   // Skip this adjustment if nextPassesHours is explicitly provided (e.g., from overview page)
+  // Also skip if forced time window is provided
   const [hasAdjustedInitialWindow, setHasAdjustedInitialWindow] = useState(false);
   React.useEffect(() => {
+    // ALWAYS skip if forced time window is provided (check this first, every time)
+    if (forceTimeWindowStart && forceTimeWindowEnd) {
+      console.log('[Timeline] Skipping window adjustment - forced window active');
+      setHasAdjustedInitialWindow(true);
+      return;
+    }
+
     // Don't adjust if nextPassesHours is explicitly provided (overview page scenario)
     if (nextPassesHours !== null) {
       actualInitialTimeWindowHours.current = initialTimeWindowHours;
@@ -191,12 +251,13 @@ const SatellitePassTimelineComponent = ({
 
     // If calculated hours is less than current timeWindowHours, adjust it to fit data
     if (calculatedHours < timeWindowHours) {
+      console.log('[Timeline] Adjusting window based on pass data:', calculatedHours);
       setTimeWindowHours(calculatedHours);
       actualInitialTimeWindowHours.current = calculatedHours; // Store the adjusted value
     }
 
     setHasAdjustedInitialWindow(true);
-  }, [satellitePasses, pastOffsetHours, timeWindowHours, hasAdjustedInitialWindow, nextPassesHours, initialTimeWindowHours]);
+  }, [satellitePasses, pastOffsetHours, timeWindowHours, hasAdjustedInitialWindow, nextPassesHours, initialTimeWindowHours, forceTimeWindowStart, forceTimeWindowEnd]);
 
   // Get timezone from preferences - memoized selector to avoid re-renders
   const timezone = useSelector((state) => {
