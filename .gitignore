@@ -93,3 +93,4 @@ venv.bak/
 /backend/snapshots/
 /backend/data/decoded/
 backend/data/
+/external/
