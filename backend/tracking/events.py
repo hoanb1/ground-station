@@ -296,13 +296,6 @@ async def fetch_next_events_for_group(
         f"above_el={above_el}, step_minutes={step_minutes} (fetch_next_events_for_group)"
     )
 
-    # Calculate the time window for pass calculations
-    from datetime import timedelta
-    from datetime import timezone as dt_timezone
-
-    calculation_start = datetime.now(dt_timezone.utc)
-    calculation_end = calculation_start + timedelta(hours=hours)
-
     async with AsyncSessionLocal() as dbsession:
         try:
             # Get home location (get first location from list)
@@ -337,11 +330,14 @@ async def fetch_next_events_for_group(
                         calculation_time, valid_until, cached_result = _cache[cache_key]
 
                         if current_time < valid_until:
+                            # Return cached result with original calculation window
                             result = {
                                 "success": cached_result["success"],
                                 "forecast_hours": hours,
                                 "data": cached_result["data"],
                                 "cached": True,
+                                "pass_range_start": cached_result.get("pass_range_start"),
+                                "pass_range_end": cached_result.get("pass_range_end"),
                             }
                 except Exception as cache_error:
                     logger.error(
@@ -352,6 +348,13 @@ async def fetch_next_events_for_group(
 
             # If no cache hit, spawn worker to calculate
             if result is None:
+                # Calculate the time window for pass calculations (do this BEFORE worker calculation)
+                from datetime import timedelta
+                from datetime import timezone as dt_timezone
+
+                calculation_start = datetime.now(dt_timezone.utc)
+                calculation_end = calculation_start + timedelta(hours=hours)
+
                 logger.info("Cache miss - submitting calculation to worker pool")
                 # Use persistent pool (reused across all calculations)
                 pool = _get_worker_pool()
@@ -365,6 +368,11 @@ async def fetch_next_events_for_group(
                 logger.info("Waiting for worker to complete calculation")
                 result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
                 logger.info("Worker completed, result received")
+
+                # Add calculation window to result (result is guaranteed to be dict here)
+                if result:
+                    result["pass_range_start"] = calculation_start.isoformat()
+                    result["pass_range_end"] = calculation_end.isoformat()
 
                 # Store result in cache (main process only, no IPC from worker)
                 try:
@@ -455,8 +463,8 @@ async def fetch_next_events_for_group(
                 reply["data"] = events
                 reply["forecast_hours"] = result.get("forecast_hours", hours)
                 reply["cached"] = result.get("cached", False)
-                reply["pass_range_start"] = calculation_start.isoformat()
-                reply["pass_range_end"] = calculation_end.isoformat()
+                reply["pass_range_start"] = result.get("pass_range_start")
+                reply["pass_range_end"] = result.get("pass_range_end")
 
                 elapsed_ms = (time.time() - start_time) * 1000
                 logger.info(
