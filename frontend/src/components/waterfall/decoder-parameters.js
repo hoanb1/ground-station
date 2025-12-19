@@ -156,8 +156,12 @@ export const FSK_PARAMETERS = {
             { value: 600, label: '600 Hz', tooltip: 'For 1200 baud' },
             { value: 1200, label: '1200 Hz', tooltip: 'For 2400 baud' },
             { value: 2400, label: '2400 Hz', tooltip: 'For 4800 baud' },
+            { value: 3000, label: '3000 Hz', tooltip: 'Alternative for 4800-9600 baud' },
+            { value: 4800, label: '4800 Hz', tooltip: 'For 9600 baud (wide)' },
             { value: 5000, label: '5000 Hz', tooltip: 'For 9600 baud (common)' },
-            { value: 10000, label: '10000 Hz', tooltip: 'For 19200 baud' }
+            { value: 7500, label: '7500 Hz', tooltip: 'For 19200 baud (narrow)' },
+            { value: 10000, label: '10000 Hz', tooltip: 'For 19200 baud (standard)' },
+            { value: 15000, label: '15000 Hz', tooltip: 'For high-speed links' }
         ]
     },
     // GEOSCAN-specific parameters (conditionally shown)
