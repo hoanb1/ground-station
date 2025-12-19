@@ -343,13 +343,14 @@ const VfoAccordion = ({
                                 </Box>
                             </Box>
 
-                            {/* Decoder Status Display - Compact */}
+                            {/* Decoder Status Display - Two lines */}
                             {(() => {
                                 const decoderInfo = getVFODecoderInfo(vfoIndex);
                                 const vfo = vfoMarkers[vfoIndex];
 
                                 // Determine what to display
-                                let statusText = '—';
+                                let line1Text = '—';
+                                let line2Text = '';
                                 let borderColor = 'divider';
                                 let textColor = 'text.disabled';
 
@@ -358,33 +359,46 @@ const VfoAccordion = ({
                                         const info = decoderInfo.info || {};
                                         const status = decoderInfo.status || 'unknown';
 
-                                        // Build compact status string
-                                        const parts = [];
+                                        // Line 1: STATUS, MODE, BAUD, FRAMING
+                                        const statusParts = [];
+                                        statusParts.push(status.toUpperCase());
+                                        if (info.transmitter_mode !== undefined) {
+                                            statusParts.push(info.transmitter_mode);
+                                        }
+                                        if (info.baudrate !== undefined) {
+                                            statusParts.push(`${info.baudrate}bd`);
+                                        }
+                                        if (info.framing !== undefined) {
+                                            statusParts.push(info.framing.toUpperCase());
+                                        }
+                                        line1Text = statusParts.join(' • ');
 
+                                        // Line 2: existing metrics (packets, signal power, buffer)
+                                        const metricParts = [];
                                         if (info.packets_decoded !== undefined) {
-                                            parts.push(`PKT:${info.packets_decoded}`);
+                                            metricParts.push(`PKT:${info.packets_decoded}`);
                                         }
-
                                         if (info.signal_power_dbfs !== undefined) {
-                                            parts.push(`${info.signal_power_dbfs.toFixed(1)}dB`);
+                                            metricParts.push(`${info.signal_power_dbfs.toFixed(1)}dB`);
                                         }
-
                                         if (info.buffer_samples !== undefined) {
-                                            parts.push(`BUF:${(info.buffer_samples / 1000).toFixed(0)}k`);
+                                            metricParts.push(`BUF:${(info.buffer_samples / 1000).toFixed(0)}k`);
                                         }
+                                        line2Text = metricParts.join(' • ');
 
-                                        statusText = parts.length > 0 ? parts.join(' • ') : 'Decoding...';
                                         borderColor = status === 'decoding' ? 'success.dark' : 'warning.dark';
                                         textColor = 'text.secondary';
                                     } else {
                                         // Decoder selected but not running
-                                        statusText = `${vfo.decoder.toUpperCase()} - Not Active`;
+                                        line1Text = `${vfo.decoder.toUpperCase()} - Not Active`;
+                                        line2Text = '';
                                         borderColor = 'warning.dark';
                                         textColor = 'warning.main';
                                     }
                                 } else {
                                     // No decoder selected
-                                    statusText = 'No Decoder';
+                                    line1Text = 'No Decoder';
+                                    line2Text = '';
                                     borderColor = 'divider';
                                     textColor = 'text.disabled';
                                 }
@@ -409,8 +423,22 @@ const VfoAccordion = ({
                                                 textAlign: 'center'
                                             }}
                                         >
-                                            {statusText}
+                                            {line1Text}
                                         </Typography>
+                                        {line2Text && (
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    fontSize: '0.7rem',
+                                                    fontFamily: 'monospace',
+                                                    color: textColor,
+                                                    display: 'block',
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                {line2Text}
+                                            </Typography>
+                                        )}
                                     </Box>
                                 );
                             })()}
