@@ -715,18 +715,11 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
 
             // Check if we have valid cached data covering the requested time window
             const hasValidTimeWindow = () => {
-                if (!passes || passes.length === 0) {
-                    console.log('[PassFetch] No passes in Redux');
-                    return false;
-                }
-                if (!passesRangeStart || !passesRangeEnd) {
-                    console.log('[PassFetch] No time range in Redux');
-                    return false;
-                }
+                if (!passes || passes.length === 0) return false;
+                if (!passesRangeStart || !passesRangeEnd) return false;
 
                 // Calculate expected time window
                 const now = new Date();
-                const expectedEnd = new Date(now.getTime() + (nextPassesHours * 60 * 60 * 1000));
 
                 // Parse cached time window
                 const cachedStart = new Date(passesRangeStart);
@@ -739,17 +732,6 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 const requestedWindowDuration = nextPassesHours * 60 * 60 * 1000; // in milliseconds
                 const minAcceptableEnd = new Date(now.getTime() + (requestedWindowDuration * tolerance));
 
-                console.log('[PassFetch] Time window check:', {
-                    now: now.toISOString(),
-                    expectedEnd: expectedEnd.toISOString(),
-                    minAcceptableEnd: minAcceptableEnd.toISOString(),
-                    cachedStart: cachedStart.toISOString(),
-                    cachedEnd: cachedEnd.toISOString(),
-                    cachedStartValid: cachedStart <= now,
-                    cachedEndValid: cachedEnd >= minAcceptableEnd,
-                    coveragePercent: ((cachedEnd.getTime() - now.getTime()) / requestedWindowDuration * 100).toFixed(1) + '%'
-                });
-
                 // Check if cached window covers the requested window (with tolerance)
                 const cachedStartValid = cachedStart <= now;
                 const cachedEndValid = cachedEnd >= minAcceptableEnd;
@@ -757,21 +739,11 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 return cachedStartValid && cachedEndValid;
             };
 
-            const isValid = hasValidTimeWindow();
-            console.log('[PassFetch] Decision:', {
-                selectedSatGroupId,
-                hasFetched: hasFetchedRef.current,
-                hasValidWindow: isValid,
-                willFetch: !hasFetchedRef.current && !isValid
-            });
-
-            if (!hasFetchedRef.current && !isValid) {
-                console.log('[PassFetch] Fetching passes from backend');
+            if (!hasFetchedRef.current && !hasValidTimeWindow()) {
                 hasFetchedRef.current = true;
                 dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
-            } else if (isValid) {
+            } else if (hasValidTimeWindow()) {
                 // Mark as fetched to prevent refetch - we have valid data in Redux
-                console.log('[PassFetch] Using cached data from Redux');
                 hasFetchedRef.current = true;
             }
         }
