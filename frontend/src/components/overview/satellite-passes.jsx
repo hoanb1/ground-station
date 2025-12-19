@@ -679,6 +679,8 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         passes,
         passesAreCached,
         passesLoading,
+        passesRangeStart,
+        passesRangeEnd,
         nextPassesHours,
         orbitProjectionDuration,
         gridEditable,
@@ -711,9 +713,66 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 hasFetchedRef.current = false; // Reset for new parameters
             }
 
-            if (!hasFetchedRef.current) {
+            // Check if we have valid cached data covering the requested time window
+            const hasValidTimeWindow = () => {
+                if (!passes || passes.length === 0) {
+                    console.log('[PassFetch] No passes in Redux');
+                    return false;
+                }
+                if (!passesRangeStart || !passesRangeEnd) {
+                    console.log('[PassFetch] No time range in Redux');
+                    return false;
+                }
+
+                // Calculate expected time window
+                const now = new Date();
+                const expectedEnd = new Date(now.getTime() + (nextPassesHours * 60 * 60 * 1000));
+
+                // Parse cached time window
+                const cachedStart = new Date(passesRangeStart);
+                const cachedEnd = new Date(passesRangeEnd);
+
+                // Check if cached window still covers most of the requested window
+                // Allow some tolerance since time passes between visits
+                // If cached data covers at least 90% of the requested window, consider it valid
+                const tolerance = 0.9; // 90% coverage required
+                const requestedWindowDuration = nextPassesHours * 60 * 60 * 1000; // in milliseconds
+                const minAcceptableEnd = new Date(now.getTime() + (requestedWindowDuration * tolerance));
+
+                console.log('[PassFetch] Time window check:', {
+                    now: now.toISOString(),
+                    expectedEnd: expectedEnd.toISOString(),
+                    minAcceptableEnd: minAcceptableEnd.toISOString(),
+                    cachedStart: cachedStart.toISOString(),
+                    cachedEnd: cachedEnd.toISOString(),
+                    cachedStartValid: cachedStart <= now,
+                    cachedEndValid: cachedEnd >= minAcceptableEnd,
+                    coveragePercent: ((cachedEnd.getTime() - now.getTime()) / requestedWindowDuration * 100).toFixed(1) + '%'
+                });
+
+                // Check if cached window covers the requested window (with tolerance)
+                const cachedStartValid = cachedStart <= now;
+                const cachedEndValid = cachedEnd >= minAcceptableEnd;
+
+                return cachedStartValid && cachedEndValid;
+            };
+
+            const isValid = hasValidTimeWindow();
+            console.log('[PassFetch] Decision:', {
+                selectedSatGroupId,
+                hasFetched: hasFetchedRef.current,
+                hasValidWindow: isValid,
+                willFetch: !hasFetchedRef.current && !isValid
+            });
+
+            if (!hasFetchedRef.current && !isValid) {
+                console.log('[PassFetch] Fetching passes from backend');
                 hasFetchedRef.current = true;
                 dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
+            } else if (isValid) {
+                // Mark as fetched to prevent refetch - we have valid data in Redux
+                console.log('[PassFetch] Using cached data from Redux');
+                hasFetchedRef.current = true;
             }
         }
 
@@ -721,7 +780,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         // return () => {
         //     hasFetchedRef.current = false;
         // };
-    }, [selectedSatGroupId, dispatch, socket, nextPassesHours]);
+    }, [selectedSatGroupId, dispatch, socket, nextPassesHours, passes, passesRangeStart, passesRangeEnd]);
 
     useEffect(() => {
         // Update the passes every two hours plus 5 mins to wait until the cache is invalidated
