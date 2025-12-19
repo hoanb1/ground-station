@@ -58,6 +58,12 @@ function saveLayoutsToLocalStorage(layouts) {
 
 const MainLayout = React.memo(function MainLayout() {
     const waterfallComponentSettingsRef = useRef(null);
+
+    // Playback timing refs shared between waterfall and settings components
+    const playbackElapsedSecondsRef = useRef(null);
+    const playbackRemainingSecondsRef = useRef(null);
+    const playbackTotalSecondsRef = useRef(null);
+
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const {
@@ -135,10 +141,17 @@ const MainLayout = React.memo(function MainLayout() {
     // pre-made ResponsiveGridLayout
     let gridContents = [
         <StyledIslandParentScrollbar key="waterfall">
-            <MainWaterfallDisplay/>
+            <MainWaterfallDisplay
+                playbackElapsedSecondsRef={playbackElapsedSecondsRef}
+                playbackRemainingSecondsRef={playbackRemainingSecondsRef}
+                playbackTotalSecondsRef={playbackTotalSecondsRef}
+            />
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="settings">
-            <WaterfallSettings ref={waterfallComponentSettingsRef}/>
+            <WaterfallSettings
+                ref={waterfallComponentSettingsRef}
+                playbackRemainingSecondsRef={playbackRemainingSecondsRef}
+            />
         </StyledIslandParentScrollbar>,
         // <StyledIslandParentScrollbar key="rig-control">
         //     <ControllerTabs />

@@ -59,6 +59,11 @@ let bandscopeDrawInterval = 200;
 let dottedLineImageData = null;
 let rotatorEventQueue = [];
 let lastTimestamp = new Date();
+let recordingDatetime = null; // For playback mode: tracks the recording datetime
+let playbackElapsedSeconds = null; // For playback mode: elapsed seconds counter
+let playbackRemainingSeconds = null; // For playback mode: remaining seconds countdown
+let playbackTotalSeconds = null; // For playback mode: total recording duration
+let lastPlaybackRemainingSeconds = null; // Track previous remaining seconds to detect end/loop
 let renderWaterfallCount = 0;
 let vfoMarkers = [];
 let showRotatorDottedLines = true;
@@ -220,6 +225,31 @@ self.onmessage = function(eventMessage) {
 
             // Store the new FFT data
             fftData = eventMessage.data.fft;
+
+            // Update playback timing info if present (for playback mode)
+            if (eventMessage.data.recording_datetime) {
+                recordingDatetime = new Date(eventMessage.data.recording_datetime);
+            } else {
+                recordingDatetime = null;
+            }
+
+            // Detect end of recording by checking if remaining seconds increased (loop) or reached near zero
+            const newRemainingSeconds = eventMessage.data.playback_remaining_seconds || null;
+            if (lastPlaybackRemainingSeconds !== null && newRemainingSeconds !== null) {
+                // Check if we looped (remaining increased significantly) or reached end (near zero)
+                const hasLooped = newRemainingSeconds > lastPlaybackRemainingSeconds + 1;
+                const reachedEnd = lastPlaybackRemainingSeconds > 0 && newRemainingSeconds < 1;
+
+                if (hasLooped || reachedEnd) {
+                    // Push "END" marker to rotator event queue to display on left margin
+                    rotatorEventQueue.push('━━━ END ━━━');
+                }
+            }
+
+            playbackElapsedSeconds = eventMessage.data.playback_elapsed_seconds || null;
+            playbackRemainingSeconds = newRemainingSeconds;
+            playbackTotalSeconds = eventMessage.data.playback_total_seconds || null;
+            lastPlaybackRemainingSeconds = newRemainingSeconds;
 
             // Update smoothed data with every new FFT frame
             const smoothResult = updateSmoothedFftData(
@@ -623,7 +653,8 @@ function renderWaterfall() {
         showRotatorDottedLines,
         theme,
         lastTimestamp,
-        dottedLineImageData
+        dottedLineImageData,
+        recordingDatetime  // Pass recording datetime for playback mode
     });
     lastTimestamp = marginResult.lastTimestamp;
     dottedLineImageData = marginResult.dottedLineImageData;

@@ -210,15 +210,30 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                     # Send the averaged result back to the main process
                     # Use non-blocking put with timeout to avoid hanging if main process stops
                     try:
-                        data_queue.put(
-                            {
-                                "type": "fft_data",
-                                "client_id": client_id,
-                                "data": averaged_fft.tobytes(),
-                                "timestamp": time.time(),
-                            },
-                            timeout=0.5,
-                        )
+                        fft_message = {
+                            "type": "fft_data",
+                            "client_id": client_id,
+                            "data": averaged_fft.tobytes(),
+                            "timestamp": time.time(),
+                        }
+
+                        # Pass through playback timing info if present (for playback mode)
+                        if "recording_datetime" in iq_message:
+                            fft_message["recording_datetime"] = iq_message["recording_datetime"]
+                        if "playback_elapsed_seconds" in iq_message:
+                            fft_message["playback_elapsed_seconds"] = iq_message[
+                                "playback_elapsed_seconds"
+                            ]
+                        if "playback_remaining_seconds" in iq_message:
+                            fft_message["playback_remaining_seconds"] = iq_message[
+                                "playback_remaining_seconds"
+                            ]
+                        if "playback_total_seconds" in iq_message:
+                            fft_message["playback_total_seconds"] = iq_message[
+                                "playback_total_seconds"
+                            ]
+
+                        data_queue.put(fft_message, timeout=0.5)
                     except Exception as e:
                         # Queue full or closed - log and continue
                         # This prevents FFT processor from hanging if main process stops reading

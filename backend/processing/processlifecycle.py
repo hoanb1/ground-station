@@ -741,9 +741,26 @@ class ProcessLifecycleManager:
 
                         if data_type == QueueMessageTypes.FFT_DATA:
                             # Send FFT data to all clients connected to this SDR
-                            await self.sio.emit(
-                                SocketEvents.SDR_FFT_DATA, data[DictKeys.DATA], room=sdr_id
-                            )
+                            # Include playback timing info if present (for playback mode)
+                            fft_payload = {
+                                "data": data[DictKeys.DATA],
+                            }
+                            if "recording_datetime" in data:
+                                fft_payload["recording_datetime"] = data["recording_datetime"]
+                            if "playback_elapsed_seconds" in data:
+                                fft_payload["playback_elapsed_seconds"] = data[
+                                    "playback_elapsed_seconds"
+                                ]
+                            if "playback_remaining_seconds" in data:
+                                fft_payload["playback_remaining_seconds"] = data[
+                                    "playback_remaining_seconds"
+                                ]
+                            if "playback_total_seconds" in data:
+                                fft_payload["playback_total_seconds"] = data[
+                                    "playback_total_seconds"
+                                ]
+
+                            await self.sio.emit(SocketEvents.SDR_FFT_DATA, fft_payload, room=sdr_id)
 
                         elif data_type == "stats":
                             # Store stats for performance monitoring

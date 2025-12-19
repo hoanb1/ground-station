@@ -20,7 +20,13 @@ import {
 } from './waterfall-slice.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 
-const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
+const useWaterfallStream = ({
+    workerRef,
+    targetFPSRef,
+    playbackElapsedSecondsRef,
+    playbackRemainingSecondsRef,
+    playbackTotalSecondsRef
+}) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const {
@@ -81,7 +87,7 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
             dispatch(setIsStreaming(false));
         });
 
-        socket.on('sdr-fft-data', (binaryData) => {
+        socket.on('sdr-fft-data', (payload) => {
             const now = performance.now();
             timestampWindowRef.current.push(now);
             const cutoffTime = now - windowSizeMs;
@@ -103,6 +109,25 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
                 }
                 lastAllowedUpdateRef.current = now;
             }
+            // Extract binary data from payload (may be ArrayBuffer directly for backwards compatibility,
+            // or an object with data and playback timing info for playback mode)
+            const binaryData = payload.data || payload;
+            const recordingDatetime = payload.recording_datetime || null;
+            const playbackElapsed = payload.playback_elapsed_seconds || null;
+            const playbackRemaining = payload.playback_remaining_seconds || null;
+            const playbackTotal = payload.playback_total_seconds || null;
+
+            // Update playback timing refs without causing re-renders
+            if (playbackElapsedSecondsRef) {
+                playbackElapsedSecondsRef.current = playbackElapsed;
+            }
+            if (playbackRemainingSecondsRef) {
+                playbackRemainingSecondsRef.current = playbackRemaining;
+            }
+            if (playbackTotalSecondsRef) {
+                playbackTotalSecondsRef.current = playbackTotal;
+            }
+
             // Create a typed view over the incoming ArrayBuffer and transfer its buffer
             // to the worker to avoid structured-clone copying (zero-copy transfer).
             const floatArray = new Float32Array(binaryData);
@@ -112,6 +137,10 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
                 workerRef.current.postMessage({
                     cmd: 'updateFFTData',
                     fft: floatArray,
+                    recording_datetime: recordingDatetime,
+                    playback_elapsed_seconds: playbackElapsed,
+                    playback_remaining_seconds: playbackRemaining,
+                    playback_total_seconds: playbackTotal,
                     immediate: true,
                 }, [floatArray.buffer]);
             }

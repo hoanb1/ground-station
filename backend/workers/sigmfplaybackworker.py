@@ -17,6 +17,7 @@
 import json
 import logging
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict
 
@@ -126,6 +127,16 @@ def sigmf_playback_worker_process(
         logger.info(f"Opening SigMF data file: {data_path}")
         data_file = open(data_path, "rb")
 
+        # Calculate total recording duration
+        # Each complex sample is 8 bytes (cf32_le = float32 I + float32 Q)
+        file_size_bytes = data_path.stat().st_size
+        total_samples_in_file = file_size_bytes // 8
+        total_recording_duration_seconds = total_samples_in_file / sample_rate
+        logger.info(
+            f"Recording duration: {total_recording_duration_seconds:.2f} seconds "
+            f"({total_samples_in_file} samples)"
+        )
+
         # Calculate samples per scan (similar to other workers)
         num_samples = calculate_samples_per_scan(sample_rate, fft_size)
         logger.info(
@@ -136,6 +147,19 @@ def sigmf_playback_worker_process(
         current_capture_idx = 0
         current_freq = captures[0].get("core:frequency", 100e6)
         total_samples_read = 0
+
+        # Extract recording start datetime from first capture segment
+        recording_start_datetime = None
+        if captures and "core:datetime" in captures[0]:
+            datetime_str = captures[0]["core:datetime"]
+            try:
+                # Parse ISO format datetime (e.g., "2025-11-29T11:07:23Z")
+                recording_start_datetime = datetime.fromisoformat(
+                    datetime_str.replace("Z", "+00:00")
+                )
+                logger.info(f"Recording start datetime: {recording_start_datetime}")
+            except Exception as e:
+                logger.warning(f"Could not parse recording datetime: {e}")
 
         # Send streaming start signal
         data_queue.put(
@@ -284,6 +308,25 @@ def sigmf_playback_worker_process(
                     try:
                         timestamp = time.time()
 
+                        # Calculate playback timing info
+                        recording_datetime = None
+                        playback_elapsed_seconds = total_samples_read / sample_rate
+                        playback_remaining_seconds = (
+                            total_recording_duration_seconds - playback_elapsed_seconds
+                        )
+
+                        if recording_start_datetime is not None:
+                            current_recording_datetime = recording_start_datetime + timedelta(
+                                seconds=playback_elapsed_seconds
+                            )
+                            # Format as ISO string with Z suffix
+                            recording_datetime = (
+                                current_recording_datetime.replace(
+                                    microsecond=0, tzinfo=None
+                                ).isoformat()
+                                + "Z"
+                            )
+
                         # Broadcast to FFT queue
                         if iq_queue_fft is not None:
                             try:
@@ -300,6 +343,19 @@ def sigmf_playback_worker_process(
                                             "fft_overlap": fft_overlap,
                                         },
                                     }
+                                    # Add playback timing info (only for playback mode)
+                                    if recording_datetime is not None:
+                                        iq_message["recording_datetime"] = recording_datetime
+                                    iq_message["playback_elapsed_seconds"] = (
+                                        playback_elapsed_seconds
+                                    )
+                                    iq_message["playback_remaining_seconds"] = (
+                                        playback_remaining_seconds
+                                    )
+                                    iq_message["playback_total_seconds"] = (
+                                        total_recording_duration_seconds
+                                    )
+
                                     iq_queue_fft.put_nowait(iq_message)
                                     stats["iq_chunks_out"] += 1
                                 else:
@@ -317,6 +373,19 @@ def sigmf_playback_worker_process(
                                         "sample_rate": sample_rate,
                                         "timestamp": timestamp,
                                     }
+                                    # Add playback timing info (only for playback mode)
+                                    if recording_datetime is not None:
+                                        demod_message["recording_datetime"] = recording_datetime
+                                    demod_message["playback_elapsed_seconds"] = (
+                                        playback_elapsed_seconds
+                                    )
+                                    demod_message["playback_remaining_seconds"] = (
+                                        playback_remaining_seconds
+                                    )
+                                    demod_message["playback_total_seconds"] = (
+                                        total_recording_duration_seconds
+                                    )
+
                                     iq_queue_demod.put_nowait(demod_message)
                                     stats["iq_chunks_out"] += 1
                                 else:

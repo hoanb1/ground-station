@@ -86,7 +86,7 @@ import RecordingAccordion from "./settings-recording.jsx";
 import PlaybackAccordion from "./settings-playback.jsx";
 import { useTranslation } from 'react-i18next';
 
-const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
+const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemainingSecondsRef }, ref) {
     const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
 
@@ -822,6 +822,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     onPlaybackPlay={handlePlaybackPlay}
                     onPlaybackStop={handlePlaybackStop}
                     playbackStartTime={playbackStartTime}
+                    playbackRemainingSecondsRef={playbackRemainingSecondsRef}
                 />
             </div>
         </>

@@ -104,6 +104,7 @@ const PlaybackAccordion = ({
     onPlaybackPlay,
     onPlaybackStop,
     playbackStartTime,
+    playbackRemainingSecondsRef,
 }) => {
     const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
@@ -125,31 +126,33 @@ const PlaybackAccordion = ({
     // State for details dialog
     const [detailsOpen, setDetailsOpen] = useState(false);
 
-    // Calculate playback duration from start time
-    const [playbackDuration, setPlaybackDuration] = useState(0);
+    // Track playback countdown from ref
+    const [playbackCountdown, setPlaybackCountdown] = useState(0);
 
     useEffect(() => {
-        if (!playbackStartTime) {
-            setPlaybackDuration(0);
+        if (!isStreaming || !playbackRemainingSecondsRef) {
+            setPlaybackCountdown(0);
             return;
         }
 
-        // Update duration every second
-        const updateDuration = () => {
-            const startTime = new Date(playbackStartTime);
-            const now = new Date();
-            const elapsedSeconds = Math.floor((now - startTime) / 1000);
-            setPlaybackDuration(elapsedSeconds);
+        // Update countdown every 100ms for smoother updates
+        const updateCountdown = () => {
+            const remaining = playbackRemainingSecondsRef.current;
+            if (remaining !== null && remaining >= 0) {
+                setPlaybackCountdown(remaining);
+            } else {
+                setPlaybackCountdown(0);
+            }
         };
 
         // Initial update
-        updateDuration();
+        updateCountdown();
 
-        // Set up interval to update every second
-        const intervalId = setInterval(updateDuration, 1000);
+        // Set up interval to update every 100ms
+        const intervalId = setInterval(updateCountdown, 100);
 
         return () => clearInterval(intervalId);
-    }, [playbackStartTime]);
+    }, [isStreaming, playbackRemainingSecondsRef]);
 
     // Filter, sort, and paginate recordings in the frontend
     const recordings = useMemo(() => {
@@ -282,10 +285,10 @@ const PlaybackAccordion = ({
                     <Typography component="span">
                         {t('playback.title', 'IQ Playback')}
                     </Typography>
-                    {isStreaming && playbackDuration > 0 && (
+                    {isStreaming && playbackCountdown > 0 && (
                         <Chip
-                            label={formatDuration(playbackDuration)}
-                            color="primary"
+                            label={formatDuration(playbackCountdown)}
+                            color="error"
                             size="small"
                             sx={{
                                 fontWeight: 'bold',

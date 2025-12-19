@@ -117,7 +117,11 @@ export const createExternalWorker = () => {
 };
 
 
-const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
+const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
+    playbackElapsedSecondsRef,
+    playbackRemainingSecondsRef,
+    playbackTotalSecondsRef
+}) {
     const { t } = useTranslation('waterfall');
     const theme = useTheme();
     const dispatch = useDispatch();
@@ -254,6 +258,9 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     // Rolling window for rate tracking and track last 1 second of timestamps
     const timestampWindowRef = useRef([]);
     const windowSizeMs = 1000;
+
+    // Note: Playback timing refs (playbackElapsedSecondsRef, playbackRemainingSecondsRef,
+    // playbackTotalSecondsRef) are now passed as props from parent component
 
     // Use event handlers hook
     const {
@@ -456,7 +463,10 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
 
     const { startStreaming, stopStreaming, playButtonEnabledOrNot } = useWaterfallStream({
         workerRef,
-        targetFPSRef
+        targetFPSRef,
+        playbackElapsedSecondsRef,
+        playbackRemainingSecondsRef,
+        playbackTotalSecondsRef
     });
 
     useEffect(() => {
@@ -705,6 +715,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                         sampleRate={sampleRate}
                         waterFallWindowHeight={dimensions['height']}
                         frequencyBands={frequencyBands}
+                        playbackRemainingSecondsRef={playbackRemainingSecondsRef}
                     />
 
                     <WaterfallRightSidebar

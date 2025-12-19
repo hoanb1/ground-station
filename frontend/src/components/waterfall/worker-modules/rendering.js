@@ -340,6 +340,7 @@ export function drawFftLine({
  * @param {Object} params.theme - Theme colors
  * @param {Object} params.lastTimestamp - Last timestamp reference (mutable)
  * @param {Object} params.dottedLineImageData - Cached dotted line image data (mutable)
+ * @param {Date|null} params.recordingDatetime - Recording datetime for playback mode (null for live)
  * @returns {Object} Updated state { lastTimestamp, dottedLineImageData }
  */
 export function updateWaterfallLeftMargin({
@@ -351,7 +352,8 @@ export function updateWaterfallLeftMargin({
     showRotatorDottedLines,
     theme,
     lastTimestamp,
-    dottedLineImageData
+    dottedLineImageData,
+    recordingDatetime = null
 }) {
     // This part should run on EVERY frame, not just when minutes change
     // Move existing pixels DOWN by 1 pixel
@@ -427,8 +429,8 @@ export function updateWaterfallLeftMargin({
         }
     }
 
-    // Calculate seconds since the epoch and check if we need to update
-    const now = new Date();
+    // Use recording datetime if available (playback mode), otherwise use current time (live mode)
+    const now = recordingDatetime || new Date();
     const currentSeconds = Math.floor(now.getTime() / 1000);
 
     // Only update if this is a NEW timestamp (check if lastTimestamp second has changed)

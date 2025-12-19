@@ -41,6 +41,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                                               frequencyBands = [],
                                               minZoom = 1,
                                               maxZoom = 20,
+                                              playbackRemainingSecondsRef,
                                           }, ref) {
 
     const theme = useTheme();
@@ -73,6 +74,34 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
     // Add state for bookmarks
     const [visualContainerWidth, setVisualContainerWidth] = useState(waterFallCanvasWidth);
+
+    // Track playback countdown for display
+    const [playbackCountdown, setPlaybackCountdown] = useState(0);
+
+    // Update playback countdown from ref
+    useEffect(() => {
+        if (!isStreaming || !playbackRemainingSecondsRef) {
+            setPlaybackCountdown(0);
+            return;
+        }
+
+        const updateCountdown = () => {
+            const remaining = playbackRemainingSecondsRef.current;
+            if (remaining !== null && remaining >= 0) {
+                setPlaybackCountdown(remaining);
+            } else {
+                setPlaybackCountdown(0);
+            }
+        };
+
+        // Initial update
+        updateCountdown();
+
+        // Update every 100ms for smooth countdown
+        const intervalId = setInterval(updateCountdown, 100);
+
+        return () => clearInterval(intervalId);
+    }, [isStreaming, playbackRemainingSecondsRef]);
 
     // Function to recalculate position when the container resizes
     const handleResize = useCallback(() => {
@@ -496,7 +525,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                             borderBottom: '4px solid transparent',
                         }}
                     />
-                    PLAYBACK
+                    PLAYBACK {playbackCountdown > 0 && `${Math.floor(playbackCountdown / 60)}:${String(Math.floor(playbackCountdown % 60)).padStart(2, '0')}`}
                 </Box>
             )}
 
