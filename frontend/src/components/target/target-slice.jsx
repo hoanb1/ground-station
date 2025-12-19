@@ -387,23 +387,23 @@ const targetSatTrackSlice = createSlice({
                 }
 
                 // Update rotator events - check specific limit flags first
-                // Use descriptive text for waterfall display
+                // Store clean event keys (display formatting happens in components)
                 if (action.payload['rotator_data']['minelevation']) {
-                    state.lastRotatorEvent = '━━ EL-MIN ━━';
+                    state.lastRotatorEvent = 'EL-MIN';
                 } else if (action.payload['rotator_data']['maxelevation']) {
-                    state.lastRotatorEvent = '━━ EL-MAX ━━';
+                    state.lastRotatorEvent = 'EL-MAX';
                 } else if (action.payload['rotator_data']['minazimuth']) {
-                    state.lastRotatorEvent = '━━ AZ-MIN ━━';
+                    state.lastRotatorEvent = 'AZ-MIN';
                 } else if (action.payload['rotator_data']['maxazimuth']) {
-                    state.lastRotatorEvent = '━━ AZ-MAX ━━';
+                    state.lastRotatorEvent = 'AZ-MAX';
                 } else if (action.payload['rotator_data']['outofbounds']) {
-                    state.lastRotatorEvent = '━━━ OOB ━━━';
+                    state.lastRotatorEvent = 'OOB';
                 } else if (action.payload['rotator_data']['slewing']) {
-                    state.lastRotatorEvent = '━━ SLEW ━━';
+                    state.lastRotatorEvent = 'SLEW';
                 } else if (action.payload['rotator_data']['tracking']) {
-                    state.lastRotatorEvent = '━━━ TRK ━━━';
+                    state.lastRotatorEvent = 'TRK';
                 } else if (action.payload['rotator_data']['stopped']) {
-                    state.lastRotatorEvent = '━━ STOP ━━';
+                    state.lastRotatorEvent = 'STOP';
                 }
             }
 

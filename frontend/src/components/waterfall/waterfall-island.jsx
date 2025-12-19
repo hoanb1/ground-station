@@ -100,6 +100,7 @@ import {
     paintLeftMarginFiller
 } from './waterfall-utils.jsx';
 import { useWaterfallEventHandlers, useSnapshotHandlers } from './waterfall-events.jsx';
+import { getRotatorEventDisplay } from '../target/rotator-constants.js';
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -316,10 +317,13 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
     }, []);
 
     useEffect(() => {
-        if (workerRef.current) {
+        if (workerRef.current && lastRotatorEvent) {
+            // Format event with decorative dashes for waterfall display
+            const formattedEvent = getRotatorEventDisplay(lastRotatorEvent);
+
             workerRef.current.postMessage({
                 cmd: 'rotatorEvent',
-                event: lastRotatorEvent,
+                event: formattedEvent,
             });
         }
     }, [lastRotatorEvent]);

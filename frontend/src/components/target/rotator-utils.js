@@ -71,6 +71,7 @@ export function getCurrentStatusofRotator(rotatorData, lastRotatorEvent) {
 
     if (rotatorData['connected'] === true) {
         if (lastRotatorEvent) {
+            // lastRotatorEvent is now a clean key (e.g., 'TRK', 'SLEW')
             // If the event exists in our map, use it, otherwise return "Idle"
             const status = statusMap[lastRotatorEvent] || {
                 text: "Idle",

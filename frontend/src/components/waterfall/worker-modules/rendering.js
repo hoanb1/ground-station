@@ -371,7 +371,9 @@ export function updateWaterfallLeftMargin({
 
     // Process last rotator events, if there are any then print a line
     const newRotatorEvent = rotatorEventQueue.pop();
-    if (newRotatorEvent) {
+    const hasRotatorEvent = !!newRotatorEvent;
+
+    if (hasRotatorEvent) {
         // Set font properties first to measure text
         waterFallLeftMarginCtx.font = '12px monospace';
         waterFallLeftMarginCtx.textAlign = 'center';
@@ -440,8 +442,8 @@ export function updateWaterfallLeftMargin({
         (lastTimestamp.getMinutes() !== now.getMinutes()) ||
         (lastTimestamp.getHours() !== now.getHours());
 
-    // Update the timestamp every 15 seconds
-    if (shouldUpdate) {
+    // Update the timestamp every 15 seconds (but not if we just drew a rotator event)
+    if (shouldUpdate && !hasRotatorEvent) {
         // Format the time as HH:MM:SS
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
