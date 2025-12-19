@@ -97,14 +97,14 @@ const DecoderParamsDialog = ({
                             }
                             label={
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    Enable Custom Parameters
+                                    Enable Parameter Overrides
                                 </Typography>
                             }
                         />
                         <Typography variant="caption" sx={{ display: 'block', color: 'text.disabled', fontSize: '0.75rem', mt: 0.5 }}>
                             {parametersEnabled
-                                ? 'Custom parameters are active. The decoder will use your configured values.'
-                                : 'Custom parameters are disabled. The decoder will use default values.'}
+                                ? 'Parameter overrides are active. The decoder will use your configured values.'
+                                : 'Parameter overrides are disabled. The decoder will use default values.'}
                         </Typography>
                     </Box>
 

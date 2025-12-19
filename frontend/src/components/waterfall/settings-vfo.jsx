@@ -25,6 +25,7 @@ import {
     DialogContent,
     IconButton,
     Link,
+    Chip,
 } from "@mui/material";
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
@@ -953,12 +954,12 @@ const VfoAccordion = ({
                                         py: 1,
                                         px: 2,
                                         borderRadius: 1,
-                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        backgroundColor: vfoMarkers[vfoIndex]?.parametersEnabled ? 'rgba(33, 150, 243, 0.08)' : 'rgba(255, 255, 255, 0.05)',
+                                        border: vfoMarkers[vfoIndex]?.parametersEnabled ? '1px solid rgba(33, 150, 243, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
                                         transition: 'all 0.2s ease',
                                         '&:hover:not(.Mui-disabled)': {
-                                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                            backgroundColor: vfoMarkers[vfoIndex]?.parametersEnabled ? 'rgba(33, 150, 243, 0.12)' : 'rgba(255, 255, 255, 0.08)',
+                                            borderColor: vfoMarkers[vfoIndex]?.parametersEnabled ? 'rgba(33, 150, 243, 0.4)' : 'rgba(255, 255, 255, 0.2)',
                                         },
                                         '&.Mui-disabled': {
                                             backgroundColor: 'rgba(255, 255, 255, 0.02)',
@@ -970,10 +971,23 @@ const VfoAccordion = ({
                                         cursor: 'pointer',
                                     }}
                                 >
-                                    <SettingsIcon sx={{ fontSize: '1rem', color: 'primary.main' }} />
+                                    <SettingsIcon sx={{ fontSize: '1rem', color: vfoMarkers[vfoIndex]?.parametersEnabled ? 'primary.main' : 'text.secondary' }} />
                                     <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary', flex: 1 }}>
                                         {formatDecoderParamsSummary(vfoIndex) || 'Decoder Parameters'}
                                     </Box>
+                                    {vfoMarkers[vfoIndex]?.parametersEnabled && (
+                                        <Chip
+                                            label="Override"
+                                            size="small"
+                                            sx={{
+                                                height: '18px',
+                                                fontSize: '0.65rem',
+                                                fontWeight: 600,
+                                                backgroundColor: 'primary.main',
+                                                color: 'primary.contrastText',
+                                            }}
+                                        />
+                                    )}
                                 </Link>
                             </Box>
                         </Box>
