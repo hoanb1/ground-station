@@ -15,7 +15,7 @@ const filterUIOnlyFields = (vfoState) => {
     // frequencyOffset is UI-only (used for doppler offset calculations)
     // lockedTransmitterId is now sent to backend as locked_transmitter_id
     // parameters is frontend-only (mapped to decoder-specific fields below)
-    const { frequencyOffset, lockedTransmitterId, parameters, ...backendFields } = vfoState;
+    const { frequencyOffset, lockedTransmitterId, parameters, parametersEnabled, ...backendFields } = vfoState;
 
     // Convert camelCase to snake_case for backend
     // Only include locked_transmitter_id if it was present in the input (not undefined)
@@ -25,10 +25,18 @@ const filterUIOnlyFields = (vfoState) => {
         backendFields.locked_transmitter_id = lockedTransmitterId;
     }
 
+    // Send parametersEnabled to backend (defaults to true if not set)
+    // Backend needs this to detect when user enables/disables custom parameters
+    if (parametersEnabled !== undefined) {
+        backendFields.parametersEnabled = parametersEnabled;
+    }
+
     // Map decoder parameters from frontend format to backend format
     // Frontend: { parameters: { lora_sf: 7, lora_bw: 125000, ... } }
     // Backend: { sf: 7, bw: 125000, ... }
-    if (parameters && vfoState.decoder && vfoState.decoder !== 'none') {
+    // Only send parameters if parametersEnabled is true (defaults to true if not set)
+    const paramsEnabled = parametersEnabled ?? true;
+    if (paramsEnabled && parameters && vfoState.decoder && vfoState.decoder !== 'none') {
         const decoderParams = mapParametersToBackend(vfoState.decoder, parameters);
         Object.assign(backendFields, decoderParams);
     }

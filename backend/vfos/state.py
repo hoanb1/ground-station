@@ -24,6 +24,7 @@ class VFOState:
     transcription_language: str = "en"  # Language code for transcription
     decoder: str = "none"  # Decoder type: none, sstv, afsk, gmsk, gfsk, bpsk, lora, morse
     locked_transmitter_id: str = "none"
+    parameters_enabled: bool = True  # Enable/disable custom decoder parameters
 
 
 class VFOManager:
@@ -68,6 +69,7 @@ class VFOManager:
         transcription_language: Optional[str] = None,
         decoder: str = "none",
         locked_transmitter_id: str = "none",
+        parameters_enabled: Optional[bool] = None,
     ) -> None:
 
         assert session_id is not None, "session_id is required"
@@ -138,6 +140,10 @@ class VFOManager:
         # check locked transmitter ID
         # Always update - locked_transmitter_id is a required field that defaults to "none"
         vfo_state.locked_transmitter_id = locked_transmitter_id
+
+        # check parameters enabled
+        if parameters_enabled is not None:
+            vfo_state.parameters_enabled = parameters_enabled
 
         # logger.info(f"vfo states for session {session_id}: {session_vfos}")
 

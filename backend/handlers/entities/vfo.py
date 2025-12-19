@@ -62,6 +62,7 @@ async def update_vfo_parameters(
     # Get old VFO state BEFORE update to detect changes
     old_vfo_state = vfomanager.get_vfo_state(sid, vfo_id) if vfo_id > 0 else None
     old_locked_transmitter_id = old_vfo_state.locked_transmitter_id if old_vfo_state else None
+    old_parameters_enabled = old_vfo_state.parameters_enabled if old_vfo_state else True
 
     # Extract decoder-specific parameters from incoming data (if present)
     # These are sent from the UI when user changes decoder parameters
@@ -119,6 +120,7 @@ async def update_vfo_parameters(
         transcription_language=data.get("transcriptionLanguage"),
         decoder=data.get("decoder"),
         locked_transmitter_id=data.get("locked_transmitter_id"),
+        parameters_enabled=data.get("parametersEnabled"),
     )
 
     # Reflect UI VFO selection into SessionTracker via SessionService
@@ -185,12 +187,43 @@ async def update_vfo_parameters(
                 )
                 await handle_vfo_decoder_state(vfo_state, sid, logger, force_restart=True)
 
+        # Handle parametersEnabled changes - restart decoder with or without custom parameters
+        # When disabled, clear the param overrides cache so decoder uses defaults
+        # When enabled, use the cached params (if any)
+        parameters_enabled_changed = False
+        if "parametersEnabled" in data and vfo_state.decoder != "none" and not transmitter_changed:
+            new_parameters_enabled = data.get("parametersEnabled", True)
+            if old_parameters_enabled != new_parameters_enabled:
+                parameters_enabled_changed = True
+                override_key = f"{sid}_{vfo_id}"
+
+                if not new_parameters_enabled:
+                    # Parameters disabled - clear cache so decoder uses defaults
+                    if override_key in _decoder_param_overrides_cache:
+                        logger.info(
+                            f"Custom parameters disabled for VFO {vfo_id} - clearing overrides and restarting decoder with defaults"
+                        )
+                        del _decoder_param_overrides_cache[override_key]
+                    else:
+                        logger.info(
+                            f"Custom parameters disabled for VFO {vfo_id} - restarting decoder with defaults"
+                        )
+                else:
+                    # Parameters enabled - use cached overrides (if any)
+                    logger.info(
+                        f"Custom parameters enabled for VFO {vfo_id} - restarting decoder with custom values"
+                    )
+
+                await handle_vfo_decoder_state(vfo_state, sid, logger, force_restart=True)
+
         # Check if decoder parameters changed (requires restart)
         # This handles cases where modulation parameters change (e.g., LoRa SF/BW/CR)
         # without changing the transmitter or decoder type
         # Only check if decoder params were actually included in this update (optimization)
+        # Skip if we already restarted due to transmitter or parameters_enabled changes
         if (
             not transmitter_changed
+            and not parameters_enabled_changed
             and vfo_state.decoder != "none"
             and vfo_state.active
             and decoder_param_overrides

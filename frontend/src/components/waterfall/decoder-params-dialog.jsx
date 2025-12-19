@@ -55,6 +55,7 @@ const DecoderParamsDialog = ({
     }
 
     const decoderParams = getDecoderParameters(decoder);
+    const parametersEnabled = vfo.parametersEnabled ?? true; // Default to enabled
 
     return (
         <Dialog
@@ -80,6 +81,33 @@ const DecoderParamsDialog = ({
             </DialogTitle>
             <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.elevated' }}>
                 <Box>
+                    {/* Master Enable/Disable Checkbox */}
+                    <Box sx={{ mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={parametersEnabled}
+                                    disabled={!vfoActive[vfoIndex]}
+                                    onChange={(e) => {
+                                        onVFOPropertyChange(vfoIndex, {
+                                            parametersEnabled: e.target.checked
+                                        });
+                                    }}
+                                />
+                            }
+                            label={
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    Enable Custom Parameters
+                                </Typography>
+                            }
+                        />
+                        <Typography variant="caption" sx={{ display: 'block', color: 'text.disabled', fontSize: '0.75rem', mt: 0.5 }}>
+                            {parametersEnabled
+                                ? 'Custom parameters are active. The decoder will use your configured values.'
+                                : 'Custom parameters are disabled. The decoder will use default values.'}
+                        </Typography>
+                    </Box>
+
                     {Object.entries(decoderParams).map(([paramKey, paramDef]) => {
                         const currentValue = vfo.parameters?.[paramKey] ?? paramDef.default;
 
@@ -96,7 +124,7 @@ const DecoderParamsDialog = ({
                                         <Select
                                             value={JSON.stringify(currentValue)}
                                             label={paramDef.label}
-                                            disabled={!vfoActive[vfoIndex]}
+                                            disabled={!vfoActive[vfoIndex] || !parametersEnabled}
                                             onChange={(e) => {
                                                 // Parse the JSON string back to the original value
                                                 const selectedValue = JSON.parse(e.target.value);
@@ -133,7 +161,7 @@ const DecoderParamsDialog = ({
                                             control={
                                                 <Switch
                                                     checked={currentValue}
-                                                    disabled={!vfoActive[vfoIndex]}
+                                                    disabled={!vfoActive[vfoIndex] || !parametersEnabled}
                                                     onChange={(e) => {
                                                         onVFOPropertyChange(vfoIndex, {
                                                             parameters: {
