@@ -137,7 +137,8 @@ export const fetchNextPassesForGroup = createAsyncThunk(
                         cached: response.cached,
                         forecast_hours: response.forecast_hours,
                         pass_range_start: response.pass_range_start,
-                        pass_range_end: response.pass_range_end
+                        pass_range_end: response.pass_range_end,
+                        groupId: selectedSatGroupId
                     });
                 } else {
                     reject(rejectWithValue('Failed getting next passes'));
@@ -213,6 +214,7 @@ const overviewSlice = createSlice({
         passesLoading: false,
         passesRangeStart: null,
         passesRangeEnd: null,
+        passesCachedGroupId: null, // Track which group the cached passes belong to
         openMapSettingsDialog: false,
         nextPassesHours: 4.0,
         satellitesTableColumnVisibility: {
@@ -377,12 +379,13 @@ const overviewSlice = createSlice({
                 state.passesLoading = true;
             })
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
-                const {passes, cached, forecast_hours, pass_range_start, pass_range_end} = action.payload;
+                const {passes, cached, forecast_hours, pass_range_start, pass_range_end, groupId} = action.payload;
 
                 state.passes = passes;
                 state.passesAreCached = cached;
                 state.passesRangeStart = pass_range_start;
                 state.passesRangeEnd = pass_range_end;
+                state.passesCachedGroupId = groupId;
                 state.passesLoading = false;
             })
             .addCase(fetchNextPassesForGroup.rejected, (state, action) => {

@@ -681,6 +681,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         passesLoading,
         passesRangeStart,
         passesRangeEnd,
+        passesCachedGroupId,
         nextPassesHours,
         orbitProjectionDuration,
         gridEditable,
@@ -718,6 +719,9 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 if (!passes || passes.length === 0) return false;
                 if (!passesRangeStart || !passesRangeEnd) return false;
 
+                // Check if cached data is for the currently selected group
+                if (passesCachedGroupId !== selectedSatGroupId) return false;
+
                 // Calculate expected time window
                 const now = new Date();
 
@@ -752,7 +756,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         // return () => {
         //     hasFetchedRef.current = false;
         // };
-    }, [selectedSatGroupId, dispatch, socket, nextPassesHours, passes, passesRangeStart, passesRangeEnd]);
+    }, [selectedSatGroupId, dispatch, socket, nextPassesHours, passes, passesRangeStart, passesRangeEnd, passesCachedGroupId]);
 
     useEffect(() => {
         // Update the passes every two hours plus 5 mins to wait until the cache is invalidated
