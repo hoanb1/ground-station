@@ -310,6 +310,58 @@ class SessionTracker:
                     result[session_id] = str(vfo_number)
         return result
 
+    def get_session_sdr_config(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get SDR configuration for a session.
+
+        Args:
+            session_id: Socket.IO session ID
+
+        Returns:
+            SDR configuration dict or None if session not found
+        """
+        from typing import cast
+
+        from processing.utils import get_sdr_session
+
+        return cast(Dict[str, Any] | None, get_sdr_session(session_id))
+
+    def get_all_active_sdrs_with_config(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get all unique SDRs currently being streamed with their configurations.
+
+        Returns:
+            Dict mapping sdr_id -> {
+                "center_freq": float,  # in Hz
+                "sample_rate": float,  # in Hz
+                "sessions": [session_ids],
+                "start_freq": float,   # bandwidth start in Hz
+                "end_freq": float      # bandwidth end in Hz
+            }
+        """
+        from processing.utils import active_sdr_clients
+
+        sdrs: Dict[str, Dict[str, Any]] = {}
+        for session_id, config in active_sdr_clients.items():
+            sdr_id = config.get("sdr_id")
+            if not sdr_id:
+                continue
+
+            center_freq = config.get("center_freq", 0)
+            sample_rate = config.get("sample_rate", 0)
+
+            if sdr_id not in sdrs:
+                sdrs[sdr_id] = {
+                    "center_freq": center_freq,
+                    "sample_rate": sample_rate,
+                    "start_freq": center_freq - sample_rate / 2,
+                    "end_freq": center_freq + sample_rate / 2,
+                    "sessions": [],
+                }
+            sdrs[sdr_id]["sessions"].append(session_id)
+
+        return sdrs
+
     def get_runtime_snapshot(self, process_manager) -> Dict[str, Any]:
         """
         Build a read-only snapshot of current sessions, their relationships, and
