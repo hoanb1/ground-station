@@ -260,7 +260,7 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
               backgroundColor: theme.palette.background.paper,
               padding: '2px 6px',
               borderRadius: '3px',
-              border: `1px solid ${getColor()}`,
+              border: pass.isCurrent ? `1px solid ${getColor()}` : 'none',
               whiteSpace: 'nowrap',
               pointerEvents: 'none',
               zIndex: 25,
