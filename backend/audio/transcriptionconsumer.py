@@ -115,6 +115,7 @@ class TranscriptionConsumer(threading.Thread):
         self.receiver_task: Optional[Task] = None  # Background task for receiving responses
 
         # Track current connection settings to detect changes
+        self.current_session_id: Optional[str] = None
         self.current_language: Optional[str] = None
         self.current_translate_to: Optional[str] = None
 
@@ -350,6 +351,9 @@ class TranscriptionConsumer(threading.Thread):
                                     )
 
                                 # Send to the specific session that owns this transcription
+                                logger.debug(
+                                    f"Emitting transcription-data to room={session_id}: {text[:50]}..."
+                                )
                                 await self.sio.emit(
                                     "transcription-data", transcription_data, room=session_id
                                 )
@@ -561,10 +565,18 @@ class TranscriptionConsumer(threading.Thread):
                     )
                     return
 
-            # Check if language/translation settings changed - reconnect if needed
+            # Check if session or language/translation settings changed - reconnect if needed
+            session_changed = self.current_session_id != session_id
             settings_changed = (
                 self.current_language != language or self.current_translate_to != translate_to
             )
+
+            if session_changed and self.gemini_connected:
+                logger.info(
+                    f"Session changed ({self.current_session_id} -> {session_id}) - "
+                    f"closing old connection"
+                )
+                await self._close_connection()
 
             if settings_changed and self.gemini_connected:
                 logger.info(
@@ -584,6 +596,7 @@ class TranscriptionConsumer(threading.Thread):
                 await self._connect_to_gemini(session_id, language, translate_to)
 
                 # Store current settings
+                self.current_session_id = session_id
                 self.current_language = language
                 self.current_translate_to = translate_to
 

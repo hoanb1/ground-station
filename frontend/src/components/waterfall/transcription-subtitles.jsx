@@ -79,22 +79,23 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                 <Box
                     sx={{
                         position: 'fixed',
-                        bottom: '70px',
+                        bottom: { xs: '60px', sm: '70px' },
                         left: '50%',
                         transform: 'translateX(-50%)',
                         zIndex: 1000,
-                        maxWidth: '90%',
+                        maxWidth: { xs: '95%', sm: '92%', md: '95%', lg: '92%', xl: '90%' },
                         width: 'auto',
-                        minWidth: '300px',
+                        minWidth: { xs: '280px', sm: '320px' },
                         pointerEvents: 'none',
+                        px: { xs: 1, sm: 2 },
                     }}
                 >
                     <Box
                         sx={{
                             backgroundColor: 'rgba(0, 0, 0, 0.5)',
                             backdropFilter: 'blur(12px)',
-                            borderRadius: '8px',
-                            padding: '12px 24px',
+                            borderRadius: { xs: '6px', sm: '8px' },
+                            padding: { xs: '10px 16px', sm: '12px 24px' },
                             textAlign: 'center',
                             border: '2px solid rgba(255, 255, 255, 0.1)',
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
@@ -104,12 +105,13 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                         <Box
                             sx={{
                                 color: 'white',
-                                fontSize: '1.1rem',
+                                fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.1rem' },
                                 fontWeight: 600,
                                 lineHeight: 1.6,
                                 textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
                                 letterSpacing: '0.3px',
                                 fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                                wordBreak: 'break-word',
                             }}
                         >
                             {currentTranscription.language && currentTranscription.language !== 'auto' && currentTranscription.language !== 'unknown' && (
