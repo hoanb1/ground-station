@@ -323,13 +323,26 @@ class TranscriptionConsumer(threading.Thread):
                             if part.text:
                                 text = part.text.strip()
 
-                                # Detect language from transcribed text
-                                detected_language = "unknown"
-                                if LANGDETECT_AVAILABLE and text:
-                                    try:
-                                        detected_language = detect(text)
-                                    except LangDetectException:
-                                        detected_language = "unknown"
+                                # Determine language based on translation settings
+                                # If translation was requested, use the target language
+                                # Otherwise use the configured source language or detect it
+                                if (
+                                    self.current_translate_to
+                                    and self.current_translate_to != "none"
+                                ):
+                                    # Text is translated, use target language
+                                    detected_language = self.current_translate_to
+                                elif self.current_language and self.current_language != "auto":
+                                    # Use configured source language
+                                    detected_language = self.current_language
+                                else:
+                                    # Language is auto-detect, use langdetect as fallback
+                                    detected_language = "unknown"
+                                    if LANGDETECT_AVAILABLE and text:
+                                        try:
+                                            detected_language = detect(text)
+                                        except LangDetectException:
+                                            detected_language = "unknown"
 
                                 # Emit all transcriptions (partial and final)
                                 # For continuous streams, we get many partial updates

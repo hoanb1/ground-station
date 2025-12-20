@@ -26,7 +26,9 @@ import {
 } from '../common/custom-icons.jsx';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { clearTranscriptions } from './transcription-slice';
+import { clearTranscriptions, increaseFontSize, decreaseFontSize } from './transcription-slice';
+import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
+import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 
 const WaterfallToolbar = ({
                               startStreamingLoading,
@@ -92,6 +94,14 @@ const WaterfallToolbar = ({
 
     const handleClearTranscriptions = () => {
         dispatch(clearTranscriptions());
+    };
+
+    const handleIncreaseFontSize = () => {
+        dispatch(increaseFontSize());
+    };
+
+    const handleDecreaseFontSize = () => {
+        dispatch(decreaseFontSize());
     };
 
     return (
@@ -274,6 +284,26 @@ const WaterfallToolbar = ({
                     disabled={transcriptionEntries.length === 0 && Object.keys(liveTranscriptions).length === 0}
                 >
                     <ClearIcon/>
+                </IconButton>
+
+                {/* Increase subtitle font size */}
+                <IconButton
+                    sx={{ borderRadius: 0 }}
+                    onClick={handleIncreaseFontSize}
+                    color="primary"
+                    title="Increase Subtitle Font Size"
+                >
+                    <TextIncreaseIcon/>
+                </IconButton>
+
+                {/* Decrease subtitle font size */}
+                <IconButton
+                    sx={{ borderRadius: 0 }}
+                    onClick={handleDecreaseFontSize}
+                    color="primary"
+                    title="Decrease Subtitle Font Size"
+                >
+                    <TextDecreaseIcon/>
                 </IconButton>
 
                 <Box sx={{ position: 'relative', display: 'inline-flex' }}>

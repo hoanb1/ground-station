@@ -23,6 +23,7 @@ import { Box, IconButton, Tooltip, Fade } from '@mui/material';
 import {
     selectRecentTranscriptions,
     selectTranscriptionIsActive,
+    selectFontSizeMultiplier,
     clearTranscriptions
 } from './transcription-slice';
 import CloseIcon from '@mui/icons-material/Close';
@@ -41,6 +42,16 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);
     const isActive = useSelector(selectTranscriptionIsActive);
+    const fontSizeMultiplier = useSelector(selectFontSizeMultiplier);
+
+    // Get drawer state to adjust subtitle position
+    const packetsDrawerOpen = useSelector((state) => state.waterfall.packetsDrawerOpen);
+    const packetsDrawerHeight = useSelector((state) => state.waterfall.packetsDrawerHeight);
+
+    // Calculate bottom position: status bar (30px) + drawer height (if open) + padding (40px)
+    const statusBarHeight = 30;
+    const padding = 40;
+    const bottomPosition = statusBarHeight + (packetsDrawerOpen ? packetsDrawerHeight : 0) + padding;
 
     // Get the most recent live transcription (by timestamp)
     const currentTranscription = Object.values(liveTranscription).sort((a, b) =>
@@ -79,24 +90,24 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                 <Box
                     sx={{
                         position: 'fixed',
-                        bottom: { xs: '60px', sm: '70px' },
+                        bottom: `${bottomPosition}px`,
                         left: '50%',
                         transform: 'translateX(-50%)',
                         zIndex: 1000,
-                        maxWidth: { xs: '95%', sm: '92%', md: '95%', lg: '92%', xl: '90%' },
-                        width: 'auto',
-                        minWidth: { xs: '280px', sm: '320px' },
+                        width: { xs: '100%', sm: '100%', md: '95%' },
+                        maxWidth: { md: '95%', lg: '92%', xl: '90%' },
                         pointerEvents: 'none',
-                        px: { xs: 1, sm: 2 },
+                        px: { xs: 0, sm: 0, md: 2 },
+                        transition: 'bottom 0.3s ease-out',
                     }}
                 >
                     <Box
                         sx={{
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.65)',
                             backdropFilter: 'blur(12px)',
-                            borderRadius: { xs: '6px', sm: '8px' },
+                            borderRadius: { xs: 0, sm: 0, md: '8px' },
                             padding: { xs: '10px 16px', sm: '12px 24px' },
-                            textAlign: 'center',
+                            textAlign: 'left',
                             border: '2px solid rgba(255, 255, 255, 0.1)',
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
                             transition: 'all 0.15s ease-out',
@@ -105,7 +116,11 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                         <Box
                             sx={{
                                 color: 'white',
-                                fontSize: { xs: '0.95rem', sm: '1.05rem', md: '1.1rem' },
+                                fontSize: {
+                                    xs: `${0.75 * fontSizeMultiplier}rem`,
+                                    sm: `${0.85 * fontSizeMultiplier}rem`,
+                                    md: `${0.9 * fontSizeMultiplier}rem`
+                                },
                                 fontWeight: 600,
                                 lineHeight: 1.6,
                                 textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
@@ -114,9 +129,6 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                                 wordBreak: 'break-word',
                             }}
                         >
-                            {currentTranscription.language && currentTranscription.language !== 'auto' && currentTranscription.language !== 'unknown' && (
-                                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{currentTranscription.language.toUpperCase()}, </span>
-                            )}
                             <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{new Date(currentTranscription.startTime).toLocaleTimeString()}: </span>
                             {segmentsToRender.map((segment, idx) => (
                                 <span

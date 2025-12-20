@@ -26,6 +26,22 @@ import { createSlice } from '@reduxjs/toolkit';
  * Stores the last 500 words with timestamps and metadata.
  */
 
+// Load font size from localStorage or use default
+const loadFontSizeMultiplier = () => {
+    try {
+        const saved = localStorage.getItem('transcription_font_size_multiplier');
+        if (saved) {
+            const parsed = parseFloat(saved);
+            if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 2.0) {
+                return parsed;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load font size multiplier from localStorage:', e);
+    }
+    return 1.0;
+};
+
 const initialState = {
     // Array of transcription entries: [{id, text, timestamp, language, sessionId}]
     entries: [],
@@ -45,6 +61,9 @@ const initialState = {
     // Live accumulating transcription per session
     // {sessionId: {id, text, timestamp, language, startTime}}
     liveTranscription: {},
+
+    // Font size multiplier for subtitles (default: 1.0, persisted in localStorage)
+    fontSizeMultiplier: loadFontSizeMultiplier(),
 };
 
 const transcriptionSlice = createSlice({
@@ -174,6 +193,30 @@ const transcriptionSlice = createSlice({
                 state.lastUpdated = null;
             }
         },
+
+        /**
+         * Increase subtitle font size
+         */
+        increaseFontSize: (state) => {
+            state.fontSizeMultiplier = Math.min(state.fontSizeMultiplier + 0.1, 2.0);
+            try {
+                localStorage.setItem('transcription_font_size_multiplier', state.fontSizeMultiplier.toString());
+            } catch (e) {
+                console.error('Failed to save font size multiplier to localStorage:', e);
+            }
+        },
+
+        /**
+         * Decrease subtitle font size
+         */
+        decreaseFontSize: (state) => {
+            state.fontSizeMultiplier = Math.max(state.fontSizeMultiplier - 0.1, 0.5);
+            try {
+                localStorage.setItem('transcription_font_size_multiplier', state.fontSizeMultiplier.toString());
+            } catch (e) {
+                console.error('Failed to save font size multiplier to localStorage:', e);
+            }
+        },
     },
 });
 
@@ -185,6 +228,8 @@ export const {
     setMaxWords,
     removeTranscription,
     clearSessionTranscriptions,
+    increaseFontSize,
+    decreaseFontSize,
 } = transcriptionSlice.actions;
 
 // Selectors
@@ -193,6 +238,7 @@ export const selectTranscriptionWordCount = (state) => state.transcription.wordC
 export const selectTranscriptionIsActive = (state) => state.transcription.isActive;
 export const selectTranscriptionLastUpdated = (state) => state.transcription.lastUpdated;
 export const selectTranscriptionMaxWords = (state) => state.transcription.maxWords;
+export const selectFontSizeMultiplier = (state) => state.transcription.fontSizeMultiplier;
 
 // Get all transcriptions as a single continuous text (newest first)
 export const selectTranscriptionText = (state) => {
