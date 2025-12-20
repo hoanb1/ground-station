@@ -52,9 +52,9 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
         return null;
     }
 
-    // Get all segments and determine which are old (>15 seconds)
+    // Get all segments and determine which are old (>5 seconds)
     const now = Date.now();
-    const ageThreshold = 15000; // 15 seconds in milliseconds
+    const ageThreshold = 5000; // 5 seconds in milliseconds
 
     // Collect all segments from newest to oldest, limiting to last 50 words total
     const allText = currentTranscription.segments.map(s => s.text).join(' ');
