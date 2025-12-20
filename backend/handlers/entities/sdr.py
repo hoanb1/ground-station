@@ -460,6 +460,81 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
         return False
 
 
+def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger):
+    """
+    Auto-start transcription for a VFO when its demodulator is started.
+
+    Args:
+        sdr_id: SDR device identifier
+        session_id: Session identifier
+        vfo_number: VFO number (1-4)
+        vfo_state: VFO state object containing transcription settings
+        logger: Logger instance
+    """
+    try:
+        # Get transcription manager
+        transcription_manager = process_manager.transcription_manager
+        if not transcription_manager:
+            logger.debug("Transcription manager not initialized, skipping auto-start")
+            return
+
+        # Fetch Gemini API key from preferences
+        from crud import fetch_all_preferences
+
+        async def fetch_and_start():
+            async with AsyncSessionLocal() as dbsession:
+                prefs_result = await fetch_all_preferences(dbsession)
+                if not prefs_result["success"]:
+                    logger.debug("Failed to fetch preferences for auto-start transcription")
+                    return
+
+                preferences = prefs_result["data"]
+                gemini_api_key = next(
+                    (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
+                    "",
+                )
+
+                if not gemini_api_key:
+                    logger.debug("Gemini API key not configured, skipping auto-start transcription")
+                    return
+
+                # Update API key in transcription manager
+                transcription_manager.set_gemini_api_key(gemini_api_key)
+
+                # Get language settings from VFO state
+                language = vfo_state.transcription_language or "auto"
+                translate_to = vfo_state.transcription_translate_to or "none"
+
+                # Start transcription consumer
+                success = transcription_manager.start_transcription(
+                    sdr_id=sdr_id,
+                    session_id=session_id,
+                    vfo_number=vfo_number,
+                    language=language,
+                    translate_to=translate_to,
+                )
+
+                if success:
+                    logger.info(
+                        f"Auto-started transcription for VFO {vfo_number} "
+                        f"(language={language}, translate_to={translate_to})"
+                    )
+                else:
+                    logger.warning(f"Failed to auto-start transcription for VFO {vfo_number}")
+
+        # Run the async function
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.ensure_future(fetch_and_start())
+        else:
+            loop.run_until_complete(fetch_and_start())
+
+    except Exception as e:
+        logger.error(f"Error in auto-start transcription: {e}", exc_info=True)
+
+
 def handle_vfo_demodulator_state(vfo_state, session_id, logger):
     """
     Start or stop demodulator for a specific VFO based on its active state.
@@ -483,9 +558,16 @@ def handle_vfo_demodulator_state(vfo_state, session_id, logger):
     # Start demodulator if VFO is active, stop if not active
     if vfo_state.active:
         # Start appropriate demodulator for this VFO
-        start_demodulator_for_mode(
+        demod_started = start_demodulator_for_mode(
             vfo_state.modulation, sdr_id, session_id, logger, vfo_number=vfo_number
         )
+
+        # If demodulator started and transcription is enabled, auto-start transcription
+        if demod_started and vfo_state.transcription_enabled:
+            logger.info(
+                f"Auto-starting transcription for VFO {vfo_number} (transcription_enabled=True)"
+            )
+            _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
     else:
         # Stop demodulator for this specific VFO
         process_manager.stop_demodulator(sdr_id, session_id, vfo_number)

@@ -25,6 +25,7 @@ from processing.decodermanager import DecoderManager
 from processing.demodulatormanager import DemodulatorManager
 from processing.processlifecycle import ProcessLifecycleManager
 from processing.recordermanager import RecorderManager
+from processing.transcriptionmanager import TranscriptionManager
 
 
 class ProcessManager:
@@ -36,17 +37,20 @@ class ProcessManager:
     - DemodulatorManager: manages demodulator consumers
     - RecorderManager: manages recorder consumers
     - DecoderManager: manages decoder consumers
+    - TranscriptionManager: manages per-VFO transcription consumers
     """
 
-    def __init__(self, sio=None):
+    def __init__(self, sio=None, event_loop=None):
         self.logger = logging.getLogger("process-manager")
         self.sio = sio
+        self.event_loop = event_loop
         self.processes: Dict[str, Dict[str, Any]] = {}  # Map of sdr_id to process information
 
         # Initialize specialized managers
         self.demodulator_manager = DemodulatorManager(self.processes)
         self.recorder_manager = RecorderManager(self.processes)
         self.decoder_manager = DecoderManager(self.processes, self.demodulator_manager)
+        self.transcription_manager = None  # Will be initialized when event loop is available
         self.lifecycle_manager = ProcessLifecycleManager(
             self.processes,
             self.sio,
@@ -78,8 +82,31 @@ class ProcessManager:
         self.sio = sio
         self.lifecycle_manager.sio = sio
 
+        # Initialize transcription manager if we have both sio and event loop
+        if self.event_loop and not self.transcription_manager:
+            self.transcription_manager = TranscriptionManager(
+                self.processes, self.sio, self.event_loop
+            )
+            self.logger.info("TranscriptionManager initialized")
+
         # Try to start metrics emission (will be deferred if no event loop)
         self._start_metrics_emission()
+
+    def set_event_loop(self, event_loop):
+        """
+        Update the event loop after initialization
+
+        Args:
+            event_loop: Asyncio event loop
+        """
+        self.event_loop = event_loop
+
+        # Initialize transcription manager if we have both sio and event loop
+        if self.sio and not self.transcription_manager:
+            self.transcription_manager = TranscriptionManager(
+                self.processes, self.sio, self.event_loop
+            )
+            self.logger.info("TranscriptionManager initialized")
 
     def get_audio_consumer(self):
         """Get the global audio consumer from shutdown module."""

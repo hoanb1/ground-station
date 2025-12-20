@@ -122,6 +122,7 @@ async def cleanup_sdr_session(sid):
     - Cancels any running processing tasks
     - Releases the RTLSDR device if no other clients are using it
     - Removes the client from the active clients list
+    - Stops all per-VFO transcription consumers for this session
     - Unregisters session from SessionTracker
 
     Args:
@@ -137,6 +138,11 @@ async def cleanup_sdr_session(sid):
             proc_manager = get_process_manager()
             await proc_manager.stop_sdr_process(sdr_id, sid)
 
+            # Stop all transcription consumers for this session
+            if proc_manager.transcription_manager:
+                proc_manager.transcription_manager.stop_all_for_session(sid)
+                logger.info(f"Stopped all transcription consumers for session {sid}")
+
         # Remove client from active clients
         del active_sdr_clients[sid]
 
@@ -145,6 +151,12 @@ async def cleanup_sdr_session(sid):
             f"Client {sid} not found in active clients during cleanup. "
             f"This is normal for sessions that never started streaming."
         )
+
+        # Even if not in active clients, stop transcription consumers
+        # (session may have connected but never streamed)
+        proc_manager = get_process_manager()
+        if proc_manager.transcription_manager:
+            proc_manager.transcription_manager.stop_all_for_session(sid)
 
     # Always clear session data from SessionTracker, regardless of whether
     # the session was in active_sdr_clients (session may have connected but never streamed)

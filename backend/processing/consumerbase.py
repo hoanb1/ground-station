@@ -171,6 +171,46 @@ class ConsumerManager:
             if vfo_number is not None:
                 kwargs["vfo_number"] = vfo_number
 
+            # For demodulators, create a per-VFO AudioBroadcaster
+            # This allows multiple consumers (transcription, UI, etc.) to receive audio independently
+            audio_broadcaster_instance = None
+            if storage_key == "demodulators":
+                import queue as queue_module
+
+                from audio.audiobroadcaster import AudioBroadcaster
+
+                # Create input queue for the audio broadcaster
+                broadcaster_input_queue: queue_module.Queue = queue_module.Queue(maxsize=10)
+
+                # Create and start the audio broadcaster
+                audio_broadcaster_instance = AudioBroadcaster(
+                    broadcaster_input_queue, session_id=session_id, vfo_number=vfo_number
+                )
+                audio_broadcaster_instance.start()
+
+                # Subscribe the global audio_queue (used by WebAudioStreamer) to this broadcaster
+                # This allows the browser to hear the audio from this VFO
+                try:
+                    from server import startup
+
+                    global_audio_queue = getattr(startup, "audio_queue", None)
+                    if global_audio_queue:
+                        # Subscribe the existing global audio_queue to this broadcaster
+                        web_audio_key = f"web_audio:{session_id}:vfo{vfo_number}"
+                        audio_broadcaster_instance.subscribe_existing_queue(
+                            web_audio_key, global_audio_queue
+                        )
+                        self.logger.info(
+                            f"Subscribed global audio_queue to audio broadcaster for session {session_id} VFO {vfo_number}"
+                        )
+                except Exception as e:
+                    self.logger.warning(
+                        f"Could not subscribe global audio_queue to audio broadcaster: {e}"
+                    )
+
+                # Use broadcaster's input queue as the demodulator's output queue
+                audio_queue = broadcaster_input_queue
+
             # Create and start the consumer with the subscriber queue
             consumer = consumer_class(subscriber_queue, audio_queue, session_id, **kwargs)
             consumer.start()
@@ -187,7 +227,15 @@ class ConsumerManager:
                     "instance": consumer,
                     "subscription_key": subscription_key,
                     "class_name": consumer_class.__name__,
+                    "audio_broadcaster": audio_broadcaster_instance,  # Store audio broadcaster for transcription
                 }
+
+                # Also store audio broadcaster in global broadcasters dict for easy lookup
+                if audio_broadcaster_instance:
+                    if "broadcasters" not in process_info:
+                        process_info["broadcasters"] = {}
+                    broadcaster_key = f"audio_{session_id}_vfo{vfo_number}"
+                    process_info["broadcasters"][broadcaster_key] = audio_broadcaster_instance
             else:
                 # Recorders: store directly under session_id
                 process_info[storage_key][session_id] = {

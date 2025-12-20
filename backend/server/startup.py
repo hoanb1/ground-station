@@ -13,7 +13,6 @@ from fastapi.staticfiles import StaticFiles
 
 from audio.audiobroadcaster import AudioBroadcaster
 from audio.audiostreamer import WebAudioStreamer
-from audio.transcriptionconsumer import TranscriptionConsumer
 from common.arguments import arguments
 from common.logger import logger
 from db import *  # noqa: F401,F403
@@ -72,42 +71,9 @@ async def lifespan(fastapiapp: FastAPI):
     shutdown.audio_consumer = WebAudioStreamer(playback_queue, sio, event_loop)
     shutdown.audio_consumer.start()
 
-    # Start transcription consumer (will be used when Gemini API key is configured)
-    transcription_queue = audio_broadcaster.subscribe("transcription", maxsize=50)
-
-    # Fetch Gemini API key from preferences at startup
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-
-    from crud.preferences import fetch_all_preferences
-
-    try:
-        async with engine.begin():
-            # Create a session to fetch preferences
-            async_session = async_sessionmaker(engine, expire_on_commit=False)
-            async with async_session() as session:
-                result = await fetch_all_preferences(session)
-                if result.get("success"):
-                    preferences = result.get("data", [])
-                    gemini_api_key = next(
-                        (p["value"] for p in preferences if p["name"] == "gemini_api_key"), ""
-                    )
-                else:
-                    gemini_api_key = ""
-                if gemini_api_key:
-                    logger.info(
-                        f"Loaded Gemini API key from preferences (length: {len(gemini_api_key)})"
-                    )
-                else:
-                    logger.info("No Gemini API key found in preferences")
-    except Exception as e:
-        logger.warning(f"Failed to load Gemini API key from preferences: {e}")
-        gemini_api_key = ""
-
-    shutdown.transcription_consumer = TranscriptionConsumer(
-        transcription_queue, sio, event_loop, gemini_api_key=gemini_api_key
-    )
-    shutdown.transcription_consumer.start()
-    logger.info("Transcription consumer started")
+    # Initialize ProcessManager with event loop for TranscriptionManager
+    process_manager.set_event_loop(event_loop)
+    logger.info("ProcessManager initialized with event loop")
 
     asyncio.create_task(handle_tracker_messages(sio))
     if arguments.runonce_soapy_discovery:

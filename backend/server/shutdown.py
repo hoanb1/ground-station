@@ -4,14 +4,12 @@ from typing import Optional
 
 from audio.audiobroadcaster import AudioBroadcaster
 from audio.audiostreamer import WebAudioStreamer
-from audio.transcriptionconsumer import TranscriptionConsumer
 from common.logger import logger
 from session.service import session_service
 
 # Globals used by audio threads
 audio_consumer: Optional[WebAudioStreamer] = None
 audio_broadcaster: Optional[AudioBroadcaster] = None
-transcription_consumer: Optional[TranscriptionConsumer] = None
 
 
 def cleanup_everything():
@@ -54,12 +52,25 @@ def cleanup_everything():
     try:
         if audio_consumer:
             audio_consumer.stop()
-        if transcription_consumer:
-            transcription_consumer.stop()
         if audio_broadcaster:
             audio_broadcaster.stop()
     except Exception as e:  # pragma: no cover
         logger.warning(f"Error stopping audio: {e}")
+
+    # Stop all transcription consumers (per-VFO)
+    try:
+        from server import process_manager
+
+        if process_manager and process_manager.transcription_manager:
+            # Stop all transcription consumers across all SDRs and sessions
+            for sdr_id in list(process_manager.processes.keys()):
+                process_info = process_manager.processes.get(sdr_id, {})
+                transcription_consumers = process_info.get("transcription_consumers", {})
+                for session_id in list(transcription_consumers.keys()):
+                    process_manager.transcription_manager.stop_transcription(sdr_id, session_id)
+            logger.info("All transcription consumers stopped")
+    except Exception as e:  # pragma: no cover
+        logger.warning(f"Error stopping transcription consumers: {e}")
 
     logger.info("Cleanup complete")
 

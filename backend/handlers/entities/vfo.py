@@ -268,46 +268,101 @@ async def toggle_transcription(
 
     logger.info(f"toggle_transcription called: vfo={vfo_number}, enabled={enabled}")
 
-    # Fetch Gemini API key from preferences and update transcription consumer
-    if enabled:
-        logger.info("Transcription enabled - fetching Gemini API key from preferences")
-        try:
-            async with AsyncSessionLocal() as dbsession:
-                prefs_result = await fetch_all_preferences(dbsession)
-                logger.debug(f"Preferences fetch result: success={prefs_result['success']}")
-                if prefs_result["success"]:
-                    preferences = prefs_result["data"]
-                    logger.debug(f"Found {len(preferences)} preferences")
-                    gemini_api_key = next(
-                        (p["value"] for p in preferences if p["name"] == "gemini_api_key"), ""
-                    )
-                    logger.info(
-                        f"Gemini API key found: {'Yes' if gemini_api_key else 'No'} (length: {len(gemini_api_key) if gemini_api_key else 0})"
-                    )
-                    if gemini_api_key:
-                        from server.shutdown import transcription_consumer
+    # Get language and translation settings
+    language = data.get("language", "auto")
+    translate_to = data.get("translateTo", "none")
 
-                        logger.debug(
-                            f"transcription_consumer exists: {transcription_consumer is not None}"
-                        )
-                        if transcription_consumer:
-                            transcription_consumer.update_gemini_api_key(gemini_api_key)
-                            logger.info("Updated transcription consumer with Gemini API key")
-                        else:
-                            logger.error("transcription_consumer is None!")
-                    else:
-                        logger.warning("Gemini API key not configured in preferences")
-                        return {"success": False, "error": "Gemini API key not configured"}
-        except Exception as e:
-            logger.error(f"Error fetching Gemini API key: {e}", exc_info=True)
-            return {"success": False, "error": f"Failed to fetch Gemini configuration: {str(e)}"}
+    logger.debug(
+        f"[VFO {vfo_number}] Transcription settings from frontend: language={language}, translate_to={translate_to}"
+    )
 
+    # Get VFO state (may not exist if no SDR is streaming yet)
     vfomanager = VFOManager()
+    vfo_state = vfomanager.get_vfo_state(sid, vfo_number)
+
+    # Get SDR ID from session config (not from VFO state which may not have it)
+    from processing.utils import get_sdr_session
+
+    sdr_session = get_sdr_session(sid)
+    sdr_id = sdr_session.get("sdr_id") if sdr_session else None
+
+    # If enabling transcription and SDR is streaming, try to start the consumer
+    if enabled and sdr_id:
+        logger.info(
+            f"Starting transcription for VFO {vfo_number} (language={language}, translate_to={translate_to})"
+        )
+
+        # Get process manager and transcription manager
+        from processing.utils import get_process_manager
+
+        process_manager = get_process_manager()
+        transcription_manager = process_manager.transcription_manager
+
+        if not transcription_manager:
+            logger.warning("Transcription manager not initialized, updating VFO state only")
+        else:
+            # Fetch Gemini API key from preferences
+            try:
+                async with AsyncSessionLocal() as dbsession:
+                    prefs_result = await fetch_all_preferences(dbsession)
+                    if prefs_result["success"]:
+                        preferences = prefs_result["data"]
+                        gemini_api_key = next(
+                            (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
+                            "",
+                        )
+
+                        if not gemini_api_key:
+                            logger.warning("Gemini API key not configured in preferences")
+                            # Still update VFO state so it's ready when streaming starts
+                        else:
+                            # Update API key in transcription manager
+                            transcription_manager.set_gemini_api_key(gemini_api_key)
+                            logger.info("Updated transcription manager with Gemini API key")
+
+                            # Start per-VFO transcription consumer
+                            success = transcription_manager.start_transcription(
+                                sdr_id=sdr_id,
+                                session_id=sid,
+                                vfo_number=vfo_number,
+                                language=language,
+                                translate_to=translate_to,
+                            )
+
+                            if not success:
+                                logger.warning(
+                                    f"Failed to start transcription consumer for VFO {vfo_number}, updating VFO state only"
+                                )
+                    else:
+                        logger.warning("Failed to fetch preferences, updating VFO state only")
+            except Exception as e:
+                logger.error(
+                    f"Error fetching Gemini API key: {e}, updating VFO state only", exc_info=True
+                )
+
+    elif not enabled and sdr_id:
+        # Disabling transcription - stop consumer if it exists
+        logger.info(f"Stopping transcription for VFO {vfo_number}")
+
+        from processing.utils import get_process_manager
+
+        process_manager = get_process_manager()
+        transcription_manager = process_manager.transcription_manager
+
+        if transcription_manager:
+            transcription_manager.stop_transcription(
+                sdr_id=sdr_id,
+                session_id=sid,
+                vfo_number=vfo_number,
+            )
+
+    # Update VFO state
     vfomanager.update_vfo_state(
         session_id=sid,
         vfo_id=vfo_number,
         transcription_enabled=enabled,
-        transcription_language=data.get("language", "auto"),
+        transcription_language=language,
+        transcription_translate_to=translate_to,
     )
 
     # Get updated state
@@ -323,6 +378,9 @@ async def toggle_transcription(
             "vfoNumber": vfo_number,
             "transcriptionEnabled": vfo_state.transcription_enabled if vfo_state else False,
             "transcriptionLanguage": vfo_state.transcription_language if vfo_state else "auto",
+            "transcriptionTranslateTo": (
+                vfo_state.transcription_translate_to if vfo_state else "none"
+            ),
         },
     }
 

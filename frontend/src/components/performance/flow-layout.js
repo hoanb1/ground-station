@@ -161,8 +161,8 @@ export const applyDagreLayout = (nodes, edges) => {
         if (type === 'demodulator' || type === 'decoder' || (type === 'broadcaster' && node.data.component?.broadcaster_type === 'audio')) {
             return 2;
         }
-        // Rank 3: WebAudioStreamer
-        if (type === 'streamer') {
+        // Rank 3: WebAudioStreamer and Transcription Consumer
+        if (type === 'streamer' || type === 'transcription') {
             return 3;
         }
         // Rank 4: Browsers (rightmost)
@@ -401,18 +401,32 @@ export const createFlowFromMetrics = (metrics) => {
                         });
                     }
 
-                    // Check if demodulator connects directly to audio streamer
-                    const audioStreamerConnection = demod.connections?.find(c => c.target_type === 'audio_streamer');
-                    if (audioStreamerConnection) {
-                        // Store for later connection to WebAudioStreamer
-                        if (!nodeMap.has('pending-demod-to-streamer-edges')) {
-                            nodeMap.set('pending-demod-to-streamer-edges', []);
+                    // Check if demodulator connects to audio broadcaster (new per-VFO architecture)
+                    const audioBroadcasterConnection = demod.connections?.find(c => c.target_type === 'audio_broadcaster');
+                    if (audioBroadcasterConnection) {
+                        // Will create edge after audio broadcasters are processed
+                        if (!nodeMap.has('pending-demod-to-audio-broadcaster-edges')) {
+                            nodeMap.set('pending-demod-to-audio-broadcaster-edges', []);
                         }
-                        nodeMap.get('pending-demod-to-streamer-edges').push({
+                        nodeMap.get('pending-demod-to-audio-broadcaster-edges').push({
                             demodulatorId: nodeId,
                             demodulator: demod,
-                            targetId: audioStreamerConnection.target_id,
+                            targetBroadcasterId: audioBroadcasterConnection.target_id,
                         });
+                    } else {
+                        // Check if demodulator connects directly to audio streamer (old architecture)
+                        const audioStreamerConnection = demod.connections?.find(c => c.target_type === 'audio_streamer');
+                        if (audioStreamerConnection) {
+                            // Store for later connection to WebAudioStreamer
+                            if (!nodeMap.has('pending-demod-to-streamer-edges')) {
+                                nodeMap.set('pending-demod-to-streamer-edges', []);
+                            }
+                            nodeMap.get('pending-demod-to-streamer-edges').push({
+                                demodulatorId: nodeId,
+                                demodulator: demod,
+                                targetId: audioStreamerConnection.target_id,
+                            });
+                        }
                     }
 
                     demodY += VERTICAL_SPACING;
@@ -427,7 +441,19 @@ export const createFlowFromMetrics = (metrics) => {
                 Object.entries(sdrData.broadcasters).forEach(([broadcasterId, broadcaster]) => {
                     if (broadcaster.broadcaster_type === 'audio') {
                         const nodeId = `node-${nodeIdCounter++}`;
-                        const audioKey = `${broadcaster.session_id}_${broadcaster.decoder_name}`;
+
+                        // Handle per-VFO broadcasters (new architecture) vs decoder broadcasters (old architecture)
+                        let audioKey, label;
+                        if (broadcaster.vfo_number !== undefined) {
+                            // Per-VFO broadcaster from demodulator
+                            audioKey = broadcasterId; // e.g., "audio_VbqH4y0D5ZZE8P27AAAB_vfo1"
+                            label = `Audio Broadcaster - VFO ${broadcaster.vfo_number}`;
+                        } else {
+                            // Decoder broadcaster (old architecture)
+                            audioKey = `${broadcaster.session_id}_${broadcaster.decoder_name}`;
+                            label = `Audio Broadcaster - ${truncateId(broadcaster.session_id)}`;
+                        }
+
                         nodeMap.set(`${sdrId}-audio-broadcaster-${audioKey}`, nodeId);
 
                         nodes.push({
@@ -435,7 +461,7 @@ export const createFlowFromMetrics = (metrics) => {
                             type: 'componentNode',
                             position: { x: columnX, y: audioBroadcasterY },
                             data: {
-                                label: `Audio Broadcaster - ${truncateId(broadcaster.session_id)}`,
+                                label: label,
                                 component: broadcaster,
                                 type: 'broadcaster',
                             },
@@ -655,6 +681,78 @@ export const createFlowFromMetrics = (metrics) => {
         });
     }
 
+    // Per-VFO Transcription Consumers (Google Gemini Live API transcription)
+    // Process transcription consumers for each SDR (they're now per-VFO like demodulators/decoders)
+    Object.entries(metrics.sdrs || {}).forEach(([sdrId, sdrData]) => {
+        if (sdrData.transcription_consumers) {
+            // Position transcription consumers after decoders (same column as audio streamers)
+            const sdrStartY = START_Y + (Object.keys(metrics.sdrs || {}).indexOf(sdrId) * 1000);
+            const transcriptionX = START_X + HORIZONTAL_SPACING * 3;
+            let transcriptionY = sdrStartY + 200;
+
+            Object.entries(sdrData.transcription_consumers).forEach(([transcriptionKey, transcription]) => {
+                const nodeId = `node-${nodeIdCounter++}`;
+                nodeMap.set(`transcription-${transcriptionKey}`, nodeId);
+
+                nodes.push({
+                    id: nodeId,
+                    type: 'componentNode',
+                    position: { x: transcriptionX, y: transcriptionY },
+                    data: {
+                        label: `Transcription - ${truncateSessionVfoKey(transcriptionKey)}`,
+                        component: transcription,
+                        type: 'transcription',
+                    },
+                });
+
+                // Store for later connection to browser nodes (transcription outputs to browser)
+                if (transcription.connections) {
+                    transcription.connections.forEach(conn => {
+                        if (conn.target_type === 'browser') {
+                            if (!nodeMap.has('pending-transcription-to-browser-edges')) {
+                                nodeMap.set('pending-transcription-to-browser-edges', []);
+                            }
+                            nodeMap.get('pending-transcription-to-browser-edges').push({
+                                transcriptionId: nodeId,
+                                transcription: transcription,
+                                targetId: conn.target_id,
+                            });
+                        }
+                    });
+                }
+
+                // Connect from corresponding audio broadcaster (if exists)
+                // Transcription consumers subscribe to per-VFO audio broadcasters
+                const vfoNumber = transcription.vfo_number;
+                const sessionId = transcription.session_id;
+
+                // Find the audio broadcaster for this session/VFO
+                if (sdrData.broadcasters) {
+                    Object.entries(sdrData.broadcasters).forEach(([bcastKey, broadcaster]) => {
+                        if (broadcaster.session_id === sessionId && broadcaster.vfo_number === vfoNumber && broadcaster.broadcaster_type === 'audio') {
+                            const broadcasterNodeId = nodeMap.get(`${sdrId}-audio-broadcaster-${bcastKey}`);
+                            if (broadcasterNodeId) {
+                                const isAnimated = hasPositiveOutputRate(broadcaster);
+                                edges.push({
+                                    id: `edge-${broadcasterNodeId}-${nodeId}`,
+                                    source: broadcasterNodeId,
+                                    target: nodeId,
+                                    sourceHandle: getNextOutputHandle(broadcasterNodeId),
+                                    targetHandle: getNextInputHandle(nodeId),
+                                    animated: isAnimated,
+                                    style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 1.5 },
+                                    type: 'smoothstep',
+                                });
+                            }
+                        }
+                    });
+                }
+
+                transcriptionY += VERTICAL_SPACING;
+            });
+        }
+    });
+
     // Collect all active sessions (browsers)
     const activeSessions = {};
 
@@ -680,48 +778,35 @@ export const createFlowFromMetrics = (metrics) => {
         });
     }
 
-    // Audio Streamer (single global instance)
+    // Audio Streamers (per-session instances from audio_streamers in metrics)
     let webAudioStreamerNodeId = null;
-    if (Object.keys(activeSessions).length > 0) {
+    if (metrics.audio_streamers && Object.keys(metrics.audio_streamers).length > 0) {
         const streamerY = START_Y + (Object.keys(metrics.sdrs || {}).length * 1000);
         const streamerX = START_X + HORIZONTAL_SPACING * 2;
 
-        const nodeId = `node-${nodeIdCounter++}`;
-        nodeMap.set('audio-streamer-web_audio', nodeId);
-        webAudioStreamerNodeId = nodeId;
+        // Create nodes for each audio streamer
+        Object.entries(metrics.audio_streamers).forEach(([streamerId, streamer], index) => {
+            const nodeId = `node-${nodeIdCounter++}`;
+            nodeMap.set(`audio-streamer-${streamerId}`, nodeId);
 
-        // Aggregate stats across all sessions
-        const totalStats = Object.values(activeSessions).reduce((acc, session) => {
-            acc.audio_chunks_in += session.stats.audio_chunks_in || 0;
-            acc.audio_samples_in += session.stats.audio_samples_in || 0;
-            acc.messages_emitted += session.stats.messages_emitted || 0;
-            return acc;
-        }, { audio_chunks_in: 0, audio_samples_in: 0, messages_emitted: 0 });
+            // Keep reference to first one for backward compatibility
+            if (index === 0) {
+                webAudioStreamerNodeId = nodeId;
+                nodeMap.set('audio-streamer-web_audio', nodeId); // Fallback for old architecture
+            }
 
-        const totalRates = Object.values(activeSessions).reduce((acc, session) => {
-            acc.audio_chunks_in_per_sec += session.rates.audio_chunks_in_per_sec || 0;
-            acc.audio_samples_in_per_sec += session.rates.audio_samples_in_per_sec || 0;
-            acc.messages_emitted_per_sec += session.rates.messages_emitted_per_sec || 0;
-            return acc;
-        }, { audio_chunks_in_per_sec: 0, audio_samples_in_per_sec: 0, messages_emitted_per_sec: 0 });
-
-        nodes.push({
-            id: nodeId,
-            type: 'componentNode',
-            position: { x: streamerX, y: streamerY },
-            data: {
-                label: 'WebAudioStreamer',
-                component: {
-                    type: 'WebAudioStreamer',
-                    streamer_id: 'web_audio',
-                    input_queue_size: 0,
-                    is_alive: true,
-                    stats: totalStats,
-                    rates: totalRates,
-                    active_sessions: activeSessions,
+            // Create node for this audio streamer
+            const yOffset = index * VERTICAL_SPACING;
+            nodes.push({
+                id: nodeId,
+                type: 'componentNode',
+                position: { x: streamerX, y: streamerY + yOffset },
+                data: {
+                    label: `WebAudioStreamer - ${truncateId(streamer.session_id)}`,
+                    component: streamer,
+                    type: 'streamer',
                 },
-                type: 'streamer',
-            },
+            });
         });
 
         // Browser/Client nodes (one per session)
@@ -751,21 +836,28 @@ export const createFlowFromMetrics = (metrics) => {
                 },
             });
 
-            // Edge from WebAudioStreamer to Browser
-            const webAudioStreamerComponent = {
-                rates: totalRates // Use the aggregated rates
-            };
-            const isAnimated = hasPositiveOutputRate(webAudioStreamerComponent);
-            edges.push({
-                id: `edge-${webAudioStreamerNodeId}-${browserNodeId}`,
-                source: webAudioStreamerNodeId,
-                target: browserNodeId,
-                sourceHandle: getNextOutputHandle(webAudioStreamerNodeId),
-                targetHandle: getNextInputHandle(browserNodeId),
-                animated: isAnimated,
-                style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
-                type: 'smoothstep',
-            });
+            // Edge from corresponding WebAudioStreamer to Browser
+            // Find the streamer for this session
+            const correspondingStreamer = Object.entries(metrics.audio_streamers || {}).find(
+                ([sid, s]) => s.session_id === sessionId
+            );
+            if (correspondingStreamer) {
+                const [streamerId, streamer] = correspondingStreamer;
+                const streamerNodeId = nodeMap.get(`audio-streamer-${streamerId}`);
+                if (streamerNodeId) {
+                    const isAnimated = hasPositiveOutputRate(streamer);
+                    edges.push({
+                        id: `edge-${streamerNodeId}-${browserNodeId}`,
+                        source: streamerNodeId,
+                        target: browserNodeId,
+                        sourceHandle: getNextOutputHandle(streamerNodeId),
+                        targetHandle: getNextInputHandle(browserNodeId),
+                        animated: isAnimated,
+                        style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
+                        type: 'smoothstep',
+                    });
+                }
+            }
 
             // Implicit edge: Tracker -> Browser (trackers broadcast to all connected browsers)
             const trackerEdges = nodeMap.get('pending-tracker-to-browser-edges') || [];
@@ -818,6 +910,24 @@ export const createFlowFromMetrics = (metrics) => {
                 });
             });
 
+            // Implicit edge: Transcription Consumer -> Browser (transcriptions broadcast to all browsers)
+            const transcriptionEdges = nodeMap.get('pending-transcription-to-browser-edges') || [];
+            transcriptionEdges.forEach(({ transcriptionId, transcription, targetId }) => {
+                if (targetId === sessionId) {
+                    const isAnimated = hasPositiveOutputRate(transcription);
+                    edges.push({
+                        id: `edge-implicit-transcription-${transcriptionId}-${browserNodeId}`,
+                        source: transcriptionId,
+                        target: browserNodeId,
+                        sourceHandle: getNextOutputHandle(transcriptionId),
+                        targetHandle: getNextInputHandle(browserNodeId),
+                        animated: isAnimated,
+                        style: { stroke: getEdgeColor('decoded', 0, isAnimated), strokeWidth: 1.5 },
+                        type: 'smoothstep',
+                    });
+                }
+            });
+
             browserY += VERTICAL_SPACING;
         });
     }
@@ -826,25 +936,47 @@ export const createFlowFromMetrics = (metrics) => {
     const pendingEdges = nodeMap.get('pending-audio-broadcaster-edges');
     if (pendingEdges && pendingEdges.length > 0) {
         pendingEdges.forEach(({ audioBroadcasterId, broadcaster }) => {
-            // Look for UI target in connections
-            const uiConnection = broadcaster.connections?.find(c => c.target_type === 'ui');
-            if (uiConnection) {
-                // Connect to the single WebAudioStreamer
-                const webAudioStreamerId = nodeMap.get('audio-streamer-web_audio');
-                if (webAudioStreamerId) {
+            // Look for audio_streamer target in connections (new architecture)
+            const audioStreamerConnection = broadcaster.connections?.find(c => c.target_type === 'audio_streamer');
+            if (audioStreamerConnection) {
+                // Connect to the session-specific WebAudioStreamer
+                // The target_id is like "web_audio_VbqH4y0D5ZZE8P27AAAB"
+                const streamerId = nodeMap.get(`audio-streamer-${audioStreamerConnection.target_id}`);
+                if (streamerId) {
                     const isAnimated = hasPositiveOutputRate(broadcaster);
                     edges.push({
-                        id: `edge-${audioBroadcasterId}-${webAudioStreamerId}`,
+                        id: `edge-${audioBroadcasterId}-${streamerId}`,
                         source: audioBroadcasterId,
-                        target: webAudioStreamerId,
+                        target: streamerId,
                         sourceHandle: getNextOutputHandle(audioBroadcasterId),
-                        targetHandle: getNextInputHandle(webAudioStreamerId),
+                        targetHandle: getNextInputHandle(streamerId),
                         animated: isAnimated,
                         style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
                         type: 'smoothstep',
                     });
                 }
+            } else {
+                // Fallback to old architecture: Look for UI target in connections
+                const uiConnection = broadcaster.connections?.find(c => c.target_type === 'ui');
+                if (uiConnection) {
+                    // Connect to the single WebAudioStreamer
+                    const webAudioStreamerId = nodeMap.get('audio-streamer-web_audio');
+                    if (webAudioStreamerId) {
+                        const isAnimated = hasPositiveOutputRate(broadcaster);
+                        edges.push({
+                            id: `edge-${audioBroadcasterId}-${webAudioStreamerId}`,
+                            source: audioBroadcasterId,
+                            target: webAudioStreamerId,
+                            sourceHandle: getNextOutputHandle(audioBroadcasterId),
+                            targetHandle: getNextInputHandle(webAudioStreamerId),
+                            animated: isAnimated,
+                            style: { stroke: getEdgeColor('audio', 0, isAnimated), strokeWidth: 2 },
+                            type: 'smoothstep',
+                        });
+                    }
+                }
             }
+
         });
     }
 
@@ -882,7 +1014,10 @@ export const createFlowFromMetrics = (metrics) => {
         initNodeConnections(targetId);
 
         // Check if this is an implicit broadcast edge
-        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-') || edge.id.includes('edge-implicit-tracker-');
+        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') ||
+                                    edge.id.includes('edge-implicit-decoder-') ||
+                                    edge.id.includes('edge-implicit-tracker-') ||
+                                    edge.id.includes('edge-implicit-transcription-');
 
         if (isImplicitBroadcast) {
             // Only count implicit broadcast once per source (they all share one handle)
@@ -917,8 +1052,11 @@ export const createFlowFromMetrics = (metrics) => {
     const implicitHandles = new Map(); // nodeId -> handleId for FFT and decoder broadcasts
 
     edges.forEach(edge => {
-        // Check if this is an implicit broadcast edge (FFT→Browser, Decoder→Browser, or Tracker→Browser)
-        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') || edge.id.includes('edge-implicit-decoder-') || edge.id.includes('edge-implicit-tracker-');
+        // Check if this is an implicit broadcast edge (FFT→Browser, Decoder→Browser, Tracker→Browser, or Transcription→Browser)
+        const isImplicitBroadcast = edge.id.includes('edge-implicit-fft-') ||
+                                    edge.id.includes('edge-implicit-decoder-') ||
+                                    edge.id.includes('edge-implicit-tracker-') ||
+                                    edge.id.includes('edge-implicit-transcription-');
 
         if (isImplicitBroadcast) {
             // All implicit edges from same source share the same output handle

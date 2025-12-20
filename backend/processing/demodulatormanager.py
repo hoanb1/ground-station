@@ -91,15 +91,41 @@ class DemodulatorManager(ConsumerManager):
                 vfo_entry = demod_entry[vfo_number]
                 demodulator = vfo_entry["instance"]
                 subscription_key = vfo_entry["subscription_key"]
+                audio_broadcaster = vfo_entry.get("audio_broadcaster")
 
                 demod_name = type(demodulator).__name__
                 demodulator.stop()
                 demodulator.join(timeout=2.0)  # Wait up to 2 seconds
 
-                # Unsubscribe from the broadcaster
-                broadcaster = process_info.get("iq_broadcaster")
-                if broadcaster:
-                    broadcaster.unsubscribe(subscription_key)
+                # Stop audio broadcaster if it exists
+                if audio_broadcaster:
+                    # Unsubscribe global audio_queue from this broadcaster
+                    web_audio_key = f"web_audio:{session_id}:vfo{vfo_number}"
+                    try:
+                        audio_broadcaster.unsubscribe(web_audio_key)
+                        self.logger.info(
+                            f"Unsubscribed global audio_queue from audio broadcaster for session {session_id} VFO {vfo_number}"
+                        )
+                    except Exception as e:
+                        self.logger.debug(f"Could not unsubscribe global audio_queue: {e}")
+
+                    audio_broadcaster.stop()
+                    audio_broadcaster.join(timeout=2.0)
+                    # Remove from broadcasters dict
+                    broadcaster_key = f"audio_{session_id}_vfo{vfo_number}"
+                    if (
+                        "broadcasters" in process_info
+                        and broadcaster_key in process_info["broadcasters"]
+                    ):
+                        del process_info["broadcasters"][broadcaster_key]
+                    self.logger.info(
+                        f"Stopped audio broadcaster for session {session_id} VFO {vfo_number}"
+                    )
+
+                # Unsubscribe from the IQ broadcaster
+                iq_broadcaster = process_info.get("iq_broadcaster")
+                if iq_broadcaster:
+                    iq_broadcaster.unsubscribe(subscription_key)
 
                 # Remove from storage
                 del demod_entry[vfo_number]
@@ -112,20 +138,40 @@ class DemodulatorManager(ConsumerManager):
                 return True
             else:
                 # Stop all VFOs for this session
-                broadcaster = process_info.get("iq_broadcaster")
+                iq_broadcaster = process_info.get("iq_broadcaster")
                 stopped_count = 0
 
                 for vfo_num in list(demod_entry.keys()):
                     vfo_entry = demod_entry[vfo_num]
                     demodulator = vfo_entry["instance"]
                     subscription_key = vfo_entry["subscription_key"]
+                    audio_broadcaster = vfo_entry.get("audio_broadcaster")
 
                     demod_name = type(demodulator).__name__
                     demodulator.stop()
                     demodulator.join(timeout=2.0)
 
-                    if broadcaster:
-                        broadcaster.unsubscribe(subscription_key)
+                    # Stop audio broadcaster if it exists
+                    if audio_broadcaster:
+                        # Unsubscribe global audio_queue from this broadcaster
+                        web_audio_key = f"web_audio:{session_id}:vfo{vfo_num}"
+                        try:
+                            audio_broadcaster.unsubscribe(web_audio_key)
+                        except Exception as e:
+                            self.logger.debug(f"Could not unsubscribe global audio_queue: {e}")
+
+                        audio_broadcaster.stop()
+                        audio_broadcaster.join(timeout=2.0)
+                        # Remove from broadcasters dict
+                        broadcaster_key = f"audio_{session_id}_vfo{vfo_num}"
+                        if (
+                            "broadcasters" in process_info
+                            and broadcaster_key in process_info["broadcasters"]
+                        ):
+                            del process_info["broadcasters"][broadcaster_key]
+
+                    if iq_broadcaster:
+                        iq_broadcaster.unsubscribe(subscription_key)
 
                     stopped_count += 1
                     self.logger.info(f"Stopped {demod_name} for session {session_id} VFO {vfo_num}")

@@ -857,6 +857,65 @@ export const ComponentNode = ({ data }) => {
                         </>
                     )}
 
+                    {/* Transcription Consumer metrics */}
+                    {type === 'transcription' && (
+                        <>
+                            {/* Left column - Input */}
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Input
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Queue"
+                                        value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
+                                    />
+                                    <MetricRow
+                                        label="Audio"
+                                        value={formatNumber(component.stats?.audio_chunks_in)}
+                                    />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.audio_chunks_in_per_sec)}
+                                        unit="/s"
+                                    />
+                                </Stack>
+                            </Box>
+                            {/* Vertical divider */}
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
+                            {/* Right column - Output */}
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Gemini API
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Status"
+                                        value={component.stats?.is_connected ? 'Connected' : 'Disconnected'}
+                                    />
+                                    <MetricRow
+                                        label="Sent"
+                                        value={formatNumber(component.stats?.transcriptions_sent)}
+                                    />
+                                    <MetricRow
+                                        label="Received"
+                                        value={formatNumber(component.stats?.transcriptions_received)}
+                                    />
+                                    <MetricRow
+                                        label="Attempts"
+                                        value={formatNumber(component.stats?.connection_attempts)}
+                                    />
+                                    {component.stats?.connection_failures > 0 && (
+                                        <MetricRow
+                                            label="Failures"
+                                            value={formatNumber(component.stats?.connection_failures)}
+                                        />
+                                    )}
+                                </Stack>
+                            </Box>
+                        </>
+                    )}
+
                     {/* Browser metrics */}
                     {type === 'browser' && (
                         <>

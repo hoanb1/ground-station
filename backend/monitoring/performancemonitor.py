@@ -133,6 +133,9 @@ class PerformanceMonitor(threading.Thread):
                 "demodulators": self._poll_demodulators(sdr_id, process_info, time_delta),
                 "recorders": self._poll_recorders(sdr_id, process_info, time_delta),
                 "decoders": self._poll_decoders(sdr_id, process_info, time_delta),
+                "transcription_consumers": self._poll_transcription_consumers(
+                    sdr_id, process_info, time_delta
+                ),
             }
             all_metrics["sdrs"][sdr_id] = sdr_metrics
 
@@ -280,6 +283,30 @@ class PerformanceMonitor(threading.Thread):
                         broadcaster_id = f"audio_{session_id}_{decoder_name}"
                         audio_broadcaster_metrics["broadcaster_id"] = broadcaster_id
                         broadcasters[broadcaster_id] = audio_broadcaster_metrics
+
+        # Poll Audio Broadcasters from demodulators (per-VFO broadcasters for VFOs without decoders)
+        demodulators = process_info.get("demodulators", {})
+        for session_id, session_demods in demodulators.items():
+            for vfo_num, demod_entry in session_demods.items():
+                audio_broadcaster = demod_entry.get("audio_broadcaster")
+                if audio_broadcaster:
+                    # Skip if this VFO has a decoder (decoder creates its own audio broadcaster)
+                    has_decoder = False
+                    if session_id in decoders:
+                        for decoder_entry in decoders[session_id].values():
+                            if decoder_entry.get("vfo_number") == vfo_num:
+                                has_decoder = True
+                                break
+
+                    if not has_decoder:
+                        # This is a standalone demodulator (no decoder) - track its audio broadcaster
+                        broadcaster_key = f"audio_{session_id}_vfo{vfo_num}"
+                        audio_broadcaster_metrics = self._poll_demodulator_audio_broadcaster(
+                            sdr_id, session_id, vfo_num, audio_broadcaster, process_info, time_delta
+                        )
+                        if audio_broadcaster_metrics:
+                            audio_broadcaster_metrics["broadcaster_id"] = broadcaster_key
+                            broadcasters[broadcaster_key] = audio_broadcaster_metrics
 
         return broadcasters
 
@@ -485,6 +512,91 @@ class PerformanceMonitor(threading.Thread):
             "is_alive": audio_broadcaster.is_alive(),
         }
 
+    def _poll_demodulator_audio_broadcaster(
+        self, sdr_id, session_id, vfo_number, audio_broadcaster, process_info, time_delta
+    ):
+        """
+        Extract audio broadcaster metrics from a demodulator (VFOs without decoders).
+
+        Args:
+            sdr_id: SDR device identifier
+            session_id: Session identifier
+            vfo_number: VFO number
+            audio_broadcaster: AudioBroadcaster instance from demodulator
+            process_info: Process information dictionary
+            time_delta: Time since last poll
+
+        Returns:
+            dict: Audio broadcaster metrics with connections
+        """
+        if not audio_broadcaster:
+            return None
+
+        # Get stats from broadcaster
+        broadcaster_stats = audio_broadcaster.get_stats()
+        overall_stats = broadcaster_stats.get("overall", {})
+        subscribers_info = broadcaster_stats.get("subscribers", {})
+
+        # Calculate rates from previous snapshot
+        prev_key = f"audio_broadcaster_demod_{sdr_id}_{session_id}_vfo{vfo_number}"
+        prev_snapshot = self.previous_snapshots.get(prev_key, {})
+
+        messages_received_rate = self._calculate_rate(
+            overall_stats.get("messages_received", 0),
+            prev_snapshot.get("messages_received", 0),
+            time_delta,
+        )
+
+        messages_broadcast_rate = self._calculate_rate(
+            overall_stats.get("messages_broadcast", 0),
+            prev_snapshot.get("messages_broadcast", 0),
+            time_delta,
+        )
+
+        # Store current snapshot for next iteration
+        self.previous_snapshots[prev_key] = overall_stats.copy()
+
+        # Build connections: demodulator -> audio broadcaster -> [transcription, UI audio streamer]
+        connections = []
+
+        # Source: Demodulator
+        connections.append(
+            {"source_type": "demodulator", "source_id": f"{session_id}_vfo{vfo_number}"}
+        )
+
+        # Targets: Check for transcription consumers and audio streamers
+        transcription_consumers = process_info.get("transcription_consumers", {})
+        if (
+            session_id in transcription_consumers
+            and vfo_number in transcription_consumers[session_id]
+        ):
+            connections.append(
+                {
+                    "target_type": "transcription_consumer",
+                    "target_id": f"{session_id}_vfo{vfo_number}",
+                }
+            )
+
+        # Audio streamers connection (WebAudioStreamer for this session)
+        connections.append(
+            {"target_type": "audio_streamer", "target_id": f"web_audio_{session_id}"}
+        )
+
+        return {
+            "session_id": session_id,
+            "vfo_number": vfo_number,
+            "broadcaster_type": "audio",
+            "subscriber_count": broadcaster_stats.get("active_subscribers", 0),
+            "stats": overall_stats,
+            "rates": {
+                "messages_received_per_sec": messages_received_rate,
+                "messages_broadcast_per_sec": messages_broadcast_rate,
+            },
+            "subscribers": subscribers_info,
+            "is_alive": audio_broadcaster.is_alive(),
+            "connections": connections,
+        }
+
     def _poll_demodulators(self, sdr_id, process_info, time_delta):
         """
         Extract demodulator metrics.
@@ -554,23 +666,35 @@ class PerformanceMonitor(threading.Thread):
                 # Add connection info: demodulator receives from IQ broadcaster
                 connections = [{"source_type": "iq_broadcaster", "source_id": f"iq_{sdr_id}"}]
 
-                # Check if this demodulator feeds an audio broadcaster (via decoder)
+                # Check if this demodulator has its own audio broadcaster (new per-VFO architecture)
                 has_audio_broadcaster = False
-                decoders = process_info.get("decoders", {})
-                for dec_session_id, session_decoders in decoders.items():
-                    for decoder_name, decoder_entry in session_decoders.items():
-                        if (
-                            decoder_entry.get("vfo_number") == vfo_num
-                            and dec_session_id == session_id
-                        ):
-                            if decoder_entry.get("audio_broadcaster"):
-                                connections.append(
-                                    {
-                                        "target_type": "audio_broadcaster",
-                                        "target_id": f"audio_{session_id}_{decoder_name}",
-                                    }
-                                )
-                                has_audio_broadcaster = True
+                if demod_entry.get("audio_broadcaster"):
+                    # Per-VFO audio broadcaster exists
+                    broadcaster_key = f"audio_{session_id}_vfo{vfo_num}"
+                    connections.append(
+                        {
+                            "target_type": "audio_broadcaster",
+                            "target_id": broadcaster_key,
+                        }
+                    )
+                    has_audio_broadcaster = True
+                else:
+                    # Check if this demodulator feeds an audio broadcaster (via decoder - old architecture)
+                    decoders = process_info.get("decoders", {})
+                    for dec_session_id, session_decoders in decoders.items():
+                        for decoder_name, decoder_entry in session_decoders.items():
+                            if (
+                                decoder_entry.get("vfo_number") == vfo_num
+                                and dec_session_id == session_id
+                            ):
+                                if decoder_entry.get("audio_broadcaster"):
+                                    connections.append(
+                                        {
+                                            "target_type": "audio_broadcaster",
+                                            "target_id": f"audio_{session_id}_{decoder_name}",
+                                        }
+                                    )
+                                    has_audio_broadcaster = True
 
                 # Check if demodulator outputs to global WebAudioStreamer
                 # Demodulators without audio broadcasters output to the global audio_queue
@@ -1122,6 +1246,104 @@ class PerformanceMonitor(threading.Thread):
             logger.error(f"Could not poll trackers: {e}")
 
         return trackers
+
+    def _poll_transcription_consumers(self, sdr_id, process_info, time_delta):
+        """
+        Poll per-VFO transcription consumers (Google Gemini Live API transcription).
+
+        Args:
+            sdr_id: SDR device identifier
+            process_info: Process information dictionary
+            time_delta: Time since last poll
+
+        Returns:
+            dict: Per-VFO transcription consumer metrics
+        """
+        transcription_consumers = process_info.get("transcription_consumers", {})
+        transcription_metrics = {}
+
+        for session_id, session_consumers in transcription_consumers.items():
+            for vfo_number, consumer_entry in session_consumers.items():
+                consumer_instance = consumer_entry.get("instance")
+                if not consumer_instance:
+                    continue
+
+                key = f"{session_id}_vfo{vfo_number}"
+
+                # Get stats snapshot (thread-safe)
+                if not hasattr(consumer_instance, "stats_lock"):
+                    continue
+
+                with consumer_instance.stats_lock:
+                    stats_snapshot = consumer_instance.stats.copy()
+
+                # Get queue size
+                input_queue_size = consumer_instance.transcription_queue.qsize()
+                input_queue_maxsize = getattr(
+                    consumer_instance.transcription_queue, "_maxsize", None
+                )
+
+                # Calculate rates from previous snapshot
+                prev_key = f"transcription_{sdr_id}_{key}"
+                previous = self.previous_snapshots.get(prev_key, {})
+
+                audio_chunks_in_rate = self._calculate_rate(
+                    stats_snapshot.get("audio_chunks_in", 0),
+                    previous.get("audio_chunks_in", 0),
+                    time_delta,
+                )
+
+                audio_samples_in_rate = self._calculate_rate(
+                    stats_snapshot.get("audio_samples_in", 0),
+                    previous.get("audio_samples_in", 0),
+                    time_delta,
+                )
+
+                transcriptions_sent_rate = self._calculate_rate(
+                    stats_snapshot.get("transcriptions_sent", 0),
+                    previous.get("transcriptions_sent", 0),
+                    time_delta,
+                )
+
+                transcriptions_received_rate = self._calculate_rate(
+                    stats_snapshot.get("transcriptions_received", 0),
+                    previous.get("transcriptions_received", 0),
+                    time_delta,
+                )
+
+                # Store current snapshot for next iteration
+                self.previous_snapshots[prev_key] = stats_snapshot.copy()
+
+                # Connection: Transcription consumer receives from audio broadcaster
+                # for this specific VFO and sends results to the browser session
+                connections = [
+                    {
+                        "target_type": "browser",
+                        "target_id": session_id,
+                    }
+                ]
+
+                transcription_metrics[key] = {
+                    "type": "TranscriptionConsumer",
+                    "session_id": session_id,
+                    "vfo_number": vfo_number,
+                    "transcription_id": key,
+                    "language": consumer_entry.get("language", "auto"),
+                    "translate_to": consumer_entry.get("translate_to", "none"),
+                    "input_queue_size": input_queue_size,
+                    "input_queue_maxsize": input_queue_maxsize,
+                    "is_alive": consumer_instance.is_alive(),
+                    "stats": stats_snapshot,
+                    "rates": {
+                        "audio_chunks_in_per_sec": audio_chunks_in_rate,
+                        "audio_samples_in_per_sec": audio_samples_in_rate,
+                        "transcriptions_sent_per_sec": transcriptions_sent_rate,
+                        "transcriptions_received_per_sec": transcriptions_received_rate,
+                    },
+                    "connections": connections,
+                }
+
+        return transcription_metrics
 
     def _calculate_rate(self, current_value, previous_value, time_delta):
         """
