@@ -351,9 +351,6 @@ class TranscriptionConsumer(threading.Thread):
                                     )
 
                                 # Send to the specific session that owns this transcription
-                                logger.debug(
-                                    f"Emitting transcription-data to room={session_id}: {text[:50]}..."
-                                )
                                 await self.sio.emit(
                                     "transcription-data", transcription_data, room=session_id
                                 )
