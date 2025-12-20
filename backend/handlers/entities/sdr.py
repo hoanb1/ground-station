@@ -572,3 +572,10 @@ def handle_vfo_demodulator_state(vfo_state, session_id, logger):
         # Stop demodulator for this specific VFO
         process_manager.stop_demodulator(sdr_id, session_id, vfo_number)
         logger.info(f"Stopped demodulator for session {session_id} VFO {vfo_number}")
+
+        # Stop transcription consumer if it's running
+        if vfo_state.transcription_enabled:
+            transcription_manager = process_manager.transcription_manager
+            if transcription_manager:
+                logger.info(f"Stopping transcription for deactivated VFO {vfo_number}")
+                transcription_manager.stop_transcription(sdr_id, session_id, vfo_number)

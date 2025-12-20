@@ -74,10 +74,6 @@ class TranscriptionManager:
         Returns:
             bool: True if started successfully, False otherwise
         """
-        self.logger.debug(
-            f"[VFO {vfo_number}] Starting transcription consumer with: language={language}, translate_to={translate_to}"
-        )
-
         # Import here to avoid circular dependencies
         from audio.transcriptionconsumer import TranscriptionConsumer
 
@@ -265,6 +261,13 @@ class TranscriptionManager:
         # Stop the consumer thread
         consumer.stop()
         consumer.join(timeout=2.0)
+
+        # Check if thread actually stopped
+        if consumer.is_alive():
+            self.logger.warning(
+                f"Transcription consumer thread for session {session_id} VFO {vfo_number} "
+                f"did not stop within timeout - it may still be running"
+            )
 
         # Unsubscribe from audio broadcaster
         if audio_broadcaster:

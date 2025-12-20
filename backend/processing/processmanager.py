@@ -87,6 +87,8 @@ class ProcessManager:
             self.transcription_manager = TranscriptionManager(
                 self.processes, self.sio, self.event_loop
             )
+            # Update lifecycle manager with transcription manager
+            self.lifecycle_manager.transcription_manager = self.transcription_manager
             self.logger.info("TranscriptionManager initialized")
 
         # Try to start metrics emission (will be deferred if no event loop)
@@ -106,6 +108,8 @@ class ProcessManager:
             self.transcription_manager = TranscriptionManager(
                 self.processes, self.sio, self.event_loop
             )
+            # Update lifecycle manager with transcription manager
+            self.lifecycle_manager.transcription_manager = self.transcription_manager
             self.logger.info("TranscriptionManager initialized")
 
     def get_audio_consumer(self):

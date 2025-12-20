@@ -38,7 +38,15 @@ class ProcessLifecycleManager:
     Manager for SDR process lifecycle (start, stop, configure, monitor)
     """
 
-    def __init__(self, processes, sio, demodulator_manager, recorder_manager, decoder_manager):
+    def __init__(
+        self,
+        processes,
+        sio,
+        demodulator_manager,
+        recorder_manager,
+        decoder_manager,
+        transcription_manager=None,
+    ):
         """
         Initialize the process lifecycle manager
 
@@ -48,6 +56,7 @@ class ProcessLifecycleManager:
             demodulator_manager: DemodulatorManager instance
             recorder_manager: RecorderManager instance
             decoder_manager: DecoderManager instance
+            transcription_manager: TranscriptionManager instance (optional)
         """
         self.logger = logging.getLogger("process-lifecycle")
         self.processes = processes
@@ -55,6 +64,7 @@ class ProcessLifecycleManager:
         self.demodulator_manager = demodulator_manager
         self.recorder_manager = recorder_manager
         self.decoder_manager = decoder_manager
+        self.transcription_manager = transcription_manager
         # Optional trace logging toggle
         try:
             self._trace = str(os.environ.get("GS_DECODER_TRACE", "")).lower() in (
@@ -395,6 +405,10 @@ class ProcessLifecycleManager:
                 # Stop any active decoder for this client
                 self.decoder_manager.stop_decoder(sdr_id, client_id)
 
+                # Stop any active transcription consumers for this client
+                if self.transcription_manager:
+                    self.transcription_manager.stop_transcription(sdr_id, client_id)
+
                 self.logger.info(f"Removed client {client_id} from SDR process {sdr_id}")
 
             # If there are still other clients, don't stop the process
@@ -471,6 +485,13 @@ class ProcessLifecycleManager:
                 process_info["process"].kill()
 
             self.logger.info(f"SDR worker for device {sdr_id} stopped")
+
+        # Stop all transcription consumers for this SDR
+        if self.transcription_manager:
+            transcription_consumers = process_info.get("transcription_consumers", {})
+            for session_id in list(transcription_consumers.keys()):
+                self.logger.info(f"Stopping all transcription consumers for session {session_id}")
+                self.transcription_manager.stop_transcription(sdr_id, session_id)
 
         # Clean up
         if sdr_id in self.processes:
