@@ -127,6 +127,10 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                                 letterSpacing: '0.3px',
                                 fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
                                 wordBreak: 'break-word',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
                             }}
                         >
                             <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{new Date(currentTranscription.startTime).toLocaleTimeString()}: </span>
