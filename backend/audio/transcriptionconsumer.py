@@ -349,8 +349,10 @@ class TranscriptionConsumer(threading.Thread):
                                         f"Transcription partial ({detected_language}): {text}"
                                     )
 
-                                # Broadcast to all clients (not just room)
-                                await self.sio.emit("transcription-data", transcription_data)
+                                # Send to the specific session that owns this transcription
+                                await self.sio.emit(
+                                    "transcription-data", transcription_data, room=session_id
+                                )
 
                 except Exception as e:
                     error_str = str(e).lower()
@@ -410,7 +412,7 @@ class TranscriptionConsumer(threading.Thread):
             error_message = f"Transcription error: {str(error)[:100]}"
             error_details = str(error)
 
-        # Emit error to frontend (broadcast to all)
+        # Emit error to frontend (send to specific session)
         await self.sio.emit(
             "transcription-error",
             {
@@ -420,6 +422,7 @@ class TranscriptionConsumer(threading.Thread):
                 "details": error_details,
                 "timestamp": __import__("datetime").datetime.now().isoformat(),
             },
+            room=session_id,
         )
 
     async def _connect_to_gemini(self, session_id: str, language: str, translate_to: str = "none"):
