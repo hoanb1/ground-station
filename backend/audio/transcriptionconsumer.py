@@ -37,6 +37,7 @@ import base64
 import logging
 import queue
 import threading
+import time
 from asyncio import Task
 from typing import Dict, Optional
 
@@ -62,7 +63,7 @@ except ImportError:
     logging.warning("langdetect package not installed. Language detection will be disabled.")
 
 # Configure logging
-logger = logging.getLogger("transcription-consumer")
+logger = logging.getLogger("transcription")
 
 # Reduce websockets logging verbosity to prevent API key exposure
 logging.getLogger("websockets.client").setLevel(logging.WARNING)
@@ -99,8 +100,8 @@ class TranscriptionConsumer(threading.Thread):
         # {session_id: {"buffer": [], "language": "en"}}
         self.session_buffers: Dict[str, dict] = {}
 
-        # Buffer settings (in seconds) - hardcoded 3-5 second chunks
-        self.chunk_duration = 4.0  # Send audio every 4 seconds
+        # Buffer settings (in seconds) - longer chunks for better recognition
+        self.chunk_duration = 6.0  # Send audio every 6 seconds
         self.input_sample_rate = 44100  # Input from demodulators
         self.gemini_sample_rate = 16000  # Gemini requires 16kHz
 
@@ -110,6 +111,10 @@ class TranscriptionConsumer(threading.Thread):
         self.gemini_session_context = None  # Context manager for proper cleanup
         self.gemini_connected = False
         self.receiver_task: Optional[Task] = None  # Background task for receiving responses
+
+        # Connection backoff to prevent quota exhaustion
+        self.last_connection_attempt = 0.0
+        self.connection_backoff_seconds = 60  # Wait 60 seconds after quota error before retrying
 
     def update_gemini_api_key(self, api_key: str):
         """
@@ -184,33 +189,60 @@ class TranscriptionConsumer(threading.Thread):
                     self.transcription_queue.task_done()
                     continue
 
-                # Initialize buffer for new session
+                # Initialize session tracking
                 if session_id not in self.session_buffers:
                     self.session_buffers[session_id] = {
                         "buffer": [],
                         "language": getattr(vfo_state, "transcription_language", "en"),
                     }
 
+                # Get current language for this session
+                current_language = getattr(vfo_state, "transcription_language", "auto")
+
                 # Add audio to buffer
                 self.session_buffers[session_id]["buffer"].append(audio_chunk)
 
-                # Calculate buffered duration
-                # Note: For stereo audio, samples are interleaved [L, R, L, R, ...]
-                # So we need to divide by 2 to get actual frames
+                # Calculate total duration of buffered audio
                 total_samples = sum(
                     len(chunk) for chunk in self.session_buffers[session_id]["buffer"]
                 )
-                # Check if this is stereo by looking at VFO modulation
-                is_stereo = vfo_state.modulation and vfo_state.modulation.upper() == "FM_STEREO"
-                frames = total_samples / 2 if is_stereo else total_samples
-                duration = frames / self.input_sample_rate
+                duration = total_samples / self.input_sample_rate
 
-                # Send to Gemini immediately when buffer reaches chunk duration
+                # Only send when we have accumulated chunk_duration seconds
                 if duration >= self.chunk_duration:
-                    logger.info(
-                        f"Chunk ready: {duration:.1f}s accumulated, sending to Gemini API..."
+
+                    # Concatenate all buffered chunks
+                    concatenated = np.concatenate(self.session_buffers[session_id]["buffer"])
+
+                    # Check if audio has sufficient energy (not just silence)
+                    rms = np.sqrt(np.mean(concatenated**2))
+
+                    if rms < 0.001:
+                        self.session_buffers[session_id]["buffer"] = []
+                        continue
+
+                    # Check if this is stereo
+                    is_stereo = vfo_state.modulation and vfo_state.modulation.upper() == "FM_STEREO"
+
+                    # Convert stereo to mono if needed
+                    if is_stereo:
+                        stereo_array = np.array(concatenated, dtype=np.float32).reshape(-1, 2)
+                        audio_array = np.mean(stereo_array, axis=1)
+                    else:
+                        audio_array = np.array(concatenated, dtype=np.float32)
+
+                    # Clear buffer
+                    self.session_buffers[session_id]["buffer"] = []
+
+                    # Send to Gemini
+                    asyncio.run_coroutine_threadsafe(
+                        self._transcribe_audio(
+                            session_id=session_id,
+                            audio_data=audio_array,
+                            language=current_language,
+                        ),
+                        self.loop,
                     )
-                    self._send_for_transcription(session_id)
 
                 self.transcription_queue.task_done()
 
@@ -234,6 +266,13 @@ class TranscriptionConsumer(threading.Thread):
         Returns:
             PCM audio bytes (16kHz, 16-bit)
         """
+        # Normalize audio to improve recognition
+        # Find peak amplitude
+        peak = np.max(np.abs(audio_array))
+        if peak > 0.001:  # Avoid division by zero and silence
+            # Normalize to 70% of full scale to avoid clipping but maintain good level
+            audio_array = audio_array * (0.7 / peak)
+
         # Resample from 44.1kHz to 16kHz
         num_samples_16k = int(len(audio_array) * self.gemini_sample_rate / self.input_sample_rate)
         resampled = signal.resample(audio_array, num_samples_16k)
@@ -243,63 +282,6 @@ class TranscriptionConsumer(threading.Thread):
 
         # Cast to bytes to satisfy mypy
         return bytes(audio_int16.tobytes())
-
-    def _send_for_transcription(self, session_id: str):
-        """
-        Send buffered audio to Gemini for transcription.
-
-        Args:
-            session_id: Session ID to transcribe
-        """
-        if session_id not in self.session_buffers:
-            return
-
-        buffer_data = self.session_buffers[session_id]
-
-        # Concatenate all audio chunks
-        audio_array = np.concatenate(buffer_data["buffer"])
-
-        # Get current VFO state to check if stereo and get settings
-        vfo_state = None
-        all_vfos = self.vfo_manager.get_all_vfo_states(session_id)
-        for vfo_num, vfo in all_vfos.items():
-            if vfo.selected and getattr(vfo, "transcription_enabled", False):
-                vfo_state = vfo
-                break
-
-        is_stereo = (
-            vfo_state and vfo_state.modulation and vfo_state.modulation.upper() == "FM_STEREO"
-        )
-
-        # Convert stereo to mono if needed (Gemini expects mono audio)
-        if is_stereo:
-            # Audio is interleaved [L, R, L, R, ...], convert to mono by averaging
-            left_channel = audio_array[0::2]
-            right_channel = audio_array[1::2]
-            audio_array = (left_channel + right_channel) / 2.0
-            logger.debug(f"Converted stereo to mono: {len(audio_array)} samples")
-
-        # Normalize audio to use full dynamic range without clipping
-        max_val = np.abs(audio_array).max()
-        if max_val > 0:
-            # Normalize to 0.8 to leave headroom
-            audio_array = audio_array * (0.8 / max_val)
-
-        # Clear buffer
-        buffer_data["buffer"] = []
-
-        # Get current transcription settings
-        current_language = getattr(vfo_state, "transcription_language", "en")
-
-        # Send to Gemini asynchronously
-        asyncio.run_coroutine_threadsafe(
-            self._transcribe_audio(
-                session_id=session_id,
-                audio_data=audio_array,
-                language=current_language,
-            ),
-            self.loop,
-        )
 
     async def _receiver_loop(self, session_id: str):
         """Background task to receive transcription results from Gemini (async)
@@ -324,12 +306,9 @@ class TranscriptionConsumer(threading.Thread):
                     if not response:
                         continue
 
-                    logger.debug(f"[{session_id}] Received response from Gemini")
-
                     # Process server content (transcription results)
                     if response.server_content and response.server_content.model_turn:
                         is_complete = getattr(response.server_content, "turn_complete", False)
-                        logger.debug(f"[{session_id}] Turn complete: {is_complete}")
 
                         for part in response.server_content.model_turn.parts:
                             if part.text:
@@ -340,56 +319,45 @@ class TranscriptionConsumer(threading.Thread):
                                 if LANGDETECT_AVAILABLE and text:
                                     try:
                                         detected_language = detect(text)
-                                        logger.debug(
-                                            f"[{session_id}] Detected language: {detected_language}"
-                                        )
-                                    except LangDetectException as e:
-                                        logger.debug(
-                                            f"[{session_id}] Language detection failed: {e}"
-                                        )
+                                    except LangDetectException:
                                         detected_language = "unknown"
 
+                                # Emit all transcriptions (partial and final)
+                                # For continuous streams, we get many partial updates
                                 transcription_data = {
                                     "text": text,
                                     "session_id": session_id,
                                     "language": detected_language,
-                                    "is_final": is_complete,  # Flag to indicate if this is final or partial
+                                    "is_final": is_complete,
                                 }
 
-                                logger.info(
-                                    f"[{session_id}] Transcription ({detected_language}, {'final' if is_complete else 'partial'}): {text}"
-                                )
-                                await self.sio.emit(
-                                    "transcription-data", transcription_data, room=session_id
-                                )
-                            else:
-                                logger.debug(
-                                    f"[{session_id}] Received model turn but no text in part"
-                                )
-                    else:
-                        logger.debug(f"[{session_id}] Received non-transcription response")
+                                # Log based on completeness
+                                if is_complete:
+                                    logger.info(
+                                        f"Transcription final ({detected_language}): {text}"
+                                    )
+                                else:
+                                    logger.info(
+                                        f"Transcription partial ({detected_language}): {text}"
+                                    )
 
-                    # Handle setup complete
-                    if response.setup_complete:
-                        logger.debug(f"[{session_id}] Gemini session setup complete")
+                                # Broadcast to all clients (not just room)
+                                await self.sio.emit("transcription-data", transcription_data)
 
                 except Exception as e:
                     error_str = str(e).lower()
                     # Check if it's a deadline/timeout error - these are recoverable
                     if "deadline" in error_str or "timeout" in error_str:
-                        logger.warning(
-                            f"[{session_id}] Gemini connection timeout, marking for reconnect"
-                        )
                         self.gemini_connected = False
                         break
                     else:
-                        logger.error(f"[{session_id}] Error in receiver loop: {e}", exc_info=True)
+                        logger.error(f"Receiver error: {e}")
                         self.gemini_connected = False
                         break
 
         except Exception as e:
             if self.gemini_session:  # Only log error if session was active
-                logger.error(f"Gemini receiver error: {e}", exc_info=True)
+                logger.error(f"Gemini receiver error: {e}")
             self.gemini_connected = False
 
     async def _send_error_to_ui(self, session_id: str, error: Exception):
@@ -419,7 +387,6 @@ class TranscriptionConsumer(threading.Thread):
             )
         elif "deadline" in error_str or "timeout" in error_str:
             # Deadline/timeout errors are recoverable - don't send to UI, just reconnect
-            logger.info(f"[{session_id}] Deadline timeout detected, will reconnect automatically")
             return  # Don't send error to UI for timeouts
         elif "network" in error_str or "connection" in error_str:
             error_type = "network_error"
@@ -430,7 +397,7 @@ class TranscriptionConsumer(threading.Thread):
             error_message = f"Transcription error: {str(error)[:100]}"
             error_details = str(error)
 
-        # Emit error to frontend
+        # Emit error to frontend (broadcast to all)
         await self.sio.emit(
             "transcription-error",
             {
@@ -440,10 +407,7 @@ class TranscriptionConsumer(threading.Thread):
                 "details": error_details,
                 "timestamp": __import__("datetime").datetime.now().isoformat(),
             },
-            room=session_id,
         )
-
-        logger.warning(f"Sent transcription error to UI: {error_type} - {error_message}")
 
     async def _connect_to_gemini(self, session_id: str, language: str):
         """
@@ -454,7 +418,6 @@ class TranscriptionConsumer(threading.Thread):
             language: Language code (used for system instructions)
         """
         try:
-            logger.info("Connecting to Gemini Live API...")
 
             # Initialize client
             self.gemini_client = genai.Client(api_key=self.gemini_api_key)
@@ -476,6 +439,8 @@ class TranscriptionConsumer(threading.Thread):
                 raise RuntimeError("Gemini client not initialized")
 
             # Connect to Live API (enter context manager)
+            # Note: Only certain models support Live API (bidiGenerateContent)
+            # gemini-2.0-flash-exp is confirmed to work but has 10 RPM limit
             session_context = self.gemini_client.aio.live.connect(
                 model="models/gemini-2.0-flash-exp", config=config
             )
@@ -484,6 +449,7 @@ class TranscriptionConsumer(threading.Thread):
             self.gemini_session = await session_context.__aenter__()
             self.gemini_session_context = session_context  # Store for cleanup
             self.gemini_connected = True
+            self.last_connection_attempt = 0  # Reset backoff on successful connection
             logger.info("Connected to Gemini Live API")
 
             # Start receiver task
@@ -513,26 +479,54 @@ class TranscriptionConsumer(threading.Thread):
                 logger.debug("google-genai package not installed, skipping transcription")
                 return
 
-            # Check if API key is configured
+            # Check if API key is configured, try to fetch from preferences if empty
             if not self.gemini_api_key:
-                logger.debug(
-                    f"Gemini API key not configured (current value: '{self.gemini_api_key}'), skipping transcription"
-                )
-                return
+                # Try to fetch from preferences once
+                try:
+                    from sqlalchemy.ext.asyncio import async_sessionmaker
 
-            logger.debug(
-                f"Using Gemini API key: {self.gemini_api_key[:10]}...{self.gemini_api_key[-4:] if len(self.gemini_api_key) > 14 else ''}"
-            )
+                    from crud.preferences import fetch_all_preferences
+                    from db import engine
+
+                    async_session = async_sessionmaker(engine, expire_on_commit=False)
+                    async with async_session() as session:
+                        result = await fetch_all_preferences(session)
+                        if result.get("success"):
+                            preferences = result.get("data", [])
+                            gemini_api_key = next(
+                                (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
+                                "",
+                            )
+                            if gemini_api_key:
+                                self.gemini_api_key = gemini_api_key
+                                logger.info(
+                                    f"Loaded Gemini API key from preferences (length: {len(gemini_api_key)})"
+                                )
+                            else:
+                                logger.debug(
+                                    "No Gemini API key found in preferences, skipping transcription"
+                                )
+                                return
+                        else:
+                            logger.debug(
+                                f"Failed to fetch preferences: {result.get('error')}, skipping transcription"
+                            )
+                            return
+                except Exception as e:
+                    logger.debug(
+                        f"Failed to fetch Gemini API key from preferences: {e}, skipping transcription"
+                    )
+                    return
 
             # Connect to Gemini if not connected
-            logger.debug(
-                f"Connection status: connected={self.gemini_connected}, session={self.gemini_session is not None}"
-            )
             if not self.gemini_connected or self.gemini_session is None:
-                logger.info(f"Initiating connection to Gemini for session {session_id}")
+                # Check if we're in backoff period after quota error
+                time_since_last_attempt = time.time() - self.last_connection_attempt
+                if time_since_last_attempt < self.connection_backoff_seconds:
+                    return
+
+                self.last_connection_attempt = time.time()
                 await self._connect_to_gemini(session_id, language)
-            else:
-                logger.debug("Already connected to Gemini, reusing session")
 
             # Type check: ensure session is not None
             if self.gemini_session is None:
@@ -544,14 +538,12 @@ class TranscriptionConsumer(threading.Thread):
 
             # Send audio to Gemini (API will wrap media_chunks in realtime_input)
             await self.gemini_session.send(
-                input={"media_chunks": [{"data": audio_b64, "mime_type": "audio/pcm"}]}
+                input={"media_chunks": [{"data": audio_b64, "mime_type": "audio/pcm"}]},
+                end_of_turn=True,  # Signal that this chunk is complete
             )
 
-            duration = len(audio_data) / self.input_sample_rate
-            logger.debug(f"Sent {duration:.1f}s audio to Gemini API (session: {session_id})")
-
         except Exception as e:
-            logger.error(f"Transcription send error for session {session_id}: {e}", exc_info=True)
+            logger.error(f"Transcription error: {e}")
             # Mark as disconnected but let receiver loop handle cleanup
             self.gemini_connected = False
             # Send error to UI

@@ -41,6 +41,10 @@ const initialState = {
 
     // Last received timestamp
     lastUpdated: null,
+
+    // Live accumulating transcription per session
+    // {sessionId: {id, text, timestamp, language, startTime}}
+    liveTranscription: {},
 };
 
 const transcriptionSlice = createSlice({
@@ -48,36 +52,55 @@ const transcriptionSlice = createSlice({
     initialState,
     reducers: {
         /**
-         * Add a new transcription entry
-         * Automatically trims older entries if word count exceeds maxWords
+         * Add a new transcription fragment
+         * Continuously appends to live transcription, never-ending stream
          */
         addTranscription: (state, action) => {
-            const { text, sessionId, language } = action.payload;
+            const { text, sessionId, language, is_final } = action.payload;
+            const trimmedText = text.trim();
 
-            // Create new entry
-            const entry = {
-                id: Date.now() + Math.random(), // Unique ID
-                text: text.trim(),
-                timestamp: new Date().toISOString(),
-                sessionId,
-                language: language || 'auto',
-            };
+            console.log('[Redux] addTranscription called:', { text: trimmedText, sessionId, language, is_final });
 
-            // Calculate word count for new entry
-            const newWords = text.trim().split(/\s+/).length;
+            // Skip empty text
+            if (!trimmedText) {
+                console.log('[Redux] Skipping empty text');
+                return;
+            }
 
-            // Add to beginning of array (newest first)
-            state.entries.unshift(entry);
-            state.wordCount += newWords;
-            state.lastUpdated = entry.timestamp;
+            // Initialize or update live transcription for this session
+            if (!state.liveTranscription[sessionId]) {
+                console.log('[Redux] Initializing new live transcription for session:', sessionId);
+                state.liveTranscription[sessionId] = {
+                    id: Date.now() + Math.random(),
+                    text: trimmedText,
+                    timestamp: new Date().toISOString(),
+                    startTime: new Date().toISOString(),
+                    sessionId,
+                    language: language || 'auto',
+                };
+            } else {
+                console.log('[Redux] Appending to existing transcription. Old length:', state.liveTranscription[sessionId].text.length, 'Adding:', trimmedText.length);
+                // Append new text to existing live transcription with a space
+                state.liveTranscription[sessionId].text += ' ' + trimmedText;
+                state.liveTranscription[sessionId].timestamp = new Date().toISOString();
+                state.liveTranscription[sessionId].language = language || state.liveTranscription[sessionId].language;
+            }
+
+            console.log('[Redux] Live transcription updated. Total length:', state.liveTranscription[sessionId].text.length);
+
+            state.lastUpdated = new Date().toISOString();
             state.isActive = true;
 
-            // Trim old entries if we exceed maxWords
-            while (state.wordCount > state.maxWords && state.entries.length > 1) {
-                const removed = state.entries.pop();
-                const removedWords = removed.text.split(/\s+/).length;
-                state.wordCount -= removedWords;
-            }
+            // Clean up old sessions (older than 5 minutes)
+            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+            Object.keys(state.liveTranscription).forEach(sid => {
+                const transcription = state.liveTranscription[sid];
+                const lastUpdate = new Date(transcription.timestamp).getTime();
+                if (lastUpdate < fiveMinutesAgo && sid !== sessionId) {
+                    console.log('[Redux] Removing old transcription for session:', sid);
+                    delete state.liveTranscription[sid];
+                }
+            });
         },
 
         /**
@@ -88,6 +111,7 @@ const transcriptionSlice = createSlice({
             state.wordCount = 0;
             state.lastUpdated = null;
             state.isActive = false;
+            state.liveTranscription = {};
         },
 
         /**
