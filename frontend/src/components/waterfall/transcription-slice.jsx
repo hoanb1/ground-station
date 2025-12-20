@@ -72,21 +72,27 @@ const transcriptionSlice = createSlice({
                 console.log('[Redux] Initializing new live transcription for session:', sessionId);
                 state.liveTranscription[sessionId] = {
                     id: Date.now() + Math.random(),
-                    text: trimmedText,
+                    segments: [{
+                        text: trimmedText,
+                        timestamp: Date.now(),
+                    }],
                     timestamp: new Date().toISOString(),
                     startTime: new Date().toISOString(),
                     sessionId,
                     language: language || 'auto',
                 };
             } else {
-                console.log('[Redux] Appending to existing transcription. Old length:', state.liveTranscription[sessionId].text.length, 'Adding:', trimmedText.length);
-                // Append new text to existing live transcription with a space
-                state.liveTranscription[sessionId].text += ' ' + trimmedText;
+                console.log('[Redux] Appending to existing transcription. Adding segment:', trimmedText.length, 'chars');
+                // Append new segment with timestamp
+                state.liveTranscription[sessionId].segments.push({
+                    text: trimmedText,
+                    timestamp: Date.now(),
+                });
                 state.liveTranscription[sessionId].timestamp = new Date().toISOString();
                 state.liveTranscription[sessionId].language = language || state.liveTranscription[sessionId].language;
             }
 
-            console.log('[Redux] Live transcription updated. Total length:', state.liveTranscription[sessionId].text.length);
+            console.log('[Redux] Live transcription updated. Total segments:', state.liveTranscription[sessionId].segments.length);
 
             state.lastUpdated = new Date().toISOString();
             state.isActive = true;

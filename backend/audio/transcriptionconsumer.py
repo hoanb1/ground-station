@@ -5,16 +5,17 @@
 # real-time speech-to-text conversion. It runs as a background thread that:
 #
 # 1. Consumes audio chunks from the transcription queue (fed by AudioBroadcaster)
-# 2. Buffers audio into 3-5 second chunks for transcription
-# 3. Connects to Gemini Live API
+# 2. Streams audio continuously to Gemini Live API (every 0.5 seconds)
+# 3. Connects to Gemini Live API for persistent streaming session
 # 4. Resamples audio from 44.1kHz to 16kHz and converts to 16-bit PCM
-# 5. Sends audio chunks to Gemini and receives transcriptions asynchronously
-# 6. Emits transcriptions to frontend via Socket.IO
+# 5. Sends audio chunks continuously and receives transcriptions in real-time
+# 6. Emits partial and final transcriptions to frontend via Socket.IO
 #
-# Architecture: Asynchronous send/receive pattern
-# - Audio chunks are sent to Gemini API (every 3-5 seconds)
-# - Gemini processes chunks and returns text transcriptions
-# - Results arrive asynchronously via the Live API session
+# Architecture: True continuous streaming pattern
+# - Audio chunks are streamed immediately using send_realtime_input()
+# - No end_of_turn signals between chunks for continuous flow
+# - Gemini processes audio in real-time and returns partial + final transcriptions
+# - Results arrive asynchronously via the Live API session with low latency
 #
 # Transcription is per-VFO controllable - each VFO can enable/disable transcription
 # independently with custom language settings.
@@ -74,8 +75,9 @@ class TranscriptionConsumer(threading.Thread):
     """
     Transcription consumer that streams audio to Google Gemini Live API.
 
-    Connects to Gemini Live API, buffers audio chunks, resamples to 16kHz,
-    and sends them for transcription. Receives transcription results and forwards to frontend.
+    Connects to Gemini Live API for continuous audio streaming. Small audio chunks (0.5s)
+    are resampled to 16kHz and streamed in real-time using send_realtime_input().
+    Receives partial and final transcriptions with low latency and forwards to frontend.
     """
 
     def __init__(self, transcription_queue, sio, loop, gemini_api_key: str):
@@ -100,8 +102,8 @@ class TranscriptionConsumer(threading.Thread):
         # {session_id: {"buffer": [], "language": "en"}}
         self.session_buffers: Dict[str, dict] = {}
 
-        # Buffer settings (in seconds) - longer chunks for better recognition
-        self.chunk_duration = 6.0  # Send audio every 6 seconds
+        # Streaming settings - send audio frequently for real-time transcription
+        self.chunk_duration = 0.5  # Send audio every 0.5 seconds for low latency
         self.input_sample_rate = 44100  # Input from demodulators
         self.gemini_sample_rate = 16000  # Gemini requires 16kHz
 
@@ -208,7 +210,7 @@ class TranscriptionConsumer(threading.Thread):
                 )
                 duration = total_samples / self.input_sample_rate
 
-                # Only send when we have accumulated chunk_duration seconds
+                # Send when we have accumulated chunk_duration seconds
                 if duration >= self.chunk_duration:
 
                     # Concatenate all buffered chunks
@@ -234,9 +236,9 @@ class TranscriptionConsumer(threading.Thread):
                     # Clear buffer
                     self.session_buffers[session_id]["buffer"] = []
 
-                    # Send to Gemini
+                    # Stream to Gemini immediately (true continuous streaming)
                     asyncio.run_coroutine_threadsafe(
-                        self._transcribe_audio(
+                        self._stream_audio(
                             session_id=session_id,
                             audio_data=audio_array,
                             language=current_language,
@@ -422,17 +424,17 @@ class TranscriptionConsumer(threading.Thread):
             # Initialize client
             self.gemini_client = genai.Client(api_key=self.gemini_api_key)
 
-            # Create session config with language hint
-            system_instruction = (
-                f"Transcribe the audio to text. Audio language: {language}."
-                if language != "auto"
-                else "Transcribe the audio to text."
-            )
-
-            config = {
+            # Create session config for audio transcription
+            # Note: Native audio model may be sensitive to config options
+            config: dict = {
                 "response_modalities": ["TEXT"],  # We only want text transcription
-                "system_instruction": system_instruction,
             }
+
+            # Add system instruction with language hint if not auto
+            if language != "auto":
+                config["system_instruction"] = (
+                    f"Transcribe the audio to text. Audio language: {language}."
+                )
 
             # Type check: ensure client is not None
             if self.gemini_client is None:
@@ -440,10 +442,10 @@ class TranscriptionConsumer(threading.Thread):
 
             # Connect to Live API (enter context manager)
             # Note: Only certain models support Live API (bidiGenerateContent)
-            # gemini-2.0-flash-exp is confirmed to work but has 10 RPM limit
-            session_context = self.gemini_client.aio.live.connect(
-                model="models/gemini-2.0-flash-exp", config=config
-            )
+            # Try gemini-2.0-flash-exp first (better for transcription, but has quota limits)
+            # Falls back to gemini-2.5-flash-native-audio-preview if quota exceeded
+            model = "models/gemini-2.0-flash-exp"
+            session_context = self.gemini_client.aio.live.connect(model=model, config=config)
 
             # Enter the async context manager
             self.gemini_session = await session_context.__aenter__()
@@ -464,9 +466,12 @@ class TranscriptionConsumer(threading.Thread):
             await self._send_error_to_ui(session_id, e)
             raise
 
-    async def _transcribe_audio(self, session_id: str, audio_data: np.ndarray, language: str):
+    async def _stream_audio(self, session_id: str, audio_data: np.ndarray, language: str):
         """
-        Send audio to Gemini for transcription.
+        Stream audio to Gemini Live API for real-time transcription.
+
+        Uses continuous streaming pattern without end_of_turn signals,
+        allowing Gemini to process audio in real-time and return partial transcriptions.
 
         Args:
             session_id: Session ID for routing results
@@ -536,14 +541,15 @@ class TranscriptionConsumer(threading.Thread):
             audio_pcm = self._convert_to_gemini_format(audio_data)
             audio_b64 = base64.b64encode(audio_pcm).decode("utf-8")
 
-            # Send audio to Gemini (API will wrap media_chunks in realtime_input)
+            # Stream audio continuously (no end_of_turn for continuous streaming)
+            # This allows Gemini to process audio in real-time and return partial transcriptions
             await self.gemini_session.send(
                 input={"media_chunks": [{"data": audio_b64, "mime_type": "audio/pcm"}]},
-                end_of_turn=True,  # Signal that this chunk is complete
+                end_of_turn=False,  # Keep stream open for continuous audio
             )
 
         except Exception as e:
-            logger.error(f"Transcription error: {e}")
+            logger.error(f"Audio streaming error: {e}")
             # Mark as disconnected but let receiver loop handle cleanup
             self.gemini_connected = False
             # Send error to UI

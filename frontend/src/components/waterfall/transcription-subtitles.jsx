@@ -48,13 +48,29 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
     )[0] || null;
 
     // Don't render anything if no live transcription
-    if (!currentTranscription || !currentTranscription.text) {
+    if (!currentTranscription || !currentTranscription.segments || currentTranscription.segments.length === 0) {
         return null;
     }
 
-    // Show only last 50 words
-    const words = currentTranscription.text.split(/\s+/);
-    const displayText = words.slice(-50).join(' ');
+    // Get all segments and determine which are old (>15 seconds)
+    const now = Date.now();
+    const ageThreshold = 15000; // 15 seconds in milliseconds
+
+    // Collect all segments from newest to oldest, limiting to last 50 words total
+    const allText = currentTranscription.segments.map(s => s.text).join(' ');
+    const words = allText.split(/\s+/);
+    const displayWords = words.slice(-50);
+    const displayText = displayWords.join(' ');
+
+    // Build segments with age-based opacity
+    // We'll render each segment separately with appropriate styling
+    const segmentsToRender = currentTranscription.segments
+        .map(segment => ({
+            text: segment.text,
+            isOld: (now - segment.timestamp) > ageThreshold
+        }))
+        // Only show segments that appear in the displayText (last 50 words)
+        .filter(segment => displayText.includes(segment.text));
 
     return (
         <>
@@ -100,7 +116,17 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                                 <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{currentTranscription.language.toUpperCase()}, </span>
                             )}
                             <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{new Date(currentTranscription.startTime).toLocaleTimeString()}: </span>
-                            {displayText}
+                            {segmentsToRender.map((segment, idx) => (
+                                <span
+                                    key={idx}
+                                    style={{
+                                        opacity: segment.isOld ? 0.4 : 1.0,
+                                        transition: 'opacity 0.5s ease-out'
+                                    }}
+                                >
+                                    {idx > 0 ? ' ' : ''}{segment.text}
+                                </span>
+                            ))}
                         </Box>
                     </Box>
                 </Box>
