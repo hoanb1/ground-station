@@ -45,6 +45,7 @@ import libraryVersionsReducer from '../settings/library-versions-slice.jsx';
 import performanceReducer from '../performance/performance-slice.jsx';
 import systemInfoReducer from '../settings/system-info-slice.jsx';
 import sessionsReducer from '../settings/sessions-slice.jsx';
+import transcriptionReducer from '../waterfall/transcription-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
 
 
@@ -229,6 +230,13 @@ const systemInfoPersistConfig = {
     whitelist: []
 };
 
+// Persist configuration for transcription slice (do not persist transcriptions - runtime only)
+const transcriptionPersistConfig = {
+    key: 'transcription',
+    storage,
+    whitelist: []  // Don't persist transcriptions (they're ephemeral)
+};
+
 
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
@@ -253,6 +261,7 @@ const persistedDecodersReducer = persistReducer(decodersPersistConfig, decodersR
 const persistedLibraryVersionsReducer = persistReducer(libraryVersionsPersistConfig, libraryVersionsReducer);
 const persistedPerformanceReducer = persistReducer(performancePersistConfig, performanceReducer);
 const persistedSystemInfoReducer = persistReducer(systemInfoPersistConfig, systemInfoReducer);
+const persistedTranscriptionReducer = persistReducer(transcriptionPersistConfig, transcriptionReducer);
 
 
 export const store = configureStore({
@@ -280,6 +289,7 @@ export const store = configureStore({
         performance: persistedPerformanceReducer,
         systemInfo: persistedSystemInfoReducer,
         sessions: sessionsReducer,
+        transcription: persistedTranscriptionReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>

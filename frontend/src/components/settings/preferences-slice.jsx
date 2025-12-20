@@ -90,18 +90,8 @@ const preferencesSlice = createSlice({
             },
             {
                 id: null,
-                name: 'debabel_url',
+                name: 'gemini_api_key',
                 value: '',
-            },
-            {
-                id: null,
-                name: 'debabel_model',
-                value: 'small.en',
-            },
-            {
-                id: null,
-                name: 'debabel_language',
-                value: 'en',
             }
         ],
         status: 'idle',

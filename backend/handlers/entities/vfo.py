@@ -116,7 +116,6 @@ async def update_vfo_parameters(
         volume=data.get("volume"),
         squelch=data.get("squelch"),
         transcription_enabled=data.get("transcriptionEnabled"),
-        transcription_model=data.get("transcriptionModel"),
         transcription_language=data.get("transcriptionLanguage"),
         decoder=data.get("decoder"),
         locked_transmitter_id=data.get("locked_transmitter_id"),
@@ -266,38 +265,48 @@ async def toggle_transcription(
     vfo_number = data.get("vfoNumber")
     enabled = data.get("enabled", False)
 
-    # Fetch DeBabel URL from preferences and update transcription consumer
+    logger.info(f"toggle_transcription called: vfo={vfo_number}, enabled={enabled}")
+
+    # Fetch Gemini API key from preferences and update transcription consumer
     if enabled:
+        logger.info("Transcription enabled - fetching Gemini API key from preferences")
         try:
             async with AsyncSessionLocal() as dbsession:
                 prefs_result = await fetch_all_preferences(dbsession)
+                logger.debug(f"Preferences fetch result: success={prefs_result['success']}")
                 if prefs_result["success"]:
                     preferences = prefs_result["data"]
-                    debabel_url = next(
-                        (p["value"] for p in preferences if p["name"] == "debabel_url"), ""
+                    logger.debug(f"Found {len(preferences)} preferences")
+                    gemini_api_key = next(
+                        (p["value"] for p in preferences if p["name"] == "gemini_api_key"), ""
                     )
-                    if debabel_url:
+                    logger.info(
+                        f"Gemini API key found: {'Yes' if gemini_api_key else 'No'} (length: {len(gemini_api_key) if gemini_api_key else 0})"
+                    )
+                    if gemini_api_key:
                         from server.shutdown import transcription_consumer
 
+                        logger.debug(
+                            f"transcription_consumer exists: {transcription_consumer is not None}"
+                        )
                         if transcription_consumer:
-                            transcription_consumer.update_debabel_url(debabel_url)
-                            logger.debug(
-                                f"Updated transcription consumer with DeBabel URL: {debabel_url}"
-                            )
+                            transcription_consumer.update_gemini_api_key(gemini_api_key)
+                            logger.info("Updated transcription consumer with Gemini API key")
+                        else:
+                            logger.error("transcription_consumer is None!")
                     else:
-                        logger.warning("DeBabel URL not configured in preferences")
-                        return {"success": False, "error": "DeBabel URL not configured"}
+                        logger.warning("Gemini API key not configured in preferences")
+                        return {"success": False, "error": "Gemini API key not configured"}
         except Exception as e:
-            logger.error(f"Error fetching DeBabel URL: {e}")
-            return {"success": False, "error": f"Failed to fetch DeBabel configuration: {str(e)}"}
+            logger.error(f"Error fetching Gemini API key: {e}", exc_info=True)
+            return {"success": False, "error": f"Failed to fetch Gemini configuration: {str(e)}"}
 
     vfomanager = VFOManager()
     vfomanager.update_vfo_state(
         session_id=sid,
         vfo_id=vfo_number,
         transcription_enabled=enabled,
-        transcription_model=data.get("model"),
-        transcription_language=data.get("language"),
+        transcription_language=data.get("language", "auto"),
     )
 
     # Get updated state
@@ -312,8 +321,7 @@ async def toggle_transcription(
         "data": {
             "vfoNumber": vfo_number,
             "transcriptionEnabled": vfo_state.transcription_enabled if vfo_state else False,
-            "transcriptionModel": vfo_state.transcription_model if vfo_state else "small.en",
-            "transcriptionLanguage": vfo_state.transcription_language if vfo_state else "en",
+            "transcriptionLanguage": vfo_state.transcription_language if vfo_state else "auto",
         },
     }
 

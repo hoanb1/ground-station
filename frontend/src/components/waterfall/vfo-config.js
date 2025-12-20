@@ -711,8 +711,7 @@ export const getDefaultVFOConfig = () => {
         squelch: -150,
         stepSize: 1000,
         transcriptionEnabled: false,
-        transcriptionModel: 'small.en',
-        transcriptionLanguage: 'en',
+        transcriptionLanguage: 'auto',
 
         // Decoder-specific parameters (flat object, prefixed by decoder type)
         parameters: {

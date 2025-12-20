@@ -164,8 +164,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         return preference ? preference.value : '';
     }, [preferences]);
 
-    // Check if DeBabel is configured
-    const debabelConfigured = !!getPreferenceValue('debabel_url');
+    // Check if Gemini API is configured
+    const geminiConfigured = !!getPreferenceValue('gemini_api_key');
 
     const [localCenterFrequency, setLocalCenterFrequency] = useState(centerFrequency);
     const [localDbRange, setLocalDbRange] = useState(dbRange);
@@ -429,25 +429,28 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
     };
 
     const handleTranscriptionToggle = (vfoNumber, enabled) => {
-        // Use VFO's existing values, fallback to preferences only if not set
+        // Use VFO's existing values, fallback to default
         const currentVfo = vfoMarkers[vfoNumber];
-        const model = currentVfo?.transcriptionModel || getPreferenceValue('debabel_model') || 'small';
-        const language = currentVfo?.transcriptionLanguage || getPreferenceValue('debabel_language') || 'en';
+        const language = currentVfo?.transcriptionLanguage || 'auto';
 
         socket.emit('data_submission', 'toggle-transcription', {
             vfoNumber,
             enabled,
-            model,
             language
         }, (response) => {
             if (response.success) {
-                // Update VFO state in Redux - only update enabled flag, preserve model/language
+                // Update VFO state in Redux - only update enabled flag, preserve language
                 dispatch(setVFOProperty({
                     vfoNumber,
                     updates: {
                         transcriptionEnabled: enabled
                     }
                 }));
+
+                // Update transcription active state in Redux
+                const { setTranscriptionActive } = require('./transcription-slice');
+                dispatch(setTranscriptionActive(enabled));
+
                 toast.success(t(`vfo.transcription_${enabled ? 'enabled' : 'disabled'}`,
                     `Transcription ${enabled ? 'enabled' : 'disabled'} for VFO ${vfoNumber}`));
             } else {
@@ -712,7 +715,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     selectedVFO={selectedVFO}
                     onVFOListenChange={handleVFOListenChange}
                     onTranscriptionToggle={handleTranscriptionToggle}
-                    debabelConfigured={debabelConfigured}
+                    geminiConfigured={geminiConfigured}
                 />
 
                 <FrequencyControlAccordion

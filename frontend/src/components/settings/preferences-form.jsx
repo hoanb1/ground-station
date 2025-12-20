@@ -346,9 +346,9 @@ const PreferencesForm = () => {
                         <Divider sx={{ mb: 2 }} />
                     </Grid>
 
-                    {/* DeBabel URL */}
+                    {/* Gemini API Key */}
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>{t('preferences.debabel_url', 'DeBabel URL')}</Typography>
+                        <Typography>{t('preferences.gemini_api_key', 'Gemini API Key')}</Typography>
                     </Grid>
                     <Grid size={8}>
                         <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
@@ -358,80 +358,30 @@ const PreferencesForm = () => {
                             <TextField
                                 style={{fontFamily: 'monospace'}}
                                 fullWidth
-                                id="debabel-url"
+                                id="gemini-api-key"
                                 variant="filled"
-                                type="text"
+                                type="password"
                                 size="small"
                                 disabled={isLoading}
-                                label={t('preferences.debabel_url', 'DeBabel URL')}
-                                placeholder="ws://localhost:8765"
-                                value={getPreferenceValue('debabel_url')}
-                                onChange={handleChange('debabel_url')}
-                                helperText={t('preferences.debabel_url_help', 'WebSocket URL for DeBabel service (e.g., ws://server:8765)')}
+                                label={t('preferences.gemini_api_key', 'Gemini API Key')}
+                                placeholder="AIza..."
+                                value={getPreferenceValue('gemini_api_key')}
+                                onChange={handleChange('gemini_api_key')}
+                                helperText={t('preferences.gemini_api_key_help', 'Google Gemini API key for audio transcription. Get yours at ai.google.dev')}
                             />
                         </FormControl>
-                    </Grid>
-
-                    {/* DeBabel Model */}
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>{t('preferences.debabel_model', 'Default Model')}</Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                            disabled={isLoading}
-                            size="small"
-                        >
-                            <InputLabel htmlFor={"debabel-model-selector"}>{t('preferences.debabel_model', 'Default Model')}</InputLabel>
-                            <Select
-                                id={'debabel-model-selector'}
-                                value={getPreferenceValue('debabel_model')}
-                                onChange={handleChange('debabel_model')}
-                                label={t('preferences.debabel_model', 'Default Model')}
-                                variant={'filled'}>
-                                <MenuItem value="tiny.en">Tiny (fastest, least accurate)</MenuItem>
-                                <MenuItem value="base.en">Base (fast, decent accuracy)</MenuItem>
-                                <MenuItem value="small.en">Small (recommended)</MenuItem>
-                                <MenuItem value="small">Small Multilingual</MenuItem>
-                                <MenuItem value="medium.en">Medium (slower, more accurate)</MenuItem>
-                                <MenuItem value="medium">Medium Multilingual</MenuItem>
-                                <MenuItem value="large-v3">Large (best accuracy, slowest)</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Grid>
-
-                    {/* DeBabel Language */}
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>{t('preferences.debabel_language', 'Default Language')}</Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                            disabled={isLoading}
-                            size="small"
-                        >
-                            <InputLabel htmlFor={"debabel-language-selector"}>{t('preferences.debabel_language', 'Default Language')}</InputLabel>
-                            <Select
-                                id={'debabel-language-selector'}
-                                value={getPreferenceValue('debabel_language')}
-                                onChange={handleChange('debabel_language')}
-                                label={t('preferences.debabel_language', 'Default Language')}
-                                variant={'filled'}>
-                                <MenuItem value="auto">Auto-detect</MenuItem>
-                                <MenuItem value="en">English</MenuItem>
-                                <MenuItem value="es">Español</MenuItem>
-                                <MenuItem value="fr">Français</MenuItem>
-                                <MenuItem value="de">Deutsch</MenuItem>
-                                <MenuItem value="it">Italiano</MenuItem>
-                                <MenuItem value="pt">Português</MenuItem>
-                                <MenuItem value="nl">Nederlands</MenuItem>
-                                <MenuItem value="el">Ελληνικά</MenuItem>
-                                <MenuItem value="ru">Русский</MenuItem>
-                                <MenuItem value="zh">中文</MenuItem>
-                                <MenuItem value="ja">日本語</MenuItem>
-                                <MenuItem value="ko">한국어</MenuItem>
-                                <MenuItem value="ar">العربية</MenuItem>
-                                <MenuItem value="hi">हिन्दी</MenuItem>
-                            </Select>
-                        </FormControl>
+                        <Alert severity="info" sx={{ mt: 1, fontSize: '0.75rem' }}>
+                            <AlertTitle sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Privacy & Terms</AlertTitle>
+                            When enabled, audio is sent to Google's servers. You are responsible for costs (~$0.27/hour).
+                            {' '}
+                            <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                                Google's Terms
+                            </a>
+                            {' • '}
+                            <a href="https://github.com/sgoudelis/ground-station/blob/main/TRANSCRIPTION_PRIVACY.md" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                                Privacy Notice
+                            </a>
+                        </Alert>
                     </Grid>
 
                 </Grid>

@@ -10,6 +10,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ErrorIcon from '@mui/icons-material/Error';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import LockIcon from '@mui/icons-material/Lock';
+import ClearIcon from '@mui/icons-material/Clear';
 import {
     VFO1Icon,
     VFO2Icon,
@@ -24,7 +25,8 @@ import {
     RotatorLinesIcon
 } from '../common/custom-icons.jsx';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { clearTranscriptions } from './transcription-slice';
 
 const WaterfallToolbar = ({
                               startStreamingLoading,
@@ -54,10 +56,12 @@ const WaterfallToolbar = ({
                               takeSnapshot
                           }) => {
     const { t } = useTranslation('waterfall');
+    const dispatch = useDispatch();
     const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
     const menuOpen = Boolean(menuAnchorEl);
     const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
     const vfoMarkers = useSelector((state) => state.vfo.vfoMarkers);
+    const transcriptionEntries = useSelector((state) => state.transcription?.entries || []);
 
     const handleMenuClick = (event) => {
         setMenuAnchorEl(event.currentTarget);
@@ -83,6 +87,10 @@ const WaterfallToolbar = ({
         // Set auto-scale preset for weak signals
         setAutoScalePreset('weak');
         handleMenuClose();
+    };
+
+    const handleClearTranscriptions = () => {
+        dispatch(clearTranscriptions());
     };
 
     return (
@@ -254,6 +262,17 @@ const WaterfallToolbar = ({
                     disabled={!isStreaming}
                 >
                     <CameraAltIcon/>
+                </IconButton>
+
+                {/* Clear transcriptions button */}
+                <IconButton
+                    sx={{ borderRadius: 0 }}
+                    onClick={handleClearTranscriptions}
+                    color="primary"
+                    title="Clear Subtitles"
+                    disabled={transcriptionEntries.length === 0}
+                >
+                    <ClearIcon/>
                 </IconButton>
 
                 <Box sx={{ position: 'relative', display: 'inline-flex' }}>

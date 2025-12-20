@@ -20,8 +20,7 @@ class VFOState:
     volume: int = 50
     squelch: int = -150
     transcription_enabled: bool = False  # Enable/disable transcription for this VFO
-    transcription_model: str = "small.en"  # Whisper model to use
-    transcription_language: str = "en"  # Language code for transcription
+    transcription_language: str = "auto"  # Language code for transcription (auto-detect by default)
     decoder: str = "none"  # Decoder type: none, sstv, afsk, gmsk, gfsk, bpsk, lora, morse
     locked_transmitter_id: str = "none"
     parameters_enabled: bool = True  # Enable/disable custom decoder parameters
@@ -65,7 +64,6 @@ class VFOManager:
         volume: Optional[int] = None,
         squelch: Optional[int] = None,
         transcription_enabled: Optional[bool] = None,
-        transcription_model: Optional[str] = None,
         transcription_language: Optional[str] = None,
         decoder: str = "none",
         locked_transmitter_id: str = "none",
@@ -126,9 +124,6 @@ class VFOManager:
         # check transcription settings
         if transcription_enabled is not None:
             vfo_state.transcription_enabled = transcription_enabled
-
-        if transcription_model is not None:
-            vfo_state.transcription_model = transcription_model
 
         if transcription_language is not None:
             vfo_state.transcription_language = transcription_language

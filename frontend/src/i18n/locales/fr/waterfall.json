@@ -78,9 +78,8 @@
     "squelch": "Squelch",
     "volume": "Volume",
     "transcribe": "Transcrire",
-    "configure_debabel": "(Configurer DeBabel dans Paramètres)",
+    "configure_gemini": "(Configurer l'API Gemini dans Paramètres)",
     "transcription_settings": "Paramètres de Transcription",
-    "whisper_model": "Modèle",
     "language": "Langue",
     "modes": {
       "none": "Aucun",

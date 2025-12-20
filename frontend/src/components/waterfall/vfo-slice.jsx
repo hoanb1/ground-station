@@ -191,9 +191,6 @@ export const vfoSlice = createSlice({
                     if (vfoState.transcription_enabled !== undefined) {
                         state.vfoMarkers[vfoNum].transcriptionEnabled = vfoState.transcription_enabled;
                     }
-                    if (vfoState.transcription_model !== undefined) {
-                        state.vfoMarkers[vfoNum].transcriptionModel = vfoState.transcription_model;
-                    }
                     if (vfoState.transcription_language !== undefined) {
                         state.vfoMarkers[vfoNum].transcriptionLanguage = vfoState.transcription_language;
                     }

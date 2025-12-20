@@ -82,8 +82,8 @@ const VfoAccordion = ({
                           onVFOPropertyChange,
                           selectedVFO,
                           onVFOListenChange,
-                          // onTranscriptionToggle,
-                          // debabelConfigured,
+                          onTranscriptionToggle,
+                          geminiConfigured,
                       }) => {
     const { t } = useTranslation('waterfall');
     const squelchSliderRef = React.useRef(null);
@@ -551,36 +551,33 @@ const VfoAccordion = ({
                                 </Box>
                             )}
 
-                            {/* Transcription Section - Commented Out */}
-                            {/*
+                            {/* Transcription Section */}
                             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                                 <FormControlLabel
                                     control={
                                         <Switch
                                             checked={vfoMarkers[vfoIndex]?.transcriptionEnabled || false}
                                             onChange={(e) => onTranscriptionToggle && onTranscriptionToggle(vfoIndex, e.target.checked)}
-                                            disabled={!vfoActive[vfoIndex] || !debabelConfigured}
+                                            disabled={!vfoActive[vfoIndex] || !geminiConfigured}
                                         />
                                     }
                                     label={
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            <TranscribeIcon fontSize="small" />
+                                            {/* <TranscribeIcon fontSize="small" /> */}
                                             {t('vfo.transcribe', 'Transcribe')}
                                         </Box>
                                     }
                                     sx={{mt: 0, ml: 0}}
                                 />
-                                {!debabelConfigured && (
+                                {!geminiConfigured && (
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                        {t('vfo.configure_debabel', '(Configure DeBabel in Settings)')}
+                                        {t('vfo.configure_gemini', '(Configure Gemini API in Settings)')}
                                     </Typography>
                                 )}
                             </Box>
-                            */}
 
                             {/* Transcription Settings - show when transcription is enabled */}
-                            {/*
-                            {vfoMarkers[vfoIndex]?.transcriptionEnabled && debabelConfigured && (
+                            {vfoMarkers[vfoIndex]?.transcriptionEnabled && geminiConfigured && (
                                 <Box sx={{
                                     mt: 1.5,
                                     p: 1.5,
@@ -591,54 +588,40 @@ const VfoAccordion = ({
                                     <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600, color: 'text.secondary' }}>
                                         {t('vfo.transcription_settings', 'Transcription Settings')}
                                     </Typography>
-                                    <Box sx={{ display: 'flex', gap: 1.5 }}>
-                                        <FormControl size="small" sx={{ minWidth: 120, flex: 1 }}>
-                                            <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.whisper_model', 'Model')}</InputLabel>
-                                            <Select
-                                                variant={'outlined'}
-                                                value={vfoMarkers[vfoIndex]?.transcriptionModel || 'small'}
-                                                label={t('vfo.whisper_model', 'Model')}
-                                                onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionModel: e.target.value })}
-                                                sx={{ fontSize: '0.8rem' }}
-                                            >
-                                                <MenuItem value="tiny" sx={{ fontSize: '0.8rem' }}>Tiny (Multilingual)</MenuItem>
-                                                <MenuItem value="tiny.en" sx={{ fontSize: '0.8rem' }}>Tiny (English only)</MenuItem>
-                                                <MenuItem value="base" sx={{ fontSize: '0.8rem' }}>Base (Multilingual)</MenuItem>
-                                                <MenuItem value="base.en" sx={{ fontSize: '0.8rem' }}>Base (English only)</MenuItem>
-                                                <MenuItem value="small" sx={{ fontSize: '0.8rem' }}>Small (Multilingual) ⭐</MenuItem>
-                                                <MenuItem value="small.en" sx={{ fontSize: '0.8rem' }}>Small (English only)</MenuItem>
-                                                <MenuItem value="medium" sx={{ fontSize: '0.8rem' }}>Medium (Multilingual)</MenuItem>
-                                                <MenuItem value="medium.en" sx={{ fontSize: '0.8rem' }}>Medium (English only)</MenuItem>
-                                                <MenuItem value="large" sx={{ fontSize: '0.8rem' }}>Large (Multilingual)</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                        <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
-                                            <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.language', 'Language')}</InputLabel>
-                                            <Select
-                                                variant={'outlined'}
-                                                value={vfoMarkers[vfoIndex]?.transcriptionLanguage || 'en'}
-                                                label={t('vfo.language', 'Language')}
-                                                onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionLanguage: e.target.value })}
-                                                sx={{ fontSize: '0.8rem' }}
-                                            >
-                                                <MenuItem value="auto" sx={{ fontSize: '0.8rem' }}>Auto-detect</MenuItem>
-                                                <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>English</MenuItem>
-                                                <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>Ελληνικά</MenuItem>
-                                                <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>Español</MenuItem>
-                                                <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>Français</MenuItem>
-                                                <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>Deutsch</MenuItem>
-                                                <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>Italiano</MenuItem>
-                                                <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>Português</MenuItem>
-                                                <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>Русский</MenuItem>
-                                                <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>日本語</MenuItem>
-                                                <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>中文</MenuItem>
-                                                <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>العربية</MenuItem>
-                                            </Select>
-                                        </FormControl>
+                                    <FormControl size="small" sx={{ minWidth: 120, width: '100%' }}>
+                                        <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.language', 'Language')}</InputLabel>
+                                        <Select
+                                            variant={'outlined'}
+                                            value={vfoMarkers[vfoIndex]?.transcriptionLanguage || 'auto'}
+                                            label={t('vfo.language', 'Language')}
+                                            onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionLanguage: e.target.value })}
+                                            sx={{ fontSize: '0.8rem' }}
+                                        >
+                                            <MenuItem value="auto" sx={{ fontSize: '0.8rem' }}>🌐 Auto-detect</MenuItem>
+                                            <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 English</MenuItem>
+                                            <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 Ελληνικά</MenuItem>
+                                            <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 Español</MenuItem>
+                                            <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>🇫🇷 Français</MenuItem>
+                                            <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>🇩🇪 Deutsch</MenuItem>
+                                            <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>🇮🇹 Italiano</MenuItem>
+                                            <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>🇵🇹 Português</MenuItem>
+                                            <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>🇷🇺 Русский</MenuItem>
+                                            <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>🇯🇵 日本語</MenuItem>
+                                            <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>🇨🇳 中文</MenuItem>
+                                            <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 العربية</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <Box sx={{
+                                        mt: 1,
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        fontSize: '0.75rem',
+                                        color: 'text.secondary'
+                                    }}>
+                                        ✨ Powered by Gemini
                                     </Box>
                                 </Box>
                             )}
-                            */}
                         </Box>
 
                         {vfoMarkers[vfoIndex]?.lockedTransmitterId && vfoMarkers[vfoIndex]?.lockedTransmitterId !== 'none' && (

@@ -63,6 +63,7 @@ live radio signals from satellites.
 *   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
 *   **IQ Recording & Playback:** Record raw IQ data in SigMF format with complete metadata (center frequency, sample rate, satellite info) and play back recordings through a virtual SDR device for analysis and debugging.
 *   **Data Decoding:** Decode SSTV images in real-time with live audio monitoring (additional decoders in development)
+*   **AI-Powered Transcription:** Optional real-time audio transcription using Google Gemini API for voice communications (requires user-provided API key). See [Privacy Notice](TRANSCRIPTION_PRIVACY.md).
 *   **Performance Monitoring:** Real-time visualization of the signal processing pipeline showing data flow between components (SDR → FFT → Demodulator → Decoder → Browser), queue health monitoring, throughput rates, and component statistics to diagnose bottlenecks and optimize performance.
 *   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.
 

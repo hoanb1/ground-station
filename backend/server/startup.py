@@ -72,14 +72,14 @@ async def lifespan(fastapiapp: FastAPI):
     shutdown.audio_consumer = WebAudioStreamer(playback_queue, sio, event_loop)
     shutdown.audio_consumer.start()
 
-    # Start transcription consumer (will be used when DeBabel URL is configured)
+    # Start transcription consumer (will be used when Gemini API key is configured)
     transcription_queue = audio_broadcaster.subscribe("transcription", maxsize=50)
-    # DeBabel URL will be fetched from preferences on first use
+    # Gemini API key will be fetched from preferences on first use
     shutdown.transcription_consumer = TranscriptionConsumer(
-        transcription_queue, sio, event_loop, debabel_url=""
+        transcription_queue, sio, event_loop, gemini_api_key=""
     )
     shutdown.transcription_consumer.start()
-    logger.info("Transcription consumer started (will connect when DeBabel URL is configured)")
+    logger.info("Transcription consumer started (will connect when Gemini API key is configured)")
 
     asyncio.create_task(handle_tracker_messages(sio))
     if arguments.runonce_soapy_discovery:

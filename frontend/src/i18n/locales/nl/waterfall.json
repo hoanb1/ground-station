@@ -78,9 +78,8 @@
     "squelch": "Squelch",
     "volume": "Volume",
     "transcribe": "Transcriberen",
-    "configure_debabel": "(Configureer DeBabel in Instellingen)",
+    "configure_gemini": "(Configureer Gemini API in Instellingen)",
     "transcription_settings": "Transcriptie-instellingen",
-    "whisper_model": "Model",
     "language": "Taal",
     "modes": {
       "none": "Geen",

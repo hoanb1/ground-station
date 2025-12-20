@@ -77,6 +77,7 @@ import {
 import { updateMetrics } from '../components/performance/performance-slice.jsx';
 import { setSystemInfo } from '../components/settings/system-info-slice.jsx';
 import { setRuntimeSnapshot } from '../components/settings/sessions-slice.jsx';
+import { addTranscription } from '../components/waterfall/transcription-slice.jsx';
 import ImageIcon from '@mui/icons-material/Image';
 
 /**
@@ -499,6 +500,36 @@ export const useSocketEventHandlers = (socket) => {
             store.dispatch(updateMetrics(data));
         });
 
+        // Transcription data from Google Gemini API
+        socket.on('transcription-data', (data) => {
+            // data = { text, session_id, language }
+            console.log('[Transcription] Received:', data);
+            store.dispatch(addTranscription({
+                text: data.text,
+                sessionId: data.session_id,
+                language: data.language
+            }));
+        });
+
+        // Transcription errors from Google Gemini API
+        socket.on('transcription-error', (data) => {
+            // data = { error_type, message, details, session_id }
+            const errorIcon = data.error_type === 'quota_exceeded' ? '💰' :
+                            data.error_type === 'invalid_api_key' ? '🔑' :
+                            data.error_type === 'rate_limit' ? '⏱️' :
+                            data.error_type === 'network_error' ? '🌐' : '⚠️';
+
+            toast.error(
+                <ToastMessage
+                    title={`${errorIcon} Transcription Error`}
+                    body={data.message}
+                />,
+                {
+                    autoClose: data.error_type === 'rate_limit' ? 5000 : 10000,
+                }
+            );
+        });
+
         // Decoder data events (SSTV, AFSK, Morse, GMSK, etc.)
         socket.on('decoder-data', (data) => {
             switch (data.type) {
@@ -594,6 +625,8 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("sdr-config");
             socket.off("sdr-status");
             socket.off("performance-metrics");
+            socket.off("transcription-data");
+            socket.off("transcription-error");
             socket.off("decoder-data");
         };
     }, [socket, dispatch, t]);
