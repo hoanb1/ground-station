@@ -117,6 +117,7 @@ async def update_vfo_parameters(
         squelch=data.get("squelch"),
         transcription_enabled=data.get("transcriptionEnabled"),
         transcription_language=data.get("transcriptionLanguage"),
+        transcription_translate_to=data.get("transcriptionTranslateTo"),
         decoder=data.get("decoder"),
         locked_transmitter_id=data.get("locked_transmitter_id"),
         parameters_enabled=data.get("parametersEnabled"),

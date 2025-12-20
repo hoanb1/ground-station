@@ -21,6 +21,9 @@ class VFOState:
     squelch: int = -150
     transcription_enabled: bool = False  # Enable/disable transcription for this VFO
     transcription_language: str = "auto"  # Language code for transcription (auto-detect by default)
+    transcription_translate_to: str = (
+        "none"  # Target language for translation (none = no translation)
+    )
     decoder: str = "none"  # Decoder type: none, sstv, afsk, gmsk, gfsk, bpsk, lora, morse
     locked_transmitter_id: str = "none"
     parameters_enabled: bool = True  # Enable/disable custom decoder parameters
@@ -65,6 +68,7 @@ class VFOManager:
         squelch: Optional[int] = None,
         transcription_enabled: Optional[bool] = None,
         transcription_language: Optional[str] = None,
+        transcription_translate_to: Optional[str] = None,
         decoder: str = "none",
         locked_transmitter_id: str = "none",
         parameters_enabled: Optional[bool] = None,
@@ -127,6 +131,9 @@ class VFOManager:
 
         if transcription_language is not None:
             vfo_state.transcription_language = transcription_language
+
+        if transcription_translate_to is not None:
+            vfo_state.transcription_translate_to = transcription_translate_to
 
         # check decoder setting
         # Always update - decoder is a required field that defaults to "none"

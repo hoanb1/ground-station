@@ -589,15 +589,38 @@ const VfoAccordion = ({
                                         {t('vfo.transcription_settings', 'Transcription Settings')}
                                     </Typography>
                                     <FormControl size="small" sx={{ minWidth: 120, width: '100%' }}>
-                                        <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.language', 'Language')}</InputLabel>
+                                        <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.source_language', 'Source Language')}</InputLabel>
                                         <Select
                                             variant={'outlined'}
                                             value={vfoMarkers[vfoIndex]?.transcriptionLanguage || 'auto'}
-                                            label={t('vfo.language', 'Language')}
+                                            label={t('vfo.source_language', 'Source Language')}
                                             onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionLanguage: e.target.value })}
                                             sx={{ fontSize: '0.8rem' }}
                                         >
                                             <MenuItem value="auto" sx={{ fontSize: '0.8rem' }}>🌐 Auto-detect</MenuItem>
+                                            <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 English</MenuItem>
+                                            <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 Ελληνικά</MenuItem>
+                                            <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 Español</MenuItem>
+                                            <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>🇫🇷 Français</MenuItem>
+                                            <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>🇩🇪 Deutsch</MenuItem>
+                                            <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>🇮🇹 Italiano</MenuItem>
+                                            <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>🇵🇹 Português</MenuItem>
+                                            <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>🇷🇺 Русский</MenuItem>
+                                            <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>🇯🇵 日本語</MenuItem>
+                                            <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>🇨🇳 中文</MenuItem>
+                                            <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 العربية</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <FormControl size="small" sx={{ minWidth: 120, width: '100%', mt: 1 }}>
+                                        <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.translate_to', 'Translate To')}</InputLabel>
+                                        <Select
+                                            variant={'outlined'}
+                                            value={vfoMarkers[vfoIndex]?.transcriptionTranslateTo || 'none'}
+                                            label={t('vfo.translate_to', 'Translate To')}
+                                            onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionTranslateTo: e.target.value })}
+                                            sx={{ fontSize: '0.8rem' }}
+                                        >
+                                            <MenuItem value="none" sx={{ fontSize: '0.8rem' }}>⭕ No Translation</MenuItem>
                                             <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 English</MenuItem>
                                             <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 Ελληνικά</MenuItem>
                                             <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 Español</MenuItem>

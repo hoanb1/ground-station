@@ -114,6 +114,10 @@ class TranscriptionConsumer(threading.Thread):
         self.gemini_connected = False
         self.receiver_task: Optional[Task] = None  # Background task for receiving responses
 
+        # Track current connection settings to detect changes
+        self.current_language: Optional[str] = None
+        self.current_translate_to: Optional[str] = None
+
         # Connection backoff to prevent quota exhaustion
         self.last_connection_attempt = 0.0
         self.connection_backoff_seconds = 60  # Wait 60 seconds after quota error before retrying
@@ -198,8 +202,9 @@ class TranscriptionConsumer(threading.Thread):
                         "language": getattr(vfo_state, "transcription_language", "en"),
                     }
 
-                # Get current language for this session
+                # Get current language and translation settings for this session
                 current_language = getattr(vfo_state, "transcription_language", "auto")
+                translate_to = getattr(vfo_state, "transcription_translate_to", "none")
 
                 # Add audio to buffer
                 self.session_buffers[session_id]["buffer"].append(audio_chunk)
@@ -242,6 +247,7 @@ class TranscriptionConsumer(threading.Thread):
                             session_id=session_id,
                             audio_data=audio_array,
                             language=current_language,
+                            translate_to=translate_to,
                         ),
                         self.loop,
                     )
@@ -352,6 +358,11 @@ class TranscriptionConsumer(threading.Thread):
                     if "deadline" in error_str or "timeout" in error_str:
                         self.gemini_connected = False
                         break
+                    # Check if it's a clean close (1000 OK)
+                    elif "1000 (ok)" in error_str:
+                        logger.debug(f"Receiver closed cleanly: {e}")
+                        self.gemini_connected = False
+                        break
                     else:
                         logger.error(f"Receiver error: {e}")
                         self.gemini_connected = False
@@ -411,13 +422,14 @@ class TranscriptionConsumer(threading.Thread):
             },
         )
 
-    async def _connect_to_gemini(self, session_id: str, language: str):
+    async def _connect_to_gemini(self, session_id: str, language: str, translate_to: str = "none"):
         """
         Connect to Gemini Live API and enter the async context.
 
         Args:
             session_id: Session ID for routing results
-            language: Language code (used for system instructions)
+            language: Source language code (used for system instructions)
+            translate_to: Target language code for translation (none = no translation)
         """
         try:
 
@@ -425,16 +437,36 @@ class TranscriptionConsumer(threading.Thread):
             self.gemini_client = genai.Client(api_key=self.gemini_api_key)
 
             # Create session config for audio transcription
-            # Note: Native audio model may be sensitive to config options
+            # Configure VAD to be more sensitive - detect gaps faster
             config: dict = {
                 "response_modalities": ["TEXT"],  # We only want text transcription
+                "realtime_input_config": {
+                    "automatic_activity_detection": {
+                        "disabled": False,
+                        "end_of_speech_sensitivity": "END_SENSITIVITY_HIGH",  # Detect end of speech faster
+                        "silence_duration_ms": 50,  # Only 50ms of silence needed (more sensitive than default 100ms)
+                    }
+                },
             }
 
-            # Add system instruction with language hint if not auto
-            if language != "auto":
-                config["system_instruction"] = (
-                    f"Transcribe the audio to text. Audio language: {language}."
-                )
+            # Build system instruction based on language and translation settings
+            if translate_to != "none":
+                # Translation requested
+                if language != "auto":
+                    system_instruction = (
+                        f"Transcribe the audio to text (source language: {language}) "
+                        f"and translate it to {translate_to}. Only output the translated text."
+                    )
+                else:
+                    system_instruction = (
+                        f"Transcribe the audio to text and translate it to {translate_to}. "
+                        f"Only output the translated text."
+                    )
+                config["system_instruction"] = system_instruction
+            elif language != "auto":
+                # Just transcription with language hint
+                system_instruction = f"Transcribe the audio to text. Audio language: {language}."
+                config["system_instruction"] = system_instruction
 
             # Type check: ensure client is not None
             if self.gemini_client is None:
@@ -466,9 +498,11 @@ class TranscriptionConsumer(threading.Thread):
             await self._send_error_to_ui(session_id, e)
             raise
 
-    async def _stream_audio(self, session_id: str, audio_data: np.ndarray, language: str):
+    async def _stream_audio(
+        self, session_id: str, audio_data: np.ndarray, language: str, translate_to: str = "none"
+    ):
         """
-        Stream audio to Gemini Live API for real-time transcription.
+        Stream audio to Gemini Live API for real-time transcription and optional translation.
 
         Uses continuous streaming pattern without end_of_turn signals,
         allowing Gemini to process audio in real-time and return partial transcriptions.
@@ -476,7 +510,8 @@ class TranscriptionConsumer(threading.Thread):
         Args:
             session_id: Session ID for routing results
             audio_data: Audio samples as numpy array (44.1kHz float32)
-            language: Language code (used for system instructions)
+            language: Source language code (used for system instructions)
+            translate_to: Target language code for translation (none = no translation)
         """
         try:
             # Check if Gemini is available
@@ -523,7 +558,19 @@ class TranscriptionConsumer(threading.Thread):
                     )
                     return
 
-            # Connect to Gemini if not connected
+            # Check if language/translation settings changed - reconnect if needed
+            settings_changed = (
+                self.current_language != language or self.current_translate_to != translate_to
+            )
+
+            if settings_changed and self.gemini_connected:
+                logger.info(
+                    f"Translation settings changed (lang: {self.current_language}->{language}, "
+                    f"translate: {self.current_translate_to}->{translate_to}) - reconnecting to Gemini"
+                )
+                await self._close_connection()
+
+            # Connect to Gemini if not connected or settings changed
             if not self.gemini_connected or self.gemini_session is None:
                 # Check if we're in backoff period after quota error
                 time_since_last_attempt = time.time() - self.last_connection_attempt
@@ -531,7 +578,11 @@ class TranscriptionConsumer(threading.Thread):
                     return
 
                 self.last_connection_attempt = time.time()
-                await self._connect_to_gemini(session_id, language)
+                await self._connect_to_gemini(session_id, language, translate_to)
+
+                # Store current settings
+                self.current_language = language
+                self.current_translate_to = translate_to
 
             # Type check: ensure session is not None
             if self.gemini_session is None:
