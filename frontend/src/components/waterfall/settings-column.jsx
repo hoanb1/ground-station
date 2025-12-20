@@ -75,6 +75,8 @@ import {
     setVfoActive,
 } from './vfo-slice.jsx';
 
+import { setTranscriptionActive } from './transcription-slice';
+
 import {useSocket} from "../common/socket.jsx";
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import getValue from "lodash/_getValue.js";
@@ -448,7 +450,6 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                 }));
 
                 // Update transcription active state in Redux
-                const { setTranscriptionActive } = require('./transcription-slice');
                 dispatch(setTranscriptionActive(enabled));
 
                 toast.success(t(`vfo.transcription_${enabled ? 'enabled' : 'disabled'}`,
