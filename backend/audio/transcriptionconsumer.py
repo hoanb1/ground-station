@@ -444,7 +444,7 @@ class TranscriptionConsumer(threading.Thread):
                     "automatic_activity_detection": {
                         "disabled": False,
                         "end_of_speech_sensitivity": "END_SENSITIVITY_HIGH",  # Detect end of speech faster
-                        "silence_duration_ms": 50,  # Only 50ms of silence needed (more sensitive than default 100ms)
+                        "silence_duration_ms": 30,  # Only 50ms of silence needed (more sensitive than default 100ms)
                     }
                 },
             }
