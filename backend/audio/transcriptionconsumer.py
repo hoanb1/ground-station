@@ -179,6 +179,7 @@ class TranscriptionConsumer(threading.Thread):
         rate_samples_accum = 0
         rate_chunks_accum = 0
         last_stats_time = time.time()
+        last_status_print = time.time()
 
         while self.running:
             try:
@@ -294,6 +295,22 @@ class TranscriptionConsumer(threading.Thread):
                     rate_samples_accum = 0
                     rate_chunks_accum = 0
                     last_stats_time = now
+
+                # Print status every 5 seconds
+                if now - last_status_print >= 5.0:
+                    with self.stats_lock:
+                        stats_copy = self.stats.copy()
+                    logger.info(
+                        f"[VFO {self.vfo_number}] Transcription Status: "
+                        f"Connected={stats_copy['is_connected']}, "
+                        f"Audio Rate={stats_copy['audio_chunks_per_sec']:.1f} chunks/s, "
+                        f"Sent={stats_copy['transcriptions_sent']}, "
+                        f"Received={stats_copy['transcriptions_received']}, "
+                        f"Errors={stats_copy['errors']}, "
+                        f"Language={self.language}, "
+                        f"TranslateTo={self.translate_to}"
+                    )
+                    last_status_print = now
 
         logger.info("Transcription consumer stopped")
 

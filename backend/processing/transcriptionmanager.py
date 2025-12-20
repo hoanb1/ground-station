@@ -120,10 +120,28 @@ class TranscriptionManager:
         if vfo_number in consumer_storage:
             existing = consumer_storage[vfo_number]
             if existing["instance"].is_alive():
-                self.logger.debug(
-                    f"Transcription consumer already running for session {session_id} VFO {vfo_number}"
+                # Check if settings changed - if so, restart the consumer
+                settings_changed = (
+                    existing.get("language") != language
+                    or existing.get("translate_to") != translate_to
                 )
-                return True
+                if settings_changed:
+                    self.logger.info(
+                        f"Transcription settings changed for session {session_id} VFO {vfo_number}, "
+                        f"restarting consumer (old: language={existing.get('language')}, "
+                        f"translate_to={existing.get('translate_to')} -> "
+                        f"new: language={language}, translate_to={translate_to})"
+                    )
+                    # Stop the existing consumer
+                    self._stop_consumer_entry(existing, session_id, vfo_number)
+                    del consumer_storage[vfo_number]
+                    # Continue to start new consumer with updated settings
+                else:
+                    self.logger.debug(
+                        f"Transcription consumer already running for session {session_id} VFO {vfo_number} "
+                        f"with same settings"
+                    )
+                    return True
             else:
                 # Clean up dead consumer
                 self.logger.info(
