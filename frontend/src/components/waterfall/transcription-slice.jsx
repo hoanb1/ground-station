@@ -110,14 +110,14 @@ const transcriptionSlice = createSlice({
         },
 
         /**
-         * Clear all transcription entries
+         * Clear all transcription entries and live transcriptions
          */
         clearTranscriptions: (state) => {
             state.entries = [];
             state.wordCount = 0;
             state.lastUpdated = null;
             state.isActive = false;
-            state.liveTranscription = {};
+            state.liveTranscription = {}; // Clear all live transcriptions
         },
 
         /**

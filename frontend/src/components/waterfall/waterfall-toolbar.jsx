@@ -62,6 +62,7 @@ const WaterfallToolbar = ({
     const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
     const vfoMarkers = useSelector((state) => state.vfo.vfoMarkers);
     const transcriptionEntries = useSelector((state) => state.transcription?.entries || []);
+    const liveTranscriptions = useSelector((state) => state.transcription?.liveTranscription || {});
 
     const handleMenuClick = (event) => {
         setMenuAnchorEl(event.currentTarget);
@@ -270,7 +271,7 @@ const WaterfallToolbar = ({
                     onClick={handleClearTranscriptions}
                     color="primary"
                     title="Clear Subtitles"
-                    disabled={transcriptionEntries.length === 0}
+                    disabled={transcriptionEntries.length === 0 && Object.keys(liveTranscriptions).length === 0}
                 >
                     <ClearIcon/>
                 </IconButton>
