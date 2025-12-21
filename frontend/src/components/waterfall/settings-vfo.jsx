@@ -652,18 +652,20 @@ const VfoAccordion = ({
                                             disabled={!vfoMarkers[vfoIndex]?.transcriptionEnabled || !geminiConfigured}
                                             sx={{ fontSize: '0.8rem' }}
                                         >
-                                            <MenuItem value="auto" sx={{ fontSize: '0.8rem' }}>🌐 Auto-detect</MenuItem>
-                                            <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 English</MenuItem>
-                                            <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 Ελληνικά</MenuItem>
-                                            <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 Español</MenuItem>
-                                            <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>🇫🇷 Français</MenuItem>
-                                            <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>🇩🇪 Deutsch</MenuItem>
-                                            <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>🇮🇹 Italiano</MenuItem>
-                                            <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>🇵🇹 Português</MenuItem>
-                                            <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>🇷🇺 Русский</MenuItem>
-                                            <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>🇯🇵 日本語</MenuItem>
-                                            <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>🇨🇳 中文</MenuItem>
-                                            <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 العربية</MenuItem>
+                                            <MenuItem value="auto" sx={{ fontSize: '0.8rem' }}>🌐 {t('vfo.languages.auto', 'Auto-detect')}</MenuItem>
+                                            <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 {t('vfo.languages.en', 'English')}</MenuItem>
+                                            <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 {t('vfo.languages.el', 'Greek')}</MenuItem>
+                                            <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 {t('vfo.languages.es', 'Spanish')}</MenuItem>
+                                            <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>🇫🇷 {t('vfo.languages.fr', 'French')}</MenuItem>
+                                            <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>🇩🇪 {t('vfo.languages.de', 'German')}</MenuItem>
+                                            <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>🇮🇹 {t('vfo.languages.it', 'Italian')}</MenuItem>
+                                            <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>🇵🇹 {t('vfo.languages.pt', 'Portuguese')}</MenuItem>
+                                            <MenuItem value="pt-BR" sx={{ fontSize: '0.8rem' }}>🇧🇷 {t('vfo.languages.pt-BR', 'Portuguese (Brazil)')}</MenuItem>
+                                            <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>🇷🇺 {t('vfo.languages.ru', 'Russian')}</MenuItem>
+                                            <MenuItem value="uk" sx={{ fontSize: '0.8rem' }}>🇺🇦 {t('vfo.languages.uk', 'Ukrainian')}</MenuItem>
+                                            <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>🇯🇵 {t('vfo.languages.ja', 'Japanese')}</MenuItem>
+                                            <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>🇨🇳 {t('vfo.languages.zh', 'Chinese')}</MenuItem>
+                                            <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 {t('vfo.languages.ar', 'Arabic')}</MenuItem>
                                         </Select>
                                     </FormControl>
                                     <FormControl size="small" sx={{ minWidth: 120, width: '100%', mt: 1 }}>
@@ -676,18 +678,20 @@ const VfoAccordion = ({
                                             disabled={!vfoMarkers[vfoIndex]?.transcriptionEnabled || !geminiConfigured}
                                             sx={{ fontSize: '0.8rem' }}
                                         >
-                                            <MenuItem value="none" sx={{ fontSize: '0.8rem' }}>⭕ No Translation</MenuItem>
-                                            <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 English</MenuItem>
-                                            <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 Ελληνικά</MenuItem>
-                                            <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 Español</MenuItem>
-                                            <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>🇫🇷 Français</MenuItem>
-                                            <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>🇩🇪 Deutsch</MenuItem>
-                                            <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>🇮🇹 Italiano</MenuItem>
-                                            <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>🇵🇹 Português</MenuItem>
-                                            <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>🇷🇺 Русский</MenuItem>
-                                            <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>🇯🇵 日本語</MenuItem>
-                                            <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>🇨🇳 中文</MenuItem>
-                                            <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 العربية</MenuItem>
+                                            <MenuItem value="none" sx={{ fontSize: '0.8rem' }}>⭕ {t('vfo.languages.none', 'No Translation')}</MenuItem>
+                                            <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 {t('vfo.languages.en', 'English')}</MenuItem>
+                                            <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 {t('vfo.languages.el', 'Greek')}</MenuItem>
+                                            <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 {t('vfo.languages.es', 'Spanish')}</MenuItem>
+                                            <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>🇫🇷 {t('vfo.languages.fr', 'French')}</MenuItem>
+                                            <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>🇩🇪 {t('vfo.languages.de', 'German')}</MenuItem>
+                                            <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>🇮🇹 {t('vfo.languages.it', 'Italian')}</MenuItem>
+                                            <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>🇵🇹 {t('vfo.languages.pt', 'Portuguese')}</MenuItem>
+                                            <MenuItem value="pt-BR" sx={{ fontSize: '0.8rem' }}>🇧🇷 {t('vfo.languages.pt-BR', 'Portuguese (Brazil)')}</MenuItem>
+                                            <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>🇷🇺 {t('vfo.languages.ru', 'Russian')}</MenuItem>
+                                            <MenuItem value="uk" sx={{ fontSize: '0.8rem' }}>🇺🇦 {t('vfo.languages.uk', 'Ukrainian')}</MenuItem>
+                                            <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>🇯🇵 {t('vfo.languages.ja', 'Japanese')}</MenuItem>
+                                            <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>🇨🇳 {t('vfo.languages.zh', 'Chinese')}</MenuItem>
+                                            <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 {t('vfo.languages.ar', 'Arabic')}</MenuItem>
                                         </Select>
                                     </FormControl>
 

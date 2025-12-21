@@ -89,6 +89,23 @@
       "lsb": "LSB",
       "usb": "USB",
       "cw": "CW"
+    },
+    "languages": {
+      "none": "Keine Übersetzung",
+      "auto": "Automatisch erkennen",
+      "en": "Englisch",
+      "el": "Griechisch",
+      "es": "Spanisch",
+      "fr": "Französisch",
+      "de": "Deutsch",
+      "it": "Italienisch",
+      "pt": "Portugiesisch",
+      "pt-BR": "Portugiesisch (Brasilien)",
+      "ru": "Russisch",
+      "uk": "Ukrainisch",
+      "ja": "Japanisch",
+      "zh": "Chinesisch",
+      "ar": "Arabisch"
     }
   },
   "error_dialog": {

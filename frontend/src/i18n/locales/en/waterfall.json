@@ -110,7 +110,24 @@
     },
     "lock_to_transmitter": "Lock to Transmitter",
     "none": "None",
-    "locked_to_transmitter_info": "Tracking doppler-corrected frequency"
+    "locked_to_transmitter_info": "Tracking doppler-corrected frequency",
+    "languages": {
+      "none": "No Translation",
+      "auto": "Auto-detect",
+      "en": "English",
+      "el": "Greek",
+      "es": "Spanish",
+      "fr": "French",
+      "de": "German",
+      "it": "Italian",
+      "pt": "Portuguese",
+      "pt-BR": "Portuguese (Brazil)",
+      "ru": "Russian",
+      "uk": "Ukrainian",
+      "ja": "Japanese",
+      "zh": "Chinese",
+      "ar": "Arabic"
+    }
   },
   "error_dialog": {
     "title": "Error Occurred",
