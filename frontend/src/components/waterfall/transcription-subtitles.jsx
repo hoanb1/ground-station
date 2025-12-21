@@ -209,7 +209,7 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                         {lines.map((line, idx) => {
                             // Calculate age of line in milliseconds
                             const ageMs = Date.now() - line.timestamp;
-                            const isRecent = ageMs < 10000; // Highlight for 10 seconds
+                            const isRecent = ageMs < 5000; // Highlight for 5 seconds
 
                             return (
                                 <Box
