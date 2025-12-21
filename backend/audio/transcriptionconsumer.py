@@ -180,7 +180,8 @@ class TranscriptionConsumer(threading.Thread):
         )
 
         # Send initial decoder stats immediately to inform UI
-        asyncio.run_coroutine_threadsafe(
+        # Wait for the emit to complete to ensure UI gets the message immediately
+        future = asyncio.run_coroutine_threadsafe(
             self.sio.emit(
                 "decoder-data",
                 {
@@ -216,6 +217,11 @@ class TranscriptionConsumer(threading.Thread):
             ),
             self.loop,
         )
+        # Wait up to 100ms for the initial status to be sent
+        try:
+            future.result(timeout=0.1)
+        except Exception:
+            pass  # Continue even if emit fails
 
         # Rate tracking and stats heartbeat
         rate_window_start = time.time()
