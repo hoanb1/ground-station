@@ -80,32 +80,27 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
         // Update last segment timestamp
         setLastSegmentTimestamp(latestSegmentTimestamp);
 
-        // Combine all segments into a single text stream
-        const allText = currentTranscription.segments.map(s => s.text).join(' ');
-        const words = allText.split(/\s+/).filter(w => w.length > 0);
+        // Build segments with their words and timestamps
+        const segmentsWithWords = currentTranscription.segments.map(segment => ({
+            words: segment.text.split(/\s+/).filter(w => w.length > 0),
+            timestamp: new Date(segment.timestamp).getTime()
+        }));
 
-        // Get the previous full text to compare
-        const prevText = lines.map(line => line.text.replace(' —', '')).join(' ').trim();
-        const newText = allText.trim();
-
-        // If text hasn't changed (except for dash addition), preserve existing lines
-        if (prevText === newText && !shouldAddDash) {
-            return;
-        }
-
-        // Create a map of existing line texts to their timestamps
-        const existingLineTimestamps = new Map();
-        lines.forEach(line => {
-            const cleanText = line.text.replace(' —', '').trim();
-            if (cleanText) {
-                existingLineTimestamps.set(cleanText, line.timestamp);
-            }
+        // Flatten into array of {word, timestamp} objects
+        const wordsWithTimestamps = [];
+        segmentsWithWords.forEach(segment => {
+            segment.words.forEach(word => {
+                wordsWithTimestamps.push({
+                    word: word,
+                    timestamp: segment.timestamp
+                });
+            });
         });
 
         // Build lines by filling them up to maxWordsPerLine
         const newLines = [];
         let currentLineWords = [];
-        let wordStartIndex = 0;
+        let currentLineSegments = []; // Track segments in this line
 
         // If we should add a dash due to gap, and we have existing lines,
         // add it to the previous last line and force a new line
@@ -118,58 +113,30 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
             ));
         }
 
-        for (let i = 0; i < words.length; i++) {
-            const word = words[i];
+        for (let i = 0; i < wordsWithTimestamps.length; i++) {
+            const { word, timestamp } = wordsWithTimestamps[i];
 
             if (currentLineWords.length >= maxWordsPerLine) {
                 // Current line is full, save it and start a new one
-                const lineText = currentLineWords.join(' ');
-
-                // Check if this exact line text existed before
-                const existingTimestamp = existingLineTimestamps.get(lineText);
-
                 newLines.push({
-                    text: lineText,
-                    timestamp: existingTimestamp || Date.now(),
-                    id: existingTimestamp ? `existing-${existingTimestamp}-${i}` : `new-${Date.now()}-${i}`
+                    text: currentLineWords.join(' '),
+                    segments: currentLineSegments,
+                    id: `line-${i}-${Date.now()}`
                 });
                 currentLineWords = [word];
-                wordStartIndex = i;
+                currentLineSegments = [{ word, timestamp }];
             } else {
                 currentLineWords.push(word);
+                currentLineSegments.push({ word, timestamp });
             }
         }
 
         // Add the last line if it has content
         if (currentLineWords.length > 0) {
-            const lineText = currentLineWords.join(' ');
-
-            // Check if this exact line text existed before
-            let existingTimestamp = existingLineTimestamps.get(lineText);
-
-            // If not found exactly, check if any existing line is a prefix of this line
-            // (meaning words were appended to an existing line)
-            if (!existingTimestamp) {
-                for (const [existingText, timestamp] of existingLineTimestamps) {
-                    if (lineText.startsWith(existingText + ' ')) {
-                        // This line is an extension of an existing line
-                        // Only mark the new portion, but since we can't split,
-                        // we keep the old timestamp if most of it existed
-                        const existingWordCount = existingText.split(/\s+/).length;
-                        const totalWordCount = currentLineWords.length;
-                        // If more than half existed, use old timestamp
-                        if (existingWordCount / totalWordCount > 0.5) {
-                            existingTimestamp = timestamp;
-                        }
-                        break;
-                    }
-                }
-            }
-
             newLines.push({
-                text: lineText,
-                timestamp: existingTimestamp || Date.now(),
-                id: existingTimestamp ? `existing-${existingTimestamp}-${words.length}` : `new-${Date.now()}-${words.length}`
+                text: currentLineWords.join(' '),
+                segments: currentLineSegments,
+                id: `line-${wordsWithTimestamps.length}-${Date.now()}`
             });
         }
 
@@ -225,35 +192,45 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                             transition: 'all 0.15s ease-out',
                         }}
                     >
-                        {lines.map((line, idx) => {
-                            // Calculate age of line in milliseconds
-                            const ageMs = Date.now() - line.timestamp;
-                            const isRecent = ageMs < 5000; // Highlight for 5 seconds
+                        {lines.map((line, lineIdx) => (
+                            <Box
+                                key={line.id}
+                                sx={{
+                                    fontSize: {
+                                        xs: `${0.75 * fontSizeMultiplier}rem`,
+                                        sm: `${0.85 * fontSizeMultiplier}rem`,
+                                        md: `${0.9 * fontSizeMultiplier}rem`
+                                    },
+                                    fontWeight: 600,
+                                    lineHeight: 1.6,
+                                    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+                                    letterSpacing: '0.3px',
+                                    fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                                    wordBreak: 'break-word',
+                                    mb: lineIdx < lines.length - 1 ? 0.5 : 0,
+                                }}
+                            >
+                                {line.segments.map((segment, segIdx) => {
+                                    const ageMs = Date.now() - segment.timestamp;
+                                    const isRecent = ageMs < 5000; // Highlight for 5 seconds
+                                    const color = isRecent ? 'white' : 'rgba(169, 169, 169, 1)';
 
-                            return (
-                                <Box
-                                    key={line.id}
-                                    sx={{
-                                        color: isRecent ? 'white' : 'rgba(169, 169, 169, 1)', // White when recent, grey otherwise
-                                        fontSize: {
-                                            xs: `${0.75 * fontSizeMultiplier}rem`,
-                                            sm: `${0.85 * fontSizeMultiplier}rem`,
-                                            md: `${0.9 * fontSizeMultiplier}rem`
-                                        },
-                                        fontWeight: 600,
-                                        lineHeight: 1.6,
-                                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                                        letterSpacing: '0.3px',
-                                        fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                                        wordBreak: 'break-word',
-                                        mb: idx < lines.length - 1 ? 0.5 : 0,
-                                        transition: 'color 0.5s ease-out',
-                                    }}
-                                >
-                                    {line.text}
-                                </Box>
-                            );
-                        })}
+                                    return (
+                                        <Box
+                                            key={`${line.id}-seg-${segIdx}`}
+                                            component="span"
+                                            sx={{
+                                                color: color,
+                                                transition: 'color 0.5s ease-out',
+                                            }}
+                                        >
+                                            {segment.word}
+                                            {segIdx < line.segments.length - 1 ? ' ' : ''}
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        ))}
                     </Box>
                 </Box>
             </Fade>
