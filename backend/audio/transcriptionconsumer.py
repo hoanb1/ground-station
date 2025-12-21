@@ -525,18 +525,37 @@ class TranscriptionConsumer(threading.Thread):
                 if self.language != "auto":
                     system_instruction = (
                         f"Transcribe the audio to text (source language: {self.language}) "
-                        f"and translate it to {self.translate_to}. Only output the translated text."
+                        f"and translate it to {self.translate_to}. "
+                        f"Mark unclear words with [inaudible]. "
+                        f"Preserve numbers, callsigns, and codes exactly as spoken. "
+                        f"Identify and label different speakers if multiple voices are present. "
+                        f"Only output the translated text."
                     )
                 else:
                     system_instruction = (
                         f"Transcribe the audio to text and translate it to {self.translate_to}. "
+                        f"Mark unclear words with [inaudible]. "
+                        f"Preserve numbers, callsigns, and codes exactly as spoken. "
+                        f"Identify and label different speakers if multiple voices are present. "
                         f"Only output the translated text."
                     )
                 config["system_instruction"] = system_instruction
             elif self.language != "auto":
                 # Just transcription with language hint
                 system_instruction = (
-                    f"Transcribe the audio to text. Audio language: {self.language}."
+                    f"Transcribe the audio to text. Audio language: {self.language}. "
+                    f"Mark unclear words with [inaudible]. "
+                    f"Preserve numbers, callsigns, and codes exactly as spoken. "
+                    f"Identify and label different speakers if multiple voices are present."
+                )
+                config["system_instruction"] = system_instruction
+            else:
+                # Auto-detect language with enhanced instructions
+                system_instruction = (
+                    "Transcribe the audio to text. "
+                    "Mark unclear words with [inaudible]. "
+                    "Preserve numbers, callsigns, and codes exactly as spoken. "
+                    "Identify and label different speakers if multiple voices are present."
                 )
                 config["system_instruction"] = system_instruction
 
