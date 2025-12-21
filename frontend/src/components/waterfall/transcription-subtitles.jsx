@@ -84,21 +84,31 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
         const allText = currentTranscription.segments.map(s => s.text).join(' ');
         const words = allText.split(/\s+/).filter(w => w.length > 0);
 
-        // Get the existing text to detect what's new
-        const existingText = lines.map(line => line.text).join(' ');
-        const existingWords = existingText.split(/\s+/).filter(w => w.length > 0);
+        // Get the previous full text to compare
+        const prevText = lines.map(line => line.text.replace(' —', '')).join(' ').trim();
+        const newText = allText.trim();
 
-        // Determine how many words are new
-        const newWordsStartIndex = existingWords.length;
+        // If text hasn't changed (except for dash addition), preserve existing lines
+        if (prevText === newText && !shouldAddDash) {
+            return;
+        }
+
+        // Create a map of existing line texts to their timestamps
+        const existingLineTimestamps = new Map();
+        lines.forEach(line => {
+            const cleanText = line.text.replace(' —', '').trim();
+            if (cleanText) {
+                existingLineTimestamps.set(cleanText, line.timestamp);
+            }
+        });
 
         // Build lines by filling them up to maxWordsPerLine
         const newLines = [];
         let currentLineWords = [];
-        let currentLineTimestamp = null;
+        let wordStartIndex = 0;
 
         // If we should add a dash due to gap, and we have existing lines,
         // add it to the previous last line and force a new line
-        let addedDash = false;
         if (shouldAddDash && lines.length > 0) {
             // Copy existing lines and add dash to the last one
             newLines.push(...lines.map((line, idx) =>
@@ -106,27 +116,25 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                     ? { ...line, text: line.text + ' —' }
                     : line
             ));
-            addedDash = true;
         }
 
         for (let i = 0; i < words.length; i++) {
             const word = words[i];
-            const isNewWord = i >= newWordsStartIndex;
-
-            // Set timestamp: use existing timestamp for old words, current time for new words
-            if (currentLineTimestamp === null) {
-                currentLineTimestamp = isNewWord ? Date.now() : (lines[0]?.timestamp || Date.now());
-            }
 
             if (currentLineWords.length >= maxWordsPerLine) {
                 // Current line is full, save it and start a new one
+                const lineText = currentLineWords.join(' ');
+
+                // Check if this exact line text existed before
+                const existingTimestamp = existingLineTimestamps.get(lineText);
+
                 newLines.push({
-                    text: currentLineWords.join(' '),
-                    timestamp: currentLineTimestamp,
-                    id: `${currentLineTimestamp}-${i}`
+                    text: lineText,
+                    timestamp: existingTimestamp || Date.now(),
+                    id: existingTimestamp ? `existing-${existingTimestamp}-${i}` : `new-${Date.now()}-${i}`
                 });
                 currentLineWords = [word];
-                currentLineTimestamp = isNewWord ? Date.now() : (lines[newLines.length]?.timestamp || Date.now());
+                wordStartIndex = i;
             } else {
                 currentLineWords.push(word);
             }
@@ -134,10 +142,15 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
 
         // Add the last line if it has content
         if (currentLineWords.length > 0) {
+            const lineText = currentLineWords.join(' ');
+
+            // Check if this exact line text existed before
+            const existingTimestamp = existingLineTimestamps.get(lineText);
+
             newLines.push({
-                text: currentLineWords.join(' '),
-                timestamp: currentLineTimestamp,
-                id: `${currentLineTimestamp}-${words.length}`
+                text: lineText,
+                timestamp: existingTimestamp || Date.now(),
+                id: existingTimestamp ? `existing-${existingTimestamp}-${words.length}` : `new-${Date.now()}-${words.length}`
             });
         }
 
