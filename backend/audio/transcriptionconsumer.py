@@ -606,8 +606,9 @@ class TranscriptionConsumer(threading.Thread):
 
             # Connect to Live API (enter context manager)
             # Note: Only certain models support Live API (bidiGenerateContent)
-            # Using gemini-2.5-flash-native-audio-preview-12-2025 (officially supported model)
-            model = "models/gemini-2.5-flash-native-audio-preview-12-2025"
+            # Using gemini-2.0-flash-exp (works for audio → text transcription)
+            # Newer native-audio models fail with "Cannot extract voices" error for text-only output
+            model = "models/gemini-2.0-flash-exp"
             session_context = self.gemini_client.aio.live.connect(model=model, config=config)
 
             # Enter the async context manager
