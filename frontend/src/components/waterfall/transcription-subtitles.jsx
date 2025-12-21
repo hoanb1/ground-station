@@ -145,7 +145,26 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
             const lineText = currentLineWords.join(' ');
 
             // Check if this exact line text existed before
-            const existingTimestamp = existingLineTimestamps.get(lineText);
+            let existingTimestamp = existingLineTimestamps.get(lineText);
+
+            // If not found exactly, check if any existing line is a prefix of this line
+            // (meaning words were appended to an existing line)
+            if (!existingTimestamp) {
+                for (const [existingText, timestamp] of existingLineTimestamps) {
+                    if (lineText.startsWith(existingText + ' ')) {
+                        // This line is an extension of an existing line
+                        // Only mark the new portion, but since we can't split,
+                        // we keep the old timestamp if most of it existed
+                        const existingWordCount = existingText.split(/\s+/).length;
+                        const totalWordCount = currentLineWords.length;
+                        // If more than half existed, use old timestamp
+                        if (existingWordCount / totalWordCount > 0.5) {
+                            existingTimestamp = timestamp;
+                        }
+                        break;
+                    }
+                }
+            }
 
             newLines.push({
                 text: lineText,
