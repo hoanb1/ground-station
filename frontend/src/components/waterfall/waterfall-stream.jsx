@@ -79,7 +79,7 @@ const useWaterfallStream = ({
 
     useEffect(() => {
         // Note: sdr-config-error, sdr-error, sdr-config, and sdr-status are now handled
-        // in the parent-level socket event handler (hooks/socket-event-handlers.jsx)
+        // in the parent-level socket event handler (hooks/useSocketEventHandlers.jsx)
         // to ensure messages are always received even when this component unmounts
 
         socket.on('disconnect', () => {

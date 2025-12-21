@@ -541,6 +541,14 @@ const VFOMarkersContainer = ({
                             : '0.0';
 
                         secondaryLabelText = `${syncStatus.toUpperCase()} | ${transmitterMode.toUpperCase()} | SNR ${snrDb} dB`;
+                    } else if (decoderType === 'transcription') {
+                        const status = decoderInfo.status || 'idle';
+                        const language = decoderInfo.info?.language || 'auto';
+                        const translateTo = decoderInfo.info?.translate_to || 'none';
+
+                        // Show translation indicator if enabled
+                        const translationIndicator = translateTo !== 'none' ? ` → ${translateTo.toUpperCase()}` : '';
+                        secondaryLabelText = `${status.toUpperCase()} | ${language.toUpperCase()}${translationIndicator}`;
                     } else {
                         // For other decoder types, construct the label
                         const parts = [decoderType.toUpperCase()];

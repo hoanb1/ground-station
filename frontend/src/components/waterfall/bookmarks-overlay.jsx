@@ -47,6 +47,8 @@ const BookmarkCanvas = ({
 
     const {
         bookmarks,
+        neighboringTransmitters,
+        showNeighboringTransmitters,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -118,7 +120,7 @@ const BookmarkCanvas = ({
         return true;
     }
 
-    // Merged effect: Create both transmitter and doppler-shifted bookmarks
+    // Merged effect: Create transmitter, doppler-shifted, and neighboring transmitter bookmarks
     useEffect(() => {
         // 1. Create static transmitter bookmarks from availableTransmitters
         const transmitterBookmarks = [];
@@ -136,7 +138,7 @@ const BookmarkCanvas = ({
             ));
         });
 
-        // 2. Create doppler-shifted bookmarks from rigData
+        // 2. Create doppler-shifted bookmarks from rigData (tracked satellite)
         const transmittersWithDoppler = rigData['transmitters'] || [];
         const dopplerBookmarks = transmittersWithDoppler
             .filter(transmitter => transmitter.downlink_observed_freq > 0)
@@ -150,14 +152,38 @@ const BookmarkCanvas = ({
                 }
             }));
 
-        // 3. Combine both types of bookmarks
-        const updatedBookmarks = [...transmitterBookmarks, ...dopplerBookmarks];
+        // 3. Create neighboring transmitter bookmarks (from groupOfSats) - only if enabled
+        const neighborBookmarks = showNeighboringTransmitters
+            ? neighboringTransmitters.map(tx => {
+                // Check if this is a grouped transmitter
+                const label = tx.is_group
+                    ? `${tx.satellite_name} (${tx.group_count})`
+                    : tx.satellite_name;
 
-        // 4. Only dispatch if bookmarks actually changed
+                return {
+                    frequency: tx.doppler_frequency,
+                    label: label,
+                    color: theme.palette.info.main,
+                    metadata: {
+                        type: 'neighbor_transmitter',
+                        transmitter_id: tx.id,
+                        satellite_norad_id: tx.satellite_norad_id,
+                        doppler_shift: tx.doppler_shift,
+                        is_group: tx.is_group || false,
+                        group_count: tx.group_count || 1
+                    }
+                };
+            })
+            : [];
+
+        // 4. Combine all types of bookmarks
+        const updatedBookmarks = [...transmitterBookmarks, ...dopplerBookmarks, ...neighborBookmarks];
+
+        // 5. Only dispatch if bookmarks actually changed
         if (!areBookmarksEqual(bookmarks, updatedBookmarks)) {
             dispatch(setBookMarks(updatedBookmarks));
         }
-    }, [availableTransmitters, rigData, satelliteData, theme.palette.success.main, theme.palette.warning.main, theme.palette.grey]);
+    }, [availableTransmitters, rigData, satelliteData, neighboringTransmitters, showNeighboringTransmitters, theme.palette.success.main, theme.palette.warning.main, theme.palette.info.main, theme.palette.grey]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -193,10 +219,121 @@ const BookmarkCanvas = ({
             }
         });
 
-        // Draw each bookmark
+        // Draw bookmarks in order: neighbors first (bottom layer), then main transmitters and doppler (top layer)
         if (bookmarks.length) {
+            // Separate bookmarks by type for layered rendering
+            const neighborBookmarks = bookmarks.filter(b => b.metadata?.type === 'neighbor_transmitter');
+            const mainBookmarks = bookmarks.filter(b => b.metadata?.type !== 'neighbor_transmitter');
+
             let visibleBookmarkIndex = 0;
-            bookmarks.forEach((bookmark) => {
+
+            // Draw neighbor transmitters first (bottom layer)
+            neighborBookmarks.forEach((bookmark) => {
+                // Skip if the bookmark is outside the visible range
+                if (bookmark.frequency < startFreq || bookmark.frequency > endFreq) {
+                    return;
+                }
+
+                // Calculate x position based on frequency
+                const x = ((bookmark.frequency - startFreq) / freqRange) * canvas.width;
+
+                // Check if this is an inactive transmitter for line styling
+                const isInactiveTransmitter = false; // Neighbors are always active
+                const isNeighborTransmitter = true;
+
+                // Draw a downward-pointing arrow at the bottom of the canvas
+                ctx.beginPath();
+                const arrowSize = 6;
+                const arrowY = height - arrowSize; // Position at bottom of canvas
+
+                // Draw the arrow path
+                ctx.moveTo(x - arrowSize, arrowY);
+                ctx.lineTo(x + arrowSize, arrowY);
+                ctx.lineTo(x, height);
+                ctx.closePath();
+
+                // Fill the arrow for neighbor transmitters
+                ctx.fillStyle = bookmark.color || theme.palette.info.main;
+                ctx.globalAlpha = 1.0;
+                ctx.fill();
+
+                // Variable to store the label bottom Y position for the dotted line
+                let labelBottomY = 0;
+
+                // Display label at top with alternating heights
+                if (bookmark.label) {
+                    // Calculate label vertical position based on index
+                    const labelOffset = (visibleBookmarkIndex % 3) * verticalSpacing;
+                    const labelY = baseY + labelOffset + 35 + bookmarkLabelOffset;
+
+                    // Store the bottom edge of the label box (south edge)
+                    labelBottomY = labelY + textHeight + padding * 2;
+
+                    const fontSize = '10px';
+
+                    ctx.font = `${fontSize} Arial`;
+                    ctx.fillStyle = bookmark.color || theme.palette.info.main;
+                    ctx.textAlign = 'center';
+
+                    // Add semi-transparent background
+                    const textMetrics = ctx.measureText(bookmark.label);
+                    const textWidth = textMetrics.width;
+                    const radius = 3;
+
+                    ctx.beginPath();
+                    ctx.roundRect(
+                        x - textWidth / 2 - padding,
+                        labelY - padding,
+                        textWidth + padding * 2,
+                        textHeight + padding * 2,
+                        radius
+                    );
+                    const bgColor = theme.palette.background.paper;
+                    ctx.fillStyle = bgColor.startsWith('#')
+                        ? bgColor + 'E6'
+                        : bgColor.replace(')', ', 0.9)');
+                    ctx.fill();
+
+                    // Add subtle border
+                    ctx.strokeStyle = bookmark.color || theme.palette.info.main;
+                    ctx.globalAlpha = 0.3;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1.0;
+
+                    // Draw the text
+                    ctx.shadowBlur = 2;
+                    ctx.shadowColor = theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+                    ctx.globalAlpha = 1.0;
+                    ctx.fillStyle = bookmark.color || theme.palette.info.main;
+                    ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
+                    ctx.globalAlpha = 1.0;
+
+                    // Draw dotted line from bottom of canvas to south edge of label
+                    ctx.beginPath();
+                    ctx.strokeStyle = bookmark.color || theme.palette.info.main;
+                    ctx.lineWidth = 0.8;
+                    ctx.setLineDash([2, 4]);
+                    ctx.globalAlpha = 0.9;
+                    ctx.moveTo(x, height); // Start from bottom
+                    ctx.lineTo(x, labelBottomY); // End at south edge of label
+                    ctx.stroke();
+                    ctx.setLineDash([]); // Reset dash pattern
+                    ctx.globalAlpha = 1.0;
+
+                    // Increment the visible bookmark index
+                    visibleBookmarkIndex++;
+                }
+
+                // Reset shadow
+                ctx.shadowBlur = 0;
+            });
+
+            // Reset visible index for main bookmarks layer
+            visibleBookmarkIndex = 0;
+
+            // Draw main transmitters and doppler markers (top layer)
+            mainBookmarks.forEach((bookmark) => {
                 // Skip if the bookmark is outside the visible range
                 if (bookmark.frequency < startFreq || bookmark.frequency > endFreq) {
                     return;
@@ -214,20 +351,6 @@ const BookmarkCanvas = ({
 
                 // Check if this is an inactive transmitter for line styling
                 const isInactiveTransmitter = bookmark.metadata?.type === 'transmitter' && !bookmark.metadata?.active;
-
-                // Draw bookmark marker
-                ctx.beginPath();
-                ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
-                ctx.lineWidth = isInactiveTransmitter ? 0.5 : 0.8;
-
-                // Draw a subtle dashed vertical line
-                ctx.setLineDash([2, 4]);
-                ctx.globalAlpha = isInactiveTransmitter ? 0.4 : 0.9;
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-                ctx.setLineDash([]); // Reset dash pattern
-                ctx.globalAlpha = 1.0;
 
                 // Draw a downward-pointing arrow at the bottom of the canvas
                 ctx.beginPath();
@@ -256,17 +379,25 @@ const BookmarkCanvas = ({
 
                 // Check if this is a doppler_shift type bookmark
                 const isDopplerShift = bookmark.metadata?.type === 'doppler_shift';
+                const isNeighborTransmitter = bookmark.metadata?.type === 'neighbor_transmitter';
 
-                // For regular bookmarks - display at top with alternating heights
+                // Variable to store the label bottom Y position for the dotted line
+                let labelBottomY = 0;
+
+                // For regular bookmarks and neighbor transmitters - display at top with alternating heights
                 if (bookmark.label && !isDopplerShift) {
                     // Calculate label vertical position based on index
                     // Use visibleBookmarkIndex to ensure proper alternating heights (3 rows)
                     const labelOffset = (visibleBookmarkIndex % 3) * verticalSpacing;
                     const labelY = baseY + labelOffset + 35 + bookmarkLabelOffset;
 
-                    // Check if this is an inactive transmitter
+                    // Store the bottom edge of the label box (south edge)
+                    labelBottomY = labelY + textHeight + padding * 2;
+
+                    // Check if this is an inactive transmitter or a neighbor transmitter
                     const isInactive = bookmark.metadata?.type === 'transmitter' && !bookmark.metadata?.active;
-                    const fontSize = isInactive ? '9px' : '11px';
+                    // Use slightly smaller font for neighbor transmitters to differentiate
+                    const fontSize = isInactive ? '9px' : (isNeighborTransmitter ? '10px' : '11px');
 
                     ctx.font = `${fontSize} Arial`;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
@@ -306,6 +437,18 @@ const BookmarkCanvas = ({
                     ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
                     ctx.globalAlpha = 1.0;
 
+                    // Draw dotted line from bottom of canvas to south edge of label
+                    ctx.beginPath();
+                    ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
+                    ctx.lineWidth = isInactiveTransmitter ? 0.5 : 0.8;
+                    ctx.setLineDash([2, 4]);
+                    ctx.globalAlpha = isInactiveTransmitter ? 0.4 : 0.9;
+                    ctx.moveTo(x, height); // Start from bottom
+                    ctx.lineTo(x, labelBottomY); // End at south edge of label
+                    ctx.stroke();
+                    ctx.setLineDash([]); // Reset dash pattern
+                    ctx.globalAlpha = 1.0;
+
                     // Increment the visible bookmark index only for non-doppler bookmarks
                     visibleBookmarkIndex++;
                 }
@@ -329,6 +472,9 @@ const BookmarkCanvas = ({
                     // Calculate label vertical position based on doppler index (alternating heights - 3 rows)
                     const dopplerLabelOffset = (dopplerIndex % 3) * verticalSpacing;
                     const dopplerLabelY = 50 + bookmarkLabelOffset - padding - textHeight + dopplerLabelOffset;
+
+                    // Store the bottom edge of the doppler label box (south edge)
+                    labelBottomY = dopplerLabelY + textHeight + padding * 2;
 
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);
@@ -362,6 +508,18 @@ const BookmarkCanvas = ({
                     ctx.globalAlpha = 1.0;
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
                     ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight - padding);
+
+                    // Draw dotted line from bottom of canvas to south edge of doppler label
+                    ctx.beginPath();
+                    ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
+                    ctx.lineWidth = 0.8;
+                    ctx.setLineDash([2, 4]);
+                    ctx.globalAlpha = 0.9;
+                    ctx.moveTo(x, height); // Start from bottom
+                    ctx.lineTo(x, labelBottomY); // End at south edge of label
+                    ctx.stroke();
+                    ctx.setLineDash([]); // Reset dash pattern
+                    ctx.globalAlpha = 1.0;
                 }
 
                 // Reset shadow

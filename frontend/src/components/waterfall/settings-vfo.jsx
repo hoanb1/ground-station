@@ -107,10 +107,7 @@ const VfoAccordion = ({
     const activeDecoders = useSelector(state => state.decoders.active || {});
     const currentSessionId = useSelector(state => state.decoders.currentSessionId);
 
-    // Get transcription stats for all VFOs
-    const transcriptionStats = useSelector(state => state.decoders.transcriptionStats || {});
-
-    // Get decoder info for a specific VFO
+    // Get decoder info for a specific VFO (works for both data decoders and transcription)
     const getVFODecoderInfo = (vfoIndex) => {
         if (!currentSessionId || !vfoIndex) return null;
         const decoderKey = `${currentSessionId}_vfo${vfoIndex}`;
@@ -442,7 +439,7 @@ const VfoAccordion = ({
                                         }
                                         line2Text = metricParts.length > 0 ? metricParts.join(' • ') : '—';
 
-                                        borderColor = status === 'decoding' ? 'success.dark' : 'warning.dark';
+                                        borderColor = (status === 'decoding' || status === 'transcribing') ? 'success.dark' : 'warning.dark';
                                         textColor = 'text.secondary';
                                     } else {
                                         // Decoder selected but not running
@@ -453,7 +450,7 @@ const VfoAccordion = ({
                                     }
                                 } else {
                                     // No decoder selected
-                                    line1Text = 'No Decoder';
+                                    line1Text = '- no decoder -';
                                     line2Text = '';
                                     borderColor = 'divider';
                                     textColor = 'text.disabled';
@@ -471,6 +468,7 @@ const VfoAccordion = ({
                                         minHeight: '42px', // Ensure consistent height for two lines
                                         display: 'flex',
                                         flexDirection: 'column',
+                                        alignItems: 'center',
                                         justifyContent: 'center'
                                     }}>
                                         <Typography
@@ -485,19 +483,21 @@ const VfoAccordion = ({
                                         >
                                             {line1Text}
                                         </Typography>
-                                        <Typography
-                                            variant="caption"
-                                            sx={{
-                                                fontSize: '0.7rem',
-                                                fontFamily: 'monospace',
-                                                color: textColor,
-                                                display: 'block',
-                                                textAlign: 'center',
-                                                minHeight: '0.7rem' // Reserve space even when empty
-                                            }}
-                                        >
-                                            {line2Text || '\u00A0'}
-                                        </Typography>
+                                        {line2Text && (
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    fontSize: '0.7rem',
+                                                    fontFamily: 'monospace',
+                                                    color: textColor,
+                                                    display: 'block',
+                                                    textAlign: 'center',
+                                                    minHeight: '0.7rem' // Reserve space even when empty
+                                                }}
+                                            >
+                                                {line2Text || '\u00A0'}
+                                            </Typography>
+                                        )}
                                     </Box>
                                 );
                             })()}
@@ -610,50 +610,46 @@ const VfoAccordion = ({
                                 </Box>
                             )}
 
-                            {/* Transcription Section */}
-                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={vfoMarkers[vfoIndex]?.transcriptionEnabled || false}
-                                            onChange={(e) => onTranscriptionToggle && onTranscriptionToggle(vfoIndex, e.target.checked)}
-                                            disabled={!vfoActive[vfoIndex] || !geminiConfigured}
-                                        />
-                                    }
-                                    label={
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            {/* <TranscribeIcon fontSize="small" /> */}
-                                            {t('vfo.transcribe', 'Transcribe')}
-                                        </Box>
-                                    }
-                                    sx={{mt: 0, ml: 0}}
-                                />
-                                {!geminiConfigured && (
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                        {t('vfo.configure_gemini', '(Configure Gemini API in Settings)')}
-                                    </Typography>
-                                )}
-                            </Box>
+                            {/* Transcription Section - Always visible */}
+                            <Box sx={{
+                                mt: 1.5,
+                                p: 1.5,
+                                backgroundColor: 'rgba(33, 150, 243, 0.05)',
+                                borderRadius: 1,
+                                border: '1px solid rgba(33, 150, 243, 0.2)'
+                            }}>
+                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={vfoMarkers[vfoIndex]?.transcriptionEnabled || false}
+                                                onChange={(e) => onTranscriptionToggle && onTranscriptionToggle(vfoIndex, e.target.checked)}
+                                                disabled={!vfoActive[vfoIndex] || !geminiConfigured}
+                                            />
+                                        }
+                                        label={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                {/* <TranscribeIcon fontSize="small" /> */}
+                                                {t('vfo.transcribe', 'Transcribe')}
+                                            </Box>
+                                        }
+                                        sx={{mt: 0, ml: 0}}
+                                    />
+                                    {!geminiConfigured && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                            {t('vfo.configure_gemini', '(Configure Gemini API in Settings)')}
+                                        </Typography>
+                                    )}
+                                </Box>
 
-                            {/* Transcription Settings - show when transcription is enabled */}
-                            {vfoMarkers[vfoIndex]?.transcriptionEnabled && geminiConfigured && (
-                                <Box sx={{
-                                    mt: 1.5,
-                                    p: 1.5,
-                                    backgroundColor: 'rgba(33, 150, 243, 0.05)',
-                                    borderRadius: 1,
-                                    border: '1px solid rgba(33, 150, 243, 0.2)'
-                                }}>
-                                    <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600, color: 'text.secondary' }}>
-                                        {t('vfo.transcription_settings', 'Transcription Settings')}
-                                    </Typography>
-                                    <FormControl size="small" sx={{ minWidth: 120, width: '100%' }}>
+                                <FormControl size="small" sx={{ minWidth: 120, width: '100%' }}>
                                         <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.source_language', 'Source Language')}</InputLabel>
                                         <Select
                                             variant={'outlined'}
                                             value={vfoMarkers[vfoIndex]?.transcriptionLanguage || 'auto'}
                                             label={t('vfo.source_language', 'Source Language')}
                                             onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionLanguage: e.target.value })}
+                                            disabled={!vfoMarkers[vfoIndex]?.transcriptionEnabled || !geminiConfigured}
                                             sx={{ fontSize: '0.8rem' }}
                                         >
                                             <MenuItem value="auto" sx={{ fontSize: '0.8rem' }}>🌐 Auto-detect</MenuItem>
@@ -677,6 +673,7 @@ const VfoAccordion = ({
                                             value={vfoMarkers[vfoIndex]?.transcriptionTranslateTo || 'none'}
                                             label={t('vfo.translate_to', 'Translate To')}
                                             onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionTranslateTo: e.target.value })}
+                                            disabled={!vfoMarkers[vfoIndex]?.transcriptionEnabled || !geminiConfigured}
                                             sx={{ fontSize: '0.8rem' }}
                                         >
                                             <MenuItem value="none" sx={{ fontSize: '0.8rem' }}>⭕ No Translation</MenuItem>
@@ -696,12 +693,14 @@ const VfoAccordion = ({
 
                                     {/* Transcription Stats Display */}
                                     {(() => {
-                                        const statsKey = `${currentSessionId}_vfo${vfoIndex}`;
-                                        const stats = transcriptionStats[statsKey];
-                                        if (!stats) return null;
+                                        const decoderInfo = getVFODecoderInfo(vfoIndex);
+                                        // Check if this is a transcription decoder
+                                        if (!decoderInfo || decoderInfo.decoder_type !== 'transcription') return null;
 
-                                        const successRate = stats.transcriptions_sent > 0
-                                            ? Math.round((stats.transcriptions_received / stats.transcriptions_sent) * 100)
+                                        const info = decoderInfo.info || {};
+                                        const isConnected = decoderInfo.status === 'transcribing';
+                                        const successRate = info.transcriptions_sent > 0
+                                            ? Math.round((info.transcriptions_received / info.transcriptions_sent) * 100)
                                             : 0;
 
                                         return (
@@ -712,7 +711,7 @@ const VfoAccordion = ({
                                                 backgroundColor: 'rgba(0, 0, 0, 0.2)',
                                                 borderRadius: 0.5,
                                                 border: '1px solid',
-                                                borderColor: stats.is_connected ? 'success.dark' : 'error.dark',
+                                                borderColor: isConnected ? 'success.dark' : 'error.dark',
                                             }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                                     <Box
@@ -720,8 +719,8 @@ const VfoAccordion = ({
                                                             width: 8,
                                                             height: 8,
                                                             borderRadius: '50%',
-                                                            backgroundColor: stats.is_connected ? 'success.main' : 'error.main',
-                                                            boxShadow: (theme) => stats.is_connected
+                                                            backgroundColor: isConnected ? 'success.main' : 'error.main',
+                                                            boxShadow: (theme) => isConnected
                                                                 ? `0 0 6px ${theme.palette.success.main}99`
                                                                 : `0 0 6px ${theme.palette.error.main}99`,
                                                         }}
@@ -732,7 +731,7 @@ const VfoAccordion = ({
                                                         color: 'text.secondary',
                                                         fontWeight: 600
                                                     }}>
-                                                        {stats.is_connected ? 'Connected' : 'Disconnected'}
+                                                        {isConnected ? 'Transcribing' : 'Disconnected'}
                                                     </Typography>
                                                 </Box>
                                                 <Typography variant="caption" sx={{
@@ -741,33 +740,32 @@ const VfoAccordion = ({
                                                     color: 'text.secondary',
                                                     display: 'block'
                                                 }}>
-                                                    Sent: {stats.transcriptions_sent} • Received: {stats.transcriptions_received} • Success: {successRate}%
+                                                    S:{info.transcriptions_sent || 0} • R:{info.transcriptions_received || 0} • {successRate}%
                                                 </Typography>
-                                                {stats.errors > 0 && (
+                                                {info.errors > 0 && (
                                                     <Typography variant="caption" sx={{
                                                         fontSize: '0.65rem',
                                                         fontFamily: 'monospace',
                                                         color: 'error.main',
                                                         display: 'block'
                                                     }}>
-                                                        Errors: {stats.errors}
+                                                        Errors: {info.errors}
                                                     </Typography>
                                                 )}
                                             </Box>
                                         );
                                     })()}
 
-                                    <Box sx={{
-                                        mt: 1,
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        fontSize: '0.75rem',
-                                        color: 'text.secondary'
-                                    }}>
-                                        ✨ Powered by Gemini
-                                    </Box>
+                                <Box sx={{
+                                    mt: 1,
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    fontSize: '0.75rem',
+                                    color: 'text.secondary'
+                                }}>
+                                    ✨ Powered by Gemini
                                 </Box>
-                            )}
+                            </Box>
                         </Box>
 
                         {vfoMarkers[vfoIndex]?.lockedTransmitterId && vfoMarkers[vfoIndex]?.lockedTransmitterId !== 'none' && (
@@ -1138,7 +1136,9 @@ const VfoAccordion = ({
                                             textDecoration: vfoMarkers[vfoIndex]?.decoder && vfoMarkers[vfoIndex].decoder !== 'none' && !vfoMarkers[vfoIndex]?.parametersEnabled ? 'line-through' : 'none',
                                         }}
                                     >
-                                        {formatDecoderParamsSummary(vfoIndex) || 'Decoder Parameters'}
+                                        {vfoMarkers[vfoIndex]?.decoder === 'none' || !vfoMarkers[vfoIndex]?.decoder
+                                            ? '- no decoder -'
+                                            : (formatDecoderParamsSummary(vfoIndex) || 'Decoder Parameters')}
                                     </Box>
                                 </Link>
                             </Box>

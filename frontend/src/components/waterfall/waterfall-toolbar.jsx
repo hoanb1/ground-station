@@ -24,9 +24,11 @@ import {
     ResetZoomIcon,
     RotatorLinesIcon
 } from '../common/custom-icons.jsx';
+import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearTranscriptions, increaseFontSize, decreaseFontSize } from './transcription-slice';
+import { setShowNeighboringTransmitters } from './waterfall-slice';
 import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
 import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 
@@ -59,6 +61,7 @@ const WaterfallToolbar = ({
                           }) => {
     const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
+    const showNeighboringTransmitters = useSelector((state) => state.waterfall.showNeighboringTransmitters);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
     const menuOpen = Boolean(menuAnchorEl);
     const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
@@ -262,6 +265,23 @@ const WaterfallToolbar = ({
                     }}
                 >
                     <RotatorLinesIcon/>
+                </IconButton>
+
+                {/* Toggle button for neighboring transmitters */}
+                <IconButton
+                    onClick={() => {
+                        dispatch(setShowNeighboringTransmitters(!showNeighboringTransmitters));
+                    }}
+                    size="small"
+                    color={showNeighboringTransmitters ? 'warning' : 'primary'}
+                    title={t('toolbar.toggle_neighboring_transmitters')}
+                    sx={{
+                        borderRadius: 0,
+                        '&:hover': {
+                        }
+                    }}
+                >
+                    <SatelliteAltIcon/>
                 </IconButton>
 
                 {/* Waterfall snapshot button */}

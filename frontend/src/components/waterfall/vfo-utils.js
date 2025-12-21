@@ -309,6 +309,31 @@ export const canvasDrawingUtils = {
                     ctx.fillStyle = '#ffffff';
                     ctx.textAlign = 'center';
                     ctx.fillText(decoderText, centerX, secondaryLabelTop + 12);
+                } else if (decoderType === 'transcription') {
+                    // Transcription decoder-specific label format
+                    const status = decoderInfo.status || 'idle';
+                    const language = decoderInfo.info?.language || 'auto';
+                    const translateTo = decoderInfo.info?.translate_to || 'none';
+
+                    // Show translation indicator if enabled
+                    const translationIndicator = translateTo !== 'none' ? ` → ${translateTo.toUpperCase()}` : '';
+                    const decoderText = `${status.toUpperCase()} | ${language.toUpperCase()}${translationIndicator}`;
+
+                    ctx.font = '10px Monospace';
+                    const decoderTextMetrics = ctx.measureText(decoderText);
+                    const decoderLabelWidth = decoderTextMetrics.width + 8;
+                    const decoderLabelHeight = 16;
+
+                    // Draw background
+                    ctx.fillStyle = `${color}${opacity}`;
+                    ctx.beginPath();
+                    ctx.roundRect(centerX - decoderLabelWidth / 2, secondaryLabelTop, decoderLabelWidth, decoderLabelHeight, 2);
+                    ctx.fill();
+
+                    // Draw text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(decoderText, centerX, secondaryLabelTop + 12);
                 } else {
                     // Standard decoder label (status/progress/mode)
                     const parts = [];

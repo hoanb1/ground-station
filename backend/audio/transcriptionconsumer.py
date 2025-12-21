@@ -314,14 +314,38 @@ class TranscriptionConsumer(threading.Thread):
                         f"TranslateTo={self.translate_to}"
                     )
 
-                    # Emit stats to frontend via Socket.IO
+                    # Emit decoder status to frontend (same format as other decoders)
+                    # Use 'decoder-data' event with type='decoder-status' to match frontend expectations
                     asyncio.run_coroutine_threadsafe(
                         self.sio.emit(
-                            "transcription-stats",
+                            "decoder-data",
                             {
+                                "type": "decoder-status",
                                 "session_id": self.session_id,
-                                "vfo_number": self.vfo_number,
-                                "stats": stats_copy,
+                                "vfo": self.vfo_number,
+                                "decoder_type": "transcription",
+                                "decoder_id": f"transcription_{self.session_id}_{self.vfo_number}",
+                                "status": "transcribing" if stats_copy["is_connected"] else "idle",
+                                "timestamp": now,
+                                "progress": None,
+                                "mode": None,  # Transcription doesn't have a mode
+                                "info": {
+                                    "language": self.language,
+                                    "translate_to": self.translate_to,
+                                    "audio_type": stats_copy["audio_type"],
+                                    "audio_chunks_in": stats_copy["audio_chunks_in"],
+                                    "audio_samples_in": stats_copy["audio_samples_in"],
+                                    "transcriptions_sent": stats_copy["transcriptions_sent"],
+                                    "transcriptions_received": stats_copy[
+                                        "transcriptions_received"
+                                    ],
+                                    "queue_timeouts": stats_copy["queue_timeouts"],
+                                    "errors": stats_copy["errors"],
+                                    "connection_attempts": stats_copy["connection_attempts"],
+                                    "connection_failures": stats_copy["connection_failures"],
+                                    "audio_samples_per_sec": stats_copy["audio_samples_per_sec"],
+                                    "audio_chunks_per_sec": stats_copy["audio_chunks_per_sec"],
+                                },
                             },
                             room=self.session_id,
                         ),
@@ -708,22 +732,6 @@ class TranscriptionConsumer(threading.Thread):
         """Stop the transcription consumer"""
         logger.info("Stopping transcription consumer...")
         self.running = False
-
-        # Emit stats cleanup event to frontend
-        try:
-            asyncio.run_coroutine_threadsafe(
-                self.sio.emit(
-                    "transcription-stats-cleanup",
-                    {
-                        "session_id": self.session_id,
-                        "vfo_number": self.vfo_number,
-                    },
-                    room=self.session_id,
-                ),
-                self.loop,
-            )
-        except Exception as e:
-            logger.error(f"Error emitting stats cleanup: {e}")
 
         # Close Gemini session
         if self.gemini_session_context:

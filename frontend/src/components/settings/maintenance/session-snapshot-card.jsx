@@ -121,7 +121,7 @@ const SessionSnapshotCard = () => {
 
     const runtime = useSelector((state) => state.sessions.runtimeSnapshot);
 
-    // Session runtime snapshots are now handled globally in socket-event-handlers.jsx
+    // Session runtime snapshots are now handled globally in useSocketEventHandlers.jsx
     // No need for component-specific listener
 
     const rawSnapshot = runtime.data || { sessions: {}, sdrs: {} };

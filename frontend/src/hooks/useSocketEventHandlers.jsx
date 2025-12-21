@@ -73,8 +73,6 @@ import {
     decoderErrorOccurred,
     setCurrentSessionId,
     cleanupStaleDecoders,
-    updateTranscriptionStats,
-    clearTranscriptionStats
 } from '../components/decoders/decoders-slice.jsx';
 import { updateMetrics } from '../components/performance/performance-slice.jsx';
 import { setSystemInfo } from '../components/settings/system-info-slice.jsx';
@@ -533,24 +531,7 @@ export const useSocketEventHandlers = (socket) => {
             );
         });
 
-        // Transcription stats events
-        socket.on('transcription-stats', (data) => {
-            store.dispatch(updateTranscriptionStats({
-                session_id: data.session_id,
-                vfo_number: data.vfo_number,
-                stats: data.stats
-            }));
-        });
-
-        // Transcription stats cleanup (when consumer stops)
-        socket.on('transcription-stats-cleanup', (data) => {
-            store.dispatch(clearTranscriptionStats({
-                session_id: data.session_id,
-                vfo_number: data.vfo_number
-            }));
-        });
-
-        // Decoder data events (SSTV, AFSK, Morse, GMSK, etc.)
+        // Decoder data events (SSTV, AFSK, Morse, GMSK, Transcription, etc.)
         socket.on('decoder-data', (data) => {
             switch (data.type) {
                 case 'decoder-status':
@@ -647,8 +628,6 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("performance-metrics");
             socket.off("transcription-data");
             socket.off("transcription-error");
-            socket.off("transcription-stats");
-            socket.off("transcription-stats-cleanup");
             socket.off("decoder-data");
         };
     }, [socket, dispatch, t]);

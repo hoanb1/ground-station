@@ -185,6 +185,9 @@ const initialState = {
     // Packets drawer state
     packetsDrawerOpen: false,
     packetsDrawerHeight: 250,
+    // Neighboring transmitters (doppler-shifted transmitters within bandwidth)
+    neighboringTransmitters: [],
+    showNeighboringTransmitters: false,
 };
 
 // Add these new reducers to your createSlice
@@ -367,6 +370,12 @@ export const waterfallSlice = createSlice({
         setPacketsDrawerHeight: (state, action) => {
             state.packetsDrawerHeight = action.payload;
         },
+        setNeighboringTransmitters: (state, action) => {
+            state.neighboringTransmitters = action.payload;
+        },
+        setShowNeighboringTransmitters: (state, action) => {
+            state.showNeighboringTransmitters = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -472,6 +481,8 @@ export const {
     resetPlaybackStartTime,
     setPacketsDrawerOpen,
     setPacketsDrawerHeight,
+    setNeighboringTransmitters,
+    setShowNeighboringTransmitters,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

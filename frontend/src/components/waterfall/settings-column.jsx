@@ -451,9 +451,6 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
 
                 // Update transcription active state in Redux
                 dispatch(setTranscriptionActive(enabled));
-
-                toast.success(t(`vfo.transcription_${enabled ? 'enabled' : 'disabled'}`,
-                    `Transcription ${enabled ? 'enabled' : 'disabled'} for VFO ${vfoNumber}`));
             } else {
                 toast.error(t('vfo.transcription_error', `Failed to toggle transcription: ${response.error}`));
             }

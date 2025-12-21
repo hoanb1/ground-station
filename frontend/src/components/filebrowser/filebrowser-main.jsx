@@ -216,7 +216,7 @@ export default function FilebrowserMain() {
         }
     }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded]);
 
-    // Listen for file browser state updates to trigger refetch (global handler in socket-event-handlers.jsx updates Redux)
+    // Listen for file browser state updates to trigger refetch (global handler in useSocketEventHandlers.jsx updates Redux)
     useEffect(() => {
         if (!socket) return;
 

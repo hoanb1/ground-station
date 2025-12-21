@@ -26,8 +26,8 @@ import { AudioProvider } from "./components/dashboard/audio-provider.jsx";
 import { ToastContainerWithStyles } from "./utils/toast-container.jsx";
 import { getNavigation } from "./config/navigation.jsx";
 import { BRANDING } from "./config/branding.jsx";
-import { useSocketEventHandlers } from "./hooks/socket-event-handlers.jsx";
-import { usePassFetching } from "./hooks/pass-fetching.jsx";
+import { useSocketEventHandlers } from "./hooks/useSocketEventHandlers.jsx";
+import { usePassFetching } from "./hooks/usePassFetching.jsx";
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 

@@ -30,6 +30,7 @@ import {
 } from "./waterfall-slice.jsx";
 import VFOMarkersContainer from './vfo-container.jsx';
 import FrequencyBandOverlay from './bandplan-overlay.jsx';
+import {useDopplerNeighbors} from '../../hooks/useDopplerNeighbors.jsx';
 
 
 const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
@@ -56,6 +57,9 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     const pinchCenterXRef = useRef(0);
     const persistTimerRef = useRef(null);
     const dispatch = useDispatch();
+
+    // Activate doppler neighbor calculation hook
+    useDopplerNeighbors();
     const {
         waterFallVisualWidth,
         waterFallCanvasWidth,
