@@ -795,6 +795,50 @@ class TranscriptionConsumer(threading.Thread):
         logger.info("Stopping transcription consumer...")
         self.running = False
 
+        # Send final decoder stats to inform UI that transcription has stopped
+        try:
+            with self.stats_lock:
+                stats_copy = self.stats.copy()
+
+            asyncio.run_coroutine_threadsafe(
+                self.sio.emit(
+                    "decoder-data",
+                    {
+                        "type": "decoder-status",
+                        "session_id": self.session_id,
+                        "vfo": self.vfo_number,
+                        "decoder_type": "transcription",
+                        "decoder_id": f"transcription_{self.session_id}_{self.vfo_number}",
+                        "status": "closed",
+                        "timestamp": time.time(),
+                        "progress": None,
+                        "mode": None,
+                        "info": {
+                            "language": self.language,
+                            "translate_to": self.translate_to,
+                            "audio_type": stats_copy.get("audio_type", "unknown"),
+                            "audio_chunks_in": stats_copy.get("audio_chunks_in", 0),
+                            "audio_samples_in": stats_copy.get("audio_samples_in", 0),
+                            "transcriptions_sent": stats_copy.get("transcriptions_sent", 0),
+                            "transcriptions_received": stats_copy.get("transcriptions_received", 0),
+                            "queue_timeouts": stats_copy.get("queue_timeouts", 0),
+                            "errors": stats_copy.get("errors", 0),
+                            "connection_attempts": stats_copy.get("connection_attempts", 0),
+                            "connection_failures": stats_copy.get("connection_failures", 0),
+                            "audio_samples_per_sec": 0.0,
+                            "audio_chunks_per_sec": 0.0,
+                            "total_input_tokens": stats_copy.get("total_input_tokens", 0),
+                            "total_output_tokens": stats_copy.get("total_output_tokens", 0),
+                            "total_tokens": stats_copy.get("total_tokens", 0),
+                        },
+                    },
+                    room=self.session_id,
+                ),
+                self.loop,
+            )
+        except Exception as e:
+            logger.error(f"Error sending stop notification to UI: {e}")
+
         # Close Gemini session
         if self.gemini_session_context:
             try:
