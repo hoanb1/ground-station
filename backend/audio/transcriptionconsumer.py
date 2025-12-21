@@ -233,11 +233,10 @@ class TranscriptionConsumer(threading.Thread):
                 if duration >= self.chunk_duration:
                     # Concatenate all buffered chunks
                     concatenated = np.concatenate(self.audio_buffer)
-                    actual_samples = len(concatenated)
 
                     # Convert stereo to mono if needed
                     # FM Stereo demodulator outputs interleaved stereo: [L, R, L, R, ...]
-                    if likely_stereo and actual_samples % 2 == 0:
+                    if likely_stereo:
                         left_channel = concatenated[0::2]
                         right_channel = concatenated[1::2]
                         concatenated = (left_channel + right_channel) / 2.0
