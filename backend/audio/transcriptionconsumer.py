@@ -179,6 +179,44 @@ class TranscriptionConsumer(threading.Thread):
             f"VFO {self.vfo_number} (language={self.language}, translate_to={self.translate_to})"
         )
 
+        # Send initial decoder stats immediately to inform UI
+        asyncio.run_coroutine_threadsafe(
+            self.sio.emit(
+                "decoder-data",
+                {
+                    "type": "decoder-status",
+                    "session_id": self.session_id,
+                    "vfo": self.vfo_number,
+                    "decoder_type": "transcription",
+                    "decoder_id": f"transcription_{self.session_id}_{self.vfo_number}",
+                    "status": "idle",
+                    "timestamp": time.time(),
+                    "progress": None,
+                    "mode": None,
+                    "info": {
+                        "language": self.language,
+                        "translate_to": self.translate_to,
+                        "audio_type": "unknown",
+                        "audio_chunks_in": 0,
+                        "audio_samples_in": 0,
+                        "transcriptions_sent": 0,
+                        "transcriptions_received": 0,
+                        "queue_timeouts": 0,
+                        "errors": 0,
+                        "connection_attempts": 0,
+                        "connection_failures": 0,
+                        "audio_samples_per_sec": 0.0,
+                        "audio_chunks_per_sec": 0.0,
+                        "total_input_tokens": 0,
+                        "total_output_tokens": 0,
+                        "total_tokens": 0,
+                    },
+                },
+                room=self.session_id,
+            ),
+            self.loop,
+        )
+
         # Rate tracking and stats heartbeat
         rate_window_start = time.time()
         rate_samples_accum = 0
