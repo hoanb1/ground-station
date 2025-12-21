@@ -35,7 +35,7 @@ import SubtitlesIcon from '@mui/icons-material/Subtitles';
  * Displays real-time transcriptions as traditional multi-line subtitles.
  * Shows up to 3 lines, with the oldest line expiring when new text arrives.
  */
-const TranscriptionSubtitles = ({ maxLines = 3, maxCharsPerLine = 80, autoFadeMs = 10000 }) => {
+const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs = 10000 }) => {
     const dispatch = useDispatch();
     const [visible, setVisible] = useState(true);
     const [lines, setLines] = useState([]);
@@ -70,33 +70,32 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxCharsPerLine = 80, autoFadeMs
         const allText = currentTranscription.segments.map(s => s.text).join(' ');
         const words = allText.split(/\s+/).filter(w => w.length > 0);
 
-        // Build lines by filling them up to maxCharsPerLine
+        // Build lines by filling them up to maxWordsPerLine
         const newLines = [];
-        let currentLine = '';
+        let currentLineWords = [];
         let currentLineTimestamp = Date.now();
 
         for (let i = 0; i < words.length; i++) {
             const word = words[i];
-            const testLine = currentLine ? `${currentLine} ${word}` : word;
 
-            if (testLine.length > maxCharsPerLine && currentLine.length > 0) {
+            if (currentLineWords.length >= maxWordsPerLine) {
                 // Current line is full, save it and start a new one
                 newLines.push({
-                    text: currentLine,
+                    text: currentLineWords.join(' '),
                     timestamp: currentLineTimestamp,
                     id: `${currentLineTimestamp}-${i}`
                 });
-                currentLine = word;
+                currentLineWords = [word];
                 currentLineTimestamp = Date.now();
             } else {
-                currentLine = testLine;
+                currentLineWords.push(word);
             }
         }
 
         // Add the last line if it has content
-        if (currentLine) {
+        if (currentLineWords.length > 0) {
             newLines.push({
-                text: currentLine,
+                text: currentLineWords.join(' '),
                 timestamp: currentLineTimestamp,
                 id: `${currentLineTimestamp}-${words.length}`
             });
@@ -106,7 +105,7 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxCharsPerLine = 80, autoFadeMs
         const displayLines = newLines.slice(-maxLines);
 
         setLines(displayLines);
-    }, [currentTranscription, maxLines, maxCharsPerLine]);
+    }, [currentTranscription, maxLines, maxWordsPerLine]);
 
     // Don't render anything if no lines
     if (lines.length === 0) {
