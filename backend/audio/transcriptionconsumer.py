@@ -606,9 +606,8 @@ class TranscriptionConsumer(threading.Thread):
 
             # Connect to Live API (enter context manager)
             # Note: Only certain models support Live API (bidiGenerateContent)
-            # Try gemini-2.0-flash-exp first (better for transcription, but has quota limits)
-            # Falls back to gemini-2.5-flash-native-audio-preview if quota exceeded
-            model = "models/gemini-2.0-flash-exp"
+            # Using gemini-2.5-flash-native-audio-preview-12-2025 (officially supported model)
+            model = "models/gemini-2.5-flash-native-audio-preview-12-2025"
             session_context = self.gemini_client.aio.live.connect(model=model, config=config)
 
             # Enter the async context manager
