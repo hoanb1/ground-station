@@ -84,10 +84,17 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
         const allText = currentTranscription.segments.map(s => s.text).join(' ');
         const words = allText.split(/\s+/).filter(w => w.length > 0);
 
+        // Get the existing text to detect what's new
+        const existingText = lines.map(line => line.text).join(' ');
+        const existingWords = existingText.split(/\s+/).filter(w => w.length > 0);
+
+        // Determine how many words are new
+        const newWordsStartIndex = existingWords.length;
+
         // Build lines by filling them up to maxWordsPerLine
         const newLines = [];
         let currentLineWords = [];
-        let currentLineTimestamp = Date.now();
+        let currentLineTimestamp = null;
 
         // If we should add a dash due to gap, and we have existing lines,
         // add it to the previous last line and force a new line
@@ -104,6 +111,12 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
 
         for (let i = 0; i < words.length; i++) {
             const word = words[i];
+            const isNewWord = i >= newWordsStartIndex;
+
+            // Set timestamp: use existing timestamp for old words, current time for new words
+            if (currentLineTimestamp === null) {
+                currentLineTimestamp = isNewWord ? Date.now() : (lines[0]?.timestamp || Date.now());
+            }
 
             if (currentLineWords.length >= maxWordsPerLine) {
                 // Current line is full, save it and start a new one
@@ -113,7 +126,7 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                     id: `${currentLineTimestamp}-${i}`
                 });
                 currentLineWords = [word];
-                currentLineTimestamp = Date.now();
+                currentLineTimestamp = isNewWord ? Date.now() : (lines[newLines.length]?.timestamp || Date.now());
             } else {
                 currentLineWords.push(word);
             }
