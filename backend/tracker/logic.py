@@ -312,8 +312,11 @@ class SatelliteTracker:
                 # Validate hardware states
                 await self.state_manager.validate_hardware_states()
 
-                # Update hardware positions
-                await self.rotator_handler.update_hardware_position()
+                # Update hardware positions (allow tracking to continue if rotator fails)
+                try:
+                    await self.rotator_handler.update_hardware_position()
+                except Exception as e:
+                    logger.warning(f"Rotator communication failed, continuing tracking: {e}")
 
                 # Update rig frequency (allow tracking to continue if rig fails)
                 try:
