@@ -72,6 +72,7 @@ import createTerminatorLine from '../common/terminator-line.jsx';
 import {getSunMoonCoords} from '../common/sunmoon.jsx';
 import {useSocket} from '../common/socket.jsx';
 import {store} from '../common/store.jsx';
+import {CircularProgress, Backdrop} from '@mui/material';
 
 const viewSatelliteLimit = 100;
 
@@ -116,6 +117,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
         showGrid,
         selectedSatelliteId,
         selectedSatGroupId,
+        loadingSatellites,
     } = useSelector((state) => state.overviewSatTrack);
 
     const {
@@ -692,22 +694,33 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     </Box>
                 </Box>
             </TitleBar>
-            <MapContainer
-                fullscreenControl={true}
-                center={[0, 0]}
-                zoom={mapZoomLevel}
-                style={{width: '100%', height: 'calc(100% - 60px)'}}
-                dragging={false}
-                scrollWheelZoom={false}
-                maxZoom={10}
-                minZoom={0}
-                whenReady={handleWhenReady}
-                zoomSnap={0.25}
-                zoomDelta={0.25}
-                keyboard={false}
-                bounceAtZoomLimits={false}
-                closePopupOnClick={false}
-            >
+            <Box sx={{position: 'relative', width: '100%', height: 'calc(100% - 60px)'}}>
+                <Backdrop
+                    open={loadingSatellites}
+                    sx={{
+                        position: 'absolute',
+                        zIndex: 1000,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    }}
+                >
+                    <CircularProgress size={60} thickness={4} />
+                </Backdrop>
+                <MapContainer
+                    fullscreenControl={true}
+                    center={[0, 0]}
+                    zoom={mapZoomLevel}
+                    style={{width: '100%', height: '100%'}}
+                    dragging={false}
+                    scrollWheelZoom={false}
+                    maxZoom={10}
+                    minZoom={0}
+                    whenReady={handleWhenReady}
+                    zoomSnap={0.25}
+                    zoomDelta={0.25}
+                    keyboard={false}
+                    bounceAtZoomLimits={false}
+                    closePopupOnClick={false}
+                >
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer url={getTileLayerById(tileLayerID)['url']}/>
 
@@ -793,7 +806,8 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 {/*    selectedSatellite={selectedSatellites.find((sat) => sat.norad_id === selectedSatelliteId)}*/}
                 {/*    handleSetTrackingOnBackend={handleSetTrackingOnBackend}*/}
                 {/*/>*/}
-            </MapContainer>
+                </MapContainer>
+            </Box>
             <MapStatusBar>
                 <SimpleTruncatedHtml
                     className={'attribution'}
