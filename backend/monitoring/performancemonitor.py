@@ -1055,9 +1055,11 @@ class PerformanceMonitor(threading.Thread):
 
             # Get session IP addresses and user agents from Socket.IO
             session_info = {}
+            connected_sessions = None
             try:
                 from handlers.socket import SESSIONS
 
+                connected_sessions = set(SESSIONS.keys())
                 for sid, environ in SESSIONS.items():
                     # Check for real IP behind reverse proxy
                     real_ip = (
@@ -1073,8 +1075,28 @@ class PerformanceMonitor(threading.Thread):
             except Exception as e:
                 logger.debug(f"Could not get session info: {e}")
 
-            # Create a streamer entry for each active session
-            for session_id, session_stats in session_stats_snapshot.items():
+            # If we have connected sessions but no audio stats yet (no audio flowing),
+            # create entries with zero stats for all connected sessions
+            sessions_to_show = set(session_stats_snapshot.keys())
+            if connected_sessions:
+                sessions_to_show = connected_sessions
+
+            # Create a streamer entry for each session
+            for session_id in sessions_to_show:
+                # Get existing stats or create empty stats
+                session_stats = session_stats_snapshot.get(
+                    session_id,
+                    {
+                        "audio_chunks_in": 0,
+                        "audio_samples_in": 0,
+                        "messages_emitted": 0,
+                        "last_activity": None,
+                    },
+                )
+                # Skip if session is not connected (defensive check)
+                if connected_sessions is not None and session_id not in connected_sessions:
+                    logger.debug(f"Skipping metrics for disconnected session: {session_id}")
+                    continue
                 # Calculate rates
                 prev_key = f"audio_consumer_web_{session_id}"
                 prev_snapshot = self.previous_snapshots.get(prev_key, {})

@@ -206,3 +206,10 @@ class WebAudioStreamer(threading.Thread):
 
     def stop(self):
         self.running = False
+
+    def cleanup_session(self, session_id: str):
+        """Remove session stats when a session disconnects."""
+        with self.session_stats_lock:
+            if session_id in self.session_stats:
+                del self.session_stats[session_id]
+                logger.info(f"Cleaned up WebAudioStreamer stats for session: {session_id}")

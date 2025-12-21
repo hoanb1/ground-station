@@ -103,7 +103,7 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                 >
                     <Box
                         sx={{
-                            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
                             borderRadius: { xs: 0, sm: 0, md: '8px' },
                             padding: { xs: '10px 16px', sm: '12px 24px' },
                             textAlign: 'left',
@@ -132,7 +132,6 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                                 overflow: 'hidden',
                             }}
                         >
-                            <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{new Date(currentTranscription.startTime).toLocaleTimeString()}: </span>
                             {segmentsToRender.map((segment, idx) => (
                                 <span
                                     key={idx}

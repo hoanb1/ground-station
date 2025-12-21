@@ -657,6 +657,7 @@ const SatelliteInfoPopover = () => {
                                     showSunMarkers={false}
                                     satelliteName={satelliteData.details.name}
                                     showTitleBar={false}
+                                    showGeostationarySatellites={true}
                                 />
                             ) : (
                                 <Box

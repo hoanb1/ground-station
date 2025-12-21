@@ -82,10 +82,24 @@ class SessionService:
     async def cleanup_session(self, session_id: str) -> None:
         """
         Cleanup all resources associated with the session:
+        - Clean up WebAudioStreamer session stats
         - Stop consumers/process if needed (delegated to utils)
         - Clear SessionTracker relationships
         - Remove configuration entry
         """
+        # Clean up WebAudioStreamer session stats
+        try:
+            from server import shutdown
+
+            if shutdown.audio_consumer:
+                shutdown.audio_consumer.cleanup_session(session_id)
+        except Exception as e:
+            # Log but don't fail - continue with other cleanup
+            import logging
+
+            logger = logging.getLogger("session-service")
+            logger.warning(f"Failed to cleanup WebAudioStreamer for session {session_id}: {e}")
+
         # Delegate to existing idempotent cleanup function which also clears tracker
         await utils_cleanup_sdr_session(session_id)
 
