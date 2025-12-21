@@ -134,6 +134,18 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
         setLines(displayLines);
     }, [currentTranscription, maxLines, maxWordsPerLine]);
 
+    // Force re-render every second to update color transitions
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // Force a re-render by updating state only if we have lines
+            if (lines.length > 0) {
+                setLines(prevLines => [...prevLines]);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [lines.length]);
+
     // Don't render anything if no lines
     if (lines.length === 0) {
         return null;
@@ -168,30 +180,35 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                             transition: 'all 0.15s ease-out',
                         }}
                     >
-                        {lines.map((line, idx) => (
-                            <Box
-                                key={line.id}
-                                sx={{
-                                    color: 'white',
-                                    fontSize: {
-                                        xs: `${0.75 * fontSizeMultiplier}rem`,
-                                        sm: `${0.85 * fontSizeMultiplier}rem`,
-                                        md: `${0.9 * fontSizeMultiplier}rem`
-                                    },
-                                    fontWeight: 600,
-                                    lineHeight: 1.6,
-                                    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                                    letterSpacing: '0.3px',
-                                    fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                                    wordBreak: 'break-word',
-                                    mb: idx < lines.length - 1 ? 0.5 : 0,
-                                    transition: 'opacity 0.3s ease-out',
-                                    opacity: idx === lines.length - 1 ? 1.0 : 0.7, // Last line is brightest
-                                }}
-                            >
-                                {line.text}
-                            </Box>
-                        ))}
+                        {lines.map((line, idx) => {
+                            // Calculate age of line in milliseconds
+                            const ageMs = Date.now() - line.timestamp;
+                            const isRecent = ageMs < 10000; // Highlight for 10 seconds
+
+                            return (
+                                <Box
+                                    key={line.id}
+                                    sx={{
+                                        color: isRecent ? 'white' : 'rgba(169, 169, 169, 1)', // White when recent, grey otherwise
+                                        fontSize: {
+                                            xs: `${0.75 * fontSizeMultiplier}rem`,
+                                            sm: `${0.85 * fontSizeMultiplier}rem`,
+                                            md: `${0.9 * fontSizeMultiplier}rem`
+                                        },
+                                        fontWeight: 600,
+                                        lineHeight: 1.6,
+                                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+                                        letterSpacing: '0.3px',
+                                        fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                                        wordBreak: 'break-word',
+                                        mb: idx < lines.length - 1 ? 0.5 : 0,
+                                        transition: 'color 0.5s ease-out',
+                                    }}
+                                >
+                                    {line.text}
+                                </Box>
+                            );
+                        })}
                     </Box>
                 </Box>
             </Fade>
