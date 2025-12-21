@@ -56,6 +56,9 @@ const initialState = {
     // Detected satellites (keyed by NORAD ID)
     detectedSatellites: {},
 
+    // Transcription consumer stats (keyed by session_id_vfoN)
+    transcriptionStats: {},
+
     // UI state
     ui: {
         selectedOutput: null,      // Currently viewing output ID
@@ -331,6 +334,48 @@ export const decodersSlice = createSlice({
                     delete state.active[key];
                 });
             }
+
+            // Also clean up stale transcription stats from old sessions
+            const staleTranscriptionKeys = Object.keys(state.transcriptionStats).filter(
+                key => !key.startsWith(`${state.currentSessionId}_vfo`)
+            );
+
+            if (staleTranscriptionKeys.length > 0) {
+                console.log(`Cleaning up ${staleTranscriptionKeys.length} stale transcription stat(s) from old sessions`);
+                staleTranscriptionKeys.forEach(key => {
+                    delete state.transcriptionStats[key];
+                });
+            }
+        },
+
+        // Update transcription consumer stats
+        updateTranscriptionStats: (state, action) => {
+            const { session_id, vfo_number, stats } = action.payload;
+            const key = `${session_id}_vfo${vfo_number}`;
+
+            state.transcriptionStats[key] = {
+                ...stats,
+                session_id,
+                vfo_number,
+                last_updated: Date.now(),
+            };
+        },
+
+        // Clear transcription stats for a specific VFO
+        clearTranscriptionStats: (state, action) => {
+            const { session_id, vfo_number } = action.payload;
+            const key = `${session_id}_vfo${vfo_number}`;
+            delete state.transcriptionStats[key];
+        },
+
+        // Clear all transcription stats for a session
+        clearSessionTranscriptionStats: (state, action) => {
+            const { session_id } = action.payload;
+            Object.keys(state.transcriptionStats).forEach(key => {
+                if (key.startsWith(`${session_id}_vfo`)) {
+                    delete state.transcriptionStats[key];
+                }
+            });
         },
     },
     extraReducers: (builder) => {
@@ -391,6 +436,9 @@ export const {
     setShowDecoderPanel,
     setCurrentSessionId,
     cleanupStaleDecoders,
+    updateTranscriptionStats,
+    clearTranscriptionStats,
+    clearSessionTranscriptionStats,
 } = decodersSlice.actions;
 
 // Selectors
@@ -421,5 +469,10 @@ export const selectDetectedSatellites = (state) => state.decoders.detectedSatell
 export const selectDetectedSatelliteByNorad = (noradId) => (state) => {
     return state.decoders.detectedSatellites[noradId] || null;
 };
+export const selectTranscriptionStats = (session_id, vfo_number) => (state) => {
+    const key = `${session_id}_vfo${vfo_number}`;
+    return state.decoders.transcriptionStats[key] || null;
+};
+export const selectAllTranscriptionStats = (state) => state.decoders.transcriptionStats;
 
 export default decodersSlice.reducer;

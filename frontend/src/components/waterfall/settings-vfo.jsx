@@ -107,6 +107,9 @@ const VfoAccordion = ({
     const activeDecoders = useSelector(state => state.decoders.active || {});
     const currentSessionId = useSelector(state => state.decoders.currentSessionId);
 
+    // Get transcription stats for all VFOs
+    const transcriptionStats = useSelector(state => state.decoders.transcriptionStats || {});
+
     // Get decoder info for a specific VFO
     const getVFODecoderInfo = (vfoIndex) => {
         if (!currentSessionId || !vfoIndex) return null;
@@ -690,6 +693,70 @@ const VfoAccordion = ({
                                             <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 العربية</MenuItem>
                                         </Select>
                                     </FormControl>
+
+                                    {/* Transcription Stats Display */}
+                                    {(() => {
+                                        const statsKey = `${currentSessionId}_vfo${vfoIndex}`;
+                                        const stats = transcriptionStats[statsKey];
+                                        if (!stats) return null;
+
+                                        const successRate = stats.transcriptions_sent > 0
+                                            ? Math.round((stats.transcriptions_received / stats.transcriptions_sent) * 100)
+                                            : 0;
+
+                                        return (
+                                            <Box sx={{
+                                                mt: 1.5,
+                                                px: 1,
+                                                py: 0.75,
+                                                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                                borderRadius: 0.5,
+                                                border: '1px solid',
+                                                borderColor: stats.is_connected ? 'success.dark' : 'error.dark',
+                                            }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                    <Box
+                                                        sx={{
+                                                            width: 8,
+                                                            height: 8,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: stats.is_connected ? 'success.main' : 'error.main',
+                                                            boxShadow: (theme) => stats.is_connected
+                                                                ? `0 0 6px ${theme.palette.success.main}99`
+                                                                : `0 0 6px ${theme.palette.error.main}99`,
+                                                        }}
+                                                    />
+                                                    <Typography variant="caption" sx={{
+                                                        fontSize: '0.7rem',
+                                                        fontFamily: 'monospace',
+                                                        color: 'text.secondary',
+                                                        fontWeight: 600
+                                                    }}>
+                                                        {stats.is_connected ? 'Connected' : 'Disconnected'}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="caption" sx={{
+                                                    fontSize: '0.65rem',
+                                                    fontFamily: 'monospace',
+                                                    color: 'text.secondary',
+                                                    display: 'block'
+                                                }}>
+                                                    Sent: {stats.transcriptions_sent} • Received: {stats.transcriptions_received} • Success: {successRate}%
+                                                </Typography>
+                                                {stats.errors > 0 && (
+                                                    <Typography variant="caption" sx={{
+                                                        fontSize: '0.65rem',
+                                                        fontFamily: 'monospace',
+                                                        color: 'error.main',
+                                                        display: 'block'
+                                                    }}>
+                                                        Errors: {stats.errors}
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        );
+                                    })()}
+
                                     <Box sx={{
                                         mt: 1,
                                         display: 'flex',

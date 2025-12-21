@@ -313,6 +313,21 @@ class TranscriptionConsumer(threading.Thread):
                         f"Language={self.language}, "
                         f"TranslateTo={self.translate_to}"
                     )
+
+                    # Emit stats to frontend via Socket.IO
+                    asyncio.run_coroutine_threadsafe(
+                        self.sio.emit(
+                            "transcription-stats",
+                            {
+                                "session_id": self.session_id,
+                                "vfo_number": self.vfo_number,
+                                "stats": stats_copy,
+                            },
+                            room=self.session_id,
+                        ),
+                        self.loop,
+                    )
+
                     last_status_print = now
 
         logger.info("Transcription consumer stopped")
@@ -693,6 +708,22 @@ class TranscriptionConsumer(threading.Thread):
         """Stop the transcription consumer"""
         logger.info("Stopping transcription consumer...")
         self.running = False
+
+        # Emit stats cleanup event to frontend
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self.sio.emit(
+                    "transcription-stats-cleanup",
+                    {
+                        "session_id": self.session_id,
+                        "vfo_number": self.vfo_number,
+                    },
+                    room=self.session_id,
+                ),
+                self.loop,
+            )
+        except Exception as e:
+            logger.error(f"Error emitting stats cleanup: {e}")
 
         # Close Gemini session
         if self.gemini_session_context:
