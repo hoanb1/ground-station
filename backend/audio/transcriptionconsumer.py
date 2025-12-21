@@ -118,8 +118,8 @@ class TranscriptionConsumer(threading.Thread):
         self.language = language
         self.translate_to = translate_to
 
-        # Audio buffer for this VFO
-        self.audio_buffer: List[np.ndarray] = []
+        # Audio buffer for this VFO (stores dicts with audio data and type)
+        self.audio_buffer: List[Dict[str, Any]] = []
 
         # Streaming settings - send audio frequently for real-time transcription
         self.chunk_duration = 1.5  # Send audio every 1.5 seconds for better context
@@ -193,6 +193,9 @@ class TranscriptionConsumer(threading.Thread):
 
                 # Extract audio chunk and metadata
                 audio_chunk = audio_message.get("audio")
+                audio_type = audio_message.get(
+                    "audio_type", "mono"
+                )  # Default to mono for backward compatibility
 
                 if audio_chunk is None:
                     logger.warning("Received malformed audio message for transcription")
@@ -208,21 +211,15 @@ class TranscriptionConsumer(threading.Thread):
                 rate_samples_accum += len(audio_chunk)
                 rate_chunks_accum += 1
 
-                # Add audio to buffer
-                self.audio_buffer.append(audio_chunk)
+                # Add audio to buffer along with its type
+                self.audio_buffer.append({"audio": audio_chunk, "type": audio_type})
 
                 # Calculate total duration of buffered audio
-                # NOTE: For stereo audio (FM Stereo), the sample count includes interleaved L+R
-                # So we need to detect and handle stereo by converting to mono first
-                total_samples = sum(len(chunk) for chunk in self.audio_buffer)
+                # For stereo audio (FM Stereo), the sample count includes interleaved L+R
+                total_samples = sum(len(chunk["audio"]) for chunk in self.audio_buffer)
+                is_stereo = audio_type == "stereo"
 
-                # Simple detection: if we accumulated way more samples than expected for time,
-                # it's likely stereo (interleaved L+R)
-                # At 44.1kHz, 1.5s of mono = ~66k samples, stereo = ~132k samples
-                expected_mono_samples = self.chunk_duration * self.input_sample_rate
-                likely_stereo = total_samples > expected_mono_samples * 1.8
-
-                if likely_stereo:
+                if is_stereo:
                     # Calculate duration assuming stereo (half the samples are for mono equivalent)
                     duration = (total_samples / 2) / self.input_sample_rate
                 else:
@@ -232,11 +229,11 @@ class TranscriptionConsumer(threading.Thread):
                 # Send when we have accumulated chunk_duration seconds
                 if duration >= self.chunk_duration:
                     # Concatenate all buffered chunks
-                    concatenated = np.concatenate(self.audio_buffer)
+                    concatenated = np.concatenate([chunk["audio"] for chunk in self.audio_buffer])
 
                     # Convert stereo to mono if needed
                     # FM Stereo demodulator outputs interleaved stereo: [L, R, L, R, ...]
-                    if likely_stereo:
+                    if is_stereo:
                         left_channel = concatenated[0::2]
                         right_channel = concatenated[1::2]
                         concatenated = (left_channel + right_channel) / 2.0

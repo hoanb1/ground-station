@@ -675,6 +675,7 @@ class FMStereoDemodulator(threading.Thread):
                                     "session_id": self.session_id,
                                     "audio": chunk,
                                     "vfo_number": self.vfo_number,  # Tag audio with VFO number
+                                    "audio_type": "stereo",  # Explicitly mark as stereo (interleaved L/R)
                                 }
                             )
                             # Update stats
