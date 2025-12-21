@@ -122,7 +122,7 @@ class TranscriptionConsumer(threading.Thread):
         self.audio_buffer: List[Dict[str, Any]] = []
 
         # Streaming settings - send audio frequently for real-time transcription
-        self.chunk_duration = 1.5  # Send audio every 1.5 seconds for better context
+        self.chunk_duration = 2.0  # Send audio every 2 seconds for better context
         self.input_sample_rate = 44100  # Input from demodulators
         self.gemini_sample_rate = 16000  # Gemini requires 16kHz
 
