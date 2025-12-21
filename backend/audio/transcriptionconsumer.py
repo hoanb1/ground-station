@@ -152,6 +152,7 @@ class TranscriptionConsumer(threading.Thread):
             "audio_samples_per_sec": 0.0,
             "audio_chunks_per_sec": 0.0,
             "is_connected": False,
+            "audio_type": "unknown",  # Track detected audio type (mono/stereo)
         }
         self.stats_lock = threading.Lock()
 
@@ -213,6 +214,10 @@ class TranscriptionConsumer(threading.Thread):
 
                 # Add audio to buffer along with its type
                 self.audio_buffer.append({"audio": audio_chunk, "type": audio_type})
+
+                # Update stats with audio type
+                with self.stats_lock:
+                    self.stats["audio_type"] = audio_type
 
                 # Calculate total duration of buffered audio
                 # For stereo audio (FM Stereo), the sample count includes interleaved L+R
@@ -300,6 +305,7 @@ class TranscriptionConsumer(threading.Thread):
                     logger.info(
                         f"[VFO {self.vfo_number}] Transcription Status: "
                         f"Connected={stats_copy['is_connected']}, "
+                        f"AudioType={stats_copy['audio_type']}, "
                         f"Audio Rate={stats_copy['audio_chunks_per_sec']:.1f} chunks/s, "
                         f"Sent={stats_copy['transcriptions_sent']}, "
                         f"Received={stats_copy['transcriptions_received']}, "
