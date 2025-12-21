@@ -105,13 +105,13 @@ def register_socketio_handlers(sio):
 
     @sio.on("data_request")
     async def handle_frontend_data_requests(sid, cmd, data=None):
-        logger.debug(f"Received event from: {sid}, with cmd: {cmd}")
+        logger.info(f"Received event from: {sid}, with cmd: {cmd}")
         reply = await dispatch_request(sio, cmd, data, logger, sid, handler_registry)
         return reply
 
     @sio.on("data_submission")
     async def handle_frontend_data_submissions(sid, cmd, data=None):
-        logger.debug(f"Received event from: {sid}, with cmd: {cmd}, and data: {data}")
+        logger.info(f"Received event from: {sid}, with cmd: {cmd}, and data: {data}")
         reply = await dispatch_request(sio, cmd, data, logger, sid, handler_registry)
         return reply
 

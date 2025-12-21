@@ -261,6 +261,59 @@ export const BPSK_PARAMETERS = {
 };
 
 /**
+ * AFSK Decoder Parameters
+ * AFSK (Audio Frequency Shift Keying) modulates data onto an audio frequency carrier.
+ * Used for FM-based packet radio (APRS, amateur satellites with FM transponders).
+ */
+export const AFSK_PARAMETERS = {
+    afsk_baudrate: {
+        label: 'Baud Rate',
+        description: 'Symbol rate in symbols/second',
+        type: 'select',
+        default: 1200,
+        options: [
+            { value: 300, label: '300 baud', tooltip: 'Low-speed HF packet radio' },
+            { value: 1200, label: '1200 baud', tooltip: 'Bell 202 (APRS, VHF packet radio)' },
+            { value: 2400, label: '2400 baud', tooltip: 'Medium-speed packet radio' },
+            { value: 4800, label: '4800 baud', tooltip: 'High-speed VHF packet radio' },
+            { value: 9600, label: '9600 baud', tooltip: 'G3RUH (UHF packet radio)' }
+        ]
+    },
+    afsk_af_carrier: {
+        label: 'Audio Carrier Frequency',
+        description: 'Center frequency of the audio FSK tones',
+        type: 'select',
+        default: 1700,
+        options: [
+            { value: 1200, label: '1200 Hz', tooltip: 'VHF/UHF packet radio' },
+            { value: 1700, label: '1700 Hz', tooltip: 'Bell 202 APRS standard' },
+            { value: 2200, label: '2200 Hz', tooltip: 'Alternative carrier frequency' }
+        ]
+    },
+    afsk_deviation: {
+        label: 'Frequency Deviation',
+        description: 'Audio frequency shift from carrier',
+        type: 'select',
+        default: 500,
+        options: [
+            { value: 500, label: '500 Hz', tooltip: 'Standard for 1200 baud (Bell 202)' },
+            { value: 1000, label: '1000 Hz', tooltip: 'Wide deviation for 1200 baud' },
+            { value: 2400, label: '2400 Hz', tooltip: 'Standard for 9600 baud' },
+            { value: 3000, label: '3000 Hz', tooltip: 'Wide deviation for 9600 baud' }
+        ]
+    },
+    afsk_framing: {
+        label: 'Framing Protocol',
+        description: 'Data framing protocol',
+        type: 'select',
+        default: 'ax25',
+        options: [
+            { value: 'ax25', label: 'AX.25 (G3RUH)', tooltip: 'Amateur packet radio standard with G3RUH scrambler' }
+        ]
+    }
+};
+
+/**
  * SSTV Decoder Parameters
  * SSTV (Slow Scan Television) has no user-configurable parameters.
  * Mode detection is fully automatic via VIS code.
@@ -276,6 +329,7 @@ export const DECODER_PARAMETERS = {
     ...GMSK_PARAMETERS,
     ...GFSK_PARAMETERS,
     ...BPSK_PARAMETERS,
+    ...AFSK_PARAMETERS,
     ...SSTV_PARAMETERS
 };
 
@@ -352,6 +406,15 @@ export function mapParametersToBackend(decoder, parameters) {
             baudrate: parameters.bpsk_baudrate,
             framing: parameters.bpsk_framing,
             differential: parameters.bpsk_differential
+        };
+    }
+
+    if (decoder === 'afsk') {
+        return {
+            baudrate: parameters.afsk_baudrate,
+            af_carrier: parameters.afsk_af_carrier,
+            deviation: parameters.afsk_deviation,
+            framing: parameters.afsk_framing
         };
     }
 

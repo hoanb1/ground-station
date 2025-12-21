@@ -217,16 +217,23 @@ async def update_vfo_parameters(
                 await handle_vfo_decoder_state(vfo_state, sid, logger, force_restart=True)
 
         # Check if decoder parameters changed (requires restart)
-        # This handles cases where modulation parameters change (e.g., LoRa SF/BW/CR)
+        # This handles cases where modulation parameters change (e.g., LoRa SF/BW/CR, FSK baudrate, etc.)
         # without changing the transmitter or decoder type
-        # Only check if decoder params were actually included in this update (optimization)
+        # Only check if:
+        # - Parameters were included in this update (decoder_param_overrides), OR
+        # - Parameters are enabled (vfo_state.parameters_enabled) and we have cached overrides
         # Skip if we already restarted due to transmitter or parameters_enabled changes
+        override_key = f"{sid}_{vfo_id}"
+        has_param_overrides = decoder_param_overrides or (
+            vfo_state.parameters_enabled and override_key in _decoder_param_overrides_cache
+        )
+
         if (
             not transmitter_changed
             and not parameters_enabled_changed
             and vfo_state.decoder != "none"
             and vfo_state.active
-            and decoder_param_overrides
+            and has_param_overrides
         ):
             params_changed = await check_decoder_params_changed(
                 sdr_id=session_tracker.get_session_sdr(sid),

@@ -338,6 +338,34 @@ class SSTVDecoderV2(BaseDecoderProcess):
 
     def _send_status_update(self, status, mode_name=None, info=None):
         """Send status update to UI"""
+        # Build decoder configuration info (clear FSK-specific fields)
+        config_info = {
+            "baudrate": None,  # SSTV doesn't use baudrate
+            "deviation_hz": None,  # SSTV doesn't use deviation
+            "framing": None,  # SSTV doesn't use framing
+            "transmitter": (
+                self.cached_vfo_state.get("transmitter_description", "VFO Signal")
+                if self.cached_vfo_state
+                else "VFO Signal"
+            ),
+            "transmitter_mode": "SSTV",
+            "transmitter_downlink_mhz": (
+                round(self.cached_vfo_state.get("center_freq", 0) / 1e6, 3)
+                if self.cached_vfo_state
+                else None
+            ),
+            "packets_decoded": None,  # SSTV decodes images, not packets
+            "signal_power_dbfs": None,
+            "signal_power_avg_dbfs": None,
+            "signal_power_max_dbfs": None,
+            "signal_power_min_dbfs": None,
+            "buffer_samples": None,
+        }
+
+        # Merge with any additional info passed in
+        if info:
+            config_info.update(info)
+
         msg = {
             "type": "decoder-status",
             "decoder_id": self.decoder_id,
@@ -347,9 +375,8 @@ class SSTVDecoderV2(BaseDecoderProcess):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
+            "info": config_info,
         }
-        if info:
-            msg["info"] = info
         try:
             self.data_queue.put(msg, block=False)
             with self.stats_lock:

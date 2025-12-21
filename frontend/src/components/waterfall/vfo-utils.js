@@ -226,7 +226,14 @@ export const canvasDrawingUtils = {
 
                 if (textDisplayConfig) {
                     // Text-based decoder display (e.g., morse)
-                    const staticPart = `${decoderType.toUpperCase()} | `;
+                    let staticPart = `${decoderType.toUpperCase()}`;
+
+                    // Add WPM for morse decoder if available
+                    if (decoderType === 'morse' && decoderInfo.info?.wpm !== null && decoderInfo.info?.wpm !== undefined) {
+                        staticPart += ` ${decoderInfo.info.wpm} WPM`;
+                    }
+
+                    staticPart += ' | ';
                     const displayText = morseText || textDisplayConfig.placeholder;
                     const fullText = staticPart + displayText;
 

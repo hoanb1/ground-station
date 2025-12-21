@@ -421,6 +421,24 @@ class MorseDecoder(threading.Thread):
 
     def _send_status_update(self, status):
         """Send status update to UI"""
+        # Build decoder configuration info (clear FSK-specific fields)
+        config_info = {
+            "baudrate": None,  # Morse doesn't use baudrate
+            "deviation_hz": None,  # Morse doesn't use deviation
+            "framing": None,  # Morse doesn't use framing
+            "transmitter": "VFO Signal",
+            "transmitter_mode": "MORSE",
+            "transmitter_downlink_mhz": None,
+            "packets_decoded": None,  # Morse decodes characters, not packets
+            "signal_power_dbfs": None,
+            "signal_power_avg_dbfs": None,
+            "signal_power_max_dbfs": None,
+            "signal_power_min_dbfs": None,
+            "buffer_samples": None,
+            "wpm": self.wpm if hasattr(self, "wpm") else None,
+            "character_count": self.character_count if hasattr(self, "character_count") else 0,
+        }
+
         msg = {
             "type": "decoder-status",
             "decoder_id": self.decoder_id,
@@ -429,6 +447,7 @@ class MorseDecoder(threading.Thread):
             "session_id": self.session_id,
             "vfo": self.vfo,
             "timestamp": time.time(),
+            "info": config_info,
         }
         try:
             self.data_queue.put(msg, block=False)

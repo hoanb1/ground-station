@@ -122,6 +122,17 @@ const VfoAccordion = ({
         const decoder = vfo.decoder;
         const params = vfo.parameters || {};
 
+        // Helper to get framing shorthand
+        const getFramingShort = (framing) => {
+            const framingMap = {
+                'ax25': 'AX25',
+                'raw': 'RAW',
+                'ccsds': 'CCSDS',
+                'custom': 'CUST',
+            };
+            return framingMap[framing] || framing.toUpperCase();
+        };
+
         if (decoder === 'lora') {
             const sf = params.lora_sf ?? 7;
             const bw = params.lora_bw ?? 125000;
@@ -130,29 +141,57 @@ const VfoAccordion = ({
             return `SF${sf} BW${bwKhz}kHz CR4/${cr + 4}`;
         }
 
+        // Helper to format baudrate compactly (e.g., 1k2bd, 9k6bd)
+        const formatBaudrate = (baudrate) => {
+            if (baudrate >= 1000) {
+                const k = Math.floor(baudrate / 1000);
+                const remainder = (baudrate % 1000) / 100;
+                if (remainder === 0) {
+                    return `${k}kbd`;
+                }
+                return `${k}k${remainder}bd`;
+            }
+            return `${baudrate}bd`;
+        };
+
         if (decoder === 'fsk') {
             const baudrate = params.fsk_baudrate ?? 9600;
+            const deviation = params.fsk_deviation ?? 5000;
             const framing = params.fsk_framing ?? 'ax25';
-            return `${baudrate}bd ${framing.toUpperCase()}`;
+            const devKhz = deviation >= 1000 ? `${(deviation / 1000).toFixed(1)}k` : `${deviation}`;
+            return `${formatBaudrate(baudrate)} ±${devKhz} ${getFramingShort(framing)}`;
         }
 
         if (decoder === 'gmsk') {
             const baudrate = params.gmsk_baudrate ?? 9600;
+            const deviation = params.gmsk_deviation ?? 5000;
             const framing = params.gmsk_framing ?? 'ax25';
-            return `${baudrate}bd ${framing.toUpperCase()}`;
+            const devKhz = deviation >= 1000 ? `${(deviation / 1000).toFixed(1)}k` : `${deviation}`;
+            return `${formatBaudrate(baudrate)} ±${devKhz} ${getFramingShort(framing)}`;
         }
 
         if (decoder === 'gfsk') {
             const baudrate = params.gfsk_baudrate ?? 9600;
+            const deviation = params.gfsk_deviation ?? 5000;
             const framing = params.gfsk_framing ?? 'ax25';
-            return `${baudrate}bd ${framing.toUpperCase()}`;
+            const devKhz = deviation >= 1000 ? `${(deviation / 1000).toFixed(1)}k` : `${deviation}`;
+            return `${formatBaudrate(baudrate)} ±${devKhz} ${getFramingShort(framing)}`;
         }
 
         if (decoder === 'bpsk') {
             const baudrate = params.bpsk_baudrate ?? 9600;
             const framing = params.bpsk_framing ?? 'ax25';
             const differential = params.bpsk_differential ?? false;
-            return `${baudrate}bd ${framing.toUpperCase()}${differential ? ' DIFF' : ''}`;
+            return `${formatBaudrate(baudrate)} ${getFramingShort(framing)}${differential ? ' DIFF' : ''}`;
+        }
+
+        if (decoder === 'afsk') {
+            const baudrate = params.afsk_baudrate ?? 1200;
+            const af_carrier = params.afsk_af_carrier ?? 1700;
+            const deviation = params.afsk_deviation ?? 500;
+            const framing = params.afsk_framing ?? 'ax25';
+            const carrierKhz = af_carrier >= 1000 ? `${(af_carrier / 1000).toFixed(1)}k` : `${af_carrier}`;
+            return `${formatBaudrate(baudrate)} ${carrierKhz}Hz ±${deviation} ${getFramingShort(framing)}`;
         }
 
         // Default for decoders without parameters
@@ -362,29 +401,43 @@ const VfoAccordion = ({
                                         // Line 1: STATUS, MODE, BAUD, FRAMING
                                         const statusParts = [];
                                         statusParts.push(status.toUpperCase());
-                                        if (info.transmitter_mode !== undefined) {
+                                        if (info.transmitter_mode !== undefined && info.transmitter_mode !== null) {
                                             statusParts.push(info.transmitter_mode);
                                         }
-                                        if (info.baudrate !== undefined) {
+                                        if (info.baudrate !== undefined && info.baudrate !== null) {
                                             statusParts.push(`${info.baudrate}bd`);
                                         }
-                                        if (info.framing !== undefined) {
+                                        if (info.framing !== undefined && info.framing !== null) {
                                             statusParts.push(info.framing.toUpperCase());
                                         }
                                         line1Text = statusParts.join(' • ');
 
-                                        // Line 2: existing metrics (packets, signal power, buffer)
+                                        // Line 2: existing metrics (packets, signal power, buffer) or progress or morse-specific
                                         const metricParts = [];
-                                        if (info.packets_decoded !== undefined) {
+
+                                        // Show progress for SSTV if available
+                                        if (decoderInfo.progress !== undefined && decoderInfo.progress !== null) {
+                                            metricParts.push(`Progress: ${decoderInfo.progress}%`);
+                                        }
+
+                                        // Show WPM and character count for Morse
+                                        if (info.wpm !== undefined && info.wpm !== null) {
+                                            metricParts.push(`${info.wpm} WPM`);
+                                        }
+                                        if (info.character_count !== undefined && info.character_count !== null && info.character_count > 0) {
+                                            metricParts.push(`CHAR:${info.character_count}`);
+                                        }
+
+                                        if (info.packets_decoded !== undefined && info.packets_decoded !== null) {
                                             metricParts.push(`PKT:${info.packets_decoded}`);
                                         }
-                                        if (info.signal_power_dbfs !== undefined) {
+                                        if (info.signal_power_dbfs !== undefined && info.signal_power_dbfs !== null) {
                                             metricParts.push(`${info.signal_power_dbfs.toFixed(1)}dB`);
                                         }
-                                        if (info.buffer_samples !== undefined) {
+                                        if (info.buffer_samples !== undefined && info.buffer_samples !== null) {
                                             metricParts.push(`BUF:${(info.buffer_samples / 1000).toFixed(0)}k`);
                                         }
-                                        line2Text = metricParts.join(' • ');
+                                        line2Text = metricParts.length > 0 ? metricParts.join(' • ') : '—';
 
                                         borderColor = status === 'decoding' ? 'success.dark' : 'warning.dark';
                                         textColor = 'text.secondary';
@@ -411,7 +464,11 @@ const VfoAccordion = ({
                                         backgroundColor: 'rgba(0, 0, 0, 0.2)',
                                         borderRadius: 0.5,
                                         border: '1px solid',
-                                        borderColor: borderColor
+                                        borderColor: borderColor,
+                                        minHeight: '42px', // Ensure consistent height for two lines
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'center'
                                     }}>
                                         <Typography
                                             variant="caption"
@@ -425,20 +482,19 @@ const VfoAccordion = ({
                                         >
                                             {line1Text}
                                         </Typography>
-                                        {line2Text && (
-                                            <Typography
-                                                variant="caption"
-                                                sx={{
-                                                    fontSize: '0.7rem',
-                                                    fontFamily: 'monospace',
-                                                    color: textColor,
-                                                    display: 'block',
-                                                    textAlign: 'center'
-                                                }}
-                                            >
-                                                {line2Text}
-                                            </Typography>
-                                        )}
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                fontSize: '0.7rem',
+                                                fontFamily: 'monospace',
+                                                color: textColor,
+                                                display: 'block',
+                                                textAlign: 'center',
+                                                minHeight: '0.7rem' // Reserve space even when empty
+                                            }}
+                                        >
+                                            {line2Text || '\u00A0'}
+                                        </Typography>
                                     </Box>
                                 );
                             })()}
@@ -971,22 +1027,22 @@ const VfoAccordion = ({
                                 <Link
                                     component="button"
                                     variant="body2"
-                                    disabled={!vfoMarkers[vfoIndex]?.decoder || vfoMarkers[vfoIndex].decoder === 'none'}
+                                    disabled={!vfoActive[vfoIndex] || !vfoMarkers[vfoIndex]?.decoder || vfoMarkers[vfoIndex].decoder === 'none'}
                                     onClick={() => {
                                         setDecoderParamsVfoIndex(vfoIndex);
                                         setDecoderParamsDialogOpen(true);
                                     }}
                                     sx={{
                                         width: '100%',
-                                        fontSize: '0.875rem',
+                                        fontSize: '0.8rem',
                                         color: 'text.primary',
                                         textDecoration: 'none',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: 1,
-                                        py: 1,
-                                        px: 2,
+                                        gap: 0.75,
+                                        py: 0.75,
+                                        px: 1.5,
                                         borderRadius: 1,
                                         backgroundColor: vfoMarkers[vfoIndex]?.parametersEnabled ? 'rgba(33, 150, 243, 0.08)' : 'rgba(255, 255, 255, 0.05)',
                                         border: vfoMarkers[vfoIndex]?.parametersEnabled ? '1px solid rgba(33, 150, 243, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
@@ -1006,22 +1062,17 @@ const VfoAccordion = ({
                                     }}
                                 >
                                     <SettingsIcon sx={{ fontSize: '1rem', color: vfoMarkers[vfoIndex]?.parametersEnabled ? 'primary.main' : 'text.secondary' }} />
-                                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary', flex: 1 }}>
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            fontFamily: 'monospace',
+                                            color: 'text.secondary',
+                                            flex: 1,
+                                            textDecoration: vfoMarkers[vfoIndex]?.decoder && vfoMarkers[vfoIndex].decoder !== 'none' && !vfoMarkers[vfoIndex]?.parametersEnabled ? 'line-through' : 'none',
+                                        }}
+                                    >
                                         {formatDecoderParamsSummary(vfoIndex) || 'Decoder Parameters'}
                                     </Box>
-                                    {vfoMarkers[vfoIndex]?.parametersEnabled && (
-                                        <Chip
-                                            label="Override"
-                                            size="small"
-                                            sx={{
-                                                height: '18px',
-                                                fontSize: '0.65rem',
-                                                fontWeight: 600,
-                                                backgroundColor: 'primary.main',
-                                                color: 'primary.contrastText',
-                                            }}
-                                        />
-                                    )}
                                 </Link>
                             </Box>
                         </Box>

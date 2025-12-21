@@ -85,7 +85,7 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=12500,  # 12.5 kHz for AFSK
                 supports_transmitter_config=True,
-                restart_on_params=[],  # TODO: Add AFSK-specific parameters
+                restart_on_params=["baudrate", "af_carrier", "deviation", "framing"],
                 description="Audio Frequency Shift Keying decoder (APRS, packet radio)",
             ),
             "sstv": DecoderCapabilities(
