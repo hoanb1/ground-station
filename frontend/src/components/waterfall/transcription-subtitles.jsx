@@ -32,12 +32,13 @@ import SubtitlesIcon from '@mui/icons-material/Subtitles';
 /**
  * TranscriptionSubtitles Component
  *
- * Displays real-time transcriptions as a single continuously updating subtitle.
- * Shows live accumulating text that grows as fragments arrive.
+ * Displays real-time transcriptions as traditional multi-line subtitles.
+ * Shows up to 3 lines, with the oldest line expiring when new text arrives.
  */
-const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
+const TranscriptionSubtitles = ({ maxLines = 3, maxCharsPerLine = 80, autoFadeMs = 10000 }) => {
     const dispatch = useDispatch();
     const [visible, setVisible] = useState(true);
+    const [lines, setLines] = useState([]);
 
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);
@@ -58,34 +59,63 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     )[0] || null;
 
-    // Don't render anything if no live transcription
-    if (!currentTranscription || !currentTranscription.segments || currentTranscription.segments.length === 0) {
+    // Build lines from segments when transcription updates
+    useEffect(() => {
+        if (!currentTranscription || !currentTranscription.segments || currentTranscription.segments.length === 0) {
+            setLines([]);
+            return;
+        }
+
+        // Combine all segments into a single text stream
+        const allText = currentTranscription.segments.map(s => s.text).join(' ');
+        const words = allText.split(/\s+/).filter(w => w.length > 0);
+
+        // Build lines by filling them up to maxCharsPerLine
+        const newLines = [];
+        let currentLine = '';
+        let currentLineTimestamp = Date.now();
+
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+
+            if (testLine.length > maxCharsPerLine && currentLine.length > 0) {
+                // Current line is full, save it and start a new one
+                newLines.push({
+                    text: currentLine,
+                    timestamp: currentLineTimestamp,
+                    id: `${currentLineTimestamp}-${i}`
+                });
+                currentLine = word;
+                currentLineTimestamp = Date.now();
+            } else {
+                currentLine = testLine;
+            }
+        }
+
+        // Add the last line if it has content
+        if (currentLine) {
+            newLines.push({
+                text: currentLine,
+                timestamp: currentLineTimestamp,
+                id: `${currentLineTimestamp}-${words.length}`
+            });
+        }
+
+        // Keep only the last maxLines lines
+        const displayLines = newLines.slice(-maxLines);
+
+        setLines(displayLines);
+    }, [currentTranscription, maxLines, maxCharsPerLine]);
+
+    // Don't render anything if no lines
+    if (lines.length === 0) {
         return null;
     }
 
-    // Get all segments and determine which are old (>5 seconds)
-    const now = Date.now();
-    const ageThreshold = 5000; // 5 seconds in milliseconds
-
-    // Collect all segments from newest to oldest, limiting to last 50 words total
-    const allText = currentTranscription.segments.map(s => s.text).join(' ');
-    const words = allText.split(/\s+/);
-    const displayWords = words.slice(-50);
-    const displayText = displayWords.join(' ');
-
-    // Build segments with age-based opacity
-    // We'll render each segment separately with appropriate styling
-    const segmentsToRender = currentTranscription.segments
-        .map(segment => ({
-            text: segment.text,
-            isOld: (now - segment.timestamp) > ageThreshold
-        }))
-        // Only show segments that appear in the displayText (last 50 words)
-        .filter(segment => displayText.includes(segment.text));
-
     return (
         <>
-            {/* Single continuously updating subtitle */}
+            {/* Multi-line subtitle display */}
             <Fade in={visible} timeout={300}>
                 <Box
                     sx={{
@@ -112,38 +142,30 @@ const TranscriptionSubtitles = ({ maxEntries = 2, autoFadeMs = 10000 }) => {
                             transition: 'all 0.15s ease-out',
                         }}
                     >
-                        <Box
-                            sx={{
-                                color: 'white',
-                                fontSize: {
-                                    xs: `${0.75 * fontSizeMultiplier}rem`,
-                                    sm: `${0.85 * fontSizeMultiplier}rem`,
-                                    md: `${0.9 * fontSizeMultiplier}rem`
-                                },
-                                fontWeight: 600,
-                                lineHeight: 1.6,
-                                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                                letterSpacing: '0.3px',
-                                fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                                wordBreak: 'break-word',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 3,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                            }}
-                        >
-                            {segmentsToRender.map((segment, idx) => (
-                                <span
-                                    key={idx}
-                                    style={{
-                                        opacity: segment.isOld ? 0.4 : 1.0,
-                                        transition: 'opacity 0.5s ease-out'
-                                    }}
-                                >
-                                    {idx > 0 ? ' ' : ''}{segment.text}
-                                </span>
-                            ))}
-                        </Box>
+                        {lines.map((line, idx) => (
+                            <Box
+                                key={line.id}
+                                sx={{
+                                    color: 'white',
+                                    fontSize: {
+                                        xs: `${0.75 * fontSizeMultiplier}rem`,
+                                        sm: `${0.85 * fontSizeMultiplier}rem`,
+                                        md: `${0.9 * fontSizeMultiplier}rem`
+                                    },
+                                    fontWeight: 600,
+                                    lineHeight: 1.6,
+                                    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+                                    letterSpacing: '0.3px',
+                                    fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                                    wordBreak: 'break-word',
+                                    mb: idx < lines.length - 1 ? 0.5 : 0,
+                                    transition: 'opacity 0.3s ease-out',
+                                    opacity: idx === lines.length - 1 ? 1.0 : 0.7, // Last line is brightest
+                                }}
+                            >
+                                {line.text}
+                            </Box>
+                        ))}
                     </Box>
                 </Box>
             </Fade>
