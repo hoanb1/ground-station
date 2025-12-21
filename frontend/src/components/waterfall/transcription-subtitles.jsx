@@ -39,6 +39,7 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
     const dispatch = useDispatch();
     const [visible, setVisible] = useState(true);
     const [lines, setLines] = useState([]);
+    const [lastSegmentTimestamp, setLastSegmentTimestamp] = useState(null);
 
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);
@@ -66,6 +67,19 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
             return;
         }
 
+        // Get the timestamp of the most recent segment
+        const latestSegmentTimestamp = currentTranscription.segments.reduce((latest, segment) => {
+            const segmentTime = new Date(segment.timestamp).getTime();
+            return segmentTime > latest ? segmentTime : latest;
+        }, 0);
+
+        // Check if more than 60 seconds have passed since last segment
+        const now = Date.now();
+        const shouldAddDash = lastSegmentTimestamp && (latestSegmentTimestamp - lastSegmentTimestamp > 60000);
+
+        // Update last segment timestamp
+        setLastSegmentTimestamp(latestSegmentTimestamp);
+
         // Combine all segments into a single text stream
         const allText = currentTranscription.segments.map(s => s.text).join(' ');
         const words = allText.split(/\s+/).filter(w => w.length > 0);
@@ -74,6 +88,19 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
         const newLines = [];
         let currentLineWords = [];
         let currentLineTimestamp = Date.now();
+
+        // If we should add a dash due to gap, and we have existing lines,
+        // add it to the previous last line and force a new line
+        let addedDash = false;
+        if (shouldAddDash && lines.length > 0) {
+            // Copy existing lines and add dash to the last one
+            newLines.push(...lines.map((line, idx) =>
+                idx === lines.length - 1
+                    ? { ...line, text: line.text + ' —' }
+                    : line
+            ));
+            addedDash = true;
+        }
 
         for (let i = 0; i < words.length; i++) {
             const word = words[i];
