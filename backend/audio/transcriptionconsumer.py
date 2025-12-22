@@ -635,6 +635,8 @@ class TranscriptionConsumer(threading.Thread):
                     system_instruction = (
                         f"Transcribe the audio to text (source language: {self.language}) "
                         f"and translate it to {self.translate_to}. "
+                        f"This is RF radio communication audio with intermittent static noise and varying signal quality. "
+                        f"Squelch is not applied. Ignore static noise and only transcribe actual speech. "
                         f"Mark unclear words with [inaudible]. "
                         f"Preserve numbers, callsigns, and codes exactly as spoken. "
                         f"Identify and label different speakers if multiple voices are present. "
@@ -643,6 +645,8 @@ class TranscriptionConsumer(threading.Thread):
                 else:
                     system_instruction = (
                         f"Transcribe the audio to text and translate it to {self.translate_to}. "
+                        f"This is RF radio communication audio with intermittent static noise and varying signal quality. "
+                        f"Squelch is not applied. Ignore static noise and only transcribe actual speech. "
                         f"Mark unclear words with [inaudible]. "
                         f"Preserve numbers, callsigns, and codes exactly as spoken. "
                         f"Identify and label different speakers if multiple voices are present. "
@@ -653,6 +657,8 @@ class TranscriptionConsumer(threading.Thread):
                 # Just transcription with language hint
                 system_instruction = (
                     f"Transcribe the audio to text. Audio language: {self.language}. "
+                    f"This is RF radio communication audio with intermittent static noise and varying signal quality. "
+                    f"Squelch is not applied. Ignore static noise and only transcribe actual speech. "
                     f"Mark unclear words with [inaudible]. "
                     f"Preserve numbers, callsigns, and codes exactly as spoken. "
                     f"Identify and label different speakers if multiple voices are present."
@@ -662,6 +668,8 @@ class TranscriptionConsumer(threading.Thread):
                 # Auto-detect language with enhanced instructions
                 system_instruction = (
                     "Transcribe the audio to text. "
+                    "This is RF radio communication audio with intermittent static noise and varying signal quality. "
+                    "Squelch is not applied. Ignore static noise and only transcribe actual speech. "
                     "Mark unclear words with [inaudible]. "
                     "Preserve numbers, callsigns, and codes exactly as spoken. "
                     "Identify and label different speakers if multiple voices are present."
