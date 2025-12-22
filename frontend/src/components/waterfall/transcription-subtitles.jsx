@@ -248,8 +248,10 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
         dispatch(decreaseFontSize());
     };
 
-    const handleSetAlignment = (alignment) => {
-        dispatch(setTextAlignment(alignment));
+    const handleSetAlignment = (event, alignment) => {
+        if (alignment !== null) {
+            dispatch(setTextAlignment(alignment));
+        }
     };
 
     if (activeVFOs.length === 0) {
