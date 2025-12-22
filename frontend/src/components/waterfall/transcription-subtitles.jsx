@@ -21,8 +21,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Box, IconButton, Tooltip, Fade, ToggleButtonGroup, ToggleButton, Grid } from '@mui/material';
 import {
-    selectFontSizeMultiplier,
-    selectTextAlignment,
     clearTranscriptions,
     increaseFontSize,
     decreaseFontSize,
@@ -34,11 +32,95 @@ import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter';
 import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight';
 import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
 import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
+import FlagIcon from '@mui/icons-material/Flag';
+
+/**
+ * Language code to emoji flag mapping
+ * Using Unicode regional indicator symbols
+ */
+const getLanguageFlag = (languageCode) => {
+    if (!languageCode || languageCode === 'auto' || languageCode === 'unknown') {
+        return '🌐'; // Globe for unknown/auto
+    }
+
+    const lowerCode = languageCode.toLowerCase();
+
+    // Handle regional variants (e.g., pt-br, en-us, zh-cn)
+    const regionalMapping = {
+        'pt-br': 'br', // Brazilian Portuguese
+        'pt-pt': 'pt', // European Portuguese
+        'en-us': 'us', // American English
+        'en-gb': 'gb', // British English
+        'en-au': 'au', // Australian English
+        'en-ca': 'ca', // Canadian English
+        'es-mx': 'mx', // Mexican Spanish
+        'es-es': 'es', // European Spanish
+        'zh-cn': 'cn', // Simplified Chinese
+        'zh-tw': 'tw', // Traditional Chinese
+        'fr-ca': 'ca', // Canadian French
+        'fr-fr': 'fr', // European French
+    };
+
+    // Check regional mapping first
+    if (regionalMapping[lowerCode]) {
+        const countryCode = regionalMapping[lowerCode];
+        const codePoints = [...countryCode.toUpperCase()].map(char =>
+            0x1F1E6 + char.charCodeAt(0) - 'A'.charCodeAt(0)
+        );
+        return String.fromCodePoint(...codePoints);
+    }
+
+    // Map language codes to country codes (approximate)
+    const languageToCountry = {
+        'en': 'gb', // English -> UK flag
+        'es': 'es', // Spanish
+        'fr': 'fr', // French
+        'de': 'de', // German
+        'it': 'it', // Italian
+        'pt': 'pt', // Portuguese
+        'ru': 'ru', // Russian
+        'zh': 'cn', // Chinese
+        'ja': 'jp', // Japanese
+        'ko': 'kr', // Korean
+        'ar': 'sa', // Arabic
+        'el': 'gr', // Greek
+        'nl': 'nl', // Dutch
+        'sv': 'se', // Swedish
+        'no': 'no', // Norwegian
+        'da': 'dk', // Danish
+        'fi': 'fi', // Finnish
+        'pl': 'pl', // Polish
+        'tr': 'tr', // Turkish
+        'hi': 'in', // Hindi
+        'th': 'th', // Thai
+        'vi': 'vn', // Vietnamese
+        'id': 'id', // Indonesian
+        'ms': 'my', // Malay
+        'uk': 'ua', // Ukrainian
+        'cs': 'cz', // Czech
+        'ro': 'ro', // Romanian
+        'hu': 'hu', // Hungarian
+        'he': 'il', // Hebrew
+    };
+
+    const countryCode = languageToCountry[lowerCode] || lowerCode.split('-')[0]; // Fallback to first part before hyphen
+
+    // Convert country code to flag emoji
+    // Regional indicator symbols: 🇦 = U+1F1E6, 🇿 = U+1F1FF
+    try {
+        const codePoints = [...countryCode.toUpperCase()].map(char =>
+            0x1F1E6 + char.charCodeAt(0) - 'A'.charCodeAt(0)
+        );
+        return String.fromCodePoint(...codePoints);
+    } catch (e) {
+        return '🌐'; // Fallback to globe if conversion fails
+    }
+};
 
 /**
  * Single VFO Subtitle Component
  */
-const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, textAlignment, maxLines, maxWordsPerLine }) => {
+const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, textAlignment, maxLines, maxWordsPerLine, onClear, onIncreaseFontSize, onDecreaseFontSize, onSetAlignment }) => {
     const [lines, setLines] = useState([]);
 
     useEffect(() => {
@@ -126,7 +208,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                     sx={{
                         backgroundColor: 'rgba(0, 0, 0, 0.85)',
                         borderRadius: '8px',
-                        padding: { xs: '10px 16px', sm: '12px 24px' },
+                        padding: { xs: '8px 12px', sm: '10px 16px' },
                         textAlign: textAlignment,
                         border: `2px solid ${vfoColor}40`,
                         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
@@ -136,18 +218,132 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                         minWidth: 'max-content',
                     }}
                 >
-                    {/* VFO Label */}
+                    {/* Header with VFO label and controls */}
                     <Box
                         sx={{
-                            fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
-                            fontWeight: 700,
-                            color: vfoColor,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
                             mb: 0.5,
-                            textAlign: 'center',
-                            letterSpacing: '0.5px',
+                            gap: 2,
                         }}
                     >
-                        VFO{vfoNumber}
+                        {/* VFO Label with Language Flag - Left */}
+                        <Box
+                            sx={{
+                                fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                                fontWeight: 700,
+                                color: vfoColor,
+                                letterSpacing: '0.5px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                            }}
+                        >
+                            <span>VFO{vfoNumber}</span>
+                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>
+                                {getLanguageFlag(transcription.language)}
+                            </span>
+                            <span style={{
+                                fontSize: '0.6rem',
+                                opacity: 0.7,
+                                fontWeight: 400,
+                                textTransform: 'uppercase'
+                            }}>
+                                {transcription.language && transcription.language !== 'auto' && transcription.language !== 'unknown'
+                                    ? transcription.language
+                                    : ''}
+                            </span>
+                        </Box>
+
+                        {/* Controls - Right */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                gap: 0.25,
+                                alignItems: 'center',
+                            }}
+                        >
+                            {/* Text alignment toggle */}
+                            <ToggleButtonGroup
+                                value={textAlignment}
+                                exclusive
+                                onChange={onSetAlignment}
+                                size="small"
+                                sx={{
+                                    height: '24px',
+                                    '& .MuiToggleButton-root': {
+                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        border: 'none',
+                                        padding: '2px 4px',
+                                        minWidth: 'unset',
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        },
+                                        '&.Mui-selected': {
+                                            color: 'white',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                            '&:hover': {
+                                                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                                            },
+                                        },
+                                    },
+                                }}
+                            >
+                                <ToggleButton value="left">
+                                    <FormatAlignLeftIcon sx={{ fontSize: '0.9rem' }} />
+                                </ToggleButton>
+                                <ToggleButton value="center">
+                                    <FormatAlignCenterIcon sx={{ fontSize: '0.9rem' }} />
+                                </ToggleButton>
+                                <ToggleButton value="right">
+                                    <FormatAlignRightIcon sx={{ fontSize: '0.9rem' }} />
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+
+                            {/* Font size controls */}
+                            <Tooltip title="Decrease font size">
+                                <IconButton
+                                    size="small"
+                                    onClick={onDecreaseFontSize}
+                                    sx={{
+                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        padding: '2px',
+                                        '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                                    }}
+                                >
+                                    <TextDecreaseIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Increase font size">
+                                <IconButton
+                                    size="small"
+                                    onClick={onIncreaseFontSize}
+                                    sx={{
+                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        padding: '2px',
+                                        '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                                    }}
+                                >
+                                    <TextIncreaseIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+
+                            {/* Clear button - rightmost */}
+                            <Tooltip title="Clear subtitles">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => onClear(vfoNumber)}
+                                    sx={{
+                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        padding: '2px',
+                                        '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                                    }}
+                                >
+                                    <ClearIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
                     </Box>
 
                     {lines.map((line, lineIdx) => (
@@ -205,8 +401,6 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
 
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);
-    const fontSizeMultiplier = useSelector(selectFontSizeMultiplier);
-    const textAlignment = useSelector(selectTextAlignment);
 
     // Get VFO colors from Redux
     const vfoColors = useSelector((state) => state.vfo.vfoColors);
@@ -235,22 +429,22 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
             .sort((a, b) => a.vfoNumber - b.vfoNumber);
     }, [liveTranscription]);
 
-    // Handlers
+    // Handlers - now per-VFO
     const handleClear = (vfoNumber) => {
         dispatch(clearTranscriptions({ vfoNumber }));
     };
 
-    const handleIncreaseFontSize = () => {
-        dispatch(increaseFontSize());
+    const handleIncreaseFontSize = (sessionId, vfoNumber) => {
+        dispatch(increaseFontSize({ sessionId, vfoNumber }));
     };
 
-    const handleDecreaseFontSize = () => {
-        dispatch(decreaseFontSize());
+    const handleDecreaseFontSize = (sessionId, vfoNumber) => {
+        dispatch(decreaseFontSize({ sessionId, vfoNumber }));
     };
 
-    const handleSetAlignment = (event, alignment) => {
+    const handleSetAlignment = (sessionId, vfoNumber, event, alignment) => {
         if (alignment !== null) {
-            dispatch(setTextAlignment(alignment));
+            dispatch(setTextAlignment({ sessionId, vfoNumber, alignment }));
         }
     };
 
@@ -282,104 +476,6 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
             }}
         >
             <Box sx={{ width: '100%', maxWidth: '1600px' }}>
-                {/* Single global toolbar */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        gap: 1,
-                        mb: 2,
-                        pointerEvents: 'auto',
-                    }}
-                >
-                    <Box
-                        sx={{
-                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            borderRadius: '4px',
-                            padding: '4px',
-                            display: 'flex',
-                            gap: 0.5,
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                        }}
-                    >
-                        {/* Clear all button */}
-                        <Tooltip title="Clear all subtitles">
-                            <IconButton
-                                size="small"
-                                onClick={() => dispatch(clearTranscriptions())}
-                                sx={{
-                                    color: 'rgba(255, 255, 255, 0.7)',
-                                    '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
-                                }}
-                            >
-                                <ClearIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-
-                        {/* Text alignment toggle */}
-                        <ToggleButtonGroup
-                            value={textAlignment}
-                            exclusive
-                            onChange={handleSetAlignment}
-                            size="small"
-                            sx={{
-                                '& .MuiToggleButton-root': {
-                                    color: 'rgba(255, 255, 255, 0.7)',
-                                    border: 'none',
-                                    padding: '4px 8px',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    },
-                                    '&.Mui-selected': {
-                                        color: 'white',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                                        },
-                                    },
-                                },
-                            }}
-                        >
-                            <ToggleButton value="left">
-                                <FormatAlignLeftIcon fontSize="small" />
-                            </ToggleButton>
-                            <ToggleButton value="center">
-                                <FormatAlignCenterIcon fontSize="small" />
-                            </ToggleButton>
-                            <ToggleButton value="right">
-                                <FormatAlignRightIcon fontSize="small" />
-                            </ToggleButton>
-                        </ToggleButtonGroup>
-
-                        {/* Font size controls */}
-                        <Tooltip title="Decrease font size">
-                            <IconButton
-                                size="small"
-                                onClick={handleDecreaseFontSize}
-                                sx={{
-                                    color: 'rgba(255, 255, 255, 0.7)',
-                                    '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
-                                }}
-                            >
-                                <TextDecreaseIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Increase font size">
-                            <IconButton
-                                size="small"
-                                onClick={handleIncreaseFontSize}
-                                sx={{
-                                    color: 'rgba(255, 255, 255, 0.7)',
-                                    '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
-                                }}
-                            >
-                                <TextIncreaseIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                    </Box>
-                </Box>
-
                 {/* Subtitle grid */}
                 <Grid container spacing={2} justifyContent="center">
                     {activeVFOs.map(({ vfoNumber, transcription }) => (
@@ -398,10 +494,14 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
                                 vfoNumber={vfoNumber}
                                 transcription={transcription}
                                 vfoColor={vfoColors[vfoNumber - 1]}
-                                fontSizeMultiplier={fontSizeMultiplier}
-                                textAlignment={textAlignment}
+                                fontSizeMultiplier={transcription.fontSizeMultiplier || 1.0}
+                                textAlignment={transcription.textAlignment || 'left'}
                                 maxLines={maxLines}
                                 maxWordsPerLine={maxWordsPerLine}
+                                onClear={handleClear}
+                                onIncreaseFontSize={() => handleIncreaseFontSize(transcription.sessionId, vfoNumber)}
+                                onDecreaseFontSize={() => handleDecreaseFontSize(transcription.sessionId, vfoNumber)}
+                                onSetAlignment={(e, alignment) => handleSetAlignment(transcription.sessionId, vfoNumber, e, alignment)}
                             />
                         </Grid>
                     ))}

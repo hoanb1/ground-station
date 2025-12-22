@@ -10,7 +10,6 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ErrorIcon from '@mui/icons-material/Error';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import LockIcon from '@mui/icons-material/Lock';
-import ClearIcon from '@mui/icons-material/Clear';
 import {
     VFO1Icon,
     VFO2Icon,
@@ -27,10 +26,7 @@ import {
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { clearTranscriptions, increaseFontSize, decreaseFontSize } from './transcription-slice';
 import { setShowNeighboringTransmitters } from './waterfall-slice';
-import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
-import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 
 const WaterfallToolbar = ({
                               startStreamingLoading,
@@ -66,8 +62,6 @@ const WaterfallToolbar = ({
     const menuOpen = Boolean(menuAnchorEl);
     const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
     const vfoMarkers = useSelector((state) => state.vfo.vfoMarkers);
-    const transcriptionEntries = useSelector((state) => state.transcription?.entries || []);
-    const liveTranscriptions = useSelector((state) => state.transcription?.liveTranscription || {});
 
     const handleMenuClick = (event) => {
         setMenuAnchorEl(event.currentTarget);
@@ -93,18 +87,6 @@ const WaterfallToolbar = ({
         // Set auto-scale preset for weak signals
         setAutoScalePreset('weak');
         handleMenuClose();
-    };
-
-    const handleClearTranscriptions = () => {
-        dispatch(clearTranscriptions());
-    };
-
-    const handleIncreaseFontSize = () => {
-        dispatch(increaseFontSize());
-    };
-
-    const handleDecreaseFontSize = () => {
-        dispatch(decreaseFontSize());
     };
 
     return (
@@ -293,37 +275,6 @@ const WaterfallToolbar = ({
                     disabled={!isStreaming}
                 >
                     <CameraAltIcon/>
-                </IconButton>
-
-                {/* Clear transcriptions button */}
-                <IconButton
-                    sx={{ borderRadius: 0 }}
-                    onClick={handleClearTranscriptions}
-                    color="primary"
-                    title="Clear Subtitles"
-                    disabled={transcriptionEntries.length === 0 && Object.keys(liveTranscriptions).length === 0}
-                >
-                    <ClearIcon/>
-                </IconButton>
-
-                {/* Increase subtitle font size */}
-                <IconButton
-                    sx={{ borderRadius: 0 }}
-                    onClick={handleIncreaseFontSize}
-                    color="primary"
-                    title="Increase Subtitle Font Size"
-                >
-                    <TextIncreaseIcon/>
-                </IconButton>
-
-                {/* Decrease subtitle font size */}
-                <IconButton
-                    sx={{ borderRadius: 0 }}
-                    onClick={handleDecreaseFontSize}
-                    color="primary"
-                    title="Decrease Subtitle Font Size"
-                >
-                    <TextDecreaseIcon/>
                 </IconButton>
 
                 <Box sx={{ position: 'relative', display: 'inline-flex' }}>

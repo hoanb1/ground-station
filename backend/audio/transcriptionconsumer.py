@@ -488,16 +488,20 @@ class TranscriptionConsumer(threading.Thread):
                                 text = part.text.strip()
 
                                 # Determine language based on translation settings
-                                # If translation was requested, use the target language
-                                # Otherwise use the configured source language or detect it
+                                # When translating, we want to show the SOURCE language, not target
                                 if self.translate_to and self.translate_to != "none":
-                                    # Text is translated, use target language
-                                    detected_language = self.translate_to
+                                    # Translation mode - use the configured source language
+                                    if self.language and self.language != "auto":
+                                        # Source language is known
+                                        detected_language = self.language
+                                    else:
+                                        # Source language is auto with translation - cannot detect from translated text
+                                        detected_language = "unknown"
                                 elif self.language and self.language != "auto":
-                                    # Use configured source language
+                                    # Just transcription with known language
                                     detected_language = self.language
                                 else:
-                                    # Language is auto-detect, use langdetect as fallback
+                                    # Just transcription with auto-detect - use langdetect on transcribed text
                                     detected_language = "unknown"
                                     if LANGDETECT_AVAILABLE and text:
                                         try:
@@ -634,27 +638,32 @@ class TranscriptionConsumer(threading.Thread):
 
             # Build system instruction based on language and translation settings
             if self.translate_to != "none":
-                # Translation requested
+                # Translation requested - simpler prompt without language markers
                 if self.language != "auto":
                     system_instruction = (
-                        f"Transcribe the audio to text (source language: {self.language}) "
-                        f"and translate it to {self.translate_to}. "
-                        f"This is RF radio communication audio with intermittent static noise and varying signal quality. "
+                        f"Transcribe and translate RF radio communications from {self.language} to {self.translate_to}. "
+                        f"Output ONLY the {self.translate_to} translation. "
+                        f"Do NOT include the original {self.language} text. "
+                        f"Do NOT add language codes or markers. "
+                        f"\n\n"
+                        f"Audio characteristics: RF radio with static noise and varying signal quality. "
                         f"Squelch is not applied. Ignore static noise and only transcribe actual speech. "
                         f"Mark unclear words with [inaudible]. "
                         f"Preserve numbers, callsigns, and codes exactly as spoken. "
-                        f"Identify and label different speakers if multiple voices are present. "
-                        f"Only output the translated text."
+                        f"Identify and label different speakers if multiple voices are present."
                     )
                 else:
                     system_instruction = (
-                        f"Transcribe the audio to text and translate it to {self.translate_to}. "
-                        f"This is RF radio communication audio with intermittent static noise and varying signal quality. "
+                        f"Transcribe and translate RF radio communications to {self.translate_to}. "
+                        f"Output ONLY the {self.translate_to} translation. "
+                        f"Do NOT include the original text. "
+                        f"Do NOT add language codes or markers. "
+                        f"\n\n"
+                        f"Audio characteristics: RF radio with static noise and varying signal quality. "
                         f"Squelch is not applied. Ignore static noise and only transcribe actual speech. "
                         f"Mark unclear words with [inaudible]. "
                         f"Preserve numbers, callsigns, and codes exactly as spoken. "
-                        f"Identify and label different speakers if multiple voices are present. "
-                        f"Only output the translated text."
+                        f"Identify and label different speakers if multiple voices are present."
                     )
                 config["system_instruction"] = system_instruction
             elif self.language != "auto":
