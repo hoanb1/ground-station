@@ -543,14 +543,11 @@ const SatellitePassTimelineComponent = ({
         const lastPoint = pass.elevation_curve[pass.elevation_curve.length - 1];
 
         if (firstPoint.elevation > 0 && lastPoint.elevation > 0) {
-          console.log(`Detected geostationary/geosynchronous: ${pass.name}, first: ${firstPoint.elevation.toFixed(2)}°, last: ${lastPoint.elevation.toFixed(2)}°`);
           geoIndices.set(pass.id, geoCounter);
           geoCounter++;
         }
       }
     });
-
-    console.log(`Total geostationary/geosynchronous satellites detected: ${geoIndices.size}`);
 
     return {
       timelineData: passes,

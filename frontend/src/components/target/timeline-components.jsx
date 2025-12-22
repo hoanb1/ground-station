@@ -153,12 +153,10 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
     const spacing = usableSpacePercent / (totalGeoSats + 1);
     peakX = marginPercent + (spacing * (geoIndex + 1));
     peakY = elevationToYPercent(peakElevation);
-    console.log(`GEO satellite ${pass.name}: index=${geoIndex}, total=${totalGeoSats}, peakX=${peakX}%`);
   } else if (geoIndex !== null && totalGeoSats === 1) {
     // Single geostationary satellite - place at center
     peakX = 50;
     peakY = elevationToYPercent(peakElevation);
-    console.log(`Single GEO satellite ${pass.name}: peakX=${peakX}%`);
   } else if (peakPoint) {
     const totalDuration = endTime.getTime() - startTime.getTime();
     const pointTime = new Date(peakPoint.time).getTime();

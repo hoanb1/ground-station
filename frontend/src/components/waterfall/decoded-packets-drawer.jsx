@@ -667,6 +667,7 @@ const DecodedPacketsDrawer = () => {
                             noRowsLabel: 'No decoded packets yet',
                         }}
                         sx={{
+                            height: '100%',
                             border: 0,
                             backgroundColor: theme.palette.background.paper,
                             [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
