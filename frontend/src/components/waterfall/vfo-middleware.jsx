@@ -10,6 +10,26 @@ export const setSocketForMiddleware = (socket) => {
     socketInstance = socket;
 };
 
+// Debounce delay for backend VFO parameter updates (milliseconds)
+const BACKEND_UPDATE_DEBOUNCE_MS = 50;
+
+// Debounce timers for each VFO (keyed by vfoNumber)
+const debounceTimers = {};
+
+// Debounced dispatcher for backend updates
+const debouncedBackendUpdate = (store, vfoNumber, updateFn) => {
+    // Clear existing timer for this VFO
+    if (debounceTimers[vfoNumber]) {
+        clearTimeout(debounceTimers[vfoNumber]);
+    }
+
+    // Set new timer
+    debounceTimers[vfoNumber] = setTimeout(() => {
+        updateFn();
+        delete debounceTimers[vfoNumber];
+    }, BACKEND_UPDATE_DEBOUNCE_MS);
+};
+
 // Helper function to filter out UI-only fields before sending to backend
 const filterUIOnlyFields = (vfoState) => {
     // frequencyOffset is UI-only (used for doppler offset calculations)
@@ -104,18 +124,20 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         const backendVfoState = filterUIOnlyFields(vfoState);
         const backendUpdates = filterUIOnlyFields(updates);
 
-        // Dispatch async thunk to update backend with complete state
-        store.dispatch(backendUpdateVFOParameters({
-            socket,
-            vfoNumber,
-            updates: {
-                vfoNumber: vfoNumber,
-                ...backendVfoState,
-                ...backendUpdates,
-                active: vfoActiveState,
-                selected: isSelected,
-            },
-        }));
+        // Dispatch async thunk to update backend with complete state (debounced)
+        debouncedBackendUpdate(store, vfoNumber, () => {
+            store.dispatch(backendUpdateVFOParameters({
+                socket,
+                vfoNumber,
+                updates: {
+                    vfoNumber: vfoNumber,
+                    ...backendVfoState,
+                    ...backendUpdates,
+                    active: vfoActiveState,
+                    selected: isSelected,
+                },
+            }));
+        });
     }
 
     // Handle selected VFO changes
