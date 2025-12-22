@@ -42,6 +42,19 @@ const loadFontSizeMultiplier = () => {
     return 1.0;
 };
 
+// Load text alignment from localStorage or use default
+const loadTextAlignment = () => {
+    try {
+        const saved = localStorage.getItem('transcription_text_alignment');
+        if (saved && ['left', 'center', 'right'].includes(saved)) {
+            return saved;
+        }
+    } catch (e) {
+        console.error('Failed to load text alignment from localStorage:', e);
+    }
+    return 'left';
+};
+
 const initialState = {
     // Array of transcription entries: [{id, text, timestamp, language, sessionId}]
     entries: [],
@@ -64,6 +77,9 @@ const initialState = {
 
     // Font size multiplier for subtitles (default: 1.0, persisted in localStorage)
     fontSizeMultiplier: loadFontSizeMultiplier(),
+
+    // Text alignment for subtitles ('left', 'center', 'right', persisted in localStorage)
+    textAlignment: loadTextAlignment(),
 };
 
 const transcriptionSlice = createSlice({
@@ -217,6 +233,21 @@ const transcriptionSlice = createSlice({
                 console.error('Failed to save font size multiplier to localStorage:', e);
             }
         },
+
+        /**
+         * Set text alignment for subtitles
+         */
+        setTextAlignment: (state, action) => {
+            const alignment = action.payload;
+            if (['left', 'center', 'right'].includes(alignment)) {
+                state.textAlignment = alignment;
+                try {
+                    localStorage.setItem('transcription_text_alignment', alignment);
+                } catch (e) {
+                    console.error('Failed to save text alignment to localStorage:', e);
+                }
+            }
+        },
     },
 });
 
@@ -230,6 +261,7 @@ export const {
     clearSessionTranscriptions,
     increaseFontSize,
     decreaseFontSize,
+    setTextAlignment,
 } = transcriptionSlice.actions;
 
 // Selectors
@@ -239,6 +271,7 @@ export const selectTranscriptionIsActive = (state) => state.transcription.isActi
 export const selectTranscriptionLastUpdated = (state) => state.transcription.lastUpdated;
 export const selectTranscriptionMaxWords = (state) => state.transcription.maxWords;
 export const selectFontSizeMultiplier = (state) => state.transcription.fontSizeMultiplier;
+export const selectTextAlignment = (state) => state.transcription.textAlignment;
 
 // Get all transcriptions as a single continuous text (newest first)
 export const selectTranscriptionText = (state) => {

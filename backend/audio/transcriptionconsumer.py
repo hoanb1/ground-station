@@ -699,6 +699,44 @@ class TranscriptionConsumer(threading.Thread):
             # Start receiver task
             self.receiver_task = asyncio.create_task(self._receiver_loop())
 
+            # Send "transcribing" status to UI after successful connection
+            with self.stats_lock:
+                stats_copy = self.stats.copy()
+
+            await self.sio.emit(
+                "decoder-data",
+                {
+                    "type": "decoder-status",
+                    "session_id": self.session_id,
+                    "vfo": self.vfo_number,
+                    "decoder_type": "transcription",
+                    "decoder_id": f"transcription_{self.session_id}_{self.vfo_number}",
+                    "status": "transcribing",
+                    "timestamp": time.time(),
+                    "progress": None,
+                    "mode": None,
+                    "info": {
+                        "language": self.language,
+                        "translate_to": self.translate_to,
+                        "audio_type": stats_copy["audio_type"],
+                        "audio_chunks_in": stats_copy["audio_chunks_in"],
+                        "audio_samples_in": stats_copy["audio_samples_in"],
+                        "transcriptions_sent": stats_copy["transcriptions_sent"],
+                        "transcriptions_received": stats_copy["transcriptions_received"],
+                        "queue_timeouts": stats_copy["queue_timeouts"],
+                        "errors": stats_copy["errors"],
+                        "connection_attempts": stats_copy["connection_attempts"],
+                        "connection_failures": stats_copy["connection_failures"],
+                        "audio_samples_per_sec": stats_copy["audio_samples_per_sec"],
+                        "audio_chunks_per_sec": stats_copy["audio_chunks_per_sec"],
+                        "total_input_tokens": stats_copy["total_input_tokens"],
+                        "total_output_tokens": stats_copy["total_output_tokens"],
+                        "total_tokens": stats_copy["total_tokens"],
+                    },
+                },
+                room=self.session_id,
+            )
+
         except Exception as e:
             logger.error(f"Failed to connect to Gemini: {e}", exc_info=True)
             self.gemini_connected = False
@@ -774,6 +812,44 @@ class TranscriptionConsumer(threading.Thread):
                 time_since_last_attempt = time.time() - self.last_connection_attempt
                 if time_since_last_attempt < self.connection_backoff_seconds:
                     return
+
+                # Send "connecting" status to UI before attempting connection
+                with self.stats_lock:
+                    stats_copy = self.stats.copy()
+
+                await self.sio.emit(
+                    "decoder-data",
+                    {
+                        "type": "decoder-status",
+                        "session_id": self.session_id,
+                        "vfo": self.vfo_number,
+                        "decoder_type": "transcription",
+                        "decoder_id": f"transcription_{self.session_id}_{self.vfo_number}",
+                        "status": "connecting",
+                        "timestamp": time.time(),
+                        "progress": None,
+                        "mode": None,
+                        "info": {
+                            "language": self.language,
+                            "translate_to": self.translate_to,
+                            "audio_type": stats_copy["audio_type"],
+                            "audio_chunks_in": stats_copy["audio_chunks_in"],
+                            "audio_samples_in": stats_copy["audio_samples_in"],
+                            "transcriptions_sent": stats_copy["transcriptions_sent"],
+                            "transcriptions_received": stats_copy["transcriptions_received"],
+                            "queue_timeouts": stats_copy["queue_timeouts"],
+                            "errors": stats_copy["errors"],
+                            "connection_attempts": stats_copy["connection_attempts"],
+                            "connection_failures": stats_copy["connection_failures"],
+                            "audio_samples_per_sec": stats_copy["audio_samples_per_sec"],
+                            "audio_chunks_per_sec": stats_copy["audio_chunks_per_sec"],
+                            "total_input_tokens": stats_copy["total_input_tokens"],
+                            "total_output_tokens": stats_copy["total_output_tokens"],
+                            "total_tokens": stats_copy["total_tokens"],
+                        },
+                    },
+                    room=self.session_id,
+                )
 
                 self.last_connection_attempt = time.time()
                 await self._connect_to_gemini()
