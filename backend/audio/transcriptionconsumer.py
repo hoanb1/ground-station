@@ -627,13 +627,7 @@ class TranscriptionConsumer(threading.Thread):
                     "automatic_activity_detection": {
                         "disabled": False,
                         "end_of_speech_sensitivity": "END_SENSITIVITY_HIGH",  # Detect end of speech faster
-                        "silence_duration_ms": 30,  # Only 50ms of silence needed (more sensitive than default 100ms)
-                    }
-                },
-                "speech_config": {
-                    "voice_activity_timeout": {
-                        "speech_start_timeout_ms": 1000,  # Faster speech detection
-                        "speech_end_timeout_ms": 800,  # More aggressive - catch natural pauses faster
+                        "silence_duration_ms": 30,  # Only 30ms of silence needed (more sensitive than default 100ms)
                     }
                 },
             }
