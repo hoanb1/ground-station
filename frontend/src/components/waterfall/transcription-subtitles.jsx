@@ -19,15 +19,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, IconButton, Tooltip, Fade } from '@mui/material';
+import { Box, IconButton, Tooltip, Fade, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import {
     selectRecentTranscriptions,
     selectTranscriptionIsActive,
     selectFontSizeMultiplier,
-    clearTranscriptions
+    selectTextAlignment,
+    clearTranscriptions,
+    increaseFontSize,
+    decreaseFontSize,
+    setTextAlignment
 } from './transcription-slice';
-import CloseIcon from '@mui/icons-material/Close';
-import SubtitlesIcon from '@mui/icons-material/Subtitles';
+import ClearIcon from '@mui/icons-material/Clear';
+import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
+import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter';
+import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight';
+import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
+import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 
 /**
  * TranscriptionSubtitles Component
@@ -40,11 +48,13 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
     const [visible, setVisible] = useState(true);
     const [lines, setLines] = useState([]);
     const [lastSegmentTimestamp, setLastSegmentTimestamp] = useState(null);
+    const [showControls, setShowControls] = useState(false);
 
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);
     const isActive = useSelector(selectTranscriptionIsActive);
     const fontSizeMultiplier = useSelector(selectFontSizeMultiplier);
+    const textAlignment = useSelector(selectTextAlignment);
 
     // Get drawer state to adjust subtitle position
     const packetsDrawerOpen = useSelector((state) => state.waterfall.packetsDrawerOpen);
@@ -158,6 +168,25 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
         return () => clearInterval(interval);
     }, [lines.length]);
 
+    // Handlers
+    const handleClear = () => {
+        dispatch(clearTranscriptions());
+    };
+
+    const handleAlignment = (event, newAlignment) => {
+        if (newAlignment !== null) {
+            dispatch(setTextAlignment(newAlignment));
+        }
+    };
+
+    const handleIncreaseFontSize = () => {
+        dispatch(increaseFontSize());
+    };
+
+    const handleDecreaseFontSize = () => {
+        dispatch(decreaseFontSize());
+    };
+
     // Don't render anything if no lines
     if (lines.length === 0) {
         return null;
@@ -180,13 +209,115 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                         px: { xs: 0, sm: 0, md: 2 },
                         transition: 'bottom 0.3s ease-out',
                     }}
+                    onMouseEnter={() => setShowControls(true)}
+                    onMouseLeave={() => setShowControls(false)}
                 >
+                    {/* Controls bar */}
+                    <Fade in={showControls} timeout={200}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                gap: 1,
+                                mb: 1,
+                                pointerEvents: 'auto',
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                    borderRadius: '4px',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    gap: 0.5,
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                }}
+                            >
+                                {/* Clear button */}
+                                <Tooltip title="Clear subtitles">
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleClear}
+                                        sx={{
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                                        }}
+                                    >
+                                        <ClearIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+
+                                {/* Text alignment toggle */}
+                                <ToggleButtonGroup
+                                    value={textAlignment}
+                                    exclusive
+                                    onChange={handleAlignment}
+                                    size="small"
+                                    sx={{
+                                        '& .MuiToggleButton-root': {
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            border: 'none',
+                                            padding: '4px 8px',
+                                            '&:hover': {
+                                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            },
+                                            '&.Mui-selected': {
+                                                color: 'white',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                                                },
+                                            },
+                                        },
+                                    }}
+                                >
+                                    <ToggleButton value="left">
+                                        <FormatAlignLeftIcon fontSize="small" />
+                                    </ToggleButton>
+                                    <ToggleButton value="center">
+                                        <FormatAlignCenterIcon fontSize="small" />
+                                    </ToggleButton>
+                                    <ToggleButton value="right">
+                                        <FormatAlignRightIcon fontSize="small" />
+                                    </ToggleButton>
+                                </ToggleButtonGroup>
+
+                                {/* Font size controls */}
+                                <Tooltip title="Decrease font size">
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleDecreaseFontSize}
+                                        sx={{
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                                        }}
+                                    >
+                                        <TextDecreaseIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Increase font size">
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleIncreaseFontSize}
+                                        sx={{
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            '&:hover': { color: 'white', backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                                        }}
+                                    >
+                                        <TextIncreaseIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </Box>
+                        </Box>
+                    </Fade>
+
                     <Box
                         sx={{
                             backgroundColor: 'rgba(0, 0, 0, 0.85)',
                             borderRadius: { xs: 0, sm: 0, md: '8px' },
                             padding: { xs: '10px 16px', sm: '12px 24px' },
-                            textAlign: 'left',
+                            textAlign: textAlignment,
                             border: '2px solid rgba(255, 255, 255, 0.1)',
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
                             transition: 'all 0.15s ease-out',
