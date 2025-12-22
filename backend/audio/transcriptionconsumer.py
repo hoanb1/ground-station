@@ -122,7 +122,7 @@ class TranscriptionConsumer(threading.Thread):
         self.audio_buffer: List[Dict[str, Any]] = []
 
         # Streaming settings - send audio frequently for real-time transcription
-        self.chunk_duration = 2.0  # Send audio every 2 seconds for better context
+        self.chunk_duration = 3.0  # Send audio every 3 seconds for better context
         self.input_sample_rate = 44100  # Input from demodulators
         self.gemini_sample_rate = 16000  # Gemini requires 16kHz
 
@@ -631,7 +631,7 @@ class TranscriptionConsumer(threading.Thread):
                     "automatic_activity_detection": {
                         "disabled": False,
                         "end_of_speech_sensitivity": "END_SENSITIVITY_HIGH",  # Detect end of speech faster
-                        "silence_duration_ms": 30,  # Only 30ms of silence needed (more sensitive than default 100ms)
+                        "silence_duration_ms": 100,  # 100ms of silence needed for natural pauses
                     }
                 },
             }
@@ -645,6 +645,7 @@ class TranscriptionConsumer(threading.Thread):
                         f"Output ONLY the {self.translate_to} translation. "
                         f"Do NOT include the original {self.language} text. "
                         f"Do NOT add language codes or markers. "
+                        f"Keep words intact - do not split words with spaces between characters. "
                         f"\n\n"
                         f"Audio characteristics: RF radio with static noise and varying signal quality. "
                         f"Squelch is not applied. Ignore static noise and only transcribe actual speech. "
@@ -658,6 +659,7 @@ class TranscriptionConsumer(threading.Thread):
                         f"Output ONLY the {self.translate_to} translation. "
                         f"Do NOT include the original text. "
                         f"Do NOT add language codes or markers. "
+                        f"Keep words intact - do not split words with spaces between characters. "
                         f"\n\n"
                         f"Audio characteristics: RF radio with static noise and varying signal quality. "
                         f"Squelch is not applied. Ignore static noise and only transcribe actual speech. "
@@ -670,6 +672,7 @@ class TranscriptionConsumer(threading.Thread):
                 # Just transcription with language hint
                 system_instruction = (
                     f"Transcribe the audio to text. Audio language: {self.language}. "
+                    f"Keep words intact - do not split words with spaces between characters. "
                     f"This is RF radio communication audio with intermittent static noise and varying signal quality. "
                     f"Squelch is not applied. Ignore static noise and only transcribe actual speech. "
                     f"Mark unclear words with [inaudible]. "
@@ -681,6 +684,7 @@ class TranscriptionConsumer(threading.Thread):
                 # Auto-detect language with enhanced instructions
                 system_instruction = (
                     "Transcribe the audio to text. "
+                    "Keep words intact - do not split words with spaces between characters. "
                     "This is RF radio communication audio with intermittent static noise and varying signal quality. "
                     "Squelch is not applied. Ignore static noise and only transcribe actual speech. "
                     "Mark unclear words with [inaudible]. "
