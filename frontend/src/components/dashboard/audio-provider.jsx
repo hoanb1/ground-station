@@ -30,12 +30,15 @@ export const AudioProvider = ({ children }) => {
     const [audioEnabled, setAudioEnabled] = useState(false);
     const [volume, setVolume] = useState(0.5);
 
-    // Per-VFO state (supports 4 VFOs: 0, 1, 2, 3)
-    const vfoGainNodesRef = useRef({}); // { 0: GainNode, 1: GainNode, ... }
-    const vfoWorkersRef = useRef({}); // { 0: Worker, 1: Worker, ... }
-    const vfoNextPlayTimeRef = useRef({}); // { 0: time, 1: time, ... }
-    const vfoMutedRef = useRef({}); // { 0: false, 1: false, ... }
-    const vfoVolumeRef = useRef({}); // { 0: 1.0, 1: 1.0, ... } - individual VFO volumes
+    // Per-VFO state (supports 4 VFOs: 1-4)
+    const vfoGainNodesRef = useRef({}); // { 1: GainNode, 2: GainNode, ... }
+    const vfoWorkersRef = useRef({}); // { 1: Worker, 2: Worker, ... }
+    const vfoNextPlayTimeRef = useRef({}); // { 1: time, 2: time, ... }
+    const vfoMutedRef = useRef({}); // { 1: false, 2: false, ... }
+    const vfoVolumeRef = useRef({}); // { 1: 1.0, 2: 1.0, ... } - individual VFO volumes
+
+    // Callback ref to handle audio from workers - must be defined before workers
+    const playProcessedAudioRef = useRef(null);
 
     // Initialize Web Workers - one per VFO (4 VFOs: 1-4)
     const initializeWorkers = useCallback(() => {
@@ -51,8 +54,10 @@ export const AudioProvider = ({ children }) => {
 
                     switch (type) {
                         case 'AUDIO_BATCH':
-                            // Process the batch from worker - pass vfoNumber context
-                            batch.forEach(audioData => playProcessedAudio(audioData, vfoNumber));
+                            // Process the batch from worker - use ref to avoid stale closure
+                            if (playProcessedAudioRef.current) {
+                                batch.forEach(audioData => playProcessedAudioRef.current(audioData, vfoNumber));
+                            }
                             break;
                         case 'QUEUE_STATUS':
                             //console.log(`VFO ${vfoNumber} audio queue status:`, status);
@@ -166,7 +171,6 @@ export const AudioProvider = ({ children }) => {
 
             // Connect to VFO-specific GainNode
             const gainNode = vfoGainNodesRef.current[vfoNumber];
-            console.log(`[AudioProvider] Playing audio for VFO ${vfoNumber}, current gain value: ${gainNode.gain.value}, muted: ${vfoMutedRef.current[vfoNumber]}`);
             source.connect(gainNode);
 
             const currentTime = audioContextRef.current.currentTime;
@@ -187,6 +191,11 @@ export const AudioProvider = ({ children }) => {
             console.error(`Error playing processed audio for VFO ${vfoNumber}:`, error);
         }
     }, []);
+
+    // Keep ref updated with latest playProcessedAudio function
+    useEffect(() => {
+        playProcessedAudioRef.current = playProcessedAudio;
+    }, [playProcessedAudio]);
 
     // Play audio samples - route to correct VFO worker
     const playAudioSamples = useCallback((audioData) => {
@@ -235,7 +244,7 @@ export const AudioProvider = ({ children }) => {
 
     // Set individual VFO volume
     const setVfoVolume = useCallback((vfoNumber, vfoVolume) => {
-        if (vfoNumber < 0 || vfoNumber > 3) return;
+        if (vfoNumber < 1 || vfoNumber > 4) return;
 
         vfoVolumeRef.current[vfoNumber] = vfoVolume;
         const gainNode = vfoGainNodesRef.current[vfoNumber];
@@ -244,52 +253,6 @@ export const AudioProvider = ({ children }) => {
             gainNode.gain.value = volume * vfoVolume;
         }
     }, [volume]);
-
-    // Mute/unmute individual VFO
-    // VFO numbers are 1-4 (from UI/backend), matching audio routing
-    const setVfoMute = useCallback((vfoNumber, muted) => {
-        console.log(`[AudioProvider] setVfoMute called: VFO ${vfoNumber}, muted: ${muted}`);
-        if (vfoNumber < 1 || vfoNumber > 4) {
-            console.error(`[AudioProvider] Invalid VFO number: ${vfoNumber} (expected 1-4)`);
-            return;
-        }
-
-        vfoMutedRef.current[vfoNumber] = muted;
-        const gainNode = vfoGainNodesRef.current[vfoNumber];
-
-        console.log(`[AudioProvider] GainNode for VFO ${vfoNumber}:`, gainNode);
-        if (gainNode) {
-            const newGainValue = muted ? 0 : volume * (vfoVolumeRef.current[vfoNumber] || 1.0);
-            console.log(`[AudioProvider] Setting gain to: ${newGainValue} (muted: ${muted}, volume: ${volume})`);
-            gainNode.gain.value = newGainValue;
-        } else {
-            console.warn(`[AudioProvider] No GainNode found for VFO ${vfoNumber}`);
-        }
-    }, [volume]);
-
-    // Stop audio - terminate all VFO workers
-    const stopAudio = useCallback(() => {
-        // Terminate all VFO workers
-        Object.values(vfoWorkersRef.current).forEach(worker => {
-            if (worker) {
-                worker.postMessage({ type: 'CLEAR_QUEUE' });
-                worker.terminate();
-            }
-        });
-        vfoWorkersRef.current = {};
-
-        if (audioContextRef.current) {
-            audioContextRef.current.close();
-            audioContextRef.current = null;
-        }
-
-        vfoGainNodesRef.current = {};
-        vfoNextPlayTimeRef.current = {};
-        vfoMutedRef.current = {};
-        vfoVolumeRef.current = {};
-
-        setAudioEnabled(false);
-    }, []);
 
     // Flush audio buffers (clear all VFO worker queues and reset audio scheduling)
     const flushAudioBuffers = useCallback((vfoNumber = null) => {
@@ -317,6 +280,46 @@ export const AudioProvider = ({ children }) => {
                 }
             }
         }
+    }, []);
+
+    // Mute/unmute individual VFO
+    // VFO numbers are 1-4 (from UI/backend), matching audio routing
+    const setVfoMute = useCallback((vfoNumber, muted) => {
+        if (vfoNumber < 1 || vfoNumber > 4) return;
+
+        vfoMutedRef.current[vfoNumber] = muted;
+        const gainNode = vfoGainNodesRef.current[vfoNumber];
+
+        if (gainNode) {
+            gainNode.gain.value = muted ? 0 : volume * (vfoVolumeRef.current[vfoNumber] || 1.0);
+        }
+
+        // Flush the audio buffer for this VFO when muting/unmuting
+        flushAudioBuffers(vfoNumber);
+    }, [volume, flushAudioBuffers]);
+
+    // Stop audio - terminate all VFO workers
+    const stopAudio = useCallback(() => {
+        // Terminate all VFO workers
+        Object.values(vfoWorkersRef.current).forEach(worker => {
+            if (worker) {
+                worker.postMessage({ type: 'CLEAR_QUEUE' });
+                worker.terminate();
+            }
+        });
+        vfoWorkersRef.current = {};
+
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+
+        vfoGainNodesRef.current = {};
+        vfoNextPlayTimeRef.current = {};
+        vfoMutedRef.current = {};
+        vfoVolumeRef.current = {};
+
+        setAudioEnabled(false);
     }, []);
 
     // Get audio context state

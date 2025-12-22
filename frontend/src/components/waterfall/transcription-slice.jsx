@@ -56,7 +56,7 @@ const loadTextAlignment = () => {
 };
 
 const initialState = {
-    // Array of transcription entries: [{id, text, timestamp, language, sessionId}]
+    // Array of transcription entries: [{id, text, timestamp, language, sessionId, vfoNumber}]
     entries: [],
 
     // Current word count across all entries
@@ -71,8 +71,8 @@ const initialState = {
     // Last received timestamp
     lastUpdated: null,
 
-    // Live accumulating transcription per session
-    // {sessionId: {id, text, timestamp, language, startTime}}
+    // Live accumulating transcription per session+VFO
+    // {`${sessionId}_${vfoNumber}`: {id, segments, timestamp, language, startTime, sessionId, vfoNumber}}
     liveTranscription: {},
 
     // Font size multiplier for subtitles (default: 1.0, persisted in localStorage)
@@ -91,10 +91,10 @@ const transcriptionSlice = createSlice({
          * Continuously appends to live transcription, never-ending stream
          */
         addTranscription: (state, action) => {
-            const { text, sessionId, language, is_final } = action.payload;
+            const { text, sessionId, vfoNumber, language, is_final } = action.payload;
             const trimmedText = text.trim();
 
-            console.log('[Redux] addTranscription called:', { text: trimmedText, sessionId, language, is_final });
+            console.log('[Redux] addTranscription called:', { text: trimmedText, sessionId, vfoNumber, language, is_final });
 
             // Skip empty text
             if (!trimmedText) {
@@ -102,10 +102,13 @@ const transcriptionSlice = createSlice({
                 return;
             }
 
-            // Initialize or update live transcription for this session
-            if (!state.liveTranscription[sessionId]) {
-                console.log('[Redux] Initializing new live transcription for session:', sessionId);
-                state.liveTranscription[sessionId] = {
+            // Create composite key for session + VFO
+            const transcriptionKey = `${sessionId}_${vfoNumber}`;
+
+            // Initialize or update live transcription for this session+VFO
+            if (!state.liveTranscription[transcriptionKey]) {
+                console.log('[Redux] Initializing new live transcription for session/VFO:', transcriptionKey);
+                state.liveTranscription[transcriptionKey] = {
                     id: Date.now() + Math.random(),
                     segments: [{
                         text: trimmedText,
@@ -114,32 +117,33 @@ const transcriptionSlice = createSlice({
                     timestamp: new Date().toISOString(),
                     startTime: new Date().toISOString(),
                     sessionId,
+                    vfoNumber,
                     language: language || 'auto',
                 };
             } else {
                 console.log('[Redux] Appending to existing transcription. Adding segment:', trimmedText.length, 'chars');
                 // Append new segment with timestamp
-                state.liveTranscription[sessionId].segments.push({
+                state.liveTranscription[transcriptionKey].segments.push({
                     text: trimmedText,
                     timestamp: Date.now(),
                 });
-                state.liveTranscription[sessionId].timestamp = new Date().toISOString();
-                state.liveTranscription[sessionId].language = language || state.liveTranscription[sessionId].language;
+                state.liveTranscription[transcriptionKey].timestamp = new Date().toISOString();
+                state.liveTranscription[transcriptionKey].language = language || state.liveTranscription[transcriptionKey].language;
             }
 
-            console.log('[Redux] Live transcription updated. Total segments:', state.liveTranscription[sessionId].segments.length);
+            console.log('[Redux] Live transcription updated. Total segments:', state.liveTranscription[transcriptionKey].segments.length);
 
             state.lastUpdated = new Date().toISOString();
             state.isActive = true;
 
-            // Clean up old sessions (older than 5 minutes)
+            // Clean up old transcriptions (older than 5 minutes)
             const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-            Object.keys(state.liveTranscription).forEach(sid => {
-                const transcription = state.liveTranscription[sid];
+            Object.keys(state.liveTranscription).forEach(key => {
+                const transcription = state.liveTranscription[key];
                 const lastUpdate = new Date(transcription.timestamp).getTime();
-                if (lastUpdate < fiveMinutesAgo && sid !== sessionId) {
-                    console.log('[Redux] Removing old transcription for session:', sid);
-                    delete state.liveTranscription[sid];
+                if (lastUpdate < fiveMinutesAgo && key !== transcriptionKey) {
+                    console.log('[Redux] Removing old transcription for key:', key);
+                    delete state.liveTranscription[key];
                 }
             });
         },

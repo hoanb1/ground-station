@@ -502,11 +502,12 @@ export const useSocketEventHandlers = (socket) => {
 
         // Transcription data from Google Gemini API
         socket.on('transcription-data', (data) => {
-            // data = { text, session_id, language, is_final }
+            // data = { text, session_id, vfo_number, language, is_final }
             console.log('[Transcription] Received:', data);
             store.dispatch(addTranscription({
                 text: data.text,
                 sessionId: data.session_id,
+                vfoNumber: data.vfo_number,
                 language: data.language,
                 is_final: data.is_final || false
             }));

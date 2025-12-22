@@ -479,7 +479,7 @@ export const SocketProvider = ({ children }) => {
         });
 
         newSocket.on('disconnect', (reason) => {
-            console.error(`[SOCKET DISCONNECT] Reason: ${reason}`, new Error().stack);
+            console.warn(`Socket disconnected: ${reason}`);
             trafficStatsRef.current = {
                 ...trafficStatsRef.current,
                 transport: {

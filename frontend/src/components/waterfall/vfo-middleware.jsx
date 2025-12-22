@@ -144,9 +144,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     if (action.type === 'vfo/setSelectedVFO') {
         const selectedVFO = action.payload;
 
-        // Flush audio buffers to minimize lag when switching VFOs
-        flushAudioBuffers();
-
         if (selectedVFO === null) {
             // Deselect all VFOs - vfoNumber: 0 is special case for backend
             store.dispatch(backendUpdateVFOParameters({
