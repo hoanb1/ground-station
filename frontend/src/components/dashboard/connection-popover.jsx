@@ -28,20 +28,16 @@ function ConnectionStatus() {
     const { t } = useTranslation('dashboard');
     const dispatch = useDispatch();
     const { socket, trafficStatsRef } = useSocket();
-    const { getAudioBufferLength } = useAudio();
     const [anchorEl, setAnchorEl] = useState(null);
     const [, forceUpdate] = useState(0);
-    const audioBufferLengthRef = React.useRef(0);
 
     // Force update stats every second to get fresh data
     useEffect(() => {
         const interval = setInterval(()=>{
-            // Update audio buffer length without causing state changes
-            audioBufferLengthRef.current = getAudioBufferLength();
             forceUpdate(prev => prev + 1);
         }, 1000);
         return () => clearInterval(interval);
-    }, [getAudioBufferLength]);
+    }, []);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -254,65 +250,6 @@ function ConnectionStatus() {
                                 </Typography>
                             </Box>
                         )}
-                    </Box>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {t('connection_popover.audio_buffer')}
-                        </Typography>
-                        <Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('connection_popover.browser_buffer_length')}
-                                </Typography>
-                                <Typography variant="body2" sx={{
-                                    fontFamily: 'monospace',
-                                    color: (() => {
-                                        const bufferMs = audioBufferLengthRef.current * 1000;
-                                        if (bufferMs >= 100 && bufferMs <= 1000) return '#4caf50'; // Green zone
-                                        if (bufferMs < 100 || bufferMs > 1000) return '#ff9800'; // Warning zone
-                                        return '#f44336'; // Error zone
-                                    })()
-                                }}>
-                                    {(audioBufferLengthRef.current * 1000).toFixed(0)} ms
-                                </Typography>
-                            </Box>
-                            <Box sx={{ position: 'relative', height: 8 }}>
-                                {/* Background track */}
-                                <Box sx={{
-                                    position: 'absolute',
-                                    width: '100%',
-                                    height: '100%',
-                                    backgroundColor: 'rgba(128, 128, 128, 0.2)',
-                                    borderRadius: 1,
-                                }} />
-                                {/* Green zone (100-1000ms) */}
-                                <Box sx={{
-                                    position: 'absolute',
-                                    left: `${(100 / 1500) * 100}%`,
-                                    width: `${((1000 - 100) / 1500) * 100}%`,
-                                    height: '100%',
-                                    backgroundColor: 'rgba(76, 175, 80, 0.3)',
-                                    borderRadius: 1,
-                                }} />
-                                {/* Indicator dot */}
-                                <Box sx={{
-                                    position: 'absolute',
-                                    left: `${(audioBufferLengthRef.current * 1000 / 1500) * 100}%`,
-                                    top: '50%',
-                                    width: 12,
-                                    height: 12,
-                                    backgroundColor: '#ff9800',
-                                    borderRadius: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    border: '2px solid',
-                                    borderColor: 'background.paper',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                                }} />
-                            </Box>
-                        </Box>
                     </Box>
 
                     <Divider sx={{ my: 2 }} />
