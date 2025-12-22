@@ -30,8 +30,14 @@ function ConnectionStatus() {
     const { socket, trafficStatsRef } = useSocket();
     const [anchorEl, setAnchorEl] = useState(null);
     const [, forceUpdate] = useState(0);
+    const systemInfoRef = React.useRef(useSelector(state => state.systemInfo));
 
-    // Force update stats every second to get fresh data
+    // Update system info ref and force update stats every second
+    const systemInfo = useSelector(state => state.systemInfo);
+    useEffect(() => {
+        systemInfoRef.current = systemInfo;
+    }, [systemInfo]);
+
     useEffect(() => {
         const interval = setInterval(()=>{
             forceUpdate(prev => prev + 1);
@@ -147,31 +153,25 @@ function ConnectionStatus() {
                     width: 250,
                     backgroundColor: 'background.paper',
                 }}>
-                    <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {t('connection_popover.connection_status')}
-                        </Typography>
-                        <Grid container spacing={2}>
-                            <Grid size={6}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('connection_popover.transport')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: connectionColor }}>
-                                    {trafficStatsRef.current.transport.name.toUpperCase()}
-                                </Typography>
-                            </Grid>
-                            <Grid size={6}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('connection_popover.duration')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
-                                    {formatDuration(trafficStatsRef.current.session.duration)}
-                                </Typography>
-                            </Grid>
-                        </Grid>
-
+                    <Box sx={{ mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('connection_popover.transport')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: connectionColor }}>
+                                {trafficStatsRef.current.transport.name.toUpperCase()}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('connection_popover.duration')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
+                                {formatDuration(trafficStatsRef.current.session.duration)}
+                            </Typography>
+                        </Box>
                         {trafficStatsRef.current.manager.reconnecting && (
-                            <Typography variant="caption" sx={{ color: 'status.connecting', fontFamily: 'monospace', mt: 1, display: 'block' }}>
+                            <Typography variant="caption" sx={{ color: 'status.connecting', fontFamily: 'monospace', mt: 0.5, display: 'block' }}>
                                 {t('connection_popover.reconnecting', { count: trafficStatsRef.current.manager.reconnectAttempts })}
                             </Typography>
                         )}
@@ -179,73 +179,62 @@ function ConnectionStatus() {
 
                     <Divider sx={{ my: 2 }} />
 
-                    <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {t('connection_popover.current_traffic_rate')}
-                        </Typography>
-                        <Grid container spacing={2}>
-                            <Grid size={6}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('connection_popover.upload')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
-                                    {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.sent)}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {t('connection_popover.msgs_per_second', { count: trafficStatsRef.current.rates.packetsPerSecond.sent })}
-                                </Typography>
-                            </Grid>
-                            <Grid size={6}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('connection_popover.download')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
-                                    {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.received)}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {t('connection_popover.msgs_per_second', { count: trafficStatsRef.current.rates.packetsPerSecond.received })}
-                                </Typography>
-                            </Grid>
-                        </Grid>
+                    <Box sx={{ mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('connection_popover.upload')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
+                                {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.sent)}
+                                <span style={{ color: 'var(--mui-palette-text-secondary)', marginLeft: 8 }}>
+                                    {trafficStatsRef.current.rates.packetsPerSecond.sent} msg/s
+                                </span>
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('connection_popover.download')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
+                                {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.received)}
+                                <span style={{ color: 'var(--mui-palette-text-secondary)', marginLeft: 8 }}>
+                                    {trafficStatsRef.current.rates.packetsPerSecond.received} msg/s
+                                </span>
+                            </Typography>
+                        </Box>
                     </Box>
 
                     <Divider sx={{ my: 2 }} />
 
-                    <Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {t('connection_popover.application_level')}
-                        </Typography>
-                        <Grid container spacing={2}>
-                            <Grid size={6}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('connection_popover.sent')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
-                                    {formatTotalBytes(trafficStatsRef.current.engine.bytesSent)}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {t('connection_popover.messages', { count: trafficStatsRef.current.engine.packetsSent })}
-                                </Typography>
-                            </Grid>
-                            <Grid size={6}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {t('connection_popover.received')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
-                                    {formatTotalBytes(trafficStatsRef.current.engine.bytesReceived)}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {t('connection_popover.messages', { count: trafficStatsRef.current.engine.packetsReceived })}
-                                </Typography>
-                            </Grid>
-                        </Grid>
-
+                    <Box sx={{ mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('connection_popover.sent')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
+                                {formatTotalBytes(trafficStatsRef.current.engine.bytesSent)}
+                                <span style={{ color: 'var(--mui-palette-text-secondary)', marginLeft: 8 }}>
+                                    {trafficStatsRef.current.engine.packetsSent} msgs
+                                </span>
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption" color="text.secondary">
+                                {t('connection_popover.received')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
+                                {formatTotalBytes(trafficStatsRef.current.engine.bytesReceived)}
+                                <span style={{ color: 'var(--mui-palette-text-secondary)', marginLeft: 8 }}>
+                                    {trafficStatsRef.current.engine.packetsReceived} msgs
+                                </span>
+                            </Typography>
+                        </Box>
                         {trafficStatsRef.current.engine.upgradeAttempts > 0 && (
-                            <Box sx={{ mt: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('connection_popover.transport_upgrades')}
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: '#fff', fontFamily: 'monospace', ml: 1 }}>
+                                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
                                     {trafficStatsRef.current.engine.upgradeAttempts}
                                 </Typography>
                             </Box>
@@ -254,10 +243,133 @@ function ConnectionStatus() {
 
                     <Divider sx={{ my: 2 }} />
 
+                    <Box sx={{ mb: 2 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            {/* CPU */}
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        CPU
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
+                                        {systemInfoRef.current.cpu.usage_percent !== null
+                                            ? `${systemInfoRef.current.cpu.usage_percent.toFixed(1)}%`
+                                            : 'N/A'}
+                                        {systemInfoRef.current.cpu.cores.physical && (
+                                            <span style={{ color: 'var(--mui-palette-text-secondary)', marginLeft: 8 }}>
+                                                {`${systemInfoRef.current.cpu.cores.physical}c/${systemInfoRef.current.cpu.cores.logical}t`}
+                                            </span>
+                                        )}
+                                    </Typography>
+                                </Box>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={systemInfoRef.current.cpu.usage_percent || 0}
+                                    sx={{
+                                        height: 6,
+                                        borderRadius: 1,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                            backgroundColor: systemInfoRef.current.cpu.usage_percent > 80 ? '#f44336' : '#4caf50',
+                                            borderRadius: 1,
+                                        }
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Memory */}
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Memory
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
+                                        {systemInfoRef.current.memory.usage_percent !== null
+                                            ? `${systemInfoRef.current.memory.usage_percent.toFixed(1)}%`
+                                            : 'N/A'}
+                                        {systemInfoRef.current.memory.used_gb && systemInfoRef.current.memory.total_gb && (
+                                            <span style={{ color: 'var(--mui-palette-text-secondary)', marginLeft: 8 }}>
+                                                {`${systemInfoRef.current.memory.used_gb.toFixed(1)}/${systemInfoRef.current.memory.total_gb.toFixed(1)} GB`}
+                                            </span>
+                                        )}
+                                    </Typography>
+                                </Box>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={systemInfoRef.current.memory.usage_percent || 0}
+                                    sx={{
+                                        height: 6,
+                                        borderRadius: 1,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                            backgroundColor: systemInfoRef.current.memory.usage_percent > 80 ? '#f44336' : '#2196f3',
+                                            borderRadius: 1,
+                                        }
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Disk */}
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Disk
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
+                                        {systemInfoRef.current.disk.usage_percent !== null
+                                            ? `${systemInfoRef.current.disk.usage_percent.toFixed(1)}%`
+                                            : 'N/A'}
+                                        {systemInfoRef.current.disk.available_gb && systemInfoRef.current.disk.total_gb && (
+                                            <span style={{ color: 'var(--mui-palette-text-secondary)', marginLeft: 8 }}>
+                                                {`${systemInfoRef.current.disk.available_gb.toFixed(0)}/${systemInfoRef.current.disk.total_gb.toFixed(0)} GB`}
+                                            </span>
+                                        )}
+                                    </Typography>
+                                </Box>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={systemInfoRef.current.disk.usage_percent || 0}
+                                    sx={{
+                                        height: 6,
+                                        borderRadius: 1,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                            backgroundColor: systemInfoRef.current.disk.usage_percent > 90 ? '#f44336' : '#ff9800',
+                                            borderRadius: 1,
+                                        }
+                                    }}
+                                />
+                            </Box>
+
+                            {/* Load Average */}
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Load Avg
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
+                                    {systemInfoRef.current.load_avg
+                                        ? `${systemInfoRef.current.load_avg['1m']} ${systemInfoRef.current.load_avg['5m']} ${systemInfoRef.current.load_avg['15m']}`
+                                        : 'N/A'}
+                                </Typography>
+                            </Box>
+
+                            {/* Temperature */}
+                            {systemInfoRef.current.temperatures?.cpu_c !== null && (
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        CPU Temp
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
+                                        {`${systemInfoRef.current.temperatures.cpu_c.toFixed(0)}°C`}
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
                     <Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                            System Monitoring
-                        </Typography>
                         <Button
                             variant="outlined"
                             size="small"
