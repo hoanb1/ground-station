@@ -133,6 +133,10 @@ class TranscriptionConsumer(threading.Thread):
         self.gemini_connected = False
         self.receiver_task: Optional[Task] = None  # Background task for receiving responses
 
+        # Periodic flush to force transcription processing
+        self.last_flush_time = 0.0
+        self.flush_interval = 2.5  # Force transcription every 2.5 seconds
+
         # Connection backoff to prevent quota exhaustion
         self.last_connection_attempt = 0.0
         self.connection_backoff_seconds = 60  # Wait 60 seconds after quota error before retrying
@@ -626,6 +630,12 @@ class TranscriptionConsumer(threading.Thread):
                         "silence_duration_ms": 30,  # Only 50ms of silence needed (more sensitive than default 100ms)
                     }
                 },
+                "speech_config": {
+                    "voice_activity_timeout": {
+                        "speech_start_timeout_ms": 1000,  # Faster speech detection
+                        "speech_end_timeout_ms": 800,  # More aggressive - catch natural pauses faster
+                    }
+                },
             }
 
             # Build system instruction based on language and translation settings
@@ -862,12 +872,19 @@ class TranscriptionConsumer(threading.Thread):
             audio_pcm = self._convert_to_gemini_format(audio_data)
             audio_b64 = base64.b64encode(audio_pcm).decode("utf-8")
 
-            # Stream audio continuously (no end_of_turn for continuous streaming)
-            # This allows Gemini to process audio in real-time and return partial transcriptions
+            # Check if we need to flush (force partial transcription)
+            current_time = time.time()
+            should_flush = (current_time - self.last_flush_time) > self.flush_interval
+
+            # Stream audio continuously
+            # Periodically send end_of_turn=True to force partial transcription processing
             await self.gemini_session.send(
                 input={"media_chunks": [{"data": audio_b64, "mime_type": "audio/pcm"}]},
-                end_of_turn=False,  # Keep stream open for continuous audio
+                end_of_turn=should_flush,  # Periodically force turn end to flush transcription
             )
+
+            if should_flush:
+                self.last_flush_time = current_time
 
             # Update stats for sent transcriptions
             with self.stats_lock:
