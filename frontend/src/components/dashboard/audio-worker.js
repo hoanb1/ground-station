@@ -4,6 +4,8 @@ class AudioProcessor {
         this.processingQueue = false;
         // Keep queue small (3-5 chunks) to minimize tuning lag
         this.maxQueueSize = 5;
+        // Track peak audio level (RMS) for VU meter
+        this.currentAudioLevel = 0;
     }
 
     processAudioData(audioData) {
@@ -16,10 +18,16 @@ class AudioProcessor {
 
             // Validate and normalize samples
             const normalizedSamples = new Float32Array(samples.length);
+            let sumSquares = 0;
             for (let i = 0; i < samples.length; i++) {
                 // Clamp values between -1 and 1
                 normalizedSamples[i] = Math.max(-1, Math.min(1, samples[i]));
+                sumSquares += normalizedSamples[i] * normalizedSamples[i];
             }
+
+            // Calculate RMS (Root Mean Square) audio level
+            const rms = Math.sqrt(sumSquares / samples.length);
+            this.currentAudioLevel = rms;
 
             return {
                 samples: normalizedSamples,
@@ -90,6 +98,10 @@ class AudioProcessor {
             processing: this.processingQueue
         };
     }
+
+    getAudioLevel() {
+        return this.currentAudioLevel;
+    }
 }
 
 const processor = new AudioProcessor();
@@ -106,6 +118,13 @@ self.onmessage = function(e) {
             self.postMessage({
                 type: 'QUEUE_STATUS',
                 status: processor.getQueueStatus()
+            });
+            break;
+
+        case 'GET_AUDIO_LEVEL':
+            self.postMessage({
+                type: 'AUDIO_LEVEL',
+                level: processor.getAudioLevel()
             });
             break;
 

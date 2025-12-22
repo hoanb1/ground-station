@@ -13,7 +13,8 @@ const AudioContext = createContext({
     stopAudio: () => {},
     getAudioState: () => {},
     flushAudioBuffers: () => {},
-    getAudioBufferLength: () => {}
+    getAudioBufferLength: () => {},
+    getVfoAudioLevel: () => {}
 });
 
 export const useAudio = () => {
@@ -36,6 +37,7 @@ export const AudioProvider = ({ children }) => {
     const vfoNextPlayTimeRef = useRef({}); // { 1: time, 2: time, ... }
     const vfoMutedRef = useRef({}); // { 1: false, 2: false, ... }
     const vfoVolumeRef = useRef({}); // { 1: 1.0, 2: 1.0, ... } - individual VFO volumes
+    const vfoAudioLevelRef = useRef({}); // { 1: 0.0, 2: 0.0, ... } - RMS audio levels
 
     // Callback ref to handle audio from workers - must be defined before workers
     const playProcessedAudioRef = useRef(null);
@@ -50,7 +52,7 @@ export const AudioProvider = ({ children }) => {
                 );
 
                 worker.onmessage = (e) => {
-                    const { type, batch, status, error } = e.data;
+                    const { type, batch, status, error, level } = e.data;
 
                     switch (type) {
                         case 'AUDIO_BATCH':
@@ -61,6 +63,9 @@ export const AudioProvider = ({ children }) => {
                             break;
                         case 'QUEUE_STATUS':
                             //console.log(`VFO ${vfoNumber} audio queue status:`, status);
+                            break;
+                        case 'AUDIO_LEVEL':
+                            vfoAudioLevelRef.current[vfoNumber] = level;
                             break;
                         case 'ERROR':
                             console.error(`VFO ${vfoNumber} audio worker error:`, error);
@@ -112,6 +117,7 @@ export const AudioProvider = ({ children }) => {
                 vfoNextPlayTimeRef.current[vfoNumber] = audioContextRef.current.currentTime;
                 vfoMutedRef.current[vfoNumber] = false;
                 vfoVolumeRef.current[vfoNumber] = 1.0;
+                vfoAudioLevelRef.current[vfoNumber] = 0.0;
             }
 
             if (audioContextRef.current.state === 'suspended') {
@@ -363,6 +369,19 @@ export const AudioProvider = ({ children }) => {
         }
     }, []);
 
+    // Get VFO audio level (RMS, range 0.0 to 1.0)
+    const getVfoAudioLevel = useCallback((vfoNumber) => {
+        if (vfoNumber < 1 || vfoNumber > 4) return 0;
+
+        // Request latest audio level from worker
+        const worker = vfoWorkersRef.current[vfoNumber];
+        if (worker) {
+            worker.postMessage({ type: 'GET_AUDIO_LEVEL' });
+        }
+
+        return vfoAudioLevelRef.current[vfoNumber] || 0;
+    }, []);
+
     // Register flush callback for use by middleware
     useEffect(() => {
         registerFlushCallback(flushAudioBuffers);
@@ -398,8 +417,9 @@ export const AudioProvider = ({ children }) => {
         stopAudio,
         getAudioState,
         flushAudioBuffers,
-        getAudioBufferLength
-    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, setVfoMute, setVfoVolume, stopAudio, getAudioState, flushAudioBuffers, getAudioBufferLength]);
+        getAudioBufferLength,
+        getVfoAudioLevel
+    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, setVfoMute, setVfoVolume, stopAudio, getAudioState, flushAudioBuffers, getAudioBufferLength, getVfoAudioLevel]);
 
     return (
         <AudioContext.Provider value={value}>

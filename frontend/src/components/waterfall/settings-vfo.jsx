@@ -94,8 +94,8 @@ const VfoAccordion = ({
     const [decoderParamsDialogOpen, setDecoderParamsDialogOpen] = React.useState(false);
     const [decoderParamsVfoIndex, setDecoderParamsVfoIndex] = React.useState(null);
 
-    // Get audio controls for VFO muting and buffer monitoring
-    const { setVfoMute, getAudioBufferLength } = useAudio();
+    // Get audio controls for VFO muting, buffer monitoring, and audio level
+    const { setVfoMute, getAudioBufferLength, getVfoAudioLevel } = useAudio();
 
     // Track mute state for each VFO (0-3, but UI uses 1-4)
     const [vfoMuted, setVfoMuted] = React.useState({
@@ -113,17 +113,28 @@ const VfoAccordion = ({
         4: 0
     });
 
-    // Update buffer lengths every 500ms
+    // Track audio levels per VFO
+    const [vfoAudioLevels, setVfoAudioLevels] = React.useState({
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0
+    });
+
+    // Update buffer lengths and audio levels every 500ms
     React.useEffect(() => {
         const interval = setInterval(() => {
             const newBufferLengths = {};
+            const newAudioLevels = {};
             for (let i = 1; i <= 4; i++) {
                 newBufferLengths[i] = getAudioBufferLength(i);
+                newAudioLevels[i] = getVfoAudioLevel(i);
             }
             setVfoBufferLengths(newBufferLengths);
+            setVfoAudioLevels(newAudioLevels);
         }, 500);
         return () => clearInterval(interval);
-    }, [getAudioBufferLength]);
+    }, [getAudioBufferLength, getVfoAudioLevel]);
 
     // Handle VFO mute toggle
     const handleVfoMuteToggle = (vfoIndex) => {
@@ -409,6 +420,75 @@ const VfoAccordion = ({
                                     label={t('vfo.listen')}
                                     sx={{mt: 0, ml: 0}}
                                 />
+                            </Box>
+
+                            {/* VU Meter Display */}
+                            <Box sx={{ mt: 1, mb: 1, opacity: vfoActive[vfoIndex] ? 1 : 0.4 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Audio Level
+                                    </Typography>
+                                    <Typography variant="caption" sx={{
+                                        fontFamily: 'monospace',
+                                        color: vfoActive[vfoIndex] ? (() => {
+                                            const levelDb = 20 * Math.log10(vfoAudioLevels[vfoIndex] + 0.00001);
+                                            if (levelDb > -6) return '#f44336'; // Red (too loud)
+                                            if (levelDb > -20) return '#4caf50'; // Green (good)
+                                            return '#ff9800'; // Orange (low)
+                                        })() : 'text.disabled'
+                                    }}>
+                                        {vfoActive[vfoIndex] ? (20 * Math.log10(vfoAudioLevels[vfoIndex] + 0.00001)).toFixed(1) : '—'} dB
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ position: 'relative', height: 8 }}>
+                                    {/* Background track */}
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        width: '100%',
+                                        height: '100%',
+                                        backgroundColor: 'rgba(128, 128, 128, 0.2)',
+                                        borderRadius: 1,
+                                    }} />
+                                    {/* Green zone (-60dB to -20dB) */}
+                                    {vfoActive[vfoIndex] && (
+                                        <Box sx={{
+                                            position: 'absolute',
+                                            left: `${((60 - 60) / 60) * 100}%`,
+                                            width: `${((60 - 20) / 60) * 100}%`,
+                                            height: '100%',
+                                            backgroundColor: 'rgba(76, 175, 80, 0.3)',
+                                            borderRadius: 1,
+                                        }} />
+                                    )}
+                                    {/* Orange zone (-20dB to -6dB) */}
+                                    {vfoActive[vfoIndex] && (
+                                        <Box sx={{
+                                            position: 'absolute',
+                                            left: `${((60 - 20) / 60) * 100}%`,
+                                            width: `${((20 - 6) / 60) * 100}%`,
+                                            height: '100%',
+                                            backgroundColor: 'rgba(255, 152, 0, 0.3)',
+                                            borderRadius: 1,
+                                        }} />
+                                    )}
+                                    {/* Level bar (filled portion) */}
+                                    {vfoActive[vfoIndex] && (
+                                        <Box sx={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            width: `${Math.min(100, Math.max(0, ((60 + (20 * Math.log10(vfoAudioLevels[vfoIndex] + 0.00001))) / 60) * 100))}%`,
+                                            height: '100%',
+                                            background: (() => {
+                                                const levelDb = 20 * Math.log10(vfoAudioLevels[vfoIndex] + 0.00001);
+                                                if (levelDb > -6) return 'linear-gradient(to right, #4caf50, #ff9800, #f44336)';
+                                                if (levelDb > -20) return 'linear-gradient(to right, #4caf50 80%, #ff9800)';
+                                                return '#4caf50';
+                                            })(),
+                                            borderRadius: 1,
+                                            transition: 'width 0.1s ease-out',
+                                        }} />
+                                    )}
+                                </Box>
                             </Box>
 
                             {/* Audio Buffer Display */}
