@@ -48,7 +48,6 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
     const [visible, setVisible] = useState(true);
     const [lines, setLines] = useState([]);
     const [lastSegmentTimestamp, setLastSegmentTimestamp] = useState(null);
-    const [showControls, setShowControls] = useState(false);
 
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);
@@ -203,27 +202,23 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                         left: '50%',
                         transform: 'translateX(-50%)',
                         zIndex: 1000,
-                        width: { xs: '100%', sm: '100%', md: '95%' },
-                        maxWidth: { md: '95%', lg: '92%', xl: '90%' },
-                        pointerEvents: 'none',
+                        width: 'auto',
+                        maxWidth: { xs: '100%', sm: '100%', md: '95%', lg: '92%', xl: '90%' },
+                        pointerEvents: 'auto',
                         px: { xs: 0, sm: 0, md: 2 },
                         transition: 'bottom 0.3s ease-out',
                     }}
-                    onMouseEnter={() => setShowControls(true)}
-                    onMouseLeave={() => setShowControls(false)}
                 >
                     {/* Controls bar */}
-                    <Fade in={showControls} timeout={200}>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                gap: 1,
-                                mb: 1,
-                                pointerEvents: 'auto',
-                            }}
-                        >
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: 1,
+                            mb: 1,
+                        }}
+                    >
                             <Box
                                 sx={{
                                     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -309,8 +304,7 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                                     </IconButton>
                                 </Tooltip>
                             </Box>
-                        </Box>
-                    </Fade>
+                    </Box>
 
                     <Box
                         sx={{
@@ -321,6 +315,8 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                             border: '2px solid rgba(255, 255, 255, 0.1)',
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
                             transition: 'all 0.15s ease-out',
+                            width: 'fit-content',
+                            minWidth: 'max-content',
                         }}
                     >
                         {lines.map((line, lineIdx) => (
@@ -337,7 +333,7 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20, autoFadeMs
                                     textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
                                     letterSpacing: '0.3px',
                                     fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                                    wordBreak: 'break-word',
+                                    whiteSpace: 'nowrap',
                                     mb: lineIdx < lines.length - 1 ? 0.5 : 0,
                                 }}
                             >
