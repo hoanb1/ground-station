@@ -14,6 +14,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+import threading
+import time
 from typing import Optional
 
 
@@ -42,6 +44,11 @@ class TranscriptionManager:
         self.sio = sio
         self.event_loop = event_loop
         self.gemini_api_key = None  # Will be set when first consumer starts
+
+        # Race condition prevention (similar to decoder manager)
+        self._start_locks = {}  # Per (sdr_id, session_id, vfo_number) locks
+        self._start_in_progress = {}  # Track starts in progress
+        self._last_start_ts = {}  # Timestamp of last start
 
     def set_gemini_api_key(self, api_key: str):
         """
@@ -112,79 +119,117 @@ class TranscriptionManager:
 
         consumer_storage = process_info["transcription_consumers"][session_id]
 
-        # Check if transcription consumer already exists for this VFO
-        if vfo_number in consumer_storage:
-            existing = consumer_storage[vfo_number]
-            if existing["instance"].is_alive():
-                # Check if settings changed - if so, restart the consumer
-                settings_changed = (
-                    existing.get("language") != language
-                    or existing.get("translate_to") != translate_to
-                )
-                if settings_changed:
-                    self.logger.info(
-                        f"Transcription settings changed for session {session_id} VFO {vfo_number}, "
-                        f"restarting consumer (old: language={existing.get('language')}, "
-                        f"translate_to={existing.get('translate_to')} -> "
-                        f"new: language={language}, translate_to={translate_to})"
-                    )
-                    # Stop the existing consumer
-                    self._stop_consumer_entry(existing, session_id, vfo_number)
-                    del consumer_storage[vfo_number]
-                    # Continue to start new consumer with updated settings
-                else:
-                    self.logger.debug(
-                        f"Transcription consumer already running for session {session_id} VFO {vfo_number} "
-                        f"with same settings"
-                    )
-                    return True
-            else:
-                # Clean up dead consumer
+        # Race condition prevention: Use a lock per (sdr_id, session_id, vfo_number)
+        lock_key = (sdr_id, session_id, vfo_number)
+        lock = self._start_locks.get(lock_key)
+        if lock is None:
+            lock = threading.Lock()
+            self._start_locks[lock_key] = lock
+
+        with lock:
+            # Debounce: Check if a start is already in progress or happened recently
+            key = (sdr_id, session_id, vfo_number)
+            now_ms = int(time.time() * 1000)
+            in_progress = bool(self._start_in_progress.get(key, False))
+            last_ts = int(self._last_start_ts.get(key, 0))
+
+            # If a start is in progress, reject
+            if in_progress:
                 self.logger.info(
-                    f"Cleaning up dead transcription consumer for session {session_id} VFO {vfo_number}"
+                    f"Transcription start already in progress for {session_id} VFO {vfo_number}, skipping duplicate request"
                 )
-                self._cleanup_consumer(existing)
-                del consumer_storage[vfo_number]
+                return False
 
-        # Subscribe to the audio broadcaster
-        subscription_key = f"transcription:{session_id}_vfo{vfo_number}"
-        transcription_queue = audio_broadcaster.subscribe(subscription_key, maxsize=50)
+            # If a start happened within last 1000ms, debounce
+            if now_ms - last_ts < 1000:
+                self.logger.info(
+                    f"Transcription start requested too soon after last start for {session_id} VFO {vfo_number}, debouncing"
+                )
+                return False
 
-        # Create and start the transcription consumer
-        try:
-            transcription_consumer = TranscriptionConsumer(
-                transcription_queue=transcription_queue,
-                sio=self.sio,
-                loop=self.event_loop,
-                gemini_api_key=self.gemini_api_key,
-                session_id=session_id,
-                vfo_number=vfo_number,
-                language=language,
-                translate_to=translate_to,
-            )
-            transcription_consumer.start()
+            # Mark start in progress
+            self._start_in_progress[key] = True
 
-            # Store the consumer info
-            consumer_storage[vfo_number] = {
-                "instance": transcription_consumer,
-                "subscription_key": subscription_key,
-                "audio_broadcaster": audio_broadcaster,
-                "language": language,
-                "translate_to": translate_to,
-            }
+            try:
+                # Check if transcription consumer already exists for this VFO
+                if vfo_number in consumer_storage:
+                    existing = consumer_storage[vfo_number]
+                    if existing["instance"].is_alive():
+                        # Check if settings changed - if so, restart the consumer
+                        settings_changed = (
+                            existing.get("language") != language
+                            or existing.get("translate_to") != translate_to
+                        )
+                        if settings_changed:
+                            self.logger.info(
+                                f"Transcription settings changed for session {session_id} VFO {vfo_number}, "
+                                f"restarting consumer (old: language={existing.get('language')}, "
+                                f"translate_to={existing.get('translate_to')} -> "
+                                f"new: language={language}, translate_to={translate_to})"
+                            )
+                            # Stop the existing consumer
+                            self._stop_consumer_entry(existing, session_id, vfo_number)
+                            del consumer_storage[vfo_number]
+                            # Continue to start new consumer with updated settings
+                        else:
+                            self.logger.debug(
+                                f"Transcription consumer already running for session {session_id} VFO {vfo_number} "
+                                f"with same settings"
+                            )
+                            return True
+                    else:
+                        # Clean up dead consumer
+                        self.logger.info(
+                            f"Cleaning up dead transcription consumer for session {session_id} VFO {vfo_number}"
+                        )
+                        self._cleanup_consumer(existing)
+                        del consumer_storage[vfo_number]
 
-            self.logger.info(
-                f"Started transcription consumer for session {session_id} VFO {vfo_number} "
-                f"(language={language}, translate_to={translate_to})"
-            )
-            return True
+                # Subscribe to the audio broadcaster
+                subscription_key = f"transcription:{session_id}_vfo{vfo_number}"
+                transcription_queue = audio_broadcaster.subscribe(subscription_key, maxsize=50)
 
-        except Exception as e:
-            self.logger.error(f"Failed to start transcription consumer: {e}", exc_info=True)
-            # Clean up subscription if consumer creation failed
-            if audio_broadcaster:
-                audio_broadcaster.unsubscribe(subscription_key)
-            return False
+                # Create and start the transcription consumer
+                try:
+                    transcription_consumer = TranscriptionConsumer(
+                        transcription_queue=transcription_queue,
+                        sio=self.sio,
+                        loop=self.event_loop,
+                        gemini_api_key=self.gemini_api_key,
+                        session_id=session_id,
+                        vfo_number=vfo_number,
+                        language=language,
+                        translate_to=translate_to,
+                    )
+                    transcription_consumer.start()
+
+                    # Store the consumer info
+                    consumer_storage[vfo_number] = {
+                        "instance": transcription_consumer,
+                        "subscription_key": subscription_key,
+                        "audio_broadcaster": audio_broadcaster,
+                        "language": language,
+                        "translate_to": translate_to,
+                    }
+
+                    self.logger.info(
+                        f"Started transcription consumer for session {session_id} VFO {vfo_number} "
+                        f"(language={language}, translate_to={translate_to})"
+                    )
+
+                    # Update timestamp
+                    self._last_start_ts[key] = now_ms
+                    return True
+
+                except Exception as e:
+                    self.logger.error(f"Failed to start transcription consumer: {e}", exc_info=True)
+                    # Clean up subscription if consumer creation failed
+                    if audio_broadcaster:
+                        audio_broadcaster.unsubscribe(subscription_key)
+                    return False
+            finally:
+                # Clear in-progress flag
+                self._start_in_progress[key] = False
 
     def stop_transcription(self, sdr_id: str, session_id: str, vfo_number: Optional[int] = None):
         """
@@ -258,16 +303,9 @@ class TranscriptionManager:
         subscription_key = consumer_entry["subscription_key"]
         audio_broadcaster = consumer_entry.get("audio_broadcaster")
 
-        # Stop the consumer thread
+        # Stop the consumer thread (non-blocking)
         consumer.stop()
-        consumer.join(timeout=2.0)
-
-        # Check if thread actually stopped
-        if consumer.is_alive():
-            self.logger.warning(
-                f"Transcription consumer thread for session {session_id} VFO {vfo_number} "
-                f"did not stop within timeout - it may still be running"
-            )
+        # Don't join - let it stop asynchronously to avoid blocking
 
         # Unsubscribe from audio broadcaster
         if audio_broadcaster:
@@ -291,7 +329,7 @@ class TranscriptionManager:
             consumer = consumer_entry["instance"]
             if consumer.is_alive():
                 consumer.stop()
-                consumer.join(timeout=1.0)
+                # Don't join - let it stop asynchronously
 
             subscription_key = consumer_entry.get("subscription_key")
             audio_broadcaster = consumer_entry.get("audio_broadcaster")
