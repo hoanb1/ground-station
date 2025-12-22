@@ -306,9 +306,6 @@ class AMDemodulator(threading.Thread):
                     # Wrong modulation - discard these samples and continue
                     continue
 
-                # Check if this VFO is selected for audio output
-                is_selected = vfo_state.selected if vfo_state else False
-
                 # Extract samples and metadata
                 samples = iq_message.get("samples")
                 sdr_center_freq = iq_message.get("center_freq")
@@ -503,10 +500,7 @@ class AMDemodulator(threading.Thread):
                         chunk = self.audio_buffer[: self.target_chunk_size]
                         self.audio_buffer = self.audio_buffer[self.target_chunk_size :]
 
-                        # Only output audio if this VFO is selected
-                        if not is_selected:
-                            continue
-
+                        # Always output audio (UI handles muting, transcription always active)
                         # Put audio chunk in queue - use put_nowait to avoid blocking
                         # If queue is full, skip this chunk to prevent buffer buildup
                         try:

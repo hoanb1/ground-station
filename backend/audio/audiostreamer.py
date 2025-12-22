@@ -102,20 +102,21 @@ class WebAudioStreamer(threading.Thread):
 
                     vfo_state = self.vfo_manager.get_vfo_state(originating_session_id, vfo_number)
 
-                    # Check if VFO exists and is selected
-                    # In multi-VFO mode, only play audio from the selected VFO
-                    if vfo_state is None or not vfo_state.selected:
+                    # Check if VFO exists
+                    # Multi-VFO mode: stream all active VFOs simultaneously (removed 'selected' check)
+                    if vfo_state is None:
                         self.audio_queue.task_done()
                         continue
 
                     # Process audio based on VFO settings
-                    if vfo_state.active and vfo_state.selected:
+                    if vfo_state.active:
                         # Convert volume from the 0-100 range to 0.0-1.5 multiplier
                         volume_multiplier = vfo_state.volume / 100.0 * 1.5
                         processed_audio = audio_chunk * volume_multiplier
                     else:
-                        # Mute if VFO is inactive but still selected
-                        processed_audio = np.zeros_like(audio_chunk)
+                        # Skip if VFO is inactive (no need to send muted audio)
+                        self.audio_queue.task_done()
+                        continue
 
                     # Prepare VFO data for transmission
                     vfo_data = {

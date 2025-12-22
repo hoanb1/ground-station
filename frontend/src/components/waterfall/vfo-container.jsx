@@ -66,7 +66,7 @@ const VFOMarkersContainer = ({
         vfoMarkers,
         maxVFOMarkers,
         selectedVFO,
-        streamingVFO,
+        streamingVFOs,
         vfoColors,
         vfoActive,
     } = useSelector(state => state.vfo);
@@ -357,7 +357,7 @@ const VFOMarkersContainer = ({
     useEffect(() => {
         renderVFOMarkersDirect();
     }, [vfoActive, vfoMarkers, actualWidth, height,
-        centerFrequency, sampleRate, selectedVFO, streamingVFO, containerWidth, currentPositionX, activeDecoders, decoderOutputs]);
+        centerFrequency, sampleRate, selectedVFO, streamingVFOs, containerWidth, currentPositionX, activeDecoders, decoderOutputs]);
 
     // Rendering function with cached context
     const renderVFOMarkersDirect = () => {
@@ -451,7 +451,7 @@ const VFOMarkersContainer = ({
             const packetOutputs = getPacketDecoderOutputsForVFO(parseInt(markerIdx));
 
             // Check if this VFO is currently streaming audio
-            const isStreaming = parseInt(markerIdx) === streamingVFO;
+            const isStreaming = streamingVFOs.includes(parseInt(markerIdx));
 
             canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText, isStreaming, packetOutputs);
         });

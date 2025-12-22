@@ -8,10 +8,12 @@ const AudioContext = createContext({
     initializeAudio: () => {},
     playAudioSamples: () => {},
     setAudioVolume: () => {},
+    setVfoMute: () => {},
+    setVfoVolume: () => {},
     stopAudio: () => {},
     getAudioState: () => {},
     flushAudioBuffers: () => {},
-    getAudioBufferLength: () => 0
+    getAudioBufferLength: () => {}
 });
 
 export const useAudio = () => {
@@ -25,48 +27,53 @@ export const useAudio = () => {
 export const AudioProvider = ({ children }) => {
     // Audio context for Web Audio API (must stay in main thread)
     const audioContextRef = useRef(null);
-    const gainNodeRef = useRef(null);
     const [audioEnabled, setAudioEnabled] = useState(false);
     const [volume, setVolume] = useState(0.5);
 
-    // Web Worker for audio processing
-    const audioWorkerRef = useRef(null);
-    const nextPlayTimeRef = useRef(0);
+    // Per-VFO state (supports 4 VFOs: 0, 1, 2, 3)
+    const vfoGainNodesRef = useRef({}); // { 0: GainNode, 1: GainNode, ... }
+    const vfoWorkersRef = useRef({}); // { 0: Worker, 1: Worker, ... }
+    const vfoNextPlayTimeRef = useRef({}); // { 0: time, 1: time, ... }
+    const vfoMutedRef = useRef({}); // { 0: false, 1: false, ... }
+    const vfoVolumeRef = useRef({}); // { 0: 1.0, 1: 1.0, ... } - individual VFO volumes
 
-    // Initialize Web Worker using your existing worker file
-    const initializeWorker = useCallback(() => {
+    // Initialize Web Workers - one per VFO (4 VFOs: 1-4)
+    const initializeWorkers = useCallback(() => {
         try {
-            // Use your existing audio-worker.js file
-            audioWorkerRef.current = new Worker(
-                new URL('./audio-worker.js', import.meta.url),
-                { type: 'module' }
-            );
+            for (let vfoNumber = 1; vfoNumber <= 4; vfoNumber++) {
+                const worker = new Worker(
+                    new URL('./audio-worker.js', import.meta.url),
+                    { type: 'module' }
+                );
 
-            audioWorkerRef.current.onmessage = (e) => {
-                const { type, batch, status, error } = e.data;
+                worker.onmessage = (e) => {
+                    const { type, batch, status, error } = e.data;
 
-                switch (type) {
-                    case 'AUDIO_BATCH':
-                        // Process the batch from your worker
-                        batch.forEach(audioData => playProcessedAudio(audioData));
-                        break;
-                    case 'QUEUE_STATUS':
-                        //console.log('Audio queue status:', status);
-                        break;
-                    case 'ERROR':
-                        console.error('Audio worker error:', error);
-                        break;
-                }
-            };
+                    switch (type) {
+                        case 'AUDIO_BATCH':
+                            // Process the batch from worker - pass vfoNumber context
+                            batch.forEach(audioData => playProcessedAudio(audioData, vfoNumber));
+                            break;
+                        case 'QUEUE_STATUS':
+                            //console.log(`VFO ${vfoNumber} audio queue status:`, status);
+                            break;
+                        case 'ERROR':
+                            console.error(`VFO ${vfoNumber} audio worker error:`, error);
+                            break;
+                    }
+                };
 
-            audioWorkerRef.current.onerror = (error) => {
-                console.error('Audio worker error:', error);
-                toast.error('Audio worker failed');
-            };
+                worker.onerror = (error) => {
+                    console.error(`VFO ${vfoNumber} audio worker error:`, error);
+                    toast.error(`VFO ${vfoNumber} audio worker failed`);
+                };
 
-            console.log('Audio worker initialized from audio-worker.js');
+                vfoWorkersRef.current[vfoNumber] = worker;
+            }
+
+            console.log('Audio workers initialized for 4 VFOs');
         } catch (error) {
-            console.warn('Failed to initialize audio worker, falling back to main thread:', error);
+            console.warn('Failed to initialize audio workers:', error);
         }
     }, []);
 
@@ -88,18 +95,26 @@ export const AudioProvider = ({ children }) => {
             };
 
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)(contextOptions);
-            gainNodeRef.current = audioContextRef.current.createGain();
-            gainNodeRef.current.connect(audioContextRef.current.destination);
-            gainNodeRef.current.gain.value = volume;
+
+            // Create separate GainNode for each VFO (4 VFOs: 1-4)
+            for (let vfoNumber = 1; vfoNumber <= 4; vfoNumber++) {
+                const gainNode = audioContextRef.current.createGain();
+                gainNode.connect(audioContextRef.current.destination);
+                gainNode.gain.value = volume;
+                vfoGainNodesRef.current[vfoNumber] = gainNode;
+
+                // Initialize per-VFO state
+                vfoNextPlayTimeRef.current[vfoNumber] = audioContextRef.current.currentTime;
+                vfoMutedRef.current[vfoNumber] = false;
+                vfoVolumeRef.current[vfoNumber] = 1.0;
+            }
 
             if (audioContextRef.current.state === 'suspended') {
                 await audioContextRef.current.resume();
             }
 
-            nextPlayTimeRef.current = audioContextRef.current.currentTime;
-
-            // Initialize worker after audio context is ready
-            initializeWorker();
+            // Initialize workers after audio context is ready
+            initializeWorkers();
 
             setAudioEnabled(true);
 
@@ -109,11 +124,14 @@ export const AudioProvider = ({ children }) => {
             console.error('Failed to initialize audio:', error);
             toast.error(`Failed to initialize audio: ${error.message}`);
         }
-    }, [volume, initializeWorker]);
+    }, [volume, initializeWorkers]);
 
-    // Play processed audio from worker (main thread only)
-    const playProcessedAudio = useCallback((processedData) => {
-        if (!audioContextRef.current || !gainNodeRef.current) return;
+    // Play processed audio from worker (main thread only) - per VFO
+    const playProcessedAudio = useCallback((processedData, vfoNumber) => {
+        if (!audioContextRef.current || !vfoGainNodesRef.current[vfoNumber]) return;
+
+        // Note: Don't return early if muted - let audio flow through GainNode with gain=0
+        // This allows instant mute/unmute without audio gaps
 
         try {
             const { samples, sample_rate, channels } = processedData;
@@ -145,29 +163,34 @@ export const AudioProvider = ({ children }) => {
 
             const source = audioContextRef.current.createBufferSource();
             source.buffer = audioBuffer;
-            source.connect(gainNodeRef.current);
+
+            // Connect to VFO-specific GainNode
+            const gainNode = vfoGainNodesRef.current[vfoNumber];
+            console.log(`[AudioProvider] Playing audio for VFO ${vfoNumber}, current gain value: ${gainNode.gain.value}, muted: ${vfoMutedRef.current[vfoNumber]}`);
+            source.connect(gainNode);
 
             const currentTime = audioContextRef.current.currentTime;
+            const vfoNextPlayTime = vfoNextPlayTimeRef.current[vfoNumber];
 
             // Schedule audio continuously without gaps
-            if (nextPlayTimeRef.current < currentTime) {
+            if (vfoNextPlayTime < currentTime) {
                 // If we're behind, start immediately
-                nextPlayTimeRef.current = currentTime;
+                vfoNextPlayTimeRef.current[vfoNumber] = currentTime;
             }
 
-            source.start(nextPlayTimeRef.current);
+            source.start(vfoNextPlayTimeRef.current[vfoNumber]);
 
             // Next chunk starts exactly when this one ends (no gap)
-            nextPlayTimeRef.current += audioBuffer.duration;
+            vfoNextPlayTimeRef.current[vfoNumber] += audioBuffer.duration;
 
         } catch (error) {
-            console.error('Error playing processed audio:', error);
+            console.error(`Error playing processed audio for VFO ${vfoNumber}:`, error);
         }
     }, []);
 
-    // Play audio samples (now uses your existing worker)
+    // Play audio samples - route to correct VFO worker
     const playAudioSamples = useCallback((audioData) => {
-        if (!audioContextRef.current || !gainNodeRef.current) return;
+        if (!audioContextRef.current) return;
 
         if (audioContextRef.current.state === 'suspended') {
             audioContextRef.current.resume().then(() => {
@@ -182,74 +205,159 @@ export const AudioProvider = ({ children }) => {
             setAudioEnabled(true);
         }
 
-        // Send to your existing worker for processing
-        if (audioWorkerRef.current) {
-            audioWorkerRef.current.postMessage({
+        // Extract VFO number from audio data (backend sends 1-4)
+        const vfoNumber = audioData.vfo?.vfo_number;
+        if (vfoNumber === undefined || vfoNumber < 1 || vfoNumber > 4) {
+            console.warn('Invalid or missing vfo_number in audio data:', audioData);
+            return;
+        }
+
+        // Send to the correct VFO worker for processing
+        const worker = vfoWorkersRef.current[vfoNumber];
+        if (worker) {
+            worker.postMessage({
                 type: 'AUDIO_DATA',
                 data: audioData
             });
         }
     }, [audioEnabled]);
 
-    // Set volume
+    // Set master volume (affects all VFOs)
     const setAudioVolume = useCallback((newVolume) => {
         setVolume(newVolume);
-        if (gainNodeRef.current) {
-            gainNodeRef.current.gain.value = newVolume;
-        }
+        // Apply to all VFO gain nodes
+        Object.values(vfoGainNodesRef.current).forEach(gainNode => {
+            if (gainNode && !vfoMutedRef.current[gainNode.vfoNumber]) {
+                gainNode.gain.value = newVolume * (vfoVolumeRef.current[gainNode.vfoNumber] || 1.0);
+            }
+        });
     }, []);
 
-    // Stop audio
-    const stopAudio = useCallback(() => {
-        if (audioWorkerRef.current) {
-            // Clear the queue before terminating
-            audioWorkerRef.current.postMessage({ type: 'CLEAR_QUEUE' });
-            audioWorkerRef.current.terminate();
-            audioWorkerRef.current = null;
+    // Set individual VFO volume
+    const setVfoVolume = useCallback((vfoNumber, vfoVolume) => {
+        if (vfoNumber < 0 || vfoNumber > 3) return;
+
+        vfoVolumeRef.current[vfoNumber] = vfoVolume;
+        const gainNode = vfoGainNodesRef.current[vfoNumber];
+
+        if (gainNode && !vfoMutedRef.current[vfoNumber]) {
+            gainNode.gain.value = volume * vfoVolume;
         }
+    }, [volume]);
+
+    // Mute/unmute individual VFO
+    // VFO numbers are 1-4 (from UI/backend), matching audio routing
+    const setVfoMute = useCallback((vfoNumber, muted) => {
+        console.log(`[AudioProvider] setVfoMute called: VFO ${vfoNumber}, muted: ${muted}`);
+        if (vfoNumber < 1 || vfoNumber > 4) {
+            console.error(`[AudioProvider] Invalid VFO number: ${vfoNumber} (expected 1-4)`);
+            return;
+        }
+
+        vfoMutedRef.current[vfoNumber] = muted;
+        const gainNode = vfoGainNodesRef.current[vfoNumber];
+
+        console.log(`[AudioProvider] GainNode for VFO ${vfoNumber}:`, gainNode);
+        if (gainNode) {
+            const newGainValue = muted ? 0 : volume * (vfoVolumeRef.current[vfoNumber] || 1.0);
+            console.log(`[AudioProvider] Setting gain to: ${newGainValue} (muted: ${muted}, volume: ${volume})`);
+            gainNode.gain.value = newGainValue;
+        } else {
+            console.warn(`[AudioProvider] No GainNode found for VFO ${vfoNumber}`);
+        }
+    }, [volume]);
+
+    // Stop audio - terminate all VFO workers
+    const stopAudio = useCallback(() => {
+        // Terminate all VFO workers
+        Object.values(vfoWorkersRef.current).forEach(worker => {
+            if (worker) {
+                worker.postMessage({ type: 'CLEAR_QUEUE' });
+                worker.terminate();
+            }
+        });
+        vfoWorkersRef.current = {};
+
         if (audioContextRef.current) {
             audioContextRef.current.close();
             audioContextRef.current = null;
         }
+
+        vfoGainNodesRef.current = {};
+        vfoNextPlayTimeRef.current = {};
+        vfoMutedRef.current = {};
+        vfoVolumeRef.current = {};
+
         setAudioEnabled(false);
     }, []);
 
-    // Flush audio buffers (clear worker queue and reset audio scheduling)
-    const flushAudioBuffers = useCallback(() => {
-        // Clear the worker queue
-        if (audioWorkerRef.current) {
-            audioWorkerRef.current.postMessage({ type: 'CLEAR_QUEUE' });
-        }
+    // Flush audio buffers (clear all VFO worker queues and reset audio scheduling)
+    const flushAudioBuffers = useCallback((vfoNumber = null) => {
+        if (vfoNumber !== null) {
+            // Flush specific VFO
+            const worker = vfoWorkersRef.current[vfoNumber];
+            if (worker) {
+                worker.postMessage({ type: 'CLEAR_QUEUE' });
+            }
+            if (audioContextRef.current) {
+                vfoNextPlayTimeRef.current[vfoNumber] = audioContextRef.current.currentTime;
+            }
+        } else {
+            // Flush all VFOs
+            Object.values(vfoWorkersRef.current).forEach(worker => {
+                if (worker) {
+                    worker.postMessage({ type: 'CLEAR_QUEUE' });
+                }
+            });
 
-        // Reset the next play time to current time to cancel scheduled audio
-        if (audioContextRef.current) {
-            nextPlayTimeRef.current = audioContextRef.current.currentTime;
+            if (audioContextRef.current) {
+                const currentTime = audioContextRef.current.currentTime;
+                for (let i = 1; i <= 4; i++) {
+                    vfoNextPlayTimeRef.current[i] = currentTime;
+                }
+            }
         }
     }, []);
 
     // Get audio context state
     const getAudioState = useCallback(() => {
-        // Also get worker queue status
-        if (audioWorkerRef.current) {
-            audioWorkerRef.current.postMessage({ type: 'GET_QUEUE_STATUS' });
-        }
+        // Get worker queue status for all VFOs
+        Object.values(vfoWorkersRef.current).forEach(worker => {
+            if (worker) {
+                worker.postMessage({ type: 'GET_QUEUE_STATUS' });
+            }
+        });
 
         return {
             enabled: audioEnabled,
             volume: volume,
             contextState: audioContextRef.current?.state || 'closed',
-            workerActive: !!audioWorkerRef.current
+            vfoWorkersActive: Object.keys(vfoWorkersRef.current).length,
+            vfoMuted: { ...vfoMutedRef.current },
+            vfoVolumes: { ...vfoVolumeRef.current }
         };
     }, [audioEnabled, volume]);
 
-    // Get browser audio buffer length in seconds
-    const getAudioBufferLength = useCallback(() => {
+    // Get browser audio buffer length in seconds (per VFO or max across all)
+    const getAudioBufferLength = useCallback((vfoNumber = null) => {
         if (!audioContextRef.current) {
             return 0;
         }
         const currentTime = audioContextRef.current.currentTime;
-        const bufferLength = Math.max(0, nextPlayTimeRef.current - currentTime);
-        return bufferLength;
+
+        if (vfoNumber !== null) {
+            // Get buffer length for specific VFO
+            const bufferLength = Math.max(0, vfoNextPlayTimeRef.current[vfoNumber] - currentTime);
+            return bufferLength;
+        } else {
+            // Get max buffer length across all VFOs
+            let maxBufferLength = 0;
+            for (let i = 1; i <= 4; i++) {
+                const bufferLength = Math.max(0, vfoNextPlayTimeRef.current[i] - currentTime);
+                maxBufferLength = Math.max(maxBufferLength, bufferLength);
+            }
+            return maxBufferLength;
+        }
     }, []);
 
     // Register flush callback for use by middleware
@@ -263,10 +371,13 @@ export const AudioProvider = ({ children }) => {
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (audioWorkerRef.current) {
-                audioWorkerRef.current.postMessage({ type: 'CLEAR_QUEUE' });
-                audioWorkerRef.current.terminate();
-            }
+            // Terminate all VFO workers
+            Object.values(vfoWorkersRef.current).forEach(worker => {
+                if (worker) {
+                    worker.postMessage({ type: 'CLEAR_QUEUE' });
+                    worker.terminate();
+                }
+            });
             if (audioContextRef.current) {
                 audioContextRef.current.close();
             }
@@ -279,11 +390,13 @@ export const AudioProvider = ({ children }) => {
         initializeAudio,
         playAudioSamples,
         setAudioVolume,
+        setVfoMute,
+        setVfoVolume,
         stopAudio,
         getAudioState,
         flushAudioBuffers,
         getAudioBufferLength
-    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, stopAudio, getAudioState, flushAudioBuffers, getAudioBufferLength]);
+    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, setVfoMute, setVfoVolume, stopAudio, getAudioState, flushAudioBuffers, getAudioBufferLength]);
 
     return (
         <AudioContext.Provider value={value}>

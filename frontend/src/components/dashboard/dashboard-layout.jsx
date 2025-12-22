@@ -59,7 +59,7 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import { useTranslation } from 'react-i18next';
 import { setIsEditing } from "./dashboard-slice.jsx";
-import { setStreamingVFO } from "../waterfall/vfo-slice.jsx";
+import { addStreamingVFO, removeStreamingVFO } from "../waterfall/vfo-slice.jsx";
 import WakeLockStatus from "./wake-lock-icon.jsx";
 import ConnectionStatus from "./connection-popover.jsx";
 import Tooltip from "@mui/material/Tooltip";
@@ -445,8 +445,7 @@ export default function Layout() {
 
     // Use the audio context
     const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
-    const streamingTimeoutRef = useRef(null);
-    const currentStreamingVFORef = useRef(null);
+    const streamingTimeoutsRef = useRef({}); // Track per-VFO timeouts
 
     // Update navigation when language changes or state changes
     React.useEffect(() => {
@@ -476,21 +475,18 @@ export default function Layout() {
                 const vfoNumber = data.vfo?.vfo_number;
 
                 if (vfoNumber !== undefined) {
-                    // Only dispatch if VFO actually changed
-                    if (currentStreamingVFORef.current !== vfoNumber) {
-                        currentStreamingVFORef.current = vfoNumber;
-                        dispatch(setStreamingVFO(vfoNumber));
+                    // Clear previous timeout for this VFO
+                    if (streamingTimeoutsRef.current[vfoNumber]) {
+                        clearTimeout(streamingTimeoutsRef.current[vfoNumber]);
                     }
 
-                    // Clear previous timeout
-                    if (streamingTimeoutRef.current) {
-                        clearTimeout(streamingTimeoutRef.current);
-                    }
+                    // Mark this VFO as streaming
+                    dispatch(addStreamingVFO(vfoNumber));
 
-                    // Set timeout to clear streaming state after 500ms of no audio
-                    streamingTimeoutRef.current = setTimeout(() => {
-                        currentStreamingVFORef.current = null;
-                        dispatch(setStreamingVFO(null));
+                    // Set timeout to remove this VFO from streaming after 500ms of no audio
+                    streamingTimeoutsRef.current[vfoNumber] = setTimeout(() => {
+                        delete streamingTimeoutsRef.current[vfoNumber];
+                        dispatch(removeStreamingVFO(vfoNumber));
                     }, 500);
                 }
 
@@ -502,10 +498,11 @@ export default function Layout() {
             if (socket) {
                 socket.off("audio-data");
             }
-            // Clear timeout on cleanup
-            if (streamingTimeoutRef.current) {
-                clearTimeout(streamingTimeoutRef.current);
-            }
+            // Clear all VFO timeouts on cleanup
+            Object.values(streamingTimeoutsRef.current).forEach(timeout => {
+                clearTimeout(timeout);
+            });
+            streamingTimeoutsRef.current = {};
         };
     }, [socket, playAudioSamples, dispatch]);
 

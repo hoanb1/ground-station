@@ -8,7 +8,7 @@ class AudioProcessor {
 
     processAudioData(audioData) {
         try {
-            const { samples, sample_rate, channels = 1 } = audioData;
+            const { samples, sample_rate, channels = 1, vfo } = audioData;
 
             if (!samples || samples.length === 0) {
                 return null;
@@ -25,6 +25,7 @@ class AudioProcessor {
                 samples: normalizedSamples,
                 sample_rate,
                 channels,
+                vfo_number: vfo?.vfo_number, // Preserve VFO number for routing
                 duration: samples.length / sample_rate,
                 timestamp: Date.now()
             };

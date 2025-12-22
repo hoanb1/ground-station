@@ -30,6 +30,7 @@ import {
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import CloseIcon from '@mui/icons-material/Close';
@@ -43,6 +44,7 @@ import { useSelector } from 'react-redux';
 import TransmittersTable from '../satellites/transmitters-table.jsx';
 import { isLockedBandwidth, getDecoderConfig, getDecoderParameters, normalizeTransmitterMode } from './vfo-config.js';
 import DecoderParamsDialog from './decoder-params-dialog.jsx';
+import { useAudio } from '../dashboard/audio-provider.jsx';
 
 const BANDWIDTHS = {
     "500": "500 Hz",
@@ -92,6 +94,56 @@ const VfoAccordion = ({
     const [decoderParamsDialogOpen, setDecoderParamsDialogOpen] = React.useState(false);
     const [decoderParamsVfoIndex, setDecoderParamsVfoIndex] = React.useState(null);
 
+    // Get audio controls for VFO muting and buffer monitoring
+    const { setVfoMute, getAudioBufferLength } = useAudio();
+
+    // Track mute state for each VFO (0-3, but UI uses 1-4)
+    const [vfoMuted, setVfoMuted] = React.useState({
+        1: false,
+        2: false,
+        3: false,
+        4: false
+    });
+
+    // Track audio buffer length per VFO
+    const [vfoBufferLengths, setVfoBufferLengths] = React.useState({
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0
+    });
+
+    // Update buffer lengths every 500ms
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            const newBufferLengths = {};
+            for (let i = 1; i <= 4; i++) {
+                newBufferLengths[i] = getAudioBufferLength(i);
+            }
+            setVfoBufferLengths(newBufferLengths);
+        }, 500);
+        return () => clearInterval(interval);
+    }, [getAudioBufferLength]);
+
+    // Handle VFO mute toggle
+    const handleVfoMuteToggle = (vfoIndex) => {
+        console.log('Mute button clicked for VFO', vfoIndex, 'Current state:', vfoMuted[vfoIndex]);
+        const newMutedState = !vfoMuted[vfoIndex];
+        console.log('Setting VFO', vfoIndex, 'to muted:', newMutedState);
+        setVfoMuted(prev => ({
+            ...prev,
+            [vfoIndex]: newMutedState
+        }));
+        // Call audio provider to mute/unmute
+        // Backend sends vfo_number as 1-4, which matches our vfoIndex
+        console.log('Calling setVfoMute with VFO number:', vfoIndex, 'muted:', newMutedState);
+        if (setVfoMute) {
+            setVfoMute(vfoIndex, newMutedState);
+        } else {
+            console.error('setVfoMute is not available from audio context');
+        }
+    };
+
     // Get doppler-corrected transmitters from Redux state (includes alive field)
     const transmitters = useSelector(state => state.targetSatTrack.rigData.transmitters || []);
 
@@ -100,8 +152,8 @@ const VfoAccordion = ({
     const satelliteTransmitters = useSelector(state => state.targetSatTrack.satelliteData?.transmitters || []);
     const targetSatelliteName = satelliteDetails?.name || '';
 
-    // Get streaming VFO from Redux state
-    const streamingVFO = useSelector(state => state.vfo.streamingVFO);
+    // Get streaming VFOs from Redux state (array of currently streaming VFO numbers)
+    const streamingVFOs = useSelector(state => state.vfo.streamingVFOs);
 
     // Get active decoders from Redux state
     const activeDecoders = useSelector(state => state.decoders.active || {});
@@ -290,7 +342,7 @@ const VfoAccordion = ({
                                             }}
                                         />
                                     )}
-                                    {streamingVFO === (index + 1) && (
+                                    {streamingVFOs.includes(index + 1) && (
                                         <VolumeUpIcon
                                             sx={{
                                                 position: 'absolute',
@@ -349,8 +401,8 @@ const VfoAccordion = ({
                                 <FormControlLabel
                                     control={
                                         <Switch
-                                            checked={selectedVFO === vfoIndex}
-                                            onChange={(e) => onVFOListenChange(vfoIndex, e.target.checked)}
+                                            checked={!vfoMuted[vfoIndex]}
+                                            onChange={(e) => handleVfoMuteToggle(vfoIndex)}
                                             disabled={!vfoActive[vfoIndex]}
                                         />
                                     }
@@ -358,6 +410,69 @@ const VfoAccordion = ({
                                     sx={{mt: 0, ml: 0}}
                                 />
                             </Box>
+
+                            {/* Audio Buffer Display */}
+                            <Box sx={{ mt: 1, mb: 1, opacity: vfoActive[vfoIndex] ? 1 : 0.4 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Audio Buffer
+                                    </Typography>
+                                    <Typography variant="caption" sx={{
+                                        fontFamily: 'monospace',
+                                        color: vfoActive[vfoIndex] ? (() => {
+                                            const bufferMs = vfoBufferLengths[vfoIndex] * 1000;
+                                            if (bufferMs >= 100 && bufferMs <= 1000) return '#4caf50'; // Green
+                                            if (bufferMs < 100 || bufferMs > 1000) return '#ff9800'; // Orange
+                                            return '#f44336'; // Red
+                                        })() : 'text.disabled'
+                                    }}>
+                                        {vfoActive[vfoIndex] ? (vfoBufferLengths[vfoIndex] * 1000).toFixed(0) : '—'} ms
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ position: 'relative', height: 6 }}>
+                                    {/* Background track */}
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        width: '100%',
+                                        height: '100%',
+                                        backgroundColor: 'rgba(128, 128, 128, 0.2)',
+                                        borderRadius: 1,
+                                    }} />
+                                    {/* Green zone (100-1000ms) */}
+                                    {vfoActive[vfoIndex] && (
+                                        <Box sx={{
+                                            position: 'absolute',
+                                            left: `${(100 / 1500) * 100}%`,
+                                            width: `${((1000 - 100) / 1500) * 100}%`,
+                                            height: '100%',
+                                            backgroundColor: 'rgba(76, 175, 80, 0.3)',
+                                            borderRadius: 1,
+                                        }} />
+                                    )}
+                                    {/* Indicator dot */}
+                                    {vfoActive[vfoIndex] && (
+                                        <Box sx={{
+                                            position: 'absolute',
+                                            left: `${Math.min((vfoBufferLengths[vfoIndex] * 1000 / 1500) * 100, 100)}%`,
+                                            top: '50%',
+                                            width: 8,
+                                            height: 8,
+                                            backgroundColor: (() => {
+                                                const bufferMs = vfoBufferLengths[vfoIndex] * 1000;
+                                                if (bufferMs >= 100 && bufferMs <= 1000) return '#4caf50';
+                                                if (bufferMs < 100 || bufferMs > 1000) return '#ff9800';
+                                                return '#f44336';
+                                            })(),
+                                            borderRadius: '50%',
+                                            transform: 'translate(-50%, -50%)',
+                                            border: '1px solid',
+                                            borderColor: 'background.paper',
+                                            boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                                        }} />
+                                    )}
+                                </Box>
+                            </Box>
+
                             {/* Frequency Display */}
                             <Box sx={{
                                 mt: 2,
