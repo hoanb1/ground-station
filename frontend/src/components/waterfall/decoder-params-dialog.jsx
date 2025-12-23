@@ -55,7 +55,7 @@ const DecoderParamsDialog = ({
     }
 
     const decoderParams = getDecoderParameters(decoder);
-    const parametersEnabled = vfo.parametersEnabled ?? true; // Default to enabled
+    const parametersEnabled = vfo.parametersEnabled ?? false; // Default to disabled
 
     return (
         <Dialog
