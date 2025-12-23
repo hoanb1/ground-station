@@ -94,6 +94,8 @@ const VfoAccordion = ({
     const [transmittersDialogOpen, setTransmittersDialogOpen] = React.useState(false);
     const [decoderParamsDialogOpen, setDecoderParamsDialogOpen] = React.useState(false);
     const [decoderParamsVfoIndex, setDecoderParamsVfoIndex] = React.useState(null);
+    const [transcriptionParamsDialogOpen, setTranscriptionParamsDialogOpen] = React.useState(false);
+    const [transcriptionParamsVfoIndex, setTranscriptionParamsVfoIndex] = React.useState(null);
 
     // Get audio controls for VFO muting, buffer monitoring, and audio level
     const { setVfoMute, getAudioBufferLength, getVfoAudioLevel } = useAudio();
@@ -837,171 +839,6 @@ const VfoAccordion = ({
                                     </Link>
                                 </Box>
                             )}
-
-                            {/* Transcription Section - Always visible */}
-                            <Box sx={{
-                                mt: 1.5,
-                                p: 1.5,
-                                backgroundColor: 'rgba(33, 150, 243, 0.05)',
-                                borderRadius: 1,
-                                border: '1px solid rgba(33, 150, 243, 0.2)'
-                            }}>
-                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={vfoMarkers[vfoIndex]?.transcriptionEnabled || false}
-                                                onChange={(e) => onTranscriptionToggle && onTranscriptionToggle(vfoIndex, e.target.checked)}
-                                                disabled={!vfoActive[vfoIndex] || !geminiConfigured}
-                                            />
-                                        }
-                                        label={
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                {/* <TranscribeIcon fontSize="small" /> */}
-                                                {t('vfo.transcribe', 'Transcribe')}
-                                            </Box>
-                                        }
-                                        sx={{mt: 0, ml: 0}}
-                                    />
-                                    {!geminiConfigured && (
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                            {t('vfo.configure_gemini', '(Configure Gemini API in Settings)')}
-                                        </Typography>
-                                    )}
-                                </Box>
-
-                                <FormControl size="small" sx={{ minWidth: 120, width: '100%' }}>
-                                        <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.source_language', 'Source Language')}</InputLabel>
-                                        <Select
-                                            variant={'outlined'}
-                                            value={vfoMarkers[vfoIndex]?.transcriptionLanguage || 'auto'}
-                                            label={t('vfo.source_language', 'Source Language')}
-                                            onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionLanguage: e.target.value })}
-                                            disabled={!vfoMarkers[vfoIndex]?.transcriptionEnabled || !geminiConfigured}
-                                            sx={{ fontSize: '0.8rem' }}
-                                        >
-                                            <MenuItem value="auto" sx={{ fontSize: '0.8rem' }}>🌐 {t('vfo.languages.auto', 'Auto-detect')}</MenuItem>
-                                            <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 {t('vfo.languages.en', 'English')}</MenuItem>
-                                            <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 {t('vfo.languages.el', 'Greek')}</MenuItem>
-                                            <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 {t('vfo.languages.es', 'Spanish')}</MenuItem>
-                                            <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>🇫🇷 {t('vfo.languages.fr', 'French')}</MenuItem>
-                                            <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>🇩🇪 {t('vfo.languages.de', 'German')}</MenuItem>
-                                            <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>🇮🇹 {t('vfo.languages.it', 'Italian')}</MenuItem>
-                                            <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>🇵🇹 {t('vfo.languages.pt', 'Portuguese')}</MenuItem>
-                                            <MenuItem value="pt-BR" sx={{ fontSize: '0.8rem' }}>🇧🇷 {t('vfo.languages.pt-BR', 'Portuguese (Brazil)')}</MenuItem>
-                                            <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>🇷🇺 {t('vfo.languages.ru', 'Russian')}</MenuItem>
-                                            <MenuItem value="uk" sx={{ fontSize: '0.8rem' }}>🇺🇦 {t('vfo.languages.uk', 'Ukrainian')}</MenuItem>
-                                            <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>🇯🇵 {t('vfo.languages.ja', 'Japanese')}</MenuItem>
-                                            <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>🇨🇳 {t('vfo.languages.zh', 'Chinese')}</MenuItem>
-                                            <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 {t('vfo.languages.ar', 'Arabic')}</MenuItem>
-                                            <MenuItem value="tl" sx={{ fontSize: '0.8rem' }}>🇵🇭 {t('vfo.languages.tl', 'Filipino')}</MenuItem>
-                                            <MenuItem value="tr" sx={{ fontSize: '0.8rem' }}>🇹🇷 {t('vfo.languages.tr', 'Turkish')}</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                    <FormControl size="small" sx={{ minWidth: 120, width: '100%', mt: 1 }}>
-                                        <InputLabel sx={{ fontSize: '0.8rem' }}>{t('vfo.translate_to', 'Translate To')}</InputLabel>
-                                        <Select
-                                            variant={'outlined'}
-                                            value={vfoMarkers[vfoIndex]?.transcriptionTranslateTo || 'none'}
-                                            label={t('vfo.translate_to', 'Translate To')}
-                                            onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionTranslateTo: e.target.value })}
-                                            disabled={!vfoMarkers[vfoIndex]?.transcriptionEnabled || !geminiConfigured}
-                                            sx={{ fontSize: '0.8rem' }}
-                                        >
-                                            <MenuItem value="none" sx={{ fontSize: '0.8rem' }}>⭕ {t('vfo.languages.none', 'No Translation')}</MenuItem>
-                                            <MenuItem value="en" sx={{ fontSize: '0.8rem' }}>🇬🇧 {t('vfo.languages.en', 'English')}</MenuItem>
-                                            <MenuItem value="el" sx={{ fontSize: '0.8rem' }}>🇬🇷 {t('vfo.languages.el', 'Greek')}</MenuItem>
-                                            <MenuItem value="es" sx={{ fontSize: '0.8rem' }}>🇪🇸 {t('vfo.languages.es', 'Spanish')}</MenuItem>
-                                            <MenuItem value="fr" sx={{ fontSize: '0.8rem' }}>🇫🇷 {t('vfo.languages.fr', 'French')}</MenuItem>
-                                            <MenuItem value="de" sx={{ fontSize: '0.8rem' }}>🇩🇪 {t('vfo.languages.de', 'German')}</MenuItem>
-                                            <MenuItem value="it" sx={{ fontSize: '0.8rem' }}>🇮🇹 {t('vfo.languages.it', 'Italian')}</MenuItem>
-                                            <MenuItem value="pt" sx={{ fontSize: '0.8rem' }}>🇵🇹 {t('vfo.languages.pt', 'Portuguese')}</MenuItem>
-                                            <MenuItem value="pt-BR" sx={{ fontSize: '0.8rem' }}>🇧🇷 {t('vfo.languages.pt-BR', 'Portuguese (Brazil)')}</MenuItem>
-                                            <MenuItem value="ru" sx={{ fontSize: '0.8rem' }}>🇷🇺 {t('vfo.languages.ru', 'Russian')}</MenuItem>
-                                            <MenuItem value="uk" sx={{ fontSize: '0.8rem' }}>🇺🇦 {t('vfo.languages.uk', 'Ukrainian')}</MenuItem>
-                                            <MenuItem value="ja" sx={{ fontSize: '0.8rem' }}>🇯🇵 {t('vfo.languages.ja', 'Japanese')}</MenuItem>
-                                            <MenuItem value="zh" sx={{ fontSize: '0.8rem' }}>🇨🇳 {t('vfo.languages.zh', 'Chinese')}</MenuItem>
-                                            <MenuItem value="ar" sx={{ fontSize: '0.8rem' }}>🇸🇦 {t('vfo.languages.ar', 'Arabic')}</MenuItem>
-                                            <MenuItem value="tl" sx={{ fontSize: '0.8rem' }}>🇵🇭 {t('vfo.languages.tl', 'Filipino')}</MenuItem>
-                                            <MenuItem value="tr" sx={{ fontSize: '0.8rem' }}>🇹🇷 {t('vfo.languages.tr', 'Turkish')}</MenuItem>
-                                        </Select>
-                                    </FormControl>
-
-                                    {/* Transcription Stats Display */}
-                                    {(() => {
-                                        const decoderInfo = getVFODecoderInfo(vfoIndex);
-                                        // Check if this is a transcription decoder
-                                        if (!decoderInfo || decoderInfo.decoder_type !== 'transcription') return null;
-
-                                        const info = decoderInfo.info || {};
-                                        const isConnected = decoderInfo.status === 'transcribing';
-                                        const successRate = info.transcriptions_sent > 0
-                                            ? Math.round((info.transcriptions_received / info.transcriptions_sent) * 100)
-                                            : 0;
-
-                                        return (
-                                            <Box sx={{
-                                                mt: 1.5,
-                                                px: 1,
-                                                py: 0.75,
-                                                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                                                borderRadius: 0.5,
-                                                border: '1px solid',
-                                                borderColor: isConnected ? 'success.dark' : 'error.dark',
-                                            }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                    <Box
-                                                        sx={{
-                                                            width: 8,
-                                                            height: 8,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: isConnected ? 'success.main' : 'error.main',
-                                                            boxShadow: (theme) => isConnected
-                                                                ? `0 0 6px ${theme.palette.success.main}99`
-                                                                : `0 0 6px ${theme.palette.error.main}99`,
-                                                        }}
-                                                    />
-                                                    <Typography variant="caption" sx={{
-                                                        fontSize: '0.7rem',
-                                                        fontFamily: 'monospace',
-                                                        color: 'text.secondary',
-                                                        fontWeight: 600
-                                                    }}>
-                                                        {isConnected ? 'Transcribing' : 'Disconnected'}
-                                                    </Typography>
-                                                </Box>
-                                                <Typography variant="caption" sx={{
-                                                    fontSize: '0.65rem',
-                                                    fontFamily: 'monospace',
-                                                    color: 'text.secondary',
-                                                    display: 'block'
-                                                }}>
-                                                    S:{info.transcriptions_sent || 0} • R:{info.transcriptions_received || 0} • {successRate}%
-                                                </Typography>
-                                                {info.errors > 0 && (
-                                                    <Typography variant="caption" sx={{
-                                                        fontSize: '0.65rem',
-                                                        fontFamily: 'monospace',
-                                                        color: 'error.main',
-                                                        display: 'block'
-                                                    }}>
-                                                        Errors: {info.errors}
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                        );
-                                    })()}
-
-                                <Box sx={{
-                                    mt: 1,
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    fontSize: '0.75rem',
-                                    color: 'text.secondary'
-                                }}>
-                                    ✨ Powered by Gemini
-                                </Box>
-                            </Box>
                         </Box>
 
                         {vfoMarkers[vfoIndex]?.lockedTransmitterId && vfoMarkers[vfoIndex]?.lockedTransmitterId !== 'none' && (
@@ -1200,6 +1037,148 @@ const VfoAccordion = ({
 
                         <Box sx={{ mt: 2 }}>
                             <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 600 }}>
+                                {t('vfo.transcription_mode', 'Transcription')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.disabled', fontSize: '0.7rem' }}>
+                                {t('vfo.transcription_help', 'Transcribe audio using AI')}
+                            </Typography>
+                            <ToggleButtonGroup
+                                value={vfoMarkers[vfoIndex]?.transcriptionEnabled ? 'gemini' : 'none'}
+                                exclusive
+                                disabled={!vfoActive[vfoIndex] || !geminiConfigured}
+                                onChange={(event, newValue) => {
+                                    if (newValue !== null) {
+                                        const enabled = newValue === 'gemini';
+                                        onTranscriptionToggle && onTranscriptionToggle(vfoIndex, enabled);
+                                    }
+                                }}
+                                sx={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: 0.5,
+                                    '& .MuiToggleButton-root': {
+                                        height: '28px',
+                                        minWidth: '50px',
+                                        padding: '4px 8px',
+                                        fontSize: '0.75rem',
+                                        border: '1px solid',
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
+                                        borderRadius: '4px',
+                                        color: 'text.secondary',
+                                        textAlign: 'center',
+                                        textTransform: 'none',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        transition: 'all 0.2s ease-in-out',
+                                        '&.Mui-selected': {
+                                            backgroundColor: 'primary.main',
+                                            color: 'primary.contrastText',
+                                            borderColor: 'primary.main',
+                                            fontWeight: 600,
+                                            boxShadow: '0 0 8px rgba(33, 150, 243, 0.4)',
+                                            '&:hover': {
+                                                backgroundColor: 'primary.dark',
+                                                boxShadow: '0 0 12px rgba(33, 150, 243, 0.6)',
+                                            }
+                                        },
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            borderColor: 'rgba(255, 255, 255, 0.4)',
+                                        },
+                                        '&.Mui-disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                            opacity: 0.5,
+                                        }
+                                    }
+                                }}
+                            >
+                                <ToggleButton value="none">{t('vfo.transcription_modes.none', 'None')}</ToggleButton>
+                                <ToggleButton value="gemini">{t('vfo.transcription_modes.gemini', 'Gemini AI')}</ToggleButton>
+                            </ToggleButtonGroup>
+
+                            {/* Transcription Parameters Button */}
+                            <Box sx={{ mt: 1.5, width: '100%' }}>
+                                <Link
+                                    component="button"
+                                    variant="body2"
+                                    disabled={!vfoActive[vfoIndex] || !vfoMarkers[vfoIndex]?.transcriptionEnabled || !geminiConfigured}
+                                    onClick={() => {
+                                        setTranscriptionParamsVfoIndex(vfoIndex);
+                                        setTranscriptionParamsDialogOpen(true);
+                                    }}
+                                    sx={{
+                                        width: '100%',
+                                        fontSize: '0.8rem',
+                                        color: 'text.primary',
+                                        textDecoration: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 0.75,
+                                        py: 0.75,
+                                        px: 1.5,
+                                        borderRadius: 1,
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        transition: 'all 0.2s ease',
+                                        '&:hover:not(.Mui-disabled)': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                        },
+                                        '&.Mui-disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                            borderColor: 'rgba(255, 255, 255, 0.05)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                            opacity: 0.5,
+                                            cursor: 'not-allowed',
+                                        },
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    <SettingsIcon sx={{ fontSize: '1rem', color: 'text.secondary' }} />
+                                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                        {(() => {
+                                            const vfo = vfoMarkers[vfoIndex];
+                                            if (!vfo?.transcriptionEnabled) {
+                                                return '- no transcription -';
+                                            }
+
+                                            const sourceLang = vfo.transcriptionLanguage || 'auto';
+                                            const translateTo = vfo.transcriptionTranslateTo || 'none';
+
+                                            // Language code to short name mapping
+                                            const langMap = {
+                                                'auto': 'Auto',
+                                                'en': 'EN',
+                                                'el': 'EL',
+                                                'es': 'ES',
+                                                'fr': 'FR',
+                                                'de': 'DE',
+                                                'it': 'IT',
+                                                'pt': 'PT',
+                                                'pt-BR': 'PT-BR',
+                                                'ru': 'RU',
+                                                'uk': 'UK',
+                                                'ja': 'JA',
+                                                'zh': 'ZH',
+                                                'ar': 'AR',
+                                                'tl': 'TL',
+                                                'tr': 'TR',
+                                            };
+
+                                            const sourceDisplay = langMap[sourceLang] || sourceLang.toUpperCase();
+                                            const translateDisplay = translateTo === 'none' ? 'No Trans' : langMap[translateTo] || translateTo.toUpperCase();
+
+                                            return `${sourceDisplay} → ${translateDisplay}`;
+                                        })()}
+                                    </Box>
+                                </Link>
+                            </Box>
+                        </Box>
+
+                        <Box sx={{ mt: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 600 }}>
                                 {t('vfo.data_decoders', 'Data Decoders')}
                             </Typography>
                             <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.disabled', fontSize: '0.7rem' }}>
@@ -1213,7 +1192,12 @@ const VfoAccordion = ({
                                     if (newValue !== null) {
                                         // When selecting a decoder (not none), set audio demod to NONE
                                         // Backend will start appropriate internal demodulator as needed
+                                        // Also disable transcription when a decoder is selected
                                         if (newValue !== 'none') {
+                                            // Disable transcription when selecting a decoder
+                                            if (vfoMarkers[vfoIndex]?.transcriptionEnabled) {
+                                                onTranscriptionToggle && onTranscriptionToggle(vfoIndex, false);
+                                            }
                                             const updates = { decoder: newValue, mode: 'none' };
 
                                             // Set bandwidth based on decoder type (using vfo-config.js defaults)
@@ -1498,6 +1482,176 @@ const VfoAccordion = ({
                 vfoActive={vfoActive}
                 onVFOPropertyChange={onVFOPropertyChange}
             />
+
+            {/* Transcription Parameters Dialog */}
+            <Dialog
+                open={transcriptionParamsDialogOpen}
+                onClose={() => setTranscriptionParamsDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        backgroundColor: 'background.elevated',
+                    }
+                }}
+            >
+                <DialogTitle sx={{ backgroundColor: 'background.elevated', color: 'text.primary' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6">
+                            Transcription Parameters
+                        </Typography>
+                        <IconButton onClick={() => setTranscriptionParamsDialogOpen(false)} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.elevated' }}>
+                    {transcriptionParamsVfoIndex && vfoMarkers[transcriptionParamsVfoIndex] && (
+                        <Box>
+                            {!geminiConfigured && (
+                                <Alert severity="warning" sx={{ mb: 2 }}>
+                                    {t('vfo.configure_gemini', 'Configure Gemini API in Settings to enable transcription')}
+                                </Alert>
+                            )}
+
+                            <Box sx={{ mb: 2.5 }}>
+                                <FormControl fullWidth size="small" variant="filled">
+                                    <InputLabel>{t('vfo.source_language', 'Source Language')}</InputLabel>
+                                    <Select
+                                        value={vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionLanguage || 'auto'}
+                                        label={t('vfo.source_language', 'Source Language')}
+                                        onChange={(e) => onVFOPropertyChange(transcriptionParamsVfoIndex, { transcriptionLanguage: e.target.value })}
+                                        disabled={!vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionEnabled || !geminiConfigured}
+                                        sx={{ fontSize: '0.875rem' }}
+                                    >
+                                        <MenuItem value="auto" sx={{ fontSize: '0.875rem' }}>🌐 {t('vfo.languages.auto', 'Auto-detect')}</MenuItem>
+                                        <MenuItem value="en" sx={{ fontSize: '0.875rem' }}>🇬🇧 {t('vfo.languages.en', 'English')}</MenuItem>
+                                        <MenuItem value="el" sx={{ fontSize: '0.875rem' }}>🇬🇷 {t('vfo.languages.el', 'Greek')}</MenuItem>
+                                        <MenuItem value="es" sx={{ fontSize: '0.875rem' }}>🇪🇸 {t('vfo.languages.es', 'Spanish')}</MenuItem>
+                                        <MenuItem value="fr" sx={{ fontSize: '0.875rem' }}>🇫🇷 {t('vfo.languages.fr', 'French')}</MenuItem>
+                                        <MenuItem value="de" sx={{ fontSize: '0.875rem' }}>🇩🇪 {t('vfo.languages.de', 'German')}</MenuItem>
+                                        <MenuItem value="it" sx={{ fontSize: '0.875rem' }}>🇮🇹 {t('vfo.languages.it', 'Italian')}</MenuItem>
+                                        <MenuItem value="pt" sx={{ fontSize: '0.875rem' }}>🇵🇹 {t('vfo.languages.pt', 'Portuguese')}</MenuItem>
+                                        <MenuItem value="pt-BR" sx={{ fontSize: '0.875rem' }}>🇧🇷 {t('vfo.languages.pt-BR', 'Portuguese (Brazil)')}</MenuItem>
+                                        <MenuItem value="ru" sx={{ fontSize: '0.875rem' }}>🇷🇺 {t('vfo.languages.ru', 'Russian')}</MenuItem>
+                                        <MenuItem value="uk" sx={{ fontSize: '0.875rem' }}>🇺🇦 {t('vfo.languages.uk', 'Ukrainian')}</MenuItem>
+                                        <MenuItem value="ja" sx={{ fontSize: '0.875rem' }}>🇯🇵 {t('vfo.languages.ja', 'Japanese')}</MenuItem>
+                                        <MenuItem value="zh" sx={{ fontSize: '0.875rem' }}>🇨🇳 {t('vfo.languages.zh', 'Chinese')}</MenuItem>
+                                        <MenuItem value="ar" sx={{ fontSize: '0.875rem' }}>🇸🇦 {t('vfo.languages.ar', 'Arabic')}</MenuItem>
+                                        <MenuItem value="tl" sx={{ fontSize: '0.875rem' }}>🇵🇭 {t('vfo.languages.tl', 'Filipino')}</MenuItem>
+                                        <MenuItem value="tr" sx={{ fontSize: '0.875rem' }}>🇹🇷 {t('vfo.languages.tr', 'Turkish')}</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Box>
+
+                            <Box sx={{ mb: 2.5 }}>
+                                <FormControl fullWidth size="small" variant="filled">
+                                    <InputLabel>{t('vfo.translate_to', 'Translate To')}</InputLabel>
+                                    <Select
+                                        value={vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionTranslateTo || 'none'}
+                                        label={t('vfo.translate_to', 'Translate To')}
+                                        onChange={(e) => onVFOPropertyChange(transcriptionParamsVfoIndex, { transcriptionTranslateTo: e.target.value })}
+                                        disabled={!vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionEnabled || !geminiConfigured}
+                                        sx={{ fontSize: '0.875rem' }}
+                                    >
+                                        <MenuItem value="none" sx={{ fontSize: '0.875rem' }}>⭕ {t('vfo.languages.none', 'No Translation')}</MenuItem>
+                                        <MenuItem value="en" sx={{ fontSize: '0.875rem' }}>🇬🇧 {t('vfo.languages.en', 'English')}</MenuItem>
+                                        <MenuItem value="el" sx={{ fontSize: '0.875rem' }}>🇬🇷 {t('vfo.languages.el', 'Greek')}</MenuItem>
+                                        <MenuItem value="es" sx={{ fontSize: '0.875rem' }}>🇪🇸 {t('vfo.languages.es', 'Spanish')}</MenuItem>
+                                        <MenuItem value="fr" sx={{ fontSize: '0.875rem' }}>🇫🇷 {t('vfo.languages.fr', 'French')}</MenuItem>
+                                        <MenuItem value="de" sx={{ fontSize: '0.875rem' }}>🇩🇪 {t('vfo.languages.de', 'German')}</MenuItem>
+                                        <MenuItem value="it" sx={{ fontSize: '0.875rem' }}>🇮🇹 {t('vfo.languages.it', 'Italian')}</MenuItem>
+                                        <MenuItem value="pt" sx={{ fontSize: '0.875rem' }}>🇵🇹 {t('vfo.languages.pt', 'Portuguese')}</MenuItem>
+                                        <MenuItem value="pt-BR" sx={{ fontSize: '0.875rem' }}>🇧🇷 {t('vfo.languages.pt-BR', 'Portuguese (Brazil)')}</MenuItem>
+                                        <MenuItem value="ru" sx={{ fontSize: '0.875rem' }}>🇷🇺 {t('vfo.languages.ru', 'Russian')}</MenuItem>
+                                        <MenuItem value="uk" sx={{ fontSize: '0.875rem' }}>🇺🇦 {t('vfo.languages.uk', 'Ukrainian')}</MenuItem>
+                                        <MenuItem value="ja" sx={{ fontSize: '0.875rem' }}>🇯🇵 {t('vfo.languages.ja', 'Japanese')}</MenuItem>
+                                        <MenuItem value="zh" sx={{ fontSize: '0.875rem' }}>🇨🇳 {t('vfo.languages.zh', 'Chinese')}</MenuItem>
+                                        <MenuItem value="ar" sx={{ fontSize: '0.875rem' }}>🇸🇦 {t('vfo.languages.ar', 'Arabic')}</MenuItem>
+                                        <MenuItem value="tl" sx={{ fontSize: '0.875rem' }}>🇵🇭 {t('vfo.languages.tl', 'Filipino')}</MenuItem>
+                                        <MenuItem value="tr" sx={{ fontSize: '0.875rem' }}>🇹🇷 {t('vfo.languages.tr', 'Turkish')}</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Box>
+
+                            {/* Transcription Stats Display */}
+                            {(() => {
+                                const decoderInfo = getVFODecoderInfo(transcriptionParamsVfoIndex);
+                                // Check if this is a transcription decoder
+                                if (!decoderInfo || decoderInfo.decoder_type !== 'transcription') return null;
+
+                                const info = decoderInfo.info || {};
+                                const isConnected = decoderInfo.status === 'transcribing';
+                                const successRate = info.transcriptions_sent > 0
+                                    ? Math.round((info.transcriptions_received / info.transcriptions_sent) * 100)
+                                    : 0;
+
+                                return (
+                                    <Box sx={{
+                                        mt: 2,
+                                        px: 2,
+                                        py: 1.5,
+                                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                        borderRadius: 1,
+                                        border: '1px solid',
+                                        borderColor: isConnected ? 'success.dark' : 'error.dark',
+                                    }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 10,
+                                                    height: 10,
+                                                    borderRadius: '50%',
+                                                    backgroundColor: isConnected ? 'success.main' : 'error.main',
+                                                    boxShadow: (theme) => isConnected
+                                                        ? `0 0 8px ${theme.palette.success.main}99`
+                                                        : `0 0 8px ${theme.palette.error.main}99`,
+                                                }}
+                                            />
+                                            <Typography variant="body2" sx={{
+                                                fontFamily: 'monospace',
+                                                color: 'text.primary',
+                                                fontWeight: 600
+                                            }}>
+                                                {isConnected ? 'Transcribing' : 'Disconnected'}
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="body2" sx={{
+                                            fontFamily: 'monospace',
+                                            color: 'text.secondary',
+                                            display: 'block'
+                                        }}>
+                                            Sent: {info.transcriptions_sent || 0} • Received: {info.transcriptions_received || 0} • Success Rate: {successRate}%
+                                        </Typography>
+                                        {info.errors > 0 && (
+                                            <Typography variant="body2" sx={{
+                                                fontFamily: 'monospace',
+                                                color: 'error.main',
+                                                display: 'block',
+                                                mt: 0.5
+                                            }}>
+                                                Errors: {info.errors}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                );
+                            })()}
+
+                            <Box sx={{
+                                mt: 2,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                fontSize: '0.875rem',
+                                color: 'text.secondary',
+                                gap: 0.5
+                            }}>
+                                ✨ Powered by Gemini
+                            </Box>
+                        </Box>
+                    )}
+                </DialogContent>
+            </Dialog>
         </Accordion>
     );
 };
