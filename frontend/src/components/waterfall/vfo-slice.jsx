@@ -68,6 +68,12 @@ const initialState = {
     maxVFOMarkers: 4,
     selectedVFO: null,
     streamingVFOs: [], // Changed from single to array to support multiple simultaneous streams
+    vfoMuted: {
+        1: false,
+        2: false,
+        3: false,
+        4: false,
+    },
     vfoColors: ['#FF0000', '#207820', '#144bff', '#9e129e'],
     selectedVFOTab: 0,
     errorMessage: null,
@@ -148,6 +154,12 @@ export const vfoSlice = createSlice({
         },
         clearStreamingVFOs(state) {
             state.streamingVFOs = [];
+        },
+        setVfoMuted(state, action) {
+            const { vfoNumber, muted } = action.payload;
+            if (state.vfoMuted[vfoNumber] !== undefined) {
+                state.vfoMuted[vfoNumber] = muted;
+            }
         },
         setVfoActive: (state, action) => {
             const vfoNumber = action.payload;
@@ -254,6 +266,7 @@ export const {
     addStreamingVFO,
     removeStreamingVFO,
     clearStreamingVFOs,
+    setVfoMuted,
     setVfoActive,
     setVfoInactive,
     setSelectedVFOTab,

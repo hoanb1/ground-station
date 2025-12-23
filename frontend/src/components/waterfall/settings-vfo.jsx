@@ -166,6 +166,9 @@ const VfoAccordion = ({
     // Get streaming VFOs from Redux state (array of currently streaming VFO numbers)
     const streamingVFOs = useSelector(state => state.vfo.streamingVFOs);
 
+    // Get muted VFOs from Redux state
+    const vfoMutedRedux = useSelector(state => state.vfo.vfoMuted || {});
+
     // Get active decoders from Redux state
     const activeDecoders = useSelector(state => state.decoders.active || {});
     const currentSessionId = useSelector(state => state.decoders.currentSessionId);
@@ -353,7 +356,7 @@ const VfoAccordion = ({
                                             }}
                                         />
                                     )}
-                                    {streamingVFOs.includes(index + 1) && (
+                                    {streamingVFOs.includes(index + 1) && !vfoMutedRedux[index + 1] && (
                                         <VolumeUpIcon
                                             sx={{
                                                 position: 'absolute',
@@ -361,6 +364,31 @@ const VfoAccordion = ({
                                                 right: -6,
                                                 fontSize: '0.75rem',
                                                 pointerEvents: 'none',
+                                                color: '#00ff00', // Green for playing
+                                            }}
+                                        />
+                                    )}
+                                    {streamingVFOs.includes(index + 1) && vfoMutedRedux[index + 1] && (
+                                        <VolumeOffIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: -2,
+                                                right: -6,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                                color: '#ffa500', // Orange for muted but streaming
+                                            }}
+                                        />
+                                    )}
+                                    {!streamingVFOs.includes(index + 1) && (
+                                        <VolumeOffIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: -2,
+                                                right: -6,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                                color: '#888888', // Gray for no audio
                                             }}
                                         />
                                     )}

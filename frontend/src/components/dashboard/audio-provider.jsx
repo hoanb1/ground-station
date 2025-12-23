@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { useDispatch } from 'react-redux';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { registerFlushCallback, unregisterFlushCallback } from './audio-service.js';
+import { setVfoMuted } from '../waterfall/vfo-slice.jsx';
 
 const AudioContext = createContext({
     audioEnabled: false,
@@ -26,6 +28,8 @@ export const useAudio = () => {
 };
 
 export const AudioProvider = ({ children }) => {
+    const dispatch = useDispatch();
+
     // Audio context for Web Audio API (must stay in main thread)
     const audioContextRef = useRef(null);
     const [audioEnabled, setAudioEnabled] = useState(false);
@@ -300,9 +304,12 @@ export const AudioProvider = ({ children }) => {
             gainNode.gain.value = muted ? 0 : volume * (vfoVolumeRef.current[vfoNumber] || 1.0);
         }
 
+        // Update Redux state so UI can reflect mute status
+        dispatch(setVfoMuted({ vfoNumber, muted }));
+
         // Flush the audio buffer for this VFO when muting/unmuting
         flushAudioBuffers(vfoNumber);
-    }, [volume, flushAudioBuffers]);
+    }, [volume, flushAudioBuffers, dispatch]);
 
     // Stop audio - terminate all VFO workers
     const stopAudio = useCallback(() => {

@@ -83,7 +83,7 @@ export const canvasDrawingUtils = {
         ctx.fill();
     },
 
-    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false, decoderInfo = null, morseText = null, isStreaming = false, bpskOutputs = null) => {
+    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false, decoderInfo = null, morseText = null, isStreaming = false, bpskOutputs = null, isMuted = false) => {
         ctx.font = 'bold 12px Monospace';
         const textMetrics = ctx.measureText(labelText);
 
@@ -129,27 +129,46 @@ export const canvasDrawingUtils = {
         const textY = 17; // Always use same text position
         ctx.fillText(labelText, centerX + textOffset, textY);
 
-        // Draw speaker icon - depends solely on streaming state
-        // Position icon with more padding on the right side
+        // Draw speaker icon with three states (color-coded):
+        // 1. Green speaker with sound waves: Audio streaming and playing (isStreaming && !isMuted)
+        // 2. Orange/amber speaker with X: Audio data available but browser-muted (isStreaming && isMuted)
+        // 3. Gray speaker with X: No audio data (dimmed/grayed out)
         const iconX = centerX + (labelWidth / 2) - 20;
         const iconY = 7;
 
-        if (isStreaming) {
-            // Draw active speaker icon with sound waves (audio is playing)
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            // Speaker body (trapezoid shape) - scaled up
-            ctx.moveTo(iconX, iconY + 3);
-            ctx.lineTo(iconX + 4.5, iconY + 3);
-            ctx.lineTo(iconX + 7.5, iconY);
-            ctx.lineTo(iconX + 7.5, iconY + 12);
-            ctx.lineTo(iconX + 4.5, iconY + 9);
-            ctx.lineTo(iconX, iconY + 9);
-            ctx.closePath();
-            ctx.fill();
+        // Determine icon state and color
+        let iconColor, iconState;
+        if (isStreaming && !isMuted) {
+            // State 1: Audio streaming and playing
+            iconColor = '#00ff00'; // Green
+            iconState = 'playing';
+        } else if (isStreaming && isMuted) {
+            // State 2: Audio available but muted by browser
+            iconColor = '#ffa500'; // Orange/amber
+            iconState = 'muted';
+        } else {
+            // State 3: No audio data
+            iconColor = '#888888'; // Gray (dimmed)
+            iconState = 'no-audio';
+        }
 
-            // Sound waves - scaled up
-            ctx.strokeStyle = '#ffffff';
+        // Draw speaker body (same for all states)
+        ctx.fillStyle = iconColor;
+        ctx.beginPath();
+        // Speaker body (trapezoid shape)
+        ctx.moveTo(iconX, iconY + 3);
+        ctx.lineTo(iconX + 4.5, iconY + 3);
+        ctx.lineTo(iconX + 7.5, iconY);
+        ctx.lineTo(iconX + 7.5, iconY + 12);
+        ctx.lineTo(iconX + 4.5, iconY + 9);
+        ctx.lineTo(iconX, iconY + 9);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw icon details based on state
+        if (iconState === 'playing') {
+            // Draw sound waves for playing state
+            ctx.strokeStyle = iconColor;
             ctx.lineWidth = 1.2;
             ctx.beginPath();
             ctx.arc(iconX + 9, iconY + 6, 3, -Math.PI/4, Math.PI/4);
@@ -158,24 +177,11 @@ export const canvasDrawingUtils = {
             ctx.arc(iconX + 9, iconY + 6, 6, -Math.PI/4, Math.PI/4);
             ctx.stroke();
         } else {
-            // Draw muted speaker icon (with X) - not streaming
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            // Speaker body (trapezoid shape) - scaled up
-            ctx.moveTo(iconX, iconY + 3);
-            ctx.lineTo(iconX + 4.5, iconY + 3);
-            ctx.lineTo(iconX + 7.5, iconY);
-            ctx.lineTo(iconX + 7.5, iconY + 12);
-            ctx.lineTo(iconX + 4.5, iconY + 9);
-            ctx.lineTo(iconX, iconY + 9);
-            ctx.closePath();
-            ctx.fill();
-
-            // Draw smaller X next to the speaker - vertically centered with 1px gap
-            ctx.strokeStyle = '#ffffff';
+            // Draw X for muted or no-audio states
+            ctx.strokeStyle = iconColor;
             ctx.lineWidth = 1.3;
-            const xSize = 2.5; // Half size of the X (smaller)
-            const xCenterX = iconX + 12.5; // 1px gap from speaker edge (7.5 + 1 + offset)
+            const xSize = 2.5; // Half size of the X
+            const xCenterX = iconX + 12.5; // 1px gap from speaker edge
             const xCenterY = iconY + 6;
             ctx.beginPath();
             ctx.moveTo(xCenterX - xSize, xCenterY - xSize);
