@@ -32,6 +32,8 @@ function ConnectionStatus() {
     const [, forceUpdate] = useState(0);
     const systemInfoRef = React.useRef(useSelector(state => state.systemInfo));
 
+    const open = Boolean(anchorEl);
+
     // Update system info ref and force update stats every second (only when popover is open)
     const systemInfo = useSelector(state => state.systemInfo);
     useEffect(() => {
@@ -54,8 +56,6 @@ function ConnectionStatus() {
     const handleClose = () => {
         setAnchorEl(null);
     };
-
-    const open = Boolean(anchorEl);
 
     // Memoize connection color based on transport name
     const connectionColor = React.useMemo(() => {
