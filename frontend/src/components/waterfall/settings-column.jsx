@@ -434,14 +434,16 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         // Use VFO's existing values, fallback to default
         const currentVfo = vfoMarkers[vfoNumber];
         const language = currentVfo?.transcriptionLanguage || 'auto';
+        const translateTo = currentVfo?.transcriptionTranslateTo || 'none';
 
         socket.emit('data_submission', 'toggle-transcription', {
             vfoNumber,
             enabled,
-            language
+            language,
+            translateTo
         }, (response) => {
             if (response.success) {
-                // Update VFO state in Redux - only update enabled flag, preserve language
+                // Update VFO state in Redux - only update enabled flag, preserve language and translateTo
                 dispatch(setVFOProperty({
                     vfoNumber,
                     updates: {
