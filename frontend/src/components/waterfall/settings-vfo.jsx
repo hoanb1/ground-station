@@ -1097,6 +1097,19 @@ const VfoAccordion = ({
                                 <ToggleButton value="gemini">{t('vfo.transcription_modes.gemini', 'Gemini AI')}</ToggleButton>
                             </ToggleButtonGroup>
 
+                            {/* Gemini API Key notification */}
+                            {!geminiConfigured && (
+                                <Typography variant="caption" sx={{
+                                    mt: 0.5,
+                                    display: 'block',
+                                    color: 'text.disabled',
+                                    fontSize: '0.7rem',
+                                    fontStyle: 'italic'
+                                }}>
+                                    {t('vfo.api_key_required', 'API key required in Settings')}
+                                </Typography>
+                            )}
+
                             {/* Transcription Parameters Button */}
                             <Box sx={{ mt: 1.5, width: '100%' }}>
                                 <Link
@@ -1114,7 +1127,7 @@ const VfoAccordion = ({
                                         textDecoration: 'none',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
+                                        justifyContent: 'space-between',
                                         gap: 0.75,
                                         py: 0.75,
                                         px: 1.5,
@@ -1136,8 +1149,8 @@ const VfoAccordion = ({
                                         cursor: 'pointer',
                                     }}
                                 >
-                                    <SettingsIcon sx={{ fontSize: '1rem', color: 'text.secondary' }} />
-                                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                                    <SettingsIcon sx={{ fontSize: '1rem', color: 'text.secondary', flexShrink: 0 }} />
+                                    <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.secondary', flex: 1, textAlign: 'center' }}>
                                         {(() => {
                                             const vfo = vfoMarkers[vfoIndex];
                                             if (!vfo?.transcriptionEnabled) {
@@ -1146,6 +1159,26 @@ const VfoAccordion = ({
 
                                             const sourceLang = vfo.transcriptionLanguage || 'auto';
                                             const translateTo = vfo.transcriptionTranslateTo || 'none';
+
+                                            // Language code to flag emoji mapping
+                                            const flagMap = {
+                                                'auto': '🌐',
+                                                'en': '🇬🇧',
+                                                'el': '🇬🇷',
+                                                'es': '🇪🇸',
+                                                'fr': '🇫🇷',
+                                                'de': '🇩🇪',
+                                                'it': '🇮🇹',
+                                                'pt': '🇵🇹',
+                                                'pt-BR': '🇧🇷',
+                                                'ru': '🇷🇺',
+                                                'uk': '🇺🇦',
+                                                'ja': '🇯🇵',
+                                                'zh': '🇨🇳',
+                                                'ar': '🇸🇦',
+                                                'tl': '🇵🇭',
+                                                'tr': '🇹🇷',
+                                            };
 
                                             // Language code to short name mapping
                                             const langMap = {
@@ -1167,10 +1200,12 @@ const VfoAccordion = ({
                                                 'tr': 'TR',
                                             };
 
+                                            const sourceFlag = flagMap[sourceLang] || '🏳️';
                                             const sourceDisplay = langMap[sourceLang] || sourceLang.toUpperCase();
+                                            const translateFlag = translateTo === 'none' ? '⭕' : (flagMap[translateTo] || '🏳️');
                                             const translateDisplay = translateTo === 'none' ? 'No Trans' : langMap[translateTo] || translateTo.toUpperCase();
 
-                                            return `${sourceDisplay} → ${translateDisplay}`;
+                                            return `${sourceFlag} ${sourceDisplay} → ${translateFlag} ${translateDisplay}`;
                                         })()}
                                     </Box>
                                 </Link>
@@ -1498,7 +1533,7 @@ const VfoAccordion = ({
                 <DialogTitle sx={{ backgroundColor: 'background.elevated', color: 'text.primary' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Typography variant="h6">
-                            Transcription Parameters
+                            VFO {transcriptionParamsVfoIndex} - Transcription Parameters
                         </Typography>
                         <IconButton onClick={() => setTranscriptionParamsDialogOpen(false)} size="small">
                             <CloseIcon />

@@ -72,7 +72,7 @@ const DecoderParamsDialog = ({
             <DialogTitle sx={{ backgroundColor: 'background.elevated', color: 'text.primary' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6">
-                        {decoder.toUpperCase()} Parameters
+                        VFO {vfoIndex} - {decoder.toUpperCase()} Parameters
                     </Typography>
                     <IconButton onClick={onClose} size="small">
                         <CloseIcon />
