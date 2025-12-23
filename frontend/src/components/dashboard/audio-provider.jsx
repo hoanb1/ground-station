@@ -390,6 +390,25 @@ export const AudioProvider = ({ children }) => {
         };
     }, [flushAudioBuffers]);
 
+    // Automatic buffer monitoring - flush if buffer gets too large
+    useEffect(() => {
+        if (!audioEnabled) return;
+
+        const MAX_BUFFER_SECONDS = 2.0; // Threshold before auto-flush
+
+        const monitorInterval = setInterval(() => {
+            for (let vfoNumber = 1; vfoNumber <= 4; vfoNumber++) {
+                const bufferLength = getAudioBufferLength(vfoNumber);
+                if (bufferLength > MAX_BUFFER_SECONDS) {
+                    console.warn(`VFO ${vfoNumber} buffer too large (${bufferLength.toFixed(2)}s), flushing to prevent lag`);
+                    flushAudioBuffers(vfoNumber);
+                }
+            }
+        }, 500); // Check every 500ms
+
+        return () => clearInterval(monitorInterval);
+    }, [audioEnabled, getAudioBufferLength, flushAudioBuffers]);
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {

@@ -72,6 +72,15 @@ class AudioProcessor {
     }
 
     processQueue() {
+        // Catchup mode: if queue is too large, jump to live audio
+        const MAX_QUEUE_FOR_CATCHUP = 8;
+
+        if (this.audioQueue.length > MAX_QUEUE_FOR_CATCHUP) {
+            // Drop everything except last 2 chunks to get back to live audio
+            console.warn(`Audio queue overrun (${this.audioQueue.length} chunks), jumping to live audio`);
+            this.audioQueue = this.audioQueue.slice(-2);
+        }
+
         // Process all available chunks at once for continuous audio
         const batch = [];
 
