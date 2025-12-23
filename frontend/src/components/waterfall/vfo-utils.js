@@ -547,10 +547,14 @@ export const getVisibleFrequencyRange = (centerFrequency, sampleRate, actualWidt
 };
 
 /**
- * Format frequency to MHz with 3 decimal places
+ * Format frequency to MHz with 6 decimal places, grouped by 3 digits
  * @param {number} freq - Frequency in Hz
- * @returns {string} Formatted frequency
+ * @returns {string} Formatted frequency (e.g., "433.500.000")
  */
 export const formatFrequency = (freq) => {
-    return (freq / 1e6).toFixed(3);
+    const mhz = (freq / 1e6).toFixed(6);
+    const [integer, decimal] = mhz.split('.');
+    // Group decimal part by 3 digits
+    const grouped = decimal.match(/.{1,3}/g).join('.');
+    return `${integer}.${grouped}`;
 };
