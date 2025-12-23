@@ -207,17 +207,17 @@ const VfoAccordion = ({
             return `SF${sf} BW${bwKhz}kHz CR4/${cr + 4}`;
         }
 
-        // Helper to format baudrate compactly (e.g., 1k2db, 9k6db)
+        // Helper to format baudrate compactly (e.g., 1k2bd, 9k6bd)
         const formatBaudrate = (baudrate) => {
             if (baudrate >= 1000) {
                 const k = Math.floor(baudrate / 1000);
                 const remainder = (baudrate % 1000) / 100;
                 if (remainder === 0) {
-                    return `${k}kdb`;
+                    return `${k}kbd`;
                 }
-                return `${k}k${remainder}db`;
+                return `${k}k${remainder}bd`;
             }
-            return `${baudrate}db`;
+            return `${baudrate}bd`;
         };
 
         if (decoder === 'fsk') {
