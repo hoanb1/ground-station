@@ -213,9 +213,9 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                         border: `2px solid ${vfoColor}40`,
                         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
                         transition: 'all 0.15s ease-out',
-                        width: 'fit-content',
+                        width: { xs: '100%', sm: 'fit-content' },
                         maxWidth: '100%',
-                        minWidth: 'max-content',
+                        minWidth: { xs: 'auto', sm: 'max-content' },
                     }}
                 >
                     {/* Header with VFO label and controls */}
@@ -360,7 +360,9 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                                 textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
                                 letterSpacing: '0.3px',
                                 fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                                whiteSpace: 'nowrap',
+                                whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                                wordWrap: { xs: 'break-word', sm: 'normal' },
+                                overflowWrap: { xs: 'break-word', sm: 'normal' },
                                 mb: lineIdx < lines.length - 1 ? 0.5 : 0,
                             }}
                         >
