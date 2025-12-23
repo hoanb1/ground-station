@@ -366,7 +366,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                         >
                             {line.segments.map((segment, segIdx) => {
                                 const ageMs = Date.now() - segment.timestamp;
-                                const isRecent = ageMs < 5000;
+                                const isRecent = ageMs < 10000;
                                 const color = isRecent ? 'white' : 'rgba(169, 169, 169, 1)';
 
                                 return (
