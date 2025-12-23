@@ -157,10 +157,7 @@ class TranscriptionConsumer(threading.Thread):
             "audio_chunks_per_sec": 0.0,
             "is_connected": False,
             "audio_type": "unknown",  # Track detected audio type (mono/stereo)
-            # Token usage tracking
-            "total_input_tokens": 0,
-            "total_output_tokens": 0,
-            "total_tokens": 0,
+            # Note: Token usage tracking not available - Gemini Live API doesn't provide usage_metadata
         }
         self.stats_lock = threading.Lock()
 
@@ -212,9 +209,6 @@ class TranscriptionConsumer(threading.Thread):
                         "connection_failures": 0,
                         "audio_samples_per_sec": 0.0,
                         "audio_chunks_per_sec": 0.0,
-                        "total_input_tokens": 0,
-                        "total_output_tokens": 0,
-                        "total_tokens": 0,
                     },
                 },
                 room=self.session_id,
@@ -361,7 +355,6 @@ class TranscriptionConsumer(threading.Thread):
                         f"Audio Rate={stats_copy['audio_chunks_per_sec']:.1f} chunks/s, "
                         f"Sent={stats_copy['transcriptions_sent']}, "
                         f"Received={stats_copy['transcriptions_received']}, "
-                        f"Tokens(In/Out/Total)={stats_copy['total_input_tokens']}/{stats_copy['total_output_tokens']}/{stats_copy['total_tokens']}, "
                         f"Errors={stats_copy['errors']}, "
                         f"Language={self.language}, "
                         f"TranslateTo={self.translate_to}"
@@ -398,9 +391,6 @@ class TranscriptionConsumer(threading.Thread):
                                     "connection_failures": stats_copy["connection_failures"],
                                     "audio_samples_per_sec": stats_copy["audio_samples_per_sec"],
                                     "audio_chunks_per_sec": stats_copy["audio_chunks_per_sec"],
-                                    "total_input_tokens": stats_copy["total_input_tokens"],
-                                    "total_output_tokens": stats_copy["total_output_tokens"],
-                                    "total_tokens": stats_copy["total_tokens"],
                                 },
                             },
                             room=self.session_id,
@@ -463,21 +453,8 @@ class TranscriptionConsumer(threading.Thread):
                     if not response:
                         continue
 
-                    # Check for usage metadata and track tokens
-                    if hasattr(response, "usage_metadata") and response.usage_metadata:
-                        with self.stats_lock:
-                            if hasattr(response.usage_metadata, "prompt_token_count"):
-                                self.stats[
-                                    "total_input_tokens"
-                                ] += response.usage_metadata.prompt_token_count
-                            if hasattr(response.usage_metadata, "candidates_token_count"):
-                                self.stats[
-                                    "total_output_tokens"
-                                ] += response.usage_metadata.candidates_token_count
-                            if hasattr(response.usage_metadata, "total_token_count"):
-                                self.stats[
-                                    "total_tokens"
-                                ] += response.usage_metadata.total_token_count
+                    # Note: Gemini Live API does not provide usage_metadata in streaming responses
+                    # Token tracking is not available for the Live API (bidiGenerateContent)
 
                     # Process server content (transcription results)
                     if response.server_content and response.server_content.model_turn:
@@ -746,9 +723,6 @@ class TranscriptionConsumer(threading.Thread):
                         "connection_failures": stats_copy["connection_failures"],
                         "audio_samples_per_sec": stats_copy["audio_samples_per_sec"],
                         "audio_chunks_per_sec": stats_copy["audio_chunks_per_sec"],
-                        "total_input_tokens": stats_copy["total_input_tokens"],
-                        "total_output_tokens": stats_copy["total_output_tokens"],
-                        "total_tokens": stats_copy["total_tokens"],
                     },
                 },
                 room=self.session_id,
@@ -860,9 +834,6 @@ class TranscriptionConsumer(threading.Thread):
                             "connection_failures": stats_copy["connection_failures"],
                             "audio_samples_per_sec": stats_copy["audio_samples_per_sec"],
                             "audio_chunks_per_sec": stats_copy["audio_chunks_per_sec"],
-                            "total_input_tokens": stats_copy["total_input_tokens"],
-                            "total_output_tokens": stats_copy["total_output_tokens"],
-                            "total_tokens": stats_copy["total_tokens"],
                         },
                     },
                     room=self.session_id,
@@ -941,9 +912,6 @@ class TranscriptionConsumer(threading.Thread):
                             "connection_failures": stats_copy.get("connection_failures", 0),
                             "audio_samples_per_sec": 0.0,
                             "audio_chunks_per_sec": 0.0,
-                            "total_input_tokens": stats_copy.get("total_input_tokens", 0),
-                            "total_output_tokens": stats_copy.get("total_output_tokens", 0),
-                            "total_tokens": stats_copy.get("total_tokens", 0),
                         },
                     },
                     room=self.session_id,
