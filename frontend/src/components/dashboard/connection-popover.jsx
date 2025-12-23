@@ -32,18 +32,20 @@ function ConnectionStatus() {
     const [, forceUpdate] = useState(0);
     const systemInfoRef = React.useRef(useSelector(state => state.systemInfo));
 
-    // Update system info ref and force update stats every second
+    // Update system info ref and force update stats every second (only when popover is open)
     const systemInfo = useSelector(state => state.systemInfo);
     useEffect(() => {
         systemInfoRef.current = systemInfo;
     }, [systemInfo]);
 
     useEffect(() => {
+        if (!open) return; // Only update when popover is open
+
         const interval = setInterval(()=>{
             forceUpdate(prev => prev + 1);
         }, 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [open]);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
