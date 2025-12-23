@@ -31,6 +31,7 @@ import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import VolumeMuteIcon from '@mui/icons-material/VolumeMute';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import CloseIcon from '@mui/icons-material/Close';
@@ -356,6 +357,35 @@ const VfoAccordion = ({
                                             }}
                                         />
                                     )}
+                                    {/* Audio icon with three states:
+                                        1. Gray VolumeMute (no waves): No audio data reached browser
+                                        2. Green VolumeMute (with slash): Audio reached, muted from UI
+                                        3. Green VolumeUp (with waves): Audio reached and playing
+                                    */}
+                                    {!streamingVFOs.includes(index + 1) && (
+                                        <VolumeMuteIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: -2,
+                                                right: -6,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                                color: '#888888', // Gray for no audio
+                                            }}
+                                        />
+                                    )}
+                                    {streamingVFOs.includes(index + 1) && vfoMutedRedux[index + 1] && (
+                                        <VolumeMuteIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: -2,
+                                                right: -6,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                                color: '#00ff00', // Green for muted but streaming
+                                            }}
+                                        />
+                                    )}
                                     {streamingVFOs.includes(index + 1) && !vfoMutedRedux[index + 1] && (
                                         <VolumeUpIcon
                                             sx={{
@@ -365,30 +395,6 @@ const VfoAccordion = ({
                                                 fontSize: '0.75rem',
                                                 pointerEvents: 'none',
                                                 color: '#00ff00', // Green for playing
-                                            }}
-                                        />
-                                    )}
-                                    {streamingVFOs.includes(index + 1) && vfoMutedRedux[index + 1] && (
-                                        <VolumeOffIcon
-                                            sx={{
-                                                position: 'absolute',
-                                                bottom: -2,
-                                                right: -6,
-                                                fontSize: '0.75rem',
-                                                pointerEvents: 'none',
-                                                color: '#ffa500', // Orange for muted but streaming
-                                            }}
-                                        />
-                                    )}
-                                    {!streamingVFOs.includes(index + 1) && (
-                                        <VolumeOffIcon
-                                            sx={{
-                                                position: 'absolute',
-                                                bottom: -2,
-                                                right: -6,
-                                                fontSize: '0.75rem',
-                                                pointerEvents: 'none',
-                                                color: '#888888', // Gray for no audio
                                             }}
                                         />
                                     )}

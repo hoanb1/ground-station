@@ -129,27 +129,27 @@ export const canvasDrawingUtils = {
         const textY = 17; // Always use same text position
         ctx.fillText(labelText, centerX + textOffset, textY);
 
-        // Draw speaker icon with three states (color-coded):
-        // 1. Green speaker with sound waves: Audio streaming and playing (isStreaming && !isMuted)
-        // 2. Orange/amber speaker with X: Audio data available but browser-muted (isStreaming && isMuted)
-        // 3. Gray speaker with X: No audio data (dimmed/grayed out)
+        // Draw speaker icon with three states:
+        // 1. Gray speaker (no waves): No audio data reached browser
+        // 2. Green speaker (no waves): Audio reached, muted from UI
+        // 3. Green speaker with sound waves: Audio reached and playing
         const iconX = centerX + (labelWidth / 2) - 20;
         const iconY = 7;
 
         // Determine icon state and color
         let iconColor, iconState;
-        if (isStreaming && !isMuted) {
-            // State 1: Audio streaming and playing
+        if (!isStreaming) {
+            // State 1: No audio data
+            iconColor = '#888888'; // Gray
+            iconState = 'no-audio';
+        } else if (isMuted) {
+            // State 2: Audio available but muted by UI
             iconColor = '#00ff00'; // Green
-            iconState = 'playing';
-        } else if (isStreaming && isMuted) {
-            // State 2: Audio available but muted by browser
-            iconColor = '#ffa500'; // Orange/amber
             iconState = 'muted';
         } else {
-            // State 3: No audio data
-            iconColor = '#888888'; // Gray (dimmed)
-            iconState = 'no-audio';
+            // State 3: Audio streaming and playing
+            iconColor = '#00ff00'; // Green
+            iconState = 'playing';
         }
 
         // Draw speaker body (same for all states)
@@ -165,7 +165,7 @@ export const canvasDrawingUtils = {
         ctx.closePath();
         ctx.fill();
 
-        // Draw icon details based on state
+        // Draw sound waves only for playing state
         if (iconState === 'playing') {
             // Draw sound waves for playing state
             ctx.strokeStyle = iconColor;
@@ -176,22 +176,8 @@ export const canvasDrawingUtils = {
             ctx.beginPath();
             ctx.arc(iconX + 9, iconY + 6, 6, -Math.PI/4, Math.PI/4);
             ctx.stroke();
-        } else {
-            // Draw X for muted or no-audio states
-            ctx.strokeStyle = iconColor;
-            ctx.lineWidth = 1.3;
-            const xSize = 2.5; // Half size of the X
-            const xCenterX = iconX + 12.5; // 1px gap from speaker edge
-            const xCenterY = iconY + 6;
-            ctx.beginPath();
-            ctx.moveTo(xCenterX - xSize, xCenterY - xSize);
-            ctx.lineTo(xCenterX + xSize, xCenterY + xSize);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(xCenterX + xSize, xCenterY - xSize);
-            ctx.lineTo(xCenterX - xSize, xCenterY + xSize);
-            ctx.stroke();
         }
+        // No additional drawing for 'muted' and 'no-audio' states (just the speaker body)
 
         // Draw secondary decoder label if decoder is active
         if (decoderInfo) {
