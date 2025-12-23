@@ -621,22 +621,24 @@ const VfoAccordion = ({
                                         const info = decoderInfo.info || {};
                                         const status = decoderInfo.status || 'unknown';
 
-                                        // Line 1: STATUS, MODE, BAUD, FRAMING
+                                        // Line 1: STATUS, MODE, FRAMING
                                         const statusParts = [];
                                         statusParts.push(status.toUpperCase());
                                         if (info.transmitter_mode !== undefined && info.transmitter_mode !== null) {
                                             statusParts.push(info.transmitter_mode);
-                                        }
-                                        if (info.baudrate !== undefined && info.baudrate !== null) {
-                                            statusParts.push(`${info.baudrate}bd`);
                                         }
                                         if (info.framing !== undefined && info.framing !== null) {
                                             statusParts.push(info.framing.toUpperCase());
                                         }
                                         line1Text = statusParts.join(' • ');
 
-                                        // Line 2: existing metrics (packets, signal power, buffer) or progress or morse-specific
+                                        // Line 2: baudrate and existing metrics (packets, signal power) or progress or morse-specific
                                         const metricParts = [];
+
+                                        // Add baudrate at the start of line 2
+                                        if (info.baudrate !== undefined && info.baudrate !== null) {
+                                            metricParts.push(`${info.baudrate}bd`);
+                                        }
 
                                         // Show progress for SSTV if available
                                         if (decoderInfo.progress !== undefined && decoderInfo.progress !== null) {
@@ -656,9 +658,6 @@ const VfoAccordion = ({
                                         }
                                         if (info.signal_power_dbfs !== undefined && info.signal_power_dbfs !== null) {
                                             metricParts.push(`${info.signal_power_dbfs.toFixed(1)}dB`);
-                                        }
-                                        if (info.buffer_samples !== undefined && info.buffer_samples !== null) {
-                                            metricParts.push(`BUF:${(info.buffer_samples / 1000).toFixed(0)}k`);
                                         }
                                         line2Text = metricParts.length > 0 ? metricParts.join(' • ') : '—';
 
