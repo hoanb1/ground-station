@@ -434,28 +434,82 @@ const VfoAccordion = ({
                 {[1, 2, 3, 4].map((vfoIndex) => (
                     <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
                         <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={vfoActive[vfoIndex] || false}
-                                            onChange={(e) => onVFOActiveChange(vfoIndex, e.target.checked)}
-                                        />
-                                    }
-                                    label={t('vfo.active')}
-                                    sx={{mt: 0, ml: 0}}
-                                />
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={!vfoMuted[vfoIndex]}
-                                            onChange={(e) => handleVfoMuteToggle(vfoIndex)}
-                                            disabled={!vfoActive[vfoIndex]}
-                                        />
-                                    }
-                                    label={t('vfo.listen')}
-                                    sx={{mt: 0, ml: 0}}
-                                />
+                            <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
+                                <ToggleButton
+                                    value="active"
+                                    selected={vfoActive[vfoIndex]}
+                                    onChange={() => onVFOActiveChange(vfoIndex, !vfoActive[vfoIndex])}
+                                    sx={{
+                                        flex: 1,
+                                        height: '32px',
+                                        fontSize: '0.8rem',
+                                        border: '1px solid',
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
+                                        borderRadius: '4px',
+                                        color: 'text.secondary',
+                                        textTransform: 'none',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        transition: 'all 0.2s ease-in-out',
+                                        '&.Mui-selected': {
+                                            backgroundColor: 'success.main',
+                                            color: 'success.contrastText',
+                                            borderColor: 'success.main',
+                                            fontWeight: 600,
+                                            boxShadow: '0 0 8px rgba(76, 175, 80, 0.4)',
+                                            '&:hover': {
+                                                backgroundColor: 'success.dark',
+                                                boxShadow: '0 0 12px rgba(76, 175, 80, 0.6)',
+                                            }
+                                        },
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            borderColor: 'rgba(255, 255, 255, 0.4)',
+                                        }
+                                    }}
+                                >
+                                    {vfoActive[vfoIndex] ? t('vfo.active') : t('vfo.activate', 'Activate')}
+                                </ToggleButton>
+                                <ToggleButton
+                                    value="listen"
+                                    selected={!vfoMuted[vfoIndex]}
+                                    disabled={!vfoActive[vfoIndex]}
+                                    onChange={() => handleVfoMuteToggle(vfoIndex)}
+                                    sx={{
+                                        flex: 1,
+                                        height: '32px',
+                                        fontSize: '0.8rem',
+                                        border: '1px solid',
+                                        borderColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.5)' : 'rgba(255, 255, 255, 0.23)',
+                                        borderRadius: '4px',
+                                        color: 'text.secondary',
+                                        textTransform: 'none',
+                                        backgroundColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                                        transition: 'all 0.2s ease-in-out',
+                                        '&.Mui-selected': {
+                                            backgroundColor: 'primary.main',
+                                            color: 'primary.contrastText',
+                                            borderColor: 'primary.main',
+                                            fontWeight: 600,
+                                            boxShadow: '0 0 8px rgba(33, 150, 243, 0.4)',
+                                            '&:hover': {
+                                                backgroundColor: 'primary.dark',
+                                                boxShadow: '0 0 12px rgba(33, 150, 243, 0.6)',
+                                            }
+                                        },
+                                        '&:hover': {
+                                            backgroundColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                                            borderColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.7)' : 'rgba(255, 255, 255, 0.4)',
+                                        },
+                                        '&.Mui-disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                            opacity: 0.5,
+                                        }
+                                    }}
+                                >
+                                    {!vfoMuted[vfoIndex] ? t('vfo.listening', 'Listening') : t('vfo.muted', 'Muted')}
+                                </ToggleButton>
                             </Box>
 
                             {/* Frequency Display */}
