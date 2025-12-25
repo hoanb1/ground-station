@@ -458,6 +458,30 @@ const VfoAccordion = ({
                                 />
                             </Box>
 
+                            {/* Frequency Display */}
+                            <Box sx={{
+                                mt: 2,
+                                mb: 0,
+                                width: '100%',
+                                typography: 'body1',
+                                fontWeight: 'medium',
+                                alignItems: 'center'
+                            }}>
+                                <Box
+                                    sx={{
+                                        width: '100%',
+                                        fontFamily: "Monospace",
+                                        color: '#2196f3',
+                                        alignItems: 'center',
+                                        textAlign: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                    <LCDFrequencyDisplay
+                                        frequency={vfoMarkers[vfoIndex]?.frequency || 0}
+                                        size={"large"}/>
+                                </Box>
+                            </Box>
+
                             {/* VU Meter Display */}
                             <Box sx={{ mt: 1, mb: 1, opacity: vfoActive[vfoIndex] ? 1 : 0.4 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
@@ -589,31 +613,7 @@ const VfoAccordion = ({
                                 </Box>
                             </Box>
 
-                            {/* Frequency Display */}
-                            <Box sx={{
-                                mt: 2,
-                                mb: 0,
-                                width: '100%',
-                                typography: 'body1',
-                                fontWeight: 'medium',
-                                alignItems: 'center'
-                            }}>
-                                <Box
-                                    sx={{
-                                        width: '100%',
-                                        fontFamily: "Monospace",
-                                        color: '#2196f3',
-                                        alignItems: 'center',
-                                        textAlign: 'center',
-                                        justifyContent: 'center'
-                                    }}>
-                                    <LCDFrequencyDisplay
-                                        frequency={vfoMarkers[vfoIndex]?.frequency || 0}
-                                        size={"large"}/>
-                                </Box>
-                            </Box>
-
-                            {/* Decoder Status Display - Two lines */}
+                            {/* Decoder/Transcription Status Display - Two lines */}
                             {(() => {
                                 const decoderInfo = getVFODecoderInfo(vfoIndex);
                                 const vfo = vfoMarkers[vfoIndex];
@@ -624,7 +624,56 @@ const VfoAccordion = ({
                                 let borderColor = 'divider';
                                 let textColor = 'text.disabled';
 
-                                if (vfo && vfo.decoder && vfo.decoder !== 'none') {
+                                // Check if this is a transcription decoder
+                                if (decoderInfo && decoderInfo.decoder_type === 'transcription') {
+                                    const info = decoderInfo.info || {};
+                                    const status = decoderInfo.status || 'unknown';
+
+                                    // Line 1: TRANSCRIBING status and language info
+                                    const statusParts = [];
+                                    statusParts.push(status.toUpperCase());
+
+                                    // Show language flow: source -> target
+                                    if (info.language) {
+                                        const langDisplay = info.language.toUpperCase();
+                                        const translateDisplay = info.translate_to ? info.translate_to.toUpperCase() : null;
+                                        if (translateDisplay && translateDisplay !== 'NONE') {
+                                            statusParts.push(`${langDisplay} → ${translateDisplay}`);
+                                        } else {
+                                            statusParts.push(langDisplay);
+                                        }
+                                    }
+
+                                    line1Text = statusParts.join(' • ');
+
+                                    // Line 2: Transcription metrics
+                                    const metricParts = [];
+
+                                    // Transcription request stats
+                                    if (info.transcriptions_sent !== undefined && info.transcriptions_received !== undefined) {
+                                        const successRate = info.transcriptions_sent > 0
+                                            ? Math.round((info.transcriptions_received / info.transcriptions_sent) * 100)
+                                            : 0;
+                                        metricParts.push(`SENT:${info.transcriptions_sent} RCV:${info.transcriptions_received} (${successRate}%)`);
+                                    }
+
+                                    // Show errors if any
+                                    if (info.errors !== undefined && info.errors > 0) {
+                                        metricParts.push(`ERR:${info.errors}`);
+                                    }
+
+                                    line2Text = metricParts.length > 0 ? metricParts.join(' • ') : '—';
+
+                                    borderColor = status === 'transcribing' ? 'success.dark' : 'warning.dark';
+                                    textColor = 'text.secondary';
+                                } else if (vfo && vfo.transcriptionEnabled) {
+                                    // Transcription enabled but not active
+                                    line1Text = 'TRANSCRIPTION - Not Active';
+                                    line2Text = '';
+                                    borderColor = 'warning.dark';
+                                    textColor = 'warning.main';
+                                } else if (vfo && vfo.decoder && vfo.decoder !== 'none') {
+                                    // Data decoder (existing logic)
                                     if (decoderInfo) {
                                         const info = decoderInfo.info || {};
                                         const status = decoderInfo.status || 'unknown';
@@ -679,7 +728,7 @@ const VfoAccordion = ({
                                         textColor = 'warning.main';
                                     }
                                 } else {
-                                    // No decoder selected
+                                    // No decoder or transcription selected
                                     line1Text = '- no decoder -';
                                     line2Text = '';
                                     borderColor = 'divider';
