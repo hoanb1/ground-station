@@ -540,6 +540,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                             backgroundColor: 'rgba(0, 0, 0, 0.85)',
                             padding: { xs: '8px 12px', sm: '10px 16px' },
                             textAlign: textAlignment,
+                            borderTop: `1px solid ${vfoColor}`,
                         }}
                     >
                         {lines.map((line, lineIdx) => (
