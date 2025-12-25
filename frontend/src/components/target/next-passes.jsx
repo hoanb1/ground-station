@@ -34,8 +34,10 @@ import ProgressFormatter from "../overview/progressbar-widget.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { fetchNextPasses, updateSatellitePassesWithElevationCurves } from './target-slice.jsx';
+import SettingsIcon from '@mui/icons-material/Settings';
+import { fetchNextPasses, updateSatellitePassesWithElevationCurves, setPassesTableColumnVisibility, setOpenPassesTableSettingsDialog } from './target-slice.jsx';
 import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
+import TargetPassesTableSettingsDialog from './target-passes-table-settings-dialog.jsx';
 
 
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
@@ -99,7 +101,7 @@ const DurationFormatter = React.memo(function DurationFormatter({params, value, 
 });
 
 
-const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({satellitePasses, passesLoading}) {
+const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({satellitePasses, passesLoading, columnVisibility, onColumnVisibilityChange}) {
     const apiRef = useGridApiRef();
     const { t, i18n } = useTranslation('target');
     const currentLanguage = i18n.language;
@@ -327,16 +329,12 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({satel
             density={"compact"}
             rows={satellitePasses}
             pageSizeOptions={[5, 10, 15, 20]}
+            columnVisibilityModel={columnVisibility}
+            onColumnVisibilityModelChange={onColumnVisibilityChange}
             initialState={{
                 pagination: { paginationModel: { pageSize: 15 } },
                 sorting: {
                     sortModel: [{ field: 'event_start', sort: 'asc' }],
-                },
-                columns: {
-                    columnVisibilityModel: {
-                        is_geostationary: false,
-                        is_geosynchronous: false,
-                    },
                 },
             }}
             columns={columns}
@@ -348,7 +346,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({satel
 }, (prevProps, nextProps) => {
     return (
         prevProps.satellitePasses === nextProps.satellitePasses &&
-        prevProps.passesLoading === nextProps.passesLoading
+        prevProps.passesLoading === nextProps.passesLoading &&
+        prevProps.columnVisibility === nextProps.columnVisibility
     );
 });
 
@@ -365,11 +364,52 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
         satelliteData,
         nextPassesHours,
         satelliteId,
-        gridEditable
+        gridEditable,
+        passesTableColumnVisibility,
+        openPassesTableSettingsDialog
     } = useSelector(state => state.targetSatTrack);
     const { location } = useSelector(state => state.location);
     const minHeight = 200;
     const maxHeight = 400;
+    const hasLoadedFromStorageRef = useRef(false);
+    const isLoadingRef = useRef(false);
+
+    // Load column visibility from localStorage on mount
+    useEffect(() => {
+        // Prevent double loading (React StrictMode or component remounting)
+        if (isLoadingRef.current || hasLoadedFromStorageRef.current) {
+            return;
+        }
+
+        isLoadingRef.current = true;
+
+        const loadColumnVisibility = () => {
+            try {
+                const stored = localStorage.getItem('target-passes-table-column-visibility');
+                if (stored) {
+                    const parsedVisibility = JSON.parse(stored);
+                    dispatch(setPassesTableColumnVisibility(parsedVisibility));
+                }
+            } catch (e) {
+                console.error('Failed to load target passes table column visibility:', e);
+            } finally {
+                hasLoadedFromStorageRef.current = true;
+                isLoadingRef.current = false;
+            }
+        };
+        loadColumnVisibility();
+    }, []);
+
+    // Persist column visibility to localStorage whenever it changes (but not on initial load)
+    useEffect(() => {
+        if (passesTableColumnVisibility && hasLoadedFromStorageRef.current) {
+            try {
+                localStorage.setItem('target-passes-table-column-visibility', JSON.stringify(passesTableColumnVisibility));
+            } catch (e) {
+                console.error('Failed to save target passes table column visibility:', e);
+            }
+        }
+    }, [passesTableColumnVisibility]);
 
     const handleRefreshPasses = () => {
         if (satelliteId) {
@@ -424,6 +464,18 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
         };
     }, [containerRef]);
 
+    const handleColumnVisibilityChange = (newModel) => {
+        dispatch(setPassesTableColumnVisibility(newModel));
+    };
+
+    const handleOpenSettings = () => {
+        dispatch(setOpenPassesTableSettingsDialog(true));
+    };
+
+    const handleCloseSettings = () => {
+        dispatch(setOpenPassesTableSettingsDialog(false));
+    };
+
     return (
         <>
             <TitleBar
@@ -442,6 +494,17 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title={t('passes_table_settings.title')}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={handleOpenSettings}
+                                    sx={{ padding: '2px' }}
+                                >
+                                    <SettingsIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                         <Tooltip title="Refresh passes (force recalculate)">
                             <span>
                                 <IconButton
@@ -465,9 +528,18 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                     height: containerHeight - 25,
                     minHeight,
                 }}>
-                    <MemoizedStyledDataGrid satellitePasses={satellitePasses} passesLoading={passesLoading}/>
+                    <MemoizedStyledDataGrid
+                        satellitePasses={satellitePasses}
+                        passesLoading={passesLoading}
+                        columnVisibility={passesTableColumnVisibility}
+                        onColumnVisibilityChange={handleColumnVisibilityChange}
+                    />
                 </div>
             </div>
+            <TargetPassesTableSettingsDialog
+                open={openPassesTableSettingsDialog}
+                onClose={handleCloseSettings}
+            />
         </>
     );
 });

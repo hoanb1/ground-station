@@ -299,6 +299,19 @@ const targetSatTrackSlice = createSlice({
         selectedVFO1: "uplink",
         selectedVFO2: "downlink",
         openMapSettingsDialog: false,
+        openPassesTableSettingsDialog: false,
+        passesTableColumnVisibility: {
+            event_start: true,
+            event_end: true,
+            duration: true,
+            progress: true,
+            distance_at_start: false,
+            distance_at_end: false,
+            distance_at_peak: false,
+            peak_altitude: true,
+            is_geostationary: false,
+            is_geosynchronous: false,
+        },
         nextPassesHours: 24.0,
         cachedPasses: {},
         selectedTransmitter: "none",
@@ -529,6 +542,12 @@ const targetSatTrackSlice = createSlice({
         },
         setOpenMapSettingsDialog(state, action) {
             state.openMapSettingsDialog = action.payload;
+        },
+        setOpenPassesTableSettingsDialog(state, action) {
+            state.openPassesTableSettingsDialog = action.payload;
+        },
+        setPassesTableColumnVisibility(state, action) {
+            state.passesTableColumnVisibility = action.payload;
         },
         setNextPassesHours(state, action) {
             state.nextPassesHours = action.payload;
@@ -791,6 +810,8 @@ export const {
     setVFO1,
     setVFO2,
     setOpenMapSettingsDialog,
+    setOpenPassesTableSettingsDialog,
+    setPassesTableColumnVisibility,
     setNextPassesHours,
     setSelectedTransmitter,
     setAvailableTransmitters,

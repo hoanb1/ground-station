@@ -23,6 +23,16 @@
     "geo_sync": "GEO Sync",
     "no_satellite_selected": "Please select a satellite to view passes"
   },
+  "passes_table_settings": {
+    "title": "Passes Table Settings",
+    "description": "Choose which columns to display in the passes table",
+    "category_time": "Time Information",
+    "category_basic": "Basic Information",
+    "category_distance": "Distance Information",
+    "category_orbital": "Orbital Information",
+    "always_visible": "always visible",
+    "close": "Close"
+  },
   "pass_timeline": {
     "title": "Pass Timeline for {{name}} - Next {{hours}} hours"
   },
