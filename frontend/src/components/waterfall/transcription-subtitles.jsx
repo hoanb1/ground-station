@@ -122,7 +122,7 @@ const getLanguageFlag = (languageCode) => {
 /**
  * Single VFO Subtitle Component
  */
-const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, textAlignment, maxLines, maxWordsPerLine, onClear, onIncreaseFontSize, onDecreaseFontSize, onSetAlignment, isStreaming, isMuted, translateTo, sourceLang }) => {
+const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, textAlignment, maxLines, maxWordsPerLine, onClear, onIncreaseFontSize, onDecreaseFontSize, onSetAlignment, isStreaming, isMuted, translateTo, sourceLang, provider }) => {
     const [lines, setLines] = useState([]);
 
     // Individual position state per VFO
@@ -391,8 +391,9 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                             {/* Language Display Logic:
                                 - When NOT translating: show detected language from transcription
                                 - When translating: show source → target with arrow
+                                - Deepgram doesn't support translation, so hide arrow and target
                             */}
-                            {translateTo && translateTo !== 'none' ? (
+                            {translateTo && translateTo !== 'none' && provider !== 'deepgram' ? (
                                 // Translation mode: show source → target
                                 <>
                                     {/* Source Language */}
@@ -659,6 +660,7 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
                 const vfoMarker = vfoMarkers[vfoNumber]; // vfoMarkers is an object with keys 1, 2, 3, 4
                 const translateTo = vfoMarker?.transcriptionTranslateTo || 'none';
                 const sourceLang = vfoMarker?.transcriptionLanguage || 'auto';
+                const provider = vfoMarker?.transcriptionProvider || 'gemini';
 
                 return (
                             <React.Fragment key={vfoNumber}>
@@ -678,6 +680,7 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
                                     isMuted={vfoMuted[vfoNumber]}
                                     translateTo={translateTo}
                                     sourceLang={sourceLang}
+                                    provider={provider}
                                 />
                             </React.Fragment>
                         );

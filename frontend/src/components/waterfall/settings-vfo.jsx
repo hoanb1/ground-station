@@ -1344,6 +1344,13 @@ const VfoAccordion = ({
 
                                             const sourceFlag = flagMap[sourceLang] || '🏳️';
                                             const sourceDisplay = langMap[sourceLang] || sourceLang.toUpperCase();
+
+                                            // Deepgram doesn't support translation
+                                            const provider = vfo.transcriptionProvider || 'gemini';
+                                            if (provider === 'deepgram') {
+                                                return `${sourceFlag} ${sourceDisplay}`;
+                                            }
+
                                             const translateFlag = translateTo === 'none' ? '⭕' : (flagMap[translateTo] || '🏳️');
                                             const translateDisplay = translateTo === 'none' ? 'No Trans' : langMap[translateTo] || translateTo.toUpperCase();
 
