@@ -716,6 +716,11 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
             if (lastFetchParamsRef.current !== currentParams) {
                 lastFetchParamsRef.current = currentParams;
                 hasFetchedRef.current = false; // Reset for new parameters
+
+                // Immediately fetch when group changes - don't rely on cache from different group
+                hasFetchedRef.current = true;
+                dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
+                return; // Exit early to prevent cache check logic
             }
 
             // Check if we have valid cached data covering the requested time window
