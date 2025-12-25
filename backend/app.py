@@ -17,6 +17,29 @@ from server.startup import app, init_db, sio, socket_app  # noqa: E402
 from video.webrtc import register_webrtc_routes  # noqa: E402
 
 
+def print_banner():
+    """Print ASCII art banner with version."""
+    print(
+        """
+   ██████╗ ██████╗  ██████╗ ██╗   ██╗███╗   ██╗██████╗
+  ██╔════╝ ██╔══██╗██╔═══██╗██║   ██║████╗  ██║██╔══██╗
+  ██║  ███╗██████╔╝██║   ██║██║   ██║██╔██╗ ██║██║  ██║
+  ██║   ██║██╔══██╗██║   ██║██║   ██║██║╚██╗██║██║  ██║
+  ╚██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚████║██████╔╝
+   ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚═════╝
+
+  ███████╗████████╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
+  ██╔════╝╚══██╔══╝██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
+  ███████╗   ██║   ███████║   ██║   ██║██║   ██║██╔██╗ ██║
+  ╚════██║   ██║   ██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
+  ███████║   ██║   ██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
+  ╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+
+                            v0.1.77
+    """
+    )
+
+
 # Set process and thread names
 def configure_process_names():
     try:
@@ -30,6 +53,8 @@ def configure_process_names():
 
 
 def main() -> None:
+    print_banner()
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
