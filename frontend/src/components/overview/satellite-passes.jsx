@@ -21,6 +21,7 @@
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
+import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
 import {
     formatWithZeros,
     getClassNamesBasedOnGridEditing,
@@ -41,6 +42,7 @@ import {
     setSelectedSatelliteId,
     setPassesTablePageSize,
     setPassesTableSortModel,
+    updatePassesWithElevationCurves,
 } from './overview-slice.jsx';
 import {Typography, Box, IconButton, Tooltip, Button, useMediaQuery, useTheme} from '@mui/material';
 import {useGridApiRef, GridPagination} from '@mui/x-data-grid';
@@ -686,8 +688,10 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         orbitProjectionDuration,
         gridEditable,
         passesTablePageSize,
-        passesTableSortModel
+        passesTableSortModel,
+        selectedSatellites
     } = useSelector(state => state.overviewSatTrack);
+    const { location } = useSelector(state => state.location);
 
     const minHeight = 200;
     const maxHeight = 400;
@@ -757,6 +761,36 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         //     hasFetchedRef.current = false;
         // };
     }, [selectedSatGroupId, dispatch, socket, nextPassesHours, passes, passesRangeStart, passesRangeEnd, passesCachedGroupId]);
+
+    // Calculate elevation curves when passes are received
+    useEffect(() => {
+        if (passes && passes.length > 0 && location && selectedSatellites && selectedSatellites.length > 0) {
+            // Check if elevation curves need to be calculated (if any pass has empty elevation_curve)
+            const needsCalculation = passes.some(pass => !pass.elevation_curve || pass.elevation_curve.length === 0);
+
+            if (needsCalculation) {
+                // Create satellite lookup from selectedSatellites
+                const satelliteLookup = {};
+                selectedSatellites.forEach(sat => {
+                    satelliteLookup[sat.norad_id] = {
+                        norad_id: sat.norad_id,
+                        tle1: sat.tle1,
+                        tle2: sat.tle2
+                    };
+                });
+
+                // Calculate elevation curves in the background
+                setTimeout(() => {
+                    const passesWithCurves = calculateElevationCurvesForPasses(
+                        passes,
+                        { lat: location.lat, lon: location.lon },
+                        satelliteLookup
+                    );
+                    dispatch(updatePassesWithElevationCurves(passesWithCurves));
+                }, 0);
+            }
+        }
+    }, [passes, location, selectedSatellites, dispatch]);
 
     useEffect(() => {
         // Update the passes every two hours plus 5 mins to wait until the cache is invalidated

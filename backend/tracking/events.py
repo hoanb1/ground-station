@@ -402,15 +402,6 @@ async def fetch_next_events_for_group(
                     for sat in satellites
                 }
 
-                # Create a lookup dict for full satellite data (for elevation curve calculation)
-                satellite_data_lookup = {sat["norad_id"]: sat for sat in satellites}
-                home_location = {"lat": homelat, "lon": homelon}
-
-                # Get current time to determine which passes should be extended
-                from datetime import timezone as dt_timezone
-
-                current_time_dt = datetime.now(dt_timezone.utc)
-
                 # Add satellite names, transmitters and counts to events
                 for event in events_data:
                     event["name"] = satellite_info[event["norad_id"]]["name"]
@@ -420,36 +411,9 @@ async def fetch_next_events_for_group(
                     ]
                     event["id"] = f"{event['id']}_{event['norad_id']}_{event['event_start']}"
 
-                    # Calculate elevation curve for this pass
-                    # Check if pass is active or upcoming within 2 hours
-                    event_start = datetime.fromisoformat(
-                        event["event_start"].replace("Z", "+00:00")
-                    )
-                    event_end = datetime.fromisoformat(event["event_end"].replace("Z", "+00:00"))
-
-                    # Calculate time until pass starts (negative if already started)
-                    time_until_start = (
-                        event_start - current_time_dt
-                    ).total_seconds() / 60  # minutes
-                    # Calculate time since pass ended (negative if not yet ended)
-                    time_since_end = (current_time_dt - event_end).total_seconds() / 60  # minutes
-
-                    # Extend if: pass is active OR starts within next 2 hours OR ended less than 30 min ago
-                    should_extend = (time_until_start <= 120) and (time_since_end <= 30)
-                    extend_start_minutes = 30 if should_extend else 0
-
-                    # Get satellite data for this event
-                    satellite_data = satellite_data_lookup[event["norad_id"]]
-
-                    # Calculate elevation curve
-                    elevation_curve = _calculate_elevation_curve(
-                        satellite_data,
-                        home_location,
-                        event["event_start"],
-                        event["event_end"],
-                        extend_start_minutes=extend_start_minutes,
-                    )
-                    event["elevation_curve"] = elevation_curve
+                    # Elevation curves are now calculated in the frontend for better performance
+                    # Set to empty array - frontend will calculate using satellite.js
+                    event["elevation_curve"] = []
 
                     events.append(event)
 
@@ -606,44 +570,14 @@ async def fetch_next_events_for_satellite(
 
             if result and result.get("success", False):
                 events_for_satellite = result.get("data", [])
-                home_location = {"lat": homelat, "lon": homelon}
-
-                # Get current time to determine which passes should be extended
-                from datetime import timezone as dt_timezone
-
-                current_time_dt = datetime.now(dt_timezone.utc)
 
                 for idx, event in enumerate(events_for_satellite):
                     event["name"] = satellite["name"]
                     event["id"] = f"{event['id']}_{satellite['norad_id']}_{event['event_start']}"
 
-                    # Extend passes that are happening now or will happen soon
-                    # Check if pass is active or upcoming within 2 hours
-                    event_start = datetime.fromisoformat(
-                        event["event_start"].replace("Z", "+00:00")
-                    )
-                    event_end = datetime.fromisoformat(event["event_end"].replace("Z", "+00:00"))
-
-                    # Calculate time until pass starts (negative if already started)
-                    time_until_start = (
-                        event_start - current_time_dt
-                    ).total_seconds() / 60  # minutes
-                    # Calculate time since pass ended (negative if not yet ended)
-                    time_since_end = (current_time_dt - event_end).total_seconds() / 60  # minutes
-
-                    # Extend if: pass is active OR starts within next 2 hours OR ended less than 30 min ago
-                    should_extend = (time_until_start <= 120) and (time_since_end <= 30)
-                    extend_start_minutes = 30 if should_extend else 0
-
-                    # Calculate elevation curve for this pass
-                    elevation_curve = _calculate_elevation_curve(
-                        satellite,
-                        home_location,
-                        event["event_start"],
-                        event["event_end"],
-                        extend_start_minutes=extend_start_minutes,
-                    )
-                    event["elevation_curve"] = elevation_curve
+                    # Elevation curves are now calculated in the frontend for better performance
+                    # Set to empty array - frontend will calculate using satellite.js
+                    event["elevation_curve"] = []
 
                     events.append(event)
 

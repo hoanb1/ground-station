@@ -21,6 +21,7 @@
 
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 import {getTargetMapSettings} from "../target/target-slice.jsx";
+import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
 
 
 export const getOverviewMapSettings = createAsyncThunk(
@@ -234,6 +235,10 @@ const overviewSlice = createSlice({
         setShowGeostationarySatellites(state, action) {
             state.showGeostationarySatellites = action.payload;
         },
+        updatePassesWithElevationCurves(state, action) {
+            // Update passes with calculated elevation curves
+            state.passes = action.payload;
+        },
         setPassesTablePageSize(state, action) {
             state.passesTablePageSize = action.payload;
         },
@@ -381,7 +386,11 @@ const overviewSlice = createSlice({
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
                 const {passes, cached, forecast_hours, pass_range_start, pass_range_end, groupId} = action.payload;
 
-                state.passes = passes;
+                // Store passes without elevation curves initially (they'll be calculated in the background)
+                state.passes = passes.map(pass => ({
+                    ...pass,
+                    elevation_curve: pass.elevation_curve || [] // Ensure elevation_curve exists but may be empty
+                }));
                 state.passesAreCached = cached;
                 state.passesRangeStart = pass_range_start;
                 state.passesRangeEnd = pass_range_end;
@@ -448,6 +457,7 @@ const overviewSlice = createSlice({
 
 export const {
     setShowGeostationarySatellites,
+    updatePassesWithElevationCurves,
     setPassesTablePageSize,
     setSatellitesTablePageSize,
     setPassesTableSortModel,

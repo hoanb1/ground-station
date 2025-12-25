@@ -34,7 +34,8 @@ import ProgressFormatter from "../overview/progressbar-widget.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { fetchNextPasses } from './target-slice.jsx';
+import { fetchNextPasses, updateSatellitePassesWithElevationCurves } from './target-slice.jsx';
+import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
 
 
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
@@ -366,6 +367,7 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
         satelliteId,
         gridEditable
     } = useSelector(state => state.targetSatTrack);
+    const { location } = useSelector(state => state.location);
     const minHeight = 200;
     const maxHeight = 400;
 
@@ -379,6 +381,35 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
             }));
         }
     };
+
+    // Calculate elevation curves when passes are received or satellite changes
+    useEffect(() => {
+        if (satellitePasses && satellitePasses.length > 0 && location && satelliteData && satelliteData.details) {
+            // Check if elevation curves need to be calculated (if any pass has empty elevation_curve)
+            const needsCalculation = satellitePasses.some(pass => !pass.elevation_curve || pass.elevation_curve.length === 0);
+
+            if (needsCalculation) {
+                // Create satellite lookup from satelliteData
+                const satelliteLookup = {
+                    [satelliteData.details.norad_id]: {
+                        norad_id: satelliteData.details.norad_id,
+                        tle1: satelliteData.details.tle1,
+                        tle2: satelliteData.details.tle2
+                    }
+                };
+
+                // Calculate elevation curves in the background
+                setTimeout(() => {
+                    const passesWithCurves = calculateElevationCurvesForPasses(
+                        satellitePasses,
+                        { lat: location.lat, lon: location.lon },
+                        satelliteLookup
+                    );
+                    dispatch(updateSatellitePassesWithElevationCurves(passesWithCurves));
+                }, 0);
+            }
+        }
+    }, [satellitePasses, location, satelliteData, satelliteId, dispatch]);
 
     useEffect(() => {
         const target = containerRef.current;

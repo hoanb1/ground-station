@@ -23,8 +23,10 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
   const curveSegments = [];
   const pathDataSegments = [];
 
-  // Use actual elevation curve if available
-  if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+  // Check if we have actual elevation curve data
+  const hasElevationCurve = pass.elevation_curve && pass.elevation_curve.length > 0;
+
+  if (hasElevationCurve) {
     const totalDuration = endTime.getTime() - startTime.getTime();
 
     // First, filter points to only those within the time window
@@ -103,19 +105,22 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
       }
     });
   } else {
-    // Fallback to parabolic curve if no elevation_curve data
-    const segmentPath = [];
-    const points = 100;
-    for (let i = 0; i <= points; i++) {
-      const t = i / points;
-      const x = pass.left + (pass.width * t);
-      const elevationRatio = 4 * t * (1 - t);
-      const elevationAtPoint = pass.peak_altitude * elevationRatio;
-      // Use UNIFIED COORDINATE SYSTEM
-      const y = elevationToYPercent(elevationAtPoint);
-      segmentPath.push(`${x},${y}`);
-    }
-    pathDataSegments.push(segmentPath);
+    // Fallback: Show vertical line at peak_altitude when elevation curve is loading/missing
+    // Calculate the midpoint of the pass duration
+    const passStartTime = new Date(pass.event_start).getTime();
+    const passEndTime = new Date(pass.event_end).getTime();
+    const passMidpoint = (passStartTime + passEndTime) / 2;
+
+    // Calculate position within the timeline window
+    const totalDuration = endTime.getTime() - startTime.getTime();
+    const xPercent = ((passMidpoint - startTime.getTime()) / totalDuration) * 100;
+
+    // Create vertical line from 0° to peak_altitude
+    const yBottom = elevationToYPercent(0);
+    const yTop = elevationToYPercent(pass.peak_altitude);
+
+    // Store as a single vertical line segment
+    pathDataSegments.push([`${xPercent},${yBottom}`, `${xPercent},${yTop}`]);
   }
 
   if (pathDataSegments.length === 0) {
@@ -124,9 +129,9 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
 
   // Find the peak point (highest elevation) for the label
   let peakPoint = null;
-  let peakElevation = -Infinity;
+  let peakElevation = pass.peak_altitude || -Infinity;
 
-  if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+  if (hasElevationCurve) {
     pass.elevation_curve.forEach((point) => {
       const pointTime = new Date(point.time).getTime();
       if (pointTime >= startTime.getTime() && pointTime <= endTime.getTime()) {
@@ -162,10 +167,14 @@ export const PassCurve = ({ pass, startTime, endTime, labelType = false, labelVe
     const pointTime = new Date(peakPoint.time).getTime();
     peakX = ((pointTime - startTime.getTime()) / totalDuration) * 100;
     peakY = elevationToYPercent(peakPoint.elevation);
-  } else if (pass.peak_altitude) {
-    // Fallback: use middle of pass with peak_altitude
-    peakX = pass.left + (pass.width / 2);
-    peakY = elevationToYPercent(pass.peak_altitude);
+  } else {
+    // Fallback: use middle of pass with peak_altitude (for vertical line fallback)
+    const passStartTime = new Date(pass.event_start).getTime();
+    const passEndTime = new Date(pass.event_end).getTime();
+    const passMidpoint = (passStartTime + passEndTime) / 2;
+    const totalDuration = endTime.getTime() - startTime.getTime();
+    peakX = ((passMidpoint - startTime.getTime()) / totalDuration) * 100;
+    peakY = elevationToYPercent(pass.peak_altitude || 0);
   }
 
   return (

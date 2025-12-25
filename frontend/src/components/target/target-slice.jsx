@@ -20,6 +20,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
+import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
 
 
 export const sendNudgeCommand = createAsyncThunk(
@@ -426,6 +427,10 @@ const targetSatTrackSlice = createSlice({
         setSatellitePasses(state, action) {
             state.satellitePasses = action.payload;
         },
+        updateSatellitePassesWithElevationCurves(state, action) {
+            // Update satellite passes with calculated elevation curves
+            state.satellitePasses = action.payload;
+        },
         setSatGroupId(state, action) {
             state.groupId = action.payload;
         },
@@ -616,7 +621,11 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(fetchNextPasses.fulfilled, (state, action) => {
                 state.passesLoading = false;
-                state.satellitePasses = action.payload;
+                // Store passes with empty elevation curves initially (they'll be calculated in the background)
+                state.satellitePasses = action.payload.map(pass => ({
+                    ...pass,
+                    elevation_curve: pass.elevation_curve || [] // Ensure elevation_curve exists but may be empty
+                }));
 
                 // Find the current pass and mark it
                 const now = new Date().getTime();
@@ -747,6 +756,7 @@ const targetSatTrackSlice = createSlice({
 export const {
     setSatelliteData,
     setSatellitePasses,
+    updateSatellitePassesWithElevationCurves,
     setSatelliteId,
     setSatGroupId,
     setShowPastOrbitPath,
