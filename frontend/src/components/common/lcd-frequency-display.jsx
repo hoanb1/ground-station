@@ -208,12 +208,12 @@ const LCDFrequencyDisplay = ({
         try {
             if (!freq || freq === 0) {
                 if (isFullWidth) {
-                    // Return 11 empty digits for full width when frequency is 0
+                    // Return 9 empty digits for full width when frequency is 0 (under 1GHz display)
                     const result = [];
-                    for (let i = 0; i < 11; i++) {
+                    for (let i = 0; i < 9; i++) {
                         result.push({ type: 'digit', value: '0', key: i, isEmpty: true });
-                        // Add separators at positions 3, 6, 9 from the right
-                        if ((11 - i - 1) % 3 === 0 && i < 10) {
+                        // Add separators at positions 3, 6 from the right
+                        if ((9 - i - 1) % 3 === 0 && i < 8) {
                             result.push({ type: 'separator', value: '·', key: `sep-${i}` });
                         }
                     }
@@ -238,11 +238,15 @@ const LCDFrequencyDisplay = ({
 
             let finalFreqStr = cleanFreqStr;
 
+            // Determine if frequency is under 1GHz (1,000,000,000 Hz)
+            const isUnder1GHz = processedFreq < 1000000000;
+            const totalDigits = isUnder1GHz ? 9 : 11;
+
             // Handle fullWidth mode
             if (isFullWidth) {
                 if (!isOffset) {
-                    // For regular frequencies, pad to 11 digits
-                    finalFreqStr = cleanFreqStr.padStart(11, '0');
+                    // For regular frequencies, pad to 8 or 11 digits based on size
+                    finalFreqStr = cleanFreqStr.padStart(totalDigits, '0');
                 }
                 // For offset frequencies, keep finalFreqStr as is (no padding)
             }
@@ -250,17 +254,17 @@ const LCDFrequencyDisplay = ({
             // Add separators every 3 digits from the right
             const result = [];
 
-            // If fullWidth, create the full 11-digit structure
+            // If fullWidth, create the full digit structure
             if (isFullWidth) {
                 if (isOffset) {
                     // For offset frequencies: show empty digits on the left, actual digits on the right
                     const actualDigits = cleanFreqStr.length;
                     const signSpace = isOffset ? 1 : 0; // Always reserve space for sign when isOffset
-                    const emptyDigits = 11 - actualDigits - signSpace;
+                    const emptyDigits = totalDigits - actualDigits - signSpace;
 
                     // Add empty digits first
                     for (let i = 0; i < emptyDigits; i++) {
-                        const positionFromRight = 11 - i - 1;
+                        const positionFromRight = totalDigits - i - 1;
                         result.push({ type: 'digit', value: '0', key: i, isEmpty: true });
 
                         // Add separator after every 3 digits (except for the last digit)
@@ -293,11 +297,11 @@ const LCDFrequencyDisplay = ({
                         result.push({ type: 'digit', value: '-', key: 'neg' });
                     }
 
-                    // For regular frequencies, create 11 digit positions with padding
-                    for (let i = 0; i < 11; i++) {
+                    // For regular frequencies, create digit positions with padding (8 or 11 based on frequency)
+                    for (let i = 0; i < totalDigits; i++) {
                         const digit = finalFreqStr[i] || '0';
-                        const positionFromRight = 11 - i - 1;
-                        const isEmpty = finalFreqStr[i] === '0' && i < (11 - cleanFreqStr.length);
+                        const positionFromRight = totalDigits - i - 1;
+                        const isEmpty = finalFreqStr[i] === '0' && i < (totalDigits - cleanFreqStr.length);
 
                         result.push({ type: 'digit', value: digit, key: i, isEmpty });
 
