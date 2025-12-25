@@ -166,8 +166,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         return preference ? preference.value : '';
     }, [preferences]);
 
-    // Check if Gemini API is configured
+    // Check if transcription APIs are configured
     const geminiConfigured = !!getPreferenceValue('gemini_api_key');
+    const deepgramConfigured = !!getPreferenceValue('deepgram_api_key');
 
     const [localCenterFrequency, setLocalCenterFrequency] = useState(centerFrequency);
     const [localDbRange, setLocalDbRange] = useState(dbRange);
@@ -430,7 +431,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         }
     };
 
-    const handleTranscriptionToggle = (vfoNumber, enabled) => {
+    const handleTranscriptionToggle = (vfoNumber, enabled, provider = 'gemini') => {
         // Use VFO's existing values, fallback to default
         const currentVfo = vfoMarkers[vfoNumber];
         const language = currentVfo?.transcriptionLanguage || 'auto';
@@ -440,14 +441,16 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             vfoNumber,
             enabled,
             language,
-            translateTo
+            translateTo,
+            provider
         }, (response) => {
             if (response.success) {
-                // Update VFO state in Redux - only update enabled flag, preserve language and translateTo
+                // Update VFO state in Redux - update enabled flag and provider
                 dispatch(setVFOProperty({
                     vfoNumber,
                     updates: {
-                        transcriptionEnabled: enabled
+                        transcriptionEnabled: enabled,
+                        transcriptionProvider: provider
                     }
                 }));
 
@@ -716,6 +719,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     onVFOListenChange={handleVFOListenChange}
                     onTranscriptionToggle={handleTranscriptionToggle}
                     geminiConfigured={geminiConfigured}
+                    deepgramConfigured={deepgramConfigured}
                 />
 
                 <FrequencyControlAccordion

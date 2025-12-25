@@ -20,6 +20,7 @@ class VFOState:
     volume: int = 50
     squelch: int = -150
     transcription_enabled: bool = False  # Enable/disable transcription for this VFO
+    transcription_provider: str = "gemini"  # Transcription provider (gemini, deepgram)
     transcription_language: str = "auto"  # Language code for transcription (auto-detect by default)
     transcription_translate_to: str = (
         "none"  # Target language for translation (none = no translation)
@@ -67,6 +68,7 @@ class VFOManager:
         volume: Optional[int] = None,
         squelch: Optional[int] = None,
         transcription_enabled: Optional[bool] = None,
+        transcription_provider: Optional[str] = None,
         transcription_language: Optional[str] = None,
         transcription_translate_to: Optional[str] = None,
         decoder: str = "none",
@@ -128,6 +130,9 @@ class VFOManager:
         # check transcription settings
         if transcription_enabled is not None:
             vfo_state.transcription_enabled = transcription_enabled
+
+        if transcription_provider is not None:
+            vfo_state.transcription_provider = transcription_provider
 
         if transcription_language is not None:
             vfo_state.transcription_language = transcription_language

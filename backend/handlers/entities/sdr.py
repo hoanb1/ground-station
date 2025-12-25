@@ -478,7 +478,7 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
             logger.debug("Transcription manager not initialized, skipping auto-start")
             return
 
-        # Fetch Gemini API key from preferences
+        # Fetch API keys from preferences
         from crud import fetch_all_preferences
 
         async def fetch_and_start():
@@ -489,29 +489,51 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
                     return
 
                 preferences = prefs_result["data"]
-                gemini_api_key = next(
-                    (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
-                    "",
-                )
 
-                if not gemini_api_key:
-                    logger.debug("Gemini API key not configured, skipping auto-start transcription")
+                # Get provider from VFO state (default to gemini for backward compatibility)
+                provider = getattr(vfo_state, "transcription_provider", "gemini") or "gemini"
+
+                # Get the appropriate API key based on provider
+                if provider == "gemini":
+                    api_key = next(
+                        (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
+                        "",
+                    )
+                    if not api_key:
+                        logger.debug(
+                            "Gemini API key not configured, skipping auto-start transcription"
+                        )
+                        return
+                    transcription_manager.set_gemini_api_key(api_key)
+                elif provider == "deepgram":
+                    api_key = next(
+                        (p["value"] for p in preferences if p["name"] == "deepgram_api_key"),
+                        "",
+                    )
+                    if not api_key:
+                        logger.debug(
+                            "Deepgram API key not configured, skipping auto-start transcription"
+                        )
+                        return
+                    transcription_manager.set_deepgram_api_key(api_key)
+                else:
+                    logger.warning(
+                        f"Unknown transcription provider: {provider}, skipping auto-start"
+                    )
                     return
-
-                # Update API key in transcription manager
-                transcription_manager.set_gemini_api_key(gemini_api_key)
 
                 # Get language settings from VFO state
                 language = vfo_state.transcription_language or "auto"
                 translate_to = vfo_state.transcription_translate_to or "none"
 
-                # Start transcription consumer
+                # Start transcription worker
                 success = transcription_manager.start_transcription(
                     sdr_id=sdr_id,
                     session_id=session_id,
                     vfo_number=vfo_number,
                     language=language,
                     translate_to=translate_to,
+                    provider=provider,
                 )
 
                 if success:

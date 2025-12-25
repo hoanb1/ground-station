@@ -116,6 +116,7 @@ async def update_vfo_parameters(
         volume=data.get("volume"),
         squelch=data.get("squelch"),
         transcription_enabled=data.get("transcriptionEnabled"),
+        transcription_provider=data.get("transcriptionProvider"),
         transcription_language=data.get("transcriptionLanguage"),
         transcription_translate_to=data.get("transcriptionTranslateTo"),
         decoder=data.get("decoder"),
@@ -275,12 +276,14 @@ async def toggle_transcription(
 
     logger.info(f"toggle_transcription called: vfo={vfo_number}, enabled={enabled}")
 
-    # Get language and translation settings
+    # Get language, translation, and provider settings
     language = data.get("language", "auto")
     translate_to = data.get("translateTo", "none")
+    provider = data.get("provider", "gemini")  # Default to gemini for backward compatibility
 
     logger.debug(
-        f"[VFO {vfo_number}] Transcription settings from frontend: language={language}, translate_to={translate_to}"
+        f"[VFO {vfo_number}] Transcription settings from frontend: "
+        f"provider={provider}, language={language}, translate_to={translate_to}"
     )
 
     # Get VFO state (may not exist if no SDR is streaming yet)
@@ -293,10 +296,11 @@ async def toggle_transcription(
     sdr_session = get_sdr_session(sid)
     sdr_id = sdr_session.get("sdr_id") if sdr_session else None
 
-    # If enabling transcription and SDR is streaming, try to start the consumer
+    # If enabling transcription and SDR is streaming, try to start the worker
     if enabled and sdr_id:
         logger.info(
-            f"Starting transcription for VFO {vfo_number} (language={language}, translate_to={translate_to})"
+            f"Starting {provider} transcription for VFO {vfo_number} "
+            f"(language={language}, translate_to={translate_to})"
         )
 
         # Get process manager and transcription manager
@@ -308,47 +312,68 @@ async def toggle_transcription(
         if not transcription_manager:
             logger.warning("Transcription manager not initialized, updating VFO state only")
         else:
-            # Fetch Gemini API key from preferences
+            # Fetch API key from preferences based on provider
             try:
                 async with AsyncSessionLocal() as dbsession:
                     prefs_result = await fetch_all_preferences(dbsession)
                     if prefs_result["success"]:
                         preferences = prefs_result["data"]
-                        gemini_api_key = next(
-                            (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
-                            "",
-                        )
 
-                        if not gemini_api_key:
-                            logger.warning("Gemini API key not configured in preferences")
-                            # Still update VFO state so it's ready when streaming starts
+                        # Get the appropriate API key based on provider
+                        if provider == "gemini":
+                            api_key = next(
+                                (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
+                                "",
+                            )
+                            if api_key:
+                                transcription_manager.set_gemini_api_key(api_key)
+                                logger.info("Updated transcription manager with Gemini API key")
+                            else:
+                                logger.warning("Gemini API key not configured in preferences")
+                        elif provider == "deepgram":
+                            api_key = next(
+                                (
+                                    p["value"]
+                                    for p in preferences
+                                    if p["name"] == "deepgram_api_key"
+                                ),
+                                "",
+                            )
+                            if api_key:
+                                transcription_manager.set_deepgram_api_key(api_key)
+                                logger.info("Updated transcription manager with Deepgram API key")
+                            else:
+                                logger.warning("Deepgram API key not configured in preferences")
                         else:
-                            # Update API key in transcription manager
-                            transcription_manager.set_gemini_api_key(gemini_api_key)
-                            logger.info("Updated transcription manager with Gemini API key")
+                            logger.error(f"Unknown transcription provider: {provider}")
+                            api_key = None
 
-                            # Start per-VFO transcription consumer
+                        if api_key:
+                            # Start per-VFO transcription worker
                             success = transcription_manager.start_transcription(
                                 sdr_id=sdr_id,
                                 session_id=sid,
                                 vfo_number=vfo_number,
                                 language=language,
                                 translate_to=translate_to,
+                                provider=provider,
                             )
 
                             if not success:
                                 logger.warning(
-                                    f"Failed to start transcription consumer for VFO {vfo_number}, updating VFO state only"
+                                    f"Failed to start {provider} transcription worker for VFO {vfo_number}, "
+                                    f"updating VFO state only"
                                 )
                     else:
                         logger.warning("Failed to fetch preferences, updating VFO state only")
             except Exception as e:
                 logger.error(
-                    f"Error fetching Gemini API key: {e}, updating VFO state only", exc_info=True
+                    f"Error fetching API key for {provider}: {e}, updating VFO state only",
+                    exc_info=True,
                 )
 
     elif not enabled and sdr_id:
-        # Disabling transcription - stop consumer if it exists
+        # Disabling transcription - stop worker if it exists
         logger.info(f"Stopping transcription for VFO {vfo_number}")
 
         from processing.utils import get_process_manager
@@ -368,6 +393,7 @@ async def toggle_transcription(
         session_id=sid,
         vfo_id=vfo_number,
         transcription_enabled=enabled,
+        transcription_provider=provider,
         transcription_language=language,
         transcription_translate_to=translate_to,
     )

@@ -360,7 +360,7 @@ const PreferencesForm = () => {
                                 fullWidth
                                 id="gemini-api-key"
                                 variant="filled"
-                                type="password"
+                                type="text"
                                 size="small"
                                 disabled={isLoading}
                                 label={t('preferences.gemini_api_key', 'Gemini API Key')}
@@ -368,6 +368,12 @@ const PreferencesForm = () => {
                                 value={getPreferenceValue('gemini_api_key')}
                                 onChange={handleChange('gemini_api_key')}
                                 helperText={t('preferences.gemini_api_key_help', 'Google Gemini API key for audio transcription. Get yours at ai.google.dev')}
+                                autoComplete="off"
+                                inputProps={{
+                                    autoComplete: 'off',
+                                    'data-form-type': 'other',
+                                    'data-lpignore': 'true'
+                                }}
                             />
                         </FormControl>
                         <Alert severity="info" sx={{ mt: 1, fontSize: '0.75rem' }}>
@@ -376,6 +382,50 @@ const PreferencesForm = () => {
                             {' '}
                             <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
                                 Google's Terms
+                            </a>
+                            {' • '}
+                            <a href="https://github.com/sgoudelis/ground-station/blob/main/TRANSCRIPTION_PRIVACY.md" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                                Privacy Notice
+                            </a>
+                        </Alert>
+                    </Grid>
+
+                    {/* Deepgram API Key */}
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>{t('preferences.deepgram_api_key', 'Deepgram API Key')}</Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                            disabled={isLoading}
+                            size="small"
+                        >
+                            <TextField
+                                style={{fontFamily: 'monospace'}}
+                                fullWidth
+                                id="deepgram-api-key"
+                                variant="filled"
+                                type="text"
+                                size="small"
+                                disabled={isLoading}
+                                label={t('preferences.deepgram_api_key', 'Deepgram API Key')}
+                                placeholder="..."
+                                value={getPreferenceValue('deepgram_api_key')}
+                                onChange={handleChange('deepgram_api_key')}
+                                helperText={t('preferences.deepgram_api_key_help', 'Deepgram API key for audio transcription. Get yours at deepgram.com')}
+                                autoComplete="off"
+                                inputProps={{
+                                    autoComplete: 'off',
+                                    'data-form-type': 'other',
+                                    'data-lpignore': 'true'
+                                }}
+                            />
+                        </FormControl>
+                        <Alert severity="info" sx={{ mt: 1, fontSize: '0.75rem' }}>
+                            <AlertTitle sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Privacy & Terms</AlertTitle>
+                            When enabled, audio is sent to Deepgram's servers. You are responsible for costs (~$0.015/hour).
+                            {' '}
+                            <a href="https://deepgram.com/pricing" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                                Deepgram Pricing
                             </a>
                             {' • '}
                             <a href="https://github.com/sgoudelis/ground-station/blob/main/TRANSCRIPTION_PRIVACY.md" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>

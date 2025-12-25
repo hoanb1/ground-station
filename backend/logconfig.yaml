@@ -275,6 +275,12 @@ loggers:
       - default
     propagate: no
 
+  transcription.deepgram:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

@@ -87,6 +87,7 @@ const VfoAccordion = ({
                           onVFOListenChange,
                           onTranscriptionToggle,
                           geminiConfigured,
+                          deepgramConfigured,
                       }) => {
     const { t } = useTranslation('waterfall');
     const squelchSliderRef = React.useRef(null);
@@ -1146,13 +1147,24 @@ const VfoAccordion = ({
                                 {t('vfo.transcription_help', 'Transcribe audio using AI')}
                             </Typography>
                             <ToggleButtonGroup
-                                value={vfoMarkers[vfoIndex]?.transcriptionEnabled ? 'gemini' : 'none'}
+                                value={vfoMarkers[vfoIndex]?.transcriptionEnabled ? (vfoMarkers[vfoIndex]?.transcriptionProvider || 'gemini') : 'none'}
                                 exclusive
-                                disabled={!vfoActive[vfoIndex] || !geminiConfigured}
+                                disabled={!vfoActive[vfoIndex] || (!geminiConfigured && !deepgramConfigured)}
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
-                                        const enabled = newValue === 'gemini';
-                                        onTranscriptionToggle && onTranscriptionToggle(vfoIndex, enabled);
+                                        const currentEnabled = vfoMarkers[vfoIndex]?.transcriptionEnabled;
+                                        const currentProvider = vfoMarkers[vfoIndex]?.transcriptionProvider || 'gemini';
+                                        const currentValue = currentEnabled ? currentProvider : 'none';
+
+                                        // If clicking same button, do nothing
+                                        if (newValue === currentValue) {
+                                            return;
+                                        }
+
+                                        const newEnabled = newValue !== 'none';
+                                        const newProvider = newValue !== 'none' ? newValue : currentProvider;
+
+                                        onTranscriptionToggle && onTranscriptionToggle(vfoIndex, newEnabled, newProvider);
                                     }
                                 }}
                                 sx={{
@@ -1197,11 +1209,16 @@ const VfoAccordion = ({
                                 }}
                             >
                                 <ToggleButton value="none">{t('vfo.transcription_modes.none', 'None')}</ToggleButton>
-                                <ToggleButton value="gemini">{t('vfo.transcription_modes.gemini', 'Gemini AI')}</ToggleButton>
+                                <ToggleButton value="gemini" disabled={!geminiConfigured}>
+                                    {t('vfo.transcription_modes.gemini', 'Gemini AI')}
+                                </ToggleButton>
+                                <ToggleButton value="deepgram" disabled={!deepgramConfigured}>
+                                    {t('vfo.transcription_modes.deepgram', 'Deepgram')}
+                                </ToggleButton>
                             </ToggleButtonGroup>
 
-                            {/* Gemini API Key notification */}
-                            {!geminiConfigured && (
+                            {/* API Key notification */}
+                            {!geminiConfigured && !deepgramConfigured && (
                                 <Typography variant="caption" sx={{
                                     mt: 0.5,
                                     display: 'block',
@@ -1210,6 +1227,28 @@ const VfoAccordion = ({
                                     fontStyle: 'italic'
                                 }}>
                                     {t('vfo.api_key_required', 'API key required in Settings')}
+                                </Typography>
+                            )}
+                            {!geminiConfigured && deepgramConfigured && (
+                                <Typography variant="caption" sx={{
+                                    mt: 0.5,
+                                    display: 'block',
+                                    color: 'text.disabled',
+                                    fontSize: '0.7rem',
+                                    fontStyle: 'italic'
+                                }}>
+                                    {t('vfo.gemini_key_required', 'Gemini API key required for Gemini')}
+                                </Typography>
+                            )}
+                            {geminiConfigured && !deepgramConfigured && (
+                                <Typography variant="caption" sx={{
+                                    mt: 0.5,
+                                    display: 'block',
+                                    color: 'text.disabled',
+                                    fontSize: '0.7rem',
+                                    fontStyle: 'italic'
+                                }}>
+                                    {t('vfo.deepgram_key_required', 'Deepgram API key required for Deepgram')}
                                 </Typography>
                             )}
 
@@ -1682,6 +1721,8 @@ const VfoAccordion = ({
                                 </FormControl>
                             </Box>
 
+                            {/* Translation only available with Gemini */}
+                            {vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionProvider !== 'deepgram' && (
                             <Box sx={{ mb: 2.5 }}>
                                 <FormControl fullWidth size="small" variant="filled">
                                     <InputLabel>{t('vfo.translate_to', 'Translate To')}</InputLabel>
@@ -1711,6 +1752,14 @@ const VfoAccordion = ({
                                     </Select>
                                 </FormControl>
                             </Box>
+                            )}
+
+                            {/* Deepgram note about no translation */}
+                            {vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionProvider === 'deepgram' && (
+                                <Alert severity="info" sx={{ mb: 2, fontSize: '0.75rem' }}>
+                                    {t('vfo.deepgram_no_translation', 'Deepgram does not support built-in translation. Only transcription is available.')}
+                                </Alert>
+                            )}
 
                             {/* Transcription Stats Display */}
                             {(() => {
@@ -1752,6 +1801,7 @@ const VfoAccordion = ({
                                                 fontWeight: 600
                                             }}>
                                                 {isConnected ? 'Transcribing' : 'Disconnected'}
+                                                {info.provider && ` (${info.provider.charAt(0).toUpperCase() + info.provider.slice(1)})`}
                                             </Typography>
                                         </Box>
                                         <Typography variant="body2" sx={{

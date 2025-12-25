@@ -21,10 +21,11 @@ from typing import Optional
 
 class TranscriptionManager:
     """
-    Manager for per-VFO transcription consumers.
+    Manager for per-VFO transcription workers.
 
-    Each VFO can have its own transcription consumer with independent:
-    - Gemini API connection
+    Each VFO can have its own transcription worker with independent:
+    - Provider selection (Gemini, Deepgram, etc.)
+    - API connection
     - Language settings
     - Translation settings
     - Audio queue subscription
@@ -43,7 +44,10 @@ class TranscriptionManager:
         self.processes = processes
         self.sio = sio
         self.event_loop = event_loop
-        self.gemini_api_key = None  # Will be set when first consumer starts
+
+        # API keys for different providers
+        self.gemini_api_key = None
+        self.deepgram_api_key = None
 
         # Race condition prevention (similar to decoder manager)
         self._start_locks = {}  # Per (sdr_id, session_id, vfo_number) locks
@@ -52,13 +56,23 @@ class TranscriptionManager:
 
     def set_gemini_api_key(self, api_key: str):
         """
-        Update the Gemini API key for all future transcription consumers.
+        Update the Gemini API key for all future transcription workers.
 
         Args:
             api_key: Google Gemini API key
         """
         self.gemini_api_key = api_key
         self.logger.info("Gemini API key updated for transcription manager")
+
+    def set_deepgram_api_key(self, api_key: str):
+        """
+        Update the Deepgram API key for all future transcription workers.
+
+        Args:
+            api_key: Deepgram API key
+        """
+        self.deepgram_api_key = api_key
+        self.logger.info("Deepgram API key updated for transcription manager")
 
     def start_transcription(
         self,
@@ -67,9 +81,10 @@ class TranscriptionManager:
         vfo_number: int,
         language: str = "auto",
         translate_to: str = "none",
+        provider: str = "gemini",
     ):
         """
-        Start a transcription consumer for a specific VFO.
+        Start a transcription worker for a specific VFO.
 
         Args:
             sdr_id: Device identifier
@@ -77,19 +92,28 @@ class TranscriptionManager:
             vfo_number: VFO number (1-4)
             language: Source language code (e.g., "en", "es", "auto")
             translate_to: Target language code for translation (e.g., "en", "none")
+            provider: Transcription provider ("gemini", "deepgram")
 
         Returns:
             bool: True if started successfully, False otherwise
         """
-        # Import here to avoid circular dependencies
-        from audio.transcriptionconsumer import TranscriptionConsumer
-
         if sdr_id not in self.processes:
             self.logger.warning(f"No SDR process found for device {sdr_id}")
             return False
 
-        if not self.gemini_api_key:
-            self.logger.warning("No Gemini API key configured, cannot start transcription")
+        # Get API key for the selected provider
+        if provider == "gemini":
+            api_key = self.gemini_api_key
+            if not api_key:
+                self.logger.warning("No Gemini API key configured, cannot start transcription")
+                return False
+        elif provider == "deepgram":
+            api_key = self.deepgram_api_key
+            if not api_key:
+                self.logger.warning("No Deepgram API key configured, cannot start transcription")
+                return False
+        else:
+            self.logger.error(f"Unknown transcription provider: {provider}")
             return False
 
         process_info = self.processes[sdr_id]
@@ -151,36 +175,37 @@ class TranscriptionManager:
             self._start_in_progress[key] = True
 
             try:
-                # Check if transcription consumer already exists for this VFO
+                # Check if transcription worker already exists for this VFO
                 if vfo_number in consumer_storage:
                     existing = consumer_storage[vfo_number]
                     if existing["instance"].is_alive():
-                        # Check if settings changed - if so, restart the consumer
+                        # Check if settings changed - if so, restart the worker
                         settings_changed = (
                             existing.get("language") != language
                             or existing.get("translate_to") != translate_to
+                            or existing.get("provider") != provider
                         )
                         if settings_changed:
                             self.logger.info(
                                 f"Transcription settings changed for session {session_id} VFO {vfo_number}, "
-                                f"restarting consumer (old: language={existing.get('language')}, "
-                                f"translate_to={existing.get('translate_to')} -> "
-                                f"new: language={language}, translate_to={translate_to})"
+                                f"restarting worker (old: provider={existing.get('provider')}, "
+                                f"language={existing.get('language')}, translate_to={existing.get('translate_to')} -> "
+                                f"new: provider={provider}, language={language}, translate_to={translate_to})"
                             )
-                            # Stop the existing consumer
+                            # Stop the existing worker
                             self._stop_consumer_entry(existing, session_id, vfo_number)
                             del consumer_storage[vfo_number]
-                            # Continue to start new consumer with updated settings
+                            # Continue to start new worker with updated settings
                         else:
                             self.logger.debug(
-                                f"Transcription consumer already running for session {session_id} VFO {vfo_number} "
+                                f"Transcription worker already running for session {session_id} VFO {vfo_number} "
                                 f"with same settings"
                             )
                             return True
                     else:
-                        # Clean up dead consumer
+                        # Clean up dead worker
                         self.logger.info(
-                            f"Cleaning up dead transcription consumer for session {session_id} VFO {vfo_number}"
+                            f"Cleaning up dead transcription worker for session {session_id} VFO {vfo_number}"
                         )
                         self._cleanup_consumer(existing)
                         del consumer_storage[vfo_number]
@@ -189,31 +214,51 @@ class TranscriptionManager:
                 subscription_key = f"transcription:{session_id}_vfo{vfo_number}"
                 transcription_queue = audio_broadcaster.subscribe(subscription_key, maxsize=50)
 
-                # Create and start the transcription consumer
+                # Create the appropriate worker based on provider
                 try:
-                    transcription_consumer = TranscriptionConsumer(
-                        transcription_queue=transcription_queue,
-                        sio=self.sio,
-                        loop=self.event_loop,
-                        gemini_api_key=self.gemini_api_key,
-                        session_id=session_id,
-                        vfo_number=vfo_number,
-                        language=language,
-                        translate_to=translate_to,
-                    )
-                    transcription_consumer.start()
+                    if provider == "gemini":
+                        from audio.geminitranscriptionworker import GeminiTranscriptionWorker
 
-                    # Store the consumer info
+                        transcription_worker = GeminiTranscriptionWorker(
+                            transcription_queue=transcription_queue,
+                            sio=self.sio,
+                            loop=self.event_loop,
+                            api_key=api_key,
+                            session_id=session_id,
+                            vfo_number=vfo_number,
+                            language=language,
+                            translate_to=translate_to,
+                        )
+                    elif provider == "deepgram":
+                        from audio.deepgramtranscriptionworker import DeepgramTranscriptionWorker
+
+                        transcription_worker = DeepgramTranscriptionWorker(
+                            transcription_queue=transcription_queue,
+                            sio=self.sio,
+                            loop=self.event_loop,
+                            api_key=api_key,
+                            session_id=session_id,
+                            vfo_number=vfo_number,
+                            language=language,
+                            translate_to=translate_to,
+                        )
+                    else:
+                        raise ValueError(f"Unknown provider: {provider}")
+
+                    transcription_worker.start()
+
+                    # Store the worker info
                     consumer_storage[vfo_number] = {
-                        "instance": transcription_consumer,
+                        "instance": transcription_worker,
                         "subscription_key": subscription_key,
                         "audio_broadcaster": audio_broadcaster,
                         "language": language,
                         "translate_to": translate_to,
+                        "provider": provider,
                     }
 
                     self.logger.info(
-                        f"Started transcription consumer for session {session_id} VFO {vfo_number} "
+                        f"Started {provider} transcription worker for session {session_id} VFO {vfo_number} "
                         f"(language={language}, translate_to={translate_to})"
                     )
 
@@ -222,8 +267,8 @@ class TranscriptionManager:
                     return True
 
                 except Exception as e:
-                    self.logger.error(f"Failed to start transcription consumer: {e}", exc_info=True)
-                    # Clean up subscription if consumer creation failed
+                    self.logger.error(f"Failed to start transcription worker: {e}", exc_info=True)
+                    # Clean up subscription if worker creation failed
                     if audio_broadcaster:
                         audio_broadcaster.unsubscribe(subscription_key)
                     return False
@@ -233,12 +278,12 @@ class TranscriptionManager:
 
     def stop_transcription(self, sdr_id: str, session_id: str, vfo_number: Optional[int] = None):
         """
-        Stop transcription consumer(s) for a session.
+        Stop transcription worker(s) for a session.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
-            vfo_number: VFO number (1-4). If None, stops all transcription consumers for session
+            vfo_number: VFO number (1-4). If None, stops all transcription workers for session
 
         Returns:
             bool: True if stopped successfully, False otherwise
@@ -259,7 +304,7 @@ class TranscriptionManager:
                 # Stop specific VFO
                 if vfo_number not in consumer_storage:
                     self.logger.warning(
-                        f"No transcription consumer found for session {session_id} VFO {vfo_number}"
+                        f"No transcription worker found for session {session_id} VFO {vfo_number}"
                     )
                     return False
 
@@ -282,29 +327,30 @@ class TranscriptionManager:
 
                 del transcription_consumers[session_id]
                 self.logger.info(
-                    f"Stopped {stopped_count} transcription consumer(s) for session {session_id}"
+                    f"Stopped {stopped_count} transcription worker(s) for session {session_id}"
                 )
                 return True
 
         except Exception as e:
-            self.logger.error(f"Error stopping transcription consumer: {e}", exc_info=True)
+            self.logger.error(f"Error stopping transcription worker: {e}", exc_info=True)
             return False
 
     def _stop_consumer_entry(self, consumer_entry: dict, session_id: str, vfo_number: int):
         """
-        Stop a single transcription consumer entry.
+        Stop a single transcription worker entry.
 
         Args:
-            consumer_entry: Consumer entry dict with instance, subscription_key, etc.
+            consumer_entry: Worker entry dict with instance, subscription_key, etc.
             session_id: Session identifier
             vfo_number: VFO number
         """
-        consumer = consumer_entry["instance"]
+        worker = consumer_entry["instance"]
         subscription_key = consumer_entry["subscription_key"]
         audio_broadcaster = consumer_entry.get("audio_broadcaster")
+        provider = consumer_entry.get("provider", "unknown")
 
-        # Stop the consumer thread (non-blocking)
-        consumer.stop()
+        # Stop the worker thread (non-blocking)
+        worker.stop()
         # Don't join - let it stop asynchronously to avoid blocking
 
         # Unsubscribe from audio broadcaster
@@ -315,20 +361,20 @@ class TranscriptionManager:
                 self.logger.warning(f"Failed to unsubscribe from audio broadcaster: {e}")
 
         self.logger.info(
-            f"Stopped transcription consumer for session {session_id} VFO {vfo_number}"
+            f"Stopped {provider} transcription worker for session {session_id} VFO {vfo_number}"
         )
 
     def _cleanup_consumer(self, consumer_entry: dict):
         """
-        Clean up a consumer entry (for dead/stale consumers).
+        Clean up a worker entry (for dead/stale workers).
 
         Args:
-            consumer_entry: Consumer entry dict
+            consumer_entry: Worker entry dict
         """
         try:
-            consumer = consumer_entry["instance"]
-            if consumer.is_alive():
-                consumer.stop()
+            worker = consumer_entry["instance"]
+            if worker.is_alive():
+                worker.stop()
                 # Don't join - let it stop asynchronously
 
             subscription_key = consumer_entry.get("subscription_key")
@@ -336,11 +382,11 @@ class TranscriptionManager:
             if audio_broadcaster and subscription_key:
                 audio_broadcaster.unsubscribe(subscription_key)
         except Exception as e:
-            self.logger.warning(f"Error during consumer cleanup: {e}")
+            self.logger.warning(f"Error during worker cleanup: {e}")
 
     def get_active_transcription_consumer(self, sdr_id: str, session_id: str, vfo_number: int):
         """
-        Get the active transcription consumer for a session/VFO.
+        Get the active transcription worker for a session/VFO.
 
         Args:
             sdr_id: Device identifier
@@ -348,7 +394,7 @@ class TranscriptionManager:
             vfo_number: VFO number (1-4)
 
         Returns:
-            TranscriptionConsumer instance or None
+            TranscriptionWorker instance or None
         """
         if sdr_id not in self.processes:
             return None
@@ -367,7 +413,7 @@ class TranscriptionManager:
 
     def stop_all_for_session(self, session_id: str):
         """
-        Stop all transcription consumers for a session across all SDRs.
+        Stop all transcription workers for a session across all SDRs.
 
         Args:
             session_id: Session identifier

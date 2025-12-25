@@ -92,6 +92,11 @@ const preferencesSlice = createSlice({
                 id: null,
                 name: 'gemini_api_key',
                 value: '',
+            },
+            {
+                id: null,
+                name: 'deepgram_api_key',
+                value: '',
             }
         ],
         status: 'idle',
