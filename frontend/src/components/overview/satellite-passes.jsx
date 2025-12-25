@@ -769,7 +769,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         return () => {
             clearInterval(interval);
         }
-    }, []);
+    }, [selectedSatGroupId, socket, nextPassesHours, dispatch]);
 
     useEffect(() => {
         const target = containerRef.current;
