@@ -39,12 +39,16 @@ import {
     setSelectedSatGroupId,
     fetchSatellitesByGroupId,
     fetchSatelliteGroups,
+    setOpenSatellitesTableSettingsDialog,
 } from './overview-slice.jsx';
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
+import SettingsIcon from '@mui/icons-material/Settings';
 import {useSocket} from "../common/socket.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
+import SatellitesTableSettingsDialog from './satellites-table-settings-dialog.jsx';
+import IconButton from '@mui/material/IconButton';
 
 const SATELLITE_NUMBER_LIMIT = 200;
 
@@ -412,6 +416,7 @@ const MemoizedStyledDataGrid = React.memo(({
             onRowClick={onRowClick}
             getRowId={(params) => params.norad_id}
             localeText={dataGridLocale.components.MuiDataGrid.defaultProps.localeText}
+            columnVisibilityModel={columnVisibility}
             onColumnVisibilityModelChange={onColumnVisibilityChange}
             sx={{
                 border: 0,
@@ -437,11 +442,6 @@ const MemoizedStyledDataGrid = React.memo(({
             }}
             sortModel={sortModel}
             onSortModelChange={onSortModelChange}
-            initialState={{
-                columns: {
-                    columnVisibilityModel: columnVisibility,
-                },
-            }}
             columns={columns}
         />
     );
@@ -473,8 +473,48 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const satellitesTableSortModel = useSelector(state => state.overviewSatTrack.satellitesTableSortModel);
     const satGroups = useSelector(state => state.overviewSatTrack.satGroups);
     const passesLoading = useSelector(state => state.overviewSatTrack.passesLoading);
+    const openSatellitesTableSettingsDialog = useSelector(state => state.overviewSatTrack.openSatellitesTableSettingsDialog);
 
     const minHeight = 200;
+    const hasLoadedFromStorageRef = useRef(false);
+    const isLoadingRef = useRef(false);
+
+    // Load column visibility from localStorage on mount
+    useEffect(() => {
+        // Prevent double loading (React StrictMode or component remounting)
+        if (isLoadingRef.current || hasLoadedFromStorageRef.current) {
+            return;
+        }
+
+        isLoadingRef.current = true;
+
+        const loadColumnVisibility = () => {
+            try {
+                const stored = localStorage.getItem('satellites-table-column-visibility');
+                if (stored) {
+                    const parsedVisibility = JSON.parse(stored);
+                    dispatch(setSatellitesTableColumnVisibility(parsedVisibility));
+                }
+            } catch (e) {
+                console.error('Failed to load satellites table column visibility:', e);
+            } finally {
+                hasLoadedFromStorageRef.current = true;
+                isLoadingRef.current = false;
+            }
+        };
+        loadColumnVisibility();
+    }, []); // Empty deps - only run once on mount
+
+    // Persist column visibility to localStorage whenever it changes (but not on initial load)
+    useEffect(() => {
+        if (columnVisibility && hasLoadedFromStorageRef.current) {
+            try {
+                localStorage.setItem('satellites-table-column-visibility', JSON.stringify(columnVisibility));
+            } catch (e) {
+                console.error('Failed to save satellites table column visibility:', e);
+            }
+        }
+    }, [columnVisibility]);
 
     // Add elevation to rows for sorting, but use useMemo to prevent unnecessary recalculations
     const satelliteRows = React.useMemo(() => {
@@ -550,6 +590,14 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
         dispatch(setSatellitesTableSortModel(newSortModel));
     }, [dispatch]);
 
+    const handleOpenSettings = useCallback(() => {
+        dispatch(setOpenSatellitesTableSettingsDialog(true));
+    }, [dispatch]);
+
+    const handleCloseSettings = useCallback(() => {
+        dispatch(setOpenSatellitesTableSettingsDialog(false));
+    }, [dispatch]);
+
     return (
         <>
             <TitleBar
@@ -566,6 +614,19 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                             {t('satellites_table.title')} ({t('satellites_table.satellites_count', { count: selectedSatellites?.length || 0 })})
                         </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title={t('satellites_table_settings.title')}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={handleOpenSettings}
+                                    sx={{ padding: '2px' }}
+                                >
+                                    <SettingsIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                     </Box>
                 </Box>
             </TitleBar>
@@ -608,6 +669,10 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                     )}
                 </div>
             </div>
+            <SatellitesTableSettingsDialog
+                open={openSatellitesTableSettingsDialog}
+                onClose={handleCloseSettings}
+            />
         </>
     );
 });

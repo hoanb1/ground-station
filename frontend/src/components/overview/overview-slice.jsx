@@ -217,12 +217,37 @@ const overviewSlice = createSlice({
         passesRangeEnd: null,
         passesCachedGroupId: null, // Track which group the cached passes belong to
         openMapSettingsDialog: false,
+        openPassesTableSettingsDialog: false,
+        openSatellitesTableSettingsDialog: false,
         nextPassesHours: 4.0,
         satellitesTableColumnVisibility: {
-            launched: false,
+            name: true,
             alternative_name: false,
+            norad_id: true,
+            elevation: true,
+            status: true,
+            transmitters: true,
             countries: false,
             decayed: false,
+            updated: true,
+            launched: false,
+        },
+        passesTableColumnVisibility: {
+            name: true,
+            alternative_name: false,
+            name_other: false,
+            peak_altitude: true,
+            elevation: true,
+            progress: true,
+            duration: true,
+            transmitters: true,
+            event_start: true,
+            event_end: true,
+            distance_at_start: false,
+            distance_at_end: false,
+            distance_at_peak: false,
+            is_geostationary: false,
+            is_geosynchronous: false,
         },
         recentSatelliteGroups: [],
         showGeostationarySatellites: false, // Default off - hide geostationary satellites
@@ -323,6 +348,12 @@ const overviewSlice = createSlice({
         setOpenMapSettingsDialog(state, action) {
             state.openMapSettingsDialog = action.payload;
         },
+        setOpenPassesTableSettingsDialog(state, action) {
+            state.openPassesTableSettingsDialog = action.payload;
+        },
+        setOpenSatellitesTableSettingsDialog(state, action) {
+            state.openSatellitesTableSettingsDialog = action.payload;
+        },
         setNextPassesHours(state, action) {
             state.nextPassesHours = action.payload;
         },
@@ -343,6 +374,9 @@ const overviewSlice = createSlice({
         },
         setSatellitesTableColumnVisibility(state, action) {
             state.satellitesTableColumnVisibility = action.payload;
+        },
+        setPassesTableColumnVisibility(state, action) {
+            state.passesTableColumnVisibility = action.payload;
         },
         setRecentSatelliteGroups(state, action) {
             state.recentSatelliteGroups = action.payload;
@@ -484,6 +518,8 @@ export const {
     setPasses,
     setPassesLoading,
     setOpenMapSettingsDialog,
+    setOpenPassesTableSettingsDialog,
+    setOpenSatellitesTableSettingsDialog,
     setNextPassesHours,
     setShowGrid,
     setSelectedSatelliteId,
@@ -491,6 +527,7 @@ export const {
     setSelectedSatellitePositions,
     setLoadingSatellites,
     setSatellitesTableColumnVisibility,
+    setPassesTableColumnVisibility,
     setRecentSatelliteGroups,
     addRecentSatelliteGroup,
 } = overviewSlice.actions;

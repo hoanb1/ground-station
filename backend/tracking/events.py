@@ -396,6 +396,8 @@ async def fetch_next_events_for_group(
                 satellite_info = {
                     sat["norad_id"]: {
                         "name": sat["name"],
+                        "alternative_name": sat.get("alternative_name", ""),
+                        "name_other": sat.get("name_other", ""),
                         "transmitters": sat.get("transmitters", []),
                         "transmitter_count": len([t for t in sat.get("transmitters", [])]),
                     }
@@ -405,6 +407,10 @@ async def fetch_next_events_for_group(
                 # Add satellite names, transmitters and counts to events
                 for event in events_data:
                     event["name"] = satellite_info[event["norad_id"]]["name"]
+                    event["alternative_name"] = satellite_info[event["norad_id"]][
+                        "alternative_name"
+                    ]
+                    event["name_other"] = satellite_info[event["norad_id"]]["name_other"]
                     event["transmitters"] = satellite_info[event["norad_id"]]["transmitters"]
                     event["transmitter_count"] = satellite_info[event["norad_id"]][
                         "transmitter_count"

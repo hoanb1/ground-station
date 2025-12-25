@@ -43,6 +43,8 @@ import {
     setPassesTablePageSize,
     setPassesTableSortModel,
     updatePassesWithElevationCurves,
+    setPassesTableColumnVisibility,
+    setOpenPassesTableSettingsDialog,
 } from './overview-slice.jsx';
 import {Typography, Box, IconButton, Tooltip, Button, useMediaQuery, useTheme} from '@mui/material';
 import {useGridApiRef, GridPagination} from '@mui/x-data-grid';
@@ -62,6 +64,8 @@ import { enUS, elGR } from '@mui/x-data-grid/locales';
 import ElevationDisplay from "../common/elevation-display.jsx";
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SettingsIcon from '@mui/icons-material/Settings';
+import PassesTableSettingsDialog from './passes-table-settings-dialog.jsx';
 
 
 const CustomPagination = () => {
@@ -232,7 +236,7 @@ const DurationFormatter = React.memo(function DurationFormatter({params, value, 
     }
 });
 
-const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false, orbitProjectionDuration = 240, pageSize = 10, onPageSizeChange, sortModel, onSortModelChange}) {
+const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false, orbitProjectionDuration = 240, pageSize = 10, onPageSizeChange, sortModel, onSortModelChange, columnVisibility, onColumnVisibilityChange}) {
     const apiRef = useGridApiRef();
     const store = useStore();
     const { t, i18n } = useTranslation('overview');
@@ -364,6 +368,24 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                     )}
                     {params.value}
                 </>;
+            }
+        },
+        {
+            field: 'alternative_name',
+            minWidth: 120,
+            headerName: t('passes_table.alternative_name'),
+            flex: 2,
+            valueGetter: (value, row) => {
+                return row.alternative_name || '-';
+            }
+        },
+        {
+            field: 'name_other',
+            minWidth: 120,
+            headerName: t('passes_table.name_other'),
+            flex: 2,
+            valueGetter: (value, row) => {
+                return row.name_other || '-';
             }
         },
         {
@@ -642,14 +664,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
             }}
             sortModel={sortModel}
             onSortModelChange={onSortModelChange}
-            initialState={{
-                columns: {
-                    columnVisibilityModel: {
-                        is_geostationary: false,
-                        is_geosynchronous: false,
-                    },
-                },
-            }}
+            columnVisibilityModel={columnVisibility}
+            onColumnVisibilityModelChange={onColumnVisibilityChange}
             columns={columns}
             slots={{
                 pagination: CustomPagination,
@@ -663,7 +679,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         prevProps.passesLoading === nextProps.passesLoading &&
         prevProps.orbitProjectionDuration === nextProps.orbitProjectionDuration &&
         prevProps.pageSize === nextProps.pageSize &&
-        prevProps.sortModel === nextProps.sortModel
+        prevProps.sortModel === nextProps.sortModel &&
+        prevProps.columnVisibility === nextProps.columnVisibility
     );
 });
 
@@ -689,6 +706,8 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         gridEditable,
         passesTablePageSize,
         passesTableSortModel,
+        passesTableColumnVisibility,
+        openPassesTableSettingsDialog,
         selectedSatellites
     } = useSelector(state => state.overviewSatTrack);
     const { location } = useSelector(state => state.location);
@@ -696,6 +715,45 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     const minHeight = 200;
     const maxHeight = 400;
     const [columnUpdateKey, setColumnUpdateKey] = useState(0);
+    const hasLoadedFromStorageRef = useRef(false);
+    const isLoadingRef = useRef(false);
+
+    // Load column visibility from localStorage on mount
+    useEffect(() => {
+        // Prevent double loading (React StrictMode or component remounting)
+        if (isLoadingRef.current || hasLoadedFromStorageRef.current) {
+            return;
+        }
+
+        isLoadingRef.current = true;
+
+        const loadColumnVisibility = () => {
+            try {
+                const stored = localStorage.getItem('passes-table-column-visibility');
+                if (stored) {
+                    const parsedVisibility = JSON.parse(stored);
+                    dispatch(setPassesTableColumnVisibility(parsedVisibility));
+                }
+            } catch (e) {
+                console.error('Failed to load passes table column visibility:', e);
+            } finally {
+                hasLoadedFromStorageRef.current = true;
+                isLoadingRef.current = false;
+            }
+        };
+        loadColumnVisibility();
+    }, []); // Empty deps - only run once on mount
+
+    // Persist column visibility to localStorage whenever it changes (but not on initial load)
+    useEffect(() => {
+        if (passesTableColumnVisibility && hasLoadedFromStorageRef.current) {
+            try {
+                localStorage.setItem('passes-table-column-visibility', JSON.stringify(passesTableColumnVisibility));
+            } catch (e) {
+                console.error('Failed to save passes table column visibility:', e);
+            }
+        }
+    }, [passesTableColumnVisibility]);
 
     const handleRefreshPasses = () => {
         if (selectedSatGroupId) {
@@ -836,6 +894,18 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         dispatch(setPassesTableSortModel(newSortModel));
     };
 
+    const handleColumnVisibilityChange = (newModel) => {
+        dispatch(setPassesTableColumnVisibility(newModel));
+    };
+
+    const handleOpenSettings = () => {
+        dispatch(setOpenPassesTableSettingsDialog(true));
+    };
+
+    const handleCloseSettings = () => {
+        dispatch(setOpenPassesTableSettingsDialog(false));
+    };
+
     return (
         <>
             <TitleBar
@@ -869,6 +939,17 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title={t('passes_table_settings.title')}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={handleOpenSettings}
+                                    sx={{ padding: '2px' }}
+                                >
+                                    <SettingsIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                         <Tooltip title="Refresh passes (force recalculate)">
                             <span>
                                 <IconButton
@@ -901,9 +982,15 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                         onPageSizeChange={handlePageSizeChange}
                         sortModel={passesTableSortModel}
                         onSortModelChange={handleSortModelChange}
+                        columnVisibility={passesTableColumnVisibility}
+                        onColumnVisibilityChange={handleColumnVisibilityChange}
                     />
                 </div>
             </div>
+            <PassesTableSettingsDialog
+                open={openPassesTableSettingsDialog}
+                onClose={handleCloseSettings}
+            />
         </>
     );
 });

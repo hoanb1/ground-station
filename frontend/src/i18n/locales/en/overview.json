@@ -22,10 +22,21 @@
     "na": "N/A",
     "no_group_selected": "Please select a satellite group to view satellites"
   },
+  "satellites_table_settings": {
+    "title": "Satellites Table Settings",
+    "description": "Choose which columns to display in the satellites table",
+    "category_basic": "Basic Information",
+    "category_names": "Satellite Names",
+    "category_metadata": "Metadata",
+    "always_visible": "always visible",
+    "close": "Close"
+  },
   "passes_table": {
     "title": "Passes for the next {{hours}} hours",
     "cached": "cached",
     "name": "Name",
+    "alternative_name": "Alternative Name",
+    "name_other": "Other Name",
     "peak_elevation": "Peak elevation",
     "current_elevation": "Current Elevation",
     "progress": "Progress",
@@ -41,6 +52,17 @@
     "no_value": "no value",
     "no_data": "No data",
     "no_passes": "No passes detected for the next {{hours}} hours"
+  },
+  "passes_table_settings": {
+    "title": "Passes Table Settings",
+    "description": "Choose which columns to display in the passes table",
+    "category_basic": "Basic Information",
+    "category_names": "Satellite Names",
+    "category_time": "Time Information",
+    "category_distance": "Distance Information",
+    "category_orbital": "Orbital Information",
+    "always_visible": "always visible",
+    "close": "Close"
   },
   "satellite_selector": {
     "title": "Select group of satellites",
