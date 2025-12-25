@@ -34,6 +34,7 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import MainWaterfallDisplay from "./waterfall-island.jsx";
 import WaterfallSettings from "./settings-column.jsx";
+import TranscriptionSubtitles from "./transcription-subtitles.jsx";
 
 
 // A global callback for dashboard editing here
@@ -194,7 +195,17 @@ const MainLayout = React.memo(function MainLayout() {
             </ResponsiveReactGridLayout>;
     }
 
-    return ResponsiveGridLayoutParent;
+    return (
+        <>
+            {ResponsiveGridLayoutParent}
+
+            {/* Transcription Subtitles Overlay - positioned over entire page */}
+            <TranscriptionSubtitles
+                maxLines={3}
+                maxWordsPerLine={20}
+            />
+        </>
+    );
 });
 
 export default MainLayout;

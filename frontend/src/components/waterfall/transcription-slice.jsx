@@ -72,8 +72,12 @@ const initialState = {
     lastUpdated: null,
 
     // Live accumulating transcription per session+VFO
-    // {`${sessionId}_${vfoNumber}`: {id, segments, timestamp, language, startTime, sessionId, vfoNumber, fontSizeMultiplier, textAlignment}}
+    // {`${sessionId}_${vfoNumber}`: {id, segments, timestamp, language, startTime, sessionId, vfoNumber}}
     liveTranscription: {},
+
+    // Global subtitle settings (persisted)
+    fontSizeMultiplier: loadFontSizeMultiplier(),
+    textAlignment: loadTextAlignment(),
 };
 
 const transcriptionSlice = createSlice({
@@ -113,8 +117,6 @@ const transcriptionSlice = createSlice({
                     sessionId,
                     vfoNumber,
                     language: language || 'auto',
-                    fontSizeMultiplier: 1.0,
-                    textAlignment: 'left',
                 };
             } else {
                 console.log('[Redux] Appending to existing transcription. Adding segment:', trimmedText.length, 'chars');
@@ -224,40 +226,29 @@ const transcriptionSlice = createSlice({
         },
 
         /**
-         * Increase subtitle font size for specific VFO
+         * Increase subtitle font size globally
          */
-        increaseFontSize: (state, action) => {
-            const { sessionId, vfoNumber } = action.payload;
-            const transcriptionKey = `${sessionId}_${vfoNumber}`;
-
-            if (state.liveTranscription[transcriptionKey]) {
-                state.liveTranscription[transcriptionKey].fontSizeMultiplier =
-                    Math.min((state.liveTranscription[transcriptionKey].fontSizeMultiplier || 1.0) + 0.1, 2.0);
-            }
+        increaseFontSize: (state) => {
+            state.fontSizeMultiplier = Math.min(state.fontSizeMultiplier + 0.1, 2.0);
+            localStorage.setItem('transcription_font_size_multiplier', state.fontSizeMultiplier.toString());
         },
 
         /**
-         * Decrease subtitle font size for specific VFO
+         * Decrease subtitle font size globally
          */
-        decreaseFontSize: (state, action) => {
-            const { sessionId, vfoNumber } = action.payload;
-            const transcriptionKey = `${sessionId}_${vfoNumber}`;
-
-            if (state.liveTranscription[transcriptionKey]) {
-                state.liveTranscription[transcriptionKey].fontSizeMultiplier =
-                    Math.max((state.liveTranscription[transcriptionKey].fontSizeMultiplier || 1.0) - 0.1, 0.5);
-            }
+        decreaseFontSize: (state) => {
+            state.fontSizeMultiplier = Math.max(state.fontSizeMultiplier - 0.1, 0.5);
+            localStorage.setItem('transcription_font_size_multiplier', state.fontSizeMultiplier.toString());
         },
 
         /**
-         * Set text alignment for specific VFO subtitles
+         * Set text alignment globally
          */
         setTextAlignment: (state, action) => {
-            const { sessionId, vfoNumber, alignment } = action.payload;
-            const transcriptionKey = `${sessionId}_${vfoNumber}`;
-
-            if (state.liveTranscription[transcriptionKey] && ['left', 'center', 'right'].includes(alignment)) {
-                state.liveTranscription[transcriptionKey].textAlignment = alignment;
+            const { alignment } = action.payload;
+            if (['left', 'center', 'right'].includes(alignment)) {
+                state.textAlignment = alignment;
+                localStorage.setItem('transcription_text_alignment', alignment);
             }
         },
     },

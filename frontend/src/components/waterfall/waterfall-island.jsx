@@ -91,7 +91,6 @@ import { useTranslation } from 'react-i18next';
 import { useWaterfallSnapshot } from "./waterfall-snapshot.js";
 import DecodedPacketsDrawer from "./decoded-packets-drawer.jsx";
 import WaterfallRightSidebar from "./waterfall-right-sidebar.jsx";
-import TranscriptionSubtitles from "./transcription-subtitles.jsx";
 import {
     generateSnapshotName,
     toggleFullscreen as toggleFullscreenUtil,
@@ -721,12 +720,6 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
                         waterFallWindowHeight={dimensions['height']}
                         frequencyBands={frequencyBands}
                         playbackRemainingSecondsRef={playbackRemainingSecondsRef}
-                    />
-
-                    {/* Transcription Subtitles Overlay */}
-                    <TranscriptionSubtitles
-                        maxEntries={3}
-                        autoFadeMs={10000}
                     />
 
                     <WaterfallRightSidebar

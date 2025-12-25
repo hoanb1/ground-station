@@ -32,7 +32,9 @@ import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter';
 import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight';
 import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
 import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
-import FlagIcon from '@mui/icons-material/Flag';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeMuteIcon from '@mui/icons-material/VolumeMute';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 /**
  * Language code to emoji flag mapping
@@ -120,8 +122,11 @@ const getLanguageFlag = (languageCode) => {
 /**
  * Single VFO Subtitle Component
  */
-const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, textAlignment, maxLines, maxWordsPerLine, onClear, onIncreaseFontSize, onDecreaseFontSize, onSetAlignment }) => {
+const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, textAlignment, maxLines, maxWordsPerLine, onClear, onIncreaseFontSize, onDecreaseFontSize, onSetAlignment, isStreaming, isMuted, translateTo, sourceLang }) => {
     const [lines, setLines] = useState([]);
+
+    // Debug translation settings
+    console.log(`[VFO${vfoNumber} Subtitle] translateTo:`, translateTo, 'sourceLang:', sourceLang, 'transcription.language:', transcription.language);
 
     useEffect(() => {
         if (!transcription || !transcription.segments || transcription.segments.length === 0) {
@@ -210,7 +215,6 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                         borderRadius: '8px',
                         padding: { xs: '8px 12px', sm: '10px 16px' },
                         textAlign: textAlignment,
-                        border: `2px solid ${vfoColor}40`,
                         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
                         transition: 'all 0.15s ease-out',
                         width: { xs: '100%', sm: 'fit-content' },
@@ -228,7 +232,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                             gap: 2,
                         }}
                     >
-                        {/* VFO Label with Language Flag - Left */}
+                        {/* VFO Label with Speaker Icon and Language Info - Left */}
                         <Box
                             sx={{
                                 fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
@@ -241,19 +245,70 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                             }}
                         >
                             <span>VFO{vfoNumber}</span>
-                            <span style={{ fontSize: '1rem', lineHeight: 1 }}>
-                                {getLanguageFlag(transcription.language)}
-                            </span>
-                            <span style={{
-                                fontSize: '0.6rem',
-                                opacity: 0.7,
-                                fontWeight: 400,
-                                textTransform: 'uppercase'
-                            }}>
-                                {transcription.language && transcription.language !== 'auto' && transcription.language !== 'unknown'
-                                    ? transcription.language
-                                    : ''}
-                            </span>
+
+                            {/* Speaker Icon - three states like VFO marker */}
+                            {!isStreaming ? (
+                                <VolumeMuteIcon sx={{ fontSize: '0.9rem', color: '#888888' }} />
+                            ) : isMuted ? (
+                                <VolumeMuteIcon sx={{ fontSize: '0.9rem', color: '#00ff00' }} />
+                            ) : (
+                                <VolumeUpIcon sx={{ fontSize: '0.9rem', color: '#00ff00' }} />
+                            )}
+
+                            {/* Language Display Logic:
+                                - When NOT translating: show detected language from transcription
+                                - When translating: show source → target with arrow
+                            */}
+                            {translateTo && translateTo !== 'none' ? (
+                                // Translation mode: show source → target
+                                <>
+                                    {/* Source Language */}
+                                    <span style={{ fontSize: '1rem', lineHeight: 1 }}>
+                                        {getLanguageFlag(sourceLang)}
+                                    </span>
+                                    <span style={{
+                                        fontSize: '0.6rem',
+                                        opacity: 0.7,
+                                        fontWeight: 400,
+                                        textTransform: 'uppercase'
+                                    }}>
+                                        {sourceLang === 'auto' ? 'AUTO' : sourceLang}
+                                    </span>
+
+                                    {/* Arrow */}
+                                    <ArrowForwardIcon sx={{ fontSize: '0.8rem', opacity: 0.7 }} />
+
+                                    {/* Target Language */}
+                                    <span style={{ fontSize: '1rem', lineHeight: 1 }}>
+                                        {getLanguageFlag(translateTo)}
+                                    </span>
+                                    <span style={{
+                                        fontSize: '0.6rem',
+                                        opacity: 0.7,
+                                        fontWeight: 400,
+                                        textTransform: 'uppercase'
+                                    }}>
+                                        {translateTo}
+                                    </span>
+                                </>
+                            ) : (
+                                // No translation: show detected language
+                                transcription.language && transcription.language !== 'auto' && transcription.language !== 'unknown' && (
+                                    <>
+                                        <span style={{ fontSize: '1rem', lineHeight: 1 }}>
+                                            {getLanguageFlag(transcription.language)}
+                                        </span>
+                                        <span style={{
+                                            fontSize: '0.6rem',
+                                            opacity: 0.7,
+                                            fontWeight: 400,
+                                            textTransform: 'uppercase'
+                                        }}>
+                                            {transcription.language}
+                                        </span>
+                                    </>
+                                )
+                            )}
                         </Box>
 
                         {/* Controls - Right */}
@@ -404,17 +459,15 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);
 
-    // Get VFO colors from Redux
+    // Get global subtitle settings
+    const fontSizeMultiplier = useSelector((state) => state.transcription.fontSizeMultiplier);
+    const textAlignment = useSelector((state) => state.transcription.textAlignment);
+
+    // Get VFO data from Redux
     const vfoColors = useSelector((state) => state.vfo.vfoColors);
-
-    // Get drawer state to adjust subtitle position
-    const packetsDrawerOpen = useSelector((state) => state.waterfall.packetsDrawerOpen);
-    const packetsDrawerHeight = useSelector((state) => state.waterfall.packetsDrawerHeight);
-
-    // Calculate bottom position
-    const statusBarHeight = 30;
-    const padding = 40;
-    const bottomPosition = statusBarHeight + (packetsDrawerOpen ? packetsDrawerHeight : 0) + padding;
+    const vfoMarkers = useSelector((state) => state.vfo.vfoMarkers);
+    const streamingVFOs = useSelector((state) => state.vfo.streamingVFOs);
+    const vfoMuted = useSelector((state) => state.vfo.vfoMuted);
 
     // Get active VFOs (those with transcriptions)
     const activeVFOs = useMemo(() => {
@@ -431,22 +484,22 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
             .sort((a, b) => a.vfoNumber - b.vfoNumber);
     }, [liveTranscription]);
 
-    // Handlers - now per-VFO
+    // Handlers - now global
     const handleClear = (vfoNumber) => {
         dispatch(clearTranscriptions({ vfoNumber }));
     };
 
-    const handleIncreaseFontSize = (sessionId, vfoNumber) => {
-        dispatch(increaseFontSize({ sessionId, vfoNumber }));
+    const handleIncreaseFontSize = () => {
+        dispatch(increaseFontSize());
     };
 
-    const handleDecreaseFontSize = (sessionId, vfoNumber) => {
-        dispatch(decreaseFontSize({ sessionId, vfoNumber }));
+    const handleDecreaseFontSize = () => {
+        dispatch(decreaseFontSize());
     };
 
-    const handleSetAlignment = (sessionId, vfoNumber, event, alignment) => {
+    const handleSetAlignment = (event, alignment) => {
         if (alignment !== null) {
-            dispatch(setTextAlignment({ sessionId, vfoNumber, alignment }));
+            dispatch(setTextAlignment({ alignment }));
         }
     };
 
@@ -466,12 +519,11 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
         <Box
             sx={{
                 position: 'fixed',
-                bottom: `${bottomPosition}px`,
+                bottom: '40px',
                 left: 0,
                 right: 0,
                 zIndex: 1000,
                 pointerEvents: 'none',
-                transition: 'bottom 0.3s ease-out',
                 display: 'flex',
                 justifyContent: 'center',
                 px: 2,
@@ -480,33 +532,45 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
             <Box sx={{ width: '100%', maxWidth: '1600px' }}>
                 {/* Subtitle grid */}
                 <Grid container spacing={2} justifyContent="center">
-                    {activeVFOs.map(({ vfoNumber, transcription }) => (
-                        <Grid
-                            item
-                            key={vfoNumber}
-                            xs={gridColumnsXs}
-                            sm={gridColumnsSm}
-                            md={gridColumnsMd}
-                            sx={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            <VFOSubtitle
-                                vfoNumber={vfoNumber}
-                                transcription={transcription}
-                                vfoColor={vfoColors[vfoNumber - 1]}
-                                fontSizeMultiplier={transcription.fontSizeMultiplier || 1.0}
-                                textAlignment={transcription.textAlignment || 'left'}
-                                maxLines={maxLines}
-                                maxWordsPerLine={maxWordsPerLine}
-                                onClear={handleClear}
-                                onIncreaseFontSize={() => handleIncreaseFontSize(transcription.sessionId, vfoNumber)}
-                                onDecreaseFontSize={() => handleDecreaseFontSize(transcription.sessionId, vfoNumber)}
-                                onSetAlignment={(e, alignment) => handleSetAlignment(transcription.sessionId, vfoNumber, e, alignment)}
-                            />
-                        </Grid>
-                    ))}
+                    {activeVFOs.map(({ vfoNumber, transcription }) => {
+                        const vfoMarker = vfoMarkers[vfoNumber]; // vfoMarkers is an object with keys 1, 2, 3, 4
+                        const translateTo = vfoMarker?.transcriptionTranslateTo || 'none';
+                        const sourceLang = vfoMarker?.transcriptionLanguage || 'auto';
+
+                        console.log(`[TranscriptionSubtitles] VFO${vfoNumber} marker:`, vfoMarker, 'translateTo:', translateTo, 'sourceLang:', sourceLang);
+
+                        return (
+                            <Grid
+                                item
+                                key={vfoNumber}
+                                xs={gridColumnsXs}
+                                sm={gridColumnsSm}
+                                md={gridColumnsMd}
+                                sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <VFOSubtitle
+                                    vfoNumber={vfoNumber}
+                                    transcription={transcription}
+                                    vfoColor={vfoColors[vfoNumber - 1]}
+                                    fontSizeMultiplier={fontSizeMultiplier}
+                                    textAlignment={textAlignment}
+                                    maxLines={maxLines}
+                                    maxWordsPerLine={maxWordsPerLine}
+                                    onClear={handleClear}
+                                    onIncreaseFontSize={handleIncreaseFontSize}
+                                    onDecreaseFontSize={handleDecreaseFontSize}
+                                    onSetAlignment={handleSetAlignment}
+                                    isStreaming={streamingVFOs.includes(vfoNumber)}
+                                    isMuted={vfoMuted[vfoNumber]}
+                                    translateTo={translateTo}
+                                    sourceLang={sourceLang}
+                                />
+                            </Grid>
+                        );
+                    })}
                 </Grid>
             </Box>
         </Box>
