@@ -26,10 +26,10 @@ import { createSlice } from '@reduxjs/toolkit';
  * Stores the last 500 words with timestamps and metadata.
  */
 
-// Load font size from localStorage or use default
-const loadFontSizeMultiplier = () => {
+// Load font size from localStorage or use default (per-VFO)
+const loadFontSizeMultiplier = (vfoNumber) => {
     try {
-        const saved = localStorage.getItem('transcription_font_size_multiplier');
+        const saved = localStorage.getItem(`transcription_font_size_vfo${vfoNumber}`);
         if (saved) {
             const parsed = parseFloat(saved);
             if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 2.0) {
@@ -37,20 +37,20 @@ const loadFontSizeMultiplier = () => {
             }
         }
     } catch (e) {
-        console.error('Failed to load font size multiplier from localStorage:', e);
+        console.error(`Failed to load font size multiplier for VFO${vfoNumber} from localStorage:`, e);
     }
     return 1.0;
 };
 
-// Load text alignment from localStorage or use default
-const loadTextAlignment = () => {
+// Load text alignment from localStorage or use default (per-VFO)
+const loadTextAlignment = (vfoNumber) => {
     try {
-        const saved = localStorage.getItem('transcription_text_alignment');
+        const saved = localStorage.getItem(`transcription_text_alignment_vfo${vfoNumber}`);
         if (saved && ['left', 'center', 'right'].includes(saved)) {
             return saved;
         }
     } catch (e) {
-        console.error('Failed to load text alignment from localStorage:', e);
+        console.error(`Failed to load text alignment for VFO${vfoNumber} from localStorage:`, e);
     }
     return 'left';
 };
@@ -75,9 +75,19 @@ const initialState = {
     // {`${sessionId}_${vfoNumber}`: {id, segments, timestamp, language, startTime, sessionId, vfoNumber}}
     liveTranscription: {},
 
-    // Global subtitle settings (persisted)
-    fontSizeMultiplier: loadFontSizeMultiplier(),
-    textAlignment: loadTextAlignment(),
+    // Per-VFO subtitle settings (persisted)
+    vfoFontSizes: {
+        1: loadFontSizeMultiplier(1),
+        2: loadFontSizeMultiplier(2),
+        3: loadFontSizeMultiplier(3),
+        4: loadFontSizeMultiplier(4),
+    },
+    vfoTextAlignments: {
+        1: loadTextAlignment(1),
+        2: loadTextAlignment(2),
+        3: loadTextAlignment(3),
+        4: loadTextAlignment(4),
+    },
 };
 
 const transcriptionSlice = createSlice({
@@ -226,29 +236,35 @@ const transcriptionSlice = createSlice({
         },
 
         /**
-         * Increase subtitle font size globally
+         * Increase subtitle font size for specific VFO
          */
-        increaseFontSize: (state) => {
-            state.fontSizeMultiplier = Math.min(state.fontSizeMultiplier + 0.1, 2.0);
-            localStorage.setItem('transcription_font_size_multiplier', state.fontSizeMultiplier.toString());
+        increaseFontSize: (state, action) => {
+            const { vfoNumber } = action.payload;
+            if (state.vfoFontSizes[vfoNumber]) {
+                state.vfoFontSizes[vfoNumber] = Math.min(state.vfoFontSizes[vfoNumber] + 0.1, 2.0);
+                localStorage.setItem(`transcription_font_size_vfo${vfoNumber}`, state.vfoFontSizes[vfoNumber].toString());
+            }
         },
 
         /**
-         * Decrease subtitle font size globally
+         * Decrease subtitle font size for specific VFO
          */
-        decreaseFontSize: (state) => {
-            state.fontSizeMultiplier = Math.max(state.fontSizeMultiplier - 0.1, 0.5);
-            localStorage.setItem('transcription_font_size_multiplier', state.fontSizeMultiplier.toString());
+        decreaseFontSize: (state, action) => {
+            const { vfoNumber } = action.payload;
+            if (state.vfoFontSizes[vfoNumber]) {
+                state.vfoFontSizes[vfoNumber] = Math.max(state.vfoFontSizes[vfoNumber] - 0.1, 0.5);
+                localStorage.setItem(`transcription_font_size_vfo${vfoNumber}`, state.vfoFontSizes[vfoNumber].toString());
+            }
         },
 
         /**
-         * Set text alignment globally
+         * Set text alignment for specific VFO
          */
         setTextAlignment: (state, action) => {
-            const { alignment } = action.payload;
-            if (['left', 'center', 'right'].includes(alignment)) {
-                state.textAlignment = alignment;
-                localStorage.setItem('transcription_text_alignment', alignment);
+            const { vfoNumber, alignment } = action.payload;
+            if (state.vfoTextAlignments[vfoNumber] && ['left', 'center', 'right'].includes(alignment)) {
+                state.vfoTextAlignments[vfoNumber] = alignment;
+                localStorage.setItem(`transcription_text_alignment_vfo${vfoNumber}`, alignment);
             }
         },
     },

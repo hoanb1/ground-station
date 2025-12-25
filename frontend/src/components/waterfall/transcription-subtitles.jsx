@@ -17,7 +17,7 @@
  *
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Box, IconButton, Tooltip, Fade, ToggleButtonGroup, ToggleButton, Grid } from '@mui/material';
 import {
@@ -125,8 +125,26 @@ const getLanguageFlag = (languageCode) => {
 const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, textAlignment, maxLines, maxWordsPerLine, onClear, onIncreaseFontSize, onDecreaseFontSize, onSetAlignment, isStreaming, isMuted, translateTo, sourceLang }) => {
     const [lines, setLines] = useState([]);
 
-    // Debug translation settings
-    console.log(`[VFO${vfoNumber} Subtitle] translateTo:`, translateTo, 'sourceLang:', sourceLang, 'transcription.language:', transcription.language);
+    // Individual position state per VFO
+    const [position, setPosition] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`transcription_overlay_position_vfo${vfoNumber}`);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Validate bounds - reset if out of reasonable range
+                if (parsed.y < 0 || parsed.y > window.innerHeight - 100) {
+                    return { x: 0, y: 40 + (vfoNumber - 1) * 150 }; // Offset each VFO vertically
+                }
+                return parsed;
+            }
+            return { x: 0, y: 40 + (vfoNumber - 1) * 150 }; // Default with vertical offset
+        } catch {
+            return { x: 0, y: 40 + (vfoNumber - 1) * 150 };
+        }
+    });
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+    const containerRef = useRef(null);
 
     useEffect(() => {
         if (!transcription || !transcription.segments || transcription.segments.length === 0) {
@@ -191,6 +209,114 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
         return () => clearInterval(interval);
     }, [lines.length]);
 
+    // Constrain position to viewport boundaries
+    const constrainPosition = (newX, newY) => {
+        const container = containerRef.current;
+        if (!container) return { x: newX, y: newY };
+
+        const rect = container.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Calculate boundaries considering the container is centered
+        const maxX = (viewportWidth / 2) - 20;
+        const minX = -(viewportWidth / 2) + 20;
+
+        // For Y: bottom positioning, so higher Y = further up
+        const maxY = viewportHeight - rect.height - 20;
+        const minY = 20;
+
+        const constrainedX = Math.max(minX, Math.min(maxX, newX));
+        const constrainedY = Math.max(minY, Math.min(maxY, newY));
+
+        return { x: constrainedX, y: constrainedY };
+    };
+
+    // Drag handlers for mouse
+    const handleMouseDown = (e) => {
+        if (e.target.closest('.subtitle-header')) {
+            setIsDragging(true);
+            dragStart.current = { x: e.clientX - position.x, y: e.clientY + position.y };
+            e.preventDefault();
+        }
+    };
+
+    const handleMouseMove = (e) => {
+        if (isDragging) {
+            const newX = e.clientX - dragStart.current.x;
+            const newY = dragStart.current.y - e.clientY;
+            const constrained = constrainPosition(newX, newY);
+            setPosition(constrained);
+        }
+    };
+
+    const handleMouseUp = () => {
+        if (isDragging) {
+            setIsDragging(false);
+            localStorage.setItem(`transcription_overlay_position_vfo${vfoNumber}`, JSON.stringify(position));
+        }
+    };
+
+    // Drag handlers for touch
+    const handleTouchStart = (e) => {
+        if (e.target.closest('.subtitle-header')) {
+            const touch = e.touches[0];
+            setIsDragging(true);
+            dragStart.current = { x: touch.clientX - position.x, y: touch.clientY + position.y };
+            e.preventDefault();
+        }
+    };
+
+    const handleTouchMove = (e) => {
+        if (isDragging && e.touches.length > 0) {
+            const touch = e.touches[0];
+            const newX = touch.clientX - dragStart.current.x;
+            const newY = dragStart.current.y - touch.clientY;
+            const constrained = constrainPosition(newX, newY);
+            setPosition(constrained);
+            e.preventDefault();
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (isDragging) {
+            setIsDragging(false);
+            localStorage.setItem(`transcription_overlay_position_vfo${vfoNumber}`, JSON.stringify(position));
+        }
+    };
+
+    // Add event listeners
+    useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd);
+
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                document.removeEventListener('touchmove', handleTouchMove);
+                document.removeEventListener('touchend', handleTouchEnd);
+            };
+        }
+    }, [isDragging, position]);
+
+    // Ensure position is within bounds on mount and window resize
+    useEffect(() => {
+        const checkBounds = () => {
+            const constrained = constrainPosition(position.x, position.y);
+            if (constrained.x !== position.x || constrained.y !== position.y) {
+                setPosition(constrained);
+                localStorage.setItem(`transcription_overlay_position_vfo${vfoNumber}`, JSON.stringify(constrained));
+            }
+        };
+
+        checkBounds();
+        window.addEventListener('resize', checkBounds);
+        return () => window.removeEventListener('resize', checkBounds);
+    }, []);
+
     if (lines.length === 0) {
         return null;
     }
@@ -198,38 +324,45 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
     return (
         <Fade in={true} timeout={300}>
             <Box
+                ref={containerRef}
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
                 sx={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center',
+                    position: 'fixed',
+                    bottom: `${position.y}px`,
+                    left: '50%',
+                    transform: `translate(calc(-50% + ${position.x}px), 0)`,
+                    zIndex: 1000,
                     pointerEvents: 'auto',
+                    cursor: isDragging ? 'grabbing' : 'default',
+                    userSelect: 'none',
                 }}
             >
-                {/* Subtitle box */}
+                {/* Subtitle box - split into header and body */}
                 <Box
                     sx={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                        borderRadius: '8px',
-                        padding: { xs: '8px 12px', sm: '10px 16px' },
-                        textAlign: textAlignment,
                         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-                        transition: 'all 0.15s ease-out',
+                        borderRadius: '8px',
                         width: { xs: '100%', sm: 'fit-content' },
                         maxWidth: '100%',
                         minWidth: { xs: 'auto', sm: 'max-content' },
+                        overflow: 'hidden',
                     }}
                 >
-                    {/* Header with VFO label and controls */}
+                    {/* Header with VFO color background */}
                     <Box
+                        className="subtitle-header"
                         sx={{
+                            backgroundColor: `${vfoColor}80`,
+                            padding: { xs: '4px 6px', sm: '6px 10px' },
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            mb: 0.5,
                             gap: 2,
+                            cursor: 'grab',
+                            '&:active': {
+                                cursor: 'grabbing',
+                            },
                         }}
                     >
                         {/* VFO Label with Speaker Icon and Language Info - Left */}
@@ -237,7 +370,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                             sx={{
                                 fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
                                 fontWeight: 700,
-                                color: vfoColor,
+                                color: 'rgba(255, 255, 255, 0.95)',
                                 letterSpacing: '0.5px',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -401,26 +534,34 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                         </Box>
                     </Box>
 
-                    {lines.map((line, lineIdx) => (
-                        <Box
-                            key={line.id}
-                            sx={{
-                                fontSize: {
-                                    xs: `${0.75 * fontSizeMultiplier}rem`,
-                                    sm: `${0.85 * fontSizeMultiplier}rem`,
-                                    md: `${0.9 * fontSizeMultiplier}rem`
-                                },
-                                fontWeight: 600,
-                                lineHeight: 1.6,
-                                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                                letterSpacing: '0.3px',
-                                fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                                whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                                wordWrap: { xs: 'break-word', sm: 'normal' },
-                                overflowWrap: { xs: 'break-word', sm: 'normal' },
-                                mb: lineIdx < lines.length - 1 ? 0.5 : 0,
-                            }}
-                        >
+                    {/* Body with subtitle text - dark background */}
+                    <Box
+                        sx={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            padding: { xs: '8px 12px', sm: '10px 16px' },
+                            textAlign: textAlignment,
+                        }}
+                    >
+                        {lines.map((line, lineIdx) => (
+                            <Box
+                                key={line.id}
+                                sx={{
+                                    fontSize: {
+                                        xs: `${0.75 * fontSizeMultiplier}rem`,
+                                        sm: `${0.85 * fontSizeMultiplier}rem`,
+                                        md: `${0.9 * fontSizeMultiplier}rem`
+                                    },
+                                    fontWeight: 600,
+                                    lineHeight: 1.6,
+                                    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+                                    letterSpacing: '0.3px',
+                                    fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                                    whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                                    wordWrap: { xs: 'break-word', sm: 'normal' },
+                                    overflowWrap: { xs: 'break-word', sm: 'normal' },
+                                    mb: lineIdx < lines.length - 1 ? 0.5 : 0,
+                                }}
+                            >
                             {line.segments.map((segment, segIdx) => {
                                 const ageMs = Date.now() - segment.timestamp;
                                 const isRecent = ageMs < 10000;
@@ -440,8 +581,9 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                                     </Box>
                                 );
                             })}
-                        </Box>
-                    ))}
+                            </Box>
+                        ))}
+                    </Box>
                 </Box>
             </Box>
         </Fade>
@@ -459,9 +601,9 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);
 
-    // Get global subtitle settings
-    const fontSizeMultiplier = useSelector((state) => state.transcription.fontSizeMultiplier);
-    const textAlignment = useSelector((state) => state.transcription.textAlignment);
+    // Get subtitle settings
+    const vfoFontSizes = useSelector((state) => state.transcription.vfoFontSizes);
+    const vfoTextAlignments = useSelector((state) => state.transcription.vfoTextAlignments);
 
     // Get VFO data from Redux
     const vfoColors = useSelector((state) => state.vfo.vfoColors);
@@ -484,22 +626,22 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
             .sort((a, b) => a.vfoNumber - b.vfoNumber);
     }, [liveTranscription]);
 
-    // Handlers - now global
+    // Handlers - per VFO
     const handleClear = (vfoNumber) => {
         dispatch(clearTranscriptions({ vfoNumber }));
     };
 
-    const handleIncreaseFontSize = () => {
-        dispatch(increaseFontSize());
+    const handleIncreaseFontSize = (vfoNumber) => {
+        dispatch(increaseFontSize({ vfoNumber }));
     };
 
-    const handleDecreaseFontSize = () => {
-        dispatch(decreaseFontSize());
+    const handleDecreaseFontSize = (vfoNumber) => {
+        dispatch(decreaseFontSize({ vfoNumber }));
     };
 
-    const handleSetAlignment = (event, alignment) => {
+    const handleSetAlignment = (vfoNumber, event, alignment) => {
         if (alignment !== null) {
-            dispatch(setTextAlignment({ alignment }));
+            dispatch(setTextAlignment({ vfoNumber, alignment }));
         }
     };
 
@@ -507,73 +649,36 @@ const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
         return null;
     }
 
-    // Determine grid columns based on number of active VFOs and screen size
-    // Mobile: full width (12)
-    // Tablet: 2 columns if multiple VFOs (6), otherwise full width (12)
-    // Desktop: always rows, full width (12)
-    const gridColumnsXs = 12;
-    const gridColumnsSm = activeVFOs.length === 1 ? 12 : 6;
-    const gridColumnsMd = 12;
-
     return (
-        <Box
-            sx={{
-                position: 'fixed',
-                bottom: '40px',
-                left: 0,
-                right: 0,
-                zIndex: 1000,
-                pointerEvents: 'none',
-                display: 'flex',
-                justifyContent: 'center',
-                px: 2,
-            }}
-        >
-            <Box sx={{ width: '100%', maxWidth: '1600px' }}>
-                {/* Subtitle grid */}
-                <Grid container spacing={2} justifyContent="center">
-                    {activeVFOs.map(({ vfoNumber, transcription }) => {
-                        const vfoMarker = vfoMarkers[vfoNumber]; // vfoMarkers is an object with keys 1, 2, 3, 4
-                        const translateTo = vfoMarker?.transcriptionTranslateTo || 'none';
-                        const sourceLang = vfoMarker?.transcriptionLanguage || 'auto';
+        <>
+            {activeVFOs.map(({ vfoNumber, transcription }) => {
+                const vfoMarker = vfoMarkers[vfoNumber]; // vfoMarkers is an object with keys 1, 2, 3, 4
+                const translateTo = vfoMarker?.transcriptionTranslateTo || 'none';
+                const sourceLang = vfoMarker?.transcriptionLanguage || 'auto';
 
-                        console.log(`[TranscriptionSubtitles] VFO${vfoNumber} marker:`, vfoMarker, 'translateTo:', translateTo, 'sourceLang:', sourceLang);
-
-                        return (
-                            <Grid
-                                item
-                                key={vfoNumber}
-                                xs={gridColumnsXs}
-                                sm={gridColumnsSm}
-                                md={gridColumnsMd}
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                }}
-                            >
+                return (
+                            <React.Fragment key={vfoNumber}>
                                 <VFOSubtitle
                                     vfoNumber={vfoNumber}
                                     transcription={transcription}
                                     vfoColor={vfoColors[vfoNumber - 1]}
-                                    fontSizeMultiplier={fontSizeMultiplier}
-                                    textAlignment={textAlignment}
+                                    fontSizeMultiplier={vfoFontSizes[vfoNumber]}
+                                    textAlignment={vfoTextAlignments[vfoNumber]}
                                     maxLines={maxLines}
                                     maxWordsPerLine={maxWordsPerLine}
-                                    onClear={handleClear}
-                                    onIncreaseFontSize={handleIncreaseFontSize}
-                                    onDecreaseFontSize={handleDecreaseFontSize}
-                                    onSetAlignment={handleSetAlignment}
+                                    onClear={() => handleClear(vfoNumber)}
+                                    onIncreaseFontSize={() => handleIncreaseFontSize(vfoNumber)}
+                                    onDecreaseFontSize={() => handleDecreaseFontSize(vfoNumber)}
+                                    onSetAlignment={(e, alignment) => handleSetAlignment(vfoNumber, e, alignment)}
                                     isStreaming={streamingVFOs.includes(vfoNumber)}
                                     isMuted={vfoMuted[vfoNumber]}
                                     translateTo={translateTo}
                                     sourceLang={sourceLang}
                                 />
-                            </Grid>
+                            </React.Fragment>
                         );
                     })}
-                </Grid>
-            </Box>
-        </Box>
+        </>
     );
 };
 
