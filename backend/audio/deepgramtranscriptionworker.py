@@ -103,9 +103,6 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
             "channels=1",
             "punctuate=true",
             "interim_results=false",  # Only get final transcriptions to avoid repetition
-            "utterance_end_ms=1000",  # Detect end of utterance after 1s silence
-            "vad_events=true",  # Voice activity detection events
-            "diarize=true",  # Speaker diarization
         ]
 
         # Add language if specified
