@@ -53,6 +53,7 @@ import { humanizeFrequency, formatLegibleDateTime, betterStatusValue } from "../
 import SatSelectorIsland from "../target/satellite-selector.jsx";
 import { SatellitePassTimeline } from "../target/timeline-main.jsx";
 import TransmittersTable from "../satellites/transmitters-table.jsx";
+import { calculateElevationCurve } from "../../utils/elevation-curve-calculator.js";
 
 const SatelliteInfoPopover = () => {
     const theme = useTheme();
@@ -64,6 +65,7 @@ const SatelliteInfoPopover = () => {
 
     // Get satellite data from Redux store
     const { satelliteData, trackingState, rotatorData, satellitePasses, activePass } = useSelector(state => state.targetSatTrack);
+    const groundStationLocation = useSelector((state) => state.location.location);
 
     // Combine details and transmitters for the TransmittersTable component
     const targetSatelliteData = satelliteData.details ? {
@@ -222,7 +224,29 @@ const SatelliteInfoPopover = () => {
     };
 
     const currentActivePass = getCurrentActivePass();
-    const showTimeline = satelliteData.details.norad_id && currentActivePass;
+
+    // Calculate elevation curve for the active pass on-the-fly
+    const enhancedActivePass = useMemo(() => {
+        if (!currentActivePass || !satelliteData.details.tle1 || !groundStationLocation) {
+            return currentActivePass;
+        }
+
+        // Calculate elevation curve for this single pass
+        const elevationCurve = calculateElevationCurve(
+            satelliteData.details, // Has tle1, tle2, norad_id
+            groundStationLocation,
+            currentActivePass.event_start,
+            currentActivePass.event_end,
+            30 // Extend start by 30 minutes for better curve display
+        );
+
+        return {
+            ...currentActivePass,
+            elevation_curve: elevationCurve
+        };
+    }, [currentActivePass, satelliteData.details.tle1, satelliteData.details.tle2, groundStationLocation]);
+
+    const showTimeline = satelliteData.details.norad_id && enhancedActivePass;
 
     // Memoize the next pass calculation to prevent unnecessary recalculations
     const nextPass = useMemo(() => {
@@ -652,7 +676,8 @@ const SatelliteInfoPopover = () => {
                             {showTimeline ? (
                                 <SatellitePassTimeline
                                     singlePassMode={true}
-                                    passId={currentActivePass.id}
+                                    passId={enhancedActivePass.id}
+                                    passesOverride={[enhancedActivePass]}
                                     showSunShading={false}
                                     showSunMarkers={false}
                                     satelliteName={satelliteData.details.name}
