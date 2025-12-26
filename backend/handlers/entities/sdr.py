@@ -516,6 +516,17 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
                         )
                         return
                     transcription_manager.set_deepgram_api_key(api_key)
+
+                    # Set Google Translate API key for Deepgram translation
+                    google_translate_key = next(
+                        (
+                            p["value"]
+                            for p in preferences
+                            if p["name"] == "google_translate_api_key"
+                        ),
+                        "",
+                    )
+                    transcription_manager.set_google_translate_api_key(google_translate_key)
                 else:
                     logger.warning(
                         f"Unknown transcription provider: {provider}, skipping auto-start"

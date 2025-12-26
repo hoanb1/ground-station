@@ -97,6 +97,11 @@ const preferencesSlice = createSlice({
                 id: null,
                 name: 'deepgram_api_key',
                 value: '',
+            },
+            {
+                id: null,
+                name: 'google_translate_api_key',
+                value: '',
             }
         ],
         status: 'idle',

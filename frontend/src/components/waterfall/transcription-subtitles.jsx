@@ -391,9 +391,8 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                             {/* Language Display Logic:
                                 - When NOT translating: show detected language from transcription
                                 - When translating: show source → target with arrow
-                                - Deepgram doesn't support translation, so hide arrow and target
                             */}
-                            {translateTo && translateTo !== 'none' && provider !== 'deepgram' ? (
+                            {translateTo && translateTo !== 'none' ? (
                                 // Translation mode: show source → target
                                 <>
                                     {/* Source Language */}

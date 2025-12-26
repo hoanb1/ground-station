@@ -342,6 +342,22 @@ async def toggle_transcription(
                             if api_key:
                                 transcription_manager.set_deepgram_api_key(api_key)
                                 logger.info("Updated transcription manager with Deepgram API key")
+
+                                # Set Google Translate API key for Deepgram translation
+                                google_translate_key = next(
+                                    (
+                                        p["value"]
+                                        for p in preferences
+                                        if p["name"] == "google_translate_api_key"
+                                    ),
+                                    "",
+                                )
+                                transcription_manager.set_google_translate_api_key(
+                                    google_translate_key
+                                )
+                                logger.info(
+                                    "Updated transcription manager with Google Translate API key"
+                                )
                             else:
                                 logger.warning("Deepgram API key not configured in preferences")
                         else:

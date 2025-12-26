@@ -434,6 +434,46 @@ const PreferencesForm = () => {
                         </Alert>
                     </Grid>
 
+                    {/* Google Translate API Key */}
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>{t('preferences.google_translate_api_key', 'Google Translate API Key')}</Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                            disabled={isLoading}
+                            size="small"
+                        >
+                            <TextField
+                                style={{fontFamily: 'monospace'}}
+                                fullWidth
+                                id="google-translate-api-key"
+                                variant="filled"
+                                type="text"
+                                size="small"
+                                disabled={isLoading}
+                                label={t('preferences.google_translate_api_key', 'Google Translate API Key')}
+                                placeholder="AIza..."
+                                value={getPreferenceValue('google_translate_api_key')}
+                                onChange={handleChange('google_translate_api_key')}
+                                helperText={t('preferences.google_translate_api_key_help', 'Google Cloud Translation API key for translating Deepgram transcriptions. Get yours at cloud.google.com')}
+                                autoComplete="off"
+                                inputProps={{
+                                    autoComplete: 'off',
+                                    'data-form-type': 'other',
+                                    'data-lpignore': 'true'
+                                }}
+                            />
+                        </FormControl>
+                        <Alert severity="info" sx={{ mt: 1, fontSize: '0.75rem' }}>
+                            <AlertTitle sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Privacy & Terms</AlertTitle>
+                            Used for translating Deepgram transcriptions. Text is sent to Google's servers. See pricing at cloud.google.com/translate/pricing.
+                            {' '}
+                            <a href="https://cloud.google.com/translate/pricing" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                                Google Translate Pricing
+                            </a>
+                        </Alert>
+                    </Grid>
+
                 </Grid>
 
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>

@@ -24,6 +24,7 @@ import json
 import logging
 from typing import Optional
 
+import aiohttp
 import numpy as np
 
 from audio.transcriptionworker import TranscriptionWorker
@@ -62,6 +63,7 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
         vfo_number: int,
         language: str = "auto",
         translate_to: str = "none",
+        google_translate_api_key: Optional[str] = None,
     ):
         super().__init__(
             transcription_queue=transcription_queue,
@@ -75,6 +77,9 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
             provider_name="deepgram",
         )
 
+        # Google Translate API key for translating Deepgram transcriptions
+        self.google_translate_api_key = google_translate_api_key
+
         # Deepgram-specific settings
         self.target_sample_rate = 16000  # Deepgram prefers 16kHz
         self.websocket = None
@@ -82,6 +87,9 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
 
         # Deepgram API endpoint
         self.websocket_url = self._build_websocket_url()
+
+        # Google Translate API endpoint
+        self.translate_api_url = "https://translation.googleapis.com/language/translate/v2"
 
     def _build_websocket_url(self) -> str:
         """Build Deepgram WebSocket URL with query parameters"""
@@ -359,6 +367,95 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
         except Exception as e:
             logger.error(f"Deepgram receiver error: {e}")
             self.connected = False
+
+    async def _translate_text(self, text: str, source_lang: str, target_lang: str) -> Optional[str]:
+        """
+        Translate text using Google Cloud Translation API REST endpoint.
+
+        Args:
+            text: Text to translate
+            source_lang: Source language code (e.g., "es", "fr")
+            target_lang: Target language code (e.g., "en", "de")
+
+        Returns:
+            Translated text or None if translation fails
+        """
+        if not self.google_translate_api_key:
+            logger.warning("Google Translate API key not configured, skipping translation")
+            return None
+
+        try:
+            # Prepare the request payload
+            payload = {
+                "q": text,
+                "target": target_lang,
+                "format": "text",
+            }
+
+            # Add source language if not auto-detect
+            if source_lang and source_lang != "auto":
+                payload["source"] = source_lang
+
+            # Make async HTTP request to Google Translate API
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.translate_api_url,
+                    params={"key": self.google_translate_api_key},
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=5.0),
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        translated_text: str = result["data"]["translations"][0]["translatedText"]
+                        logger.debug(
+                            f"Translated '{text}' from {source_lang} to {target_lang}: '{translated_text}'"
+                        )
+                        return translated_text
+                    else:
+                        error_text = await response.text()
+                        logger.error(
+                            f"Google Translate API error (status {response.status}): {error_text}"
+                        )
+                        return None
+
+        except asyncio.TimeoutError:
+            logger.warning("Google Translate API timeout, skipping translation")
+            return None
+        except Exception as e:
+            logger.error(f"Translation error: {e}", exc_info=True)
+            return None
+
+    async def _emit_transcription(
+        self, text: str, language: str, is_final: bool, confidence: Optional[float] = None
+    ):
+        """
+        Override to add translation step for Deepgram transcriptions.
+
+        Args:
+            text: Transcribed text
+            language: Detected/configured language code
+            is_final: Whether this is a final or partial transcription
+            confidence: Optional confidence score (0.0 to 1.0)
+        """
+        # If translation is requested and enabled
+        if self.translate_to and self.translate_to != "none" and self.translate_to != language:
+            try:
+                translated_text = await self._translate_text(text, language, self.translate_to)
+                if translated_text:
+                    # Emit translated text with original language preserved
+                    await super()._emit_transcription(
+                        translated_text, language, is_final, confidence
+                    )
+                else:
+                    # Translation failed, emit original text
+                    logger.debug("Translation failed, emitting original text")
+                    await super()._emit_transcription(text, language, is_final, confidence)
+            except Exception as e:
+                logger.warning(f"Translation failed: {e}, emitting original text")
+                await super()._emit_transcription(text, language, is_final, confidence)
+        else:
+            # No translation needed
+            await super()._emit_transcription(text, language, is_final, confidence)
 
     def stop(self):
         """Stop the Deepgram worker"""

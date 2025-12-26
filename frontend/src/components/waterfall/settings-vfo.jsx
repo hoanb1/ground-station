@@ -1345,12 +1345,6 @@ const VfoAccordion = ({
                                             const sourceFlag = flagMap[sourceLang] || '🏳️';
                                             const sourceDisplay = langMap[sourceLang] || sourceLang.toUpperCase();
 
-                                            // Deepgram doesn't support translation
-                                            const provider = vfo.transcriptionProvider || 'gemini';
-                                            if (provider === 'deepgram') {
-                                                return `${sourceFlag} ${sourceDisplay}`;
-                                            }
-
                                             const translateFlag = translateTo === 'none' ? '⭕' : (flagMap[translateTo] || '🏳️');
                                             const translateDisplay = translateTo === 'none' ? 'No Trans' : langMap[translateTo] || translateTo.toUpperCase();
 
@@ -1728,8 +1722,7 @@ const VfoAccordion = ({
                                 </FormControl>
                             </Box>
 
-                            {/* Translation only available with Gemini */}
-                            {vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionProvider !== 'deepgram' && (
+                            {/* Translation */}
                             <Box sx={{ mb: 2.5 }}>
                                 <FormControl fullWidth size="small" variant="filled">
                                     <InputLabel>{t('vfo.translate_to', 'Translate To')}</InputLabel>
@@ -1737,7 +1730,7 @@ const VfoAccordion = ({
                                         value={vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionTranslateTo || 'none'}
                                         label={t('vfo.translate_to', 'Translate To')}
                                         onChange={(e) => onVFOPropertyChange(transcriptionParamsVfoIndex, { transcriptionTranslateTo: e.target.value })}
-                                        disabled={!vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionEnabled || !geminiConfigured}
+                                        disabled={!vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionEnabled}
                                         sx={{ fontSize: '0.875rem' }}
                                     >
                                         <MenuItem value="none" sx={{ fontSize: '0.875rem' }}>⭕ {t('vfo.languages.none', 'No Translation')}</MenuItem>
@@ -1759,14 +1752,6 @@ const VfoAccordion = ({
                                     </Select>
                                 </FormControl>
                             </Box>
-                            )}
-
-                            {/* Deepgram note about no translation */}
-                            {vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionProvider === 'deepgram' && (
-                                <Alert severity="info" sx={{ mb: 2, fontSize: '0.75rem' }}>
-                                    {t('vfo.deepgram_no_translation', 'Deepgram does not support built-in translation. Only transcription is available.')}
-                                </Alert>
-                            )}
 
                             {/* Transcription Stats Display */}
                             {(() => {

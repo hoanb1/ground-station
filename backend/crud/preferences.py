@@ -61,6 +61,7 @@ async def fetch_all_preferences(session: AsyncSession) -> dict:
         "toast_position": "bottom-right",
         "gemini_api_key": "",  # Google Gemini API key for transcription
         "deepgram_api_key": "",  # Deepgram API key for transcription
+        "google_translate_api_key": "",  # Google Cloud Translation API key for translating Deepgram transcriptions
     }
 
     try:

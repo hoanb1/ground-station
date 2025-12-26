@@ -48,6 +48,7 @@ class TranscriptionManager:
         # API keys for different providers
         self.gemini_api_key = None
         self.deepgram_api_key = None
+        self.google_translate_api_key = None
 
         # Race condition prevention (similar to decoder manager)
         self._start_locks = {}  # Per (sdr_id, session_id, vfo_number) locks
@@ -73,6 +74,16 @@ class TranscriptionManager:
         """
         self.deepgram_api_key = api_key
         self.logger.info("Deepgram API key updated for transcription manager")
+
+    def set_google_translate_api_key(self, api_key: str):
+        """
+        Update the Google Translate API key for all future transcription workers.
+
+        Args:
+            api_key: Google Cloud Translation API key
+        """
+        self.google_translate_api_key = api_key
+        self.logger.info("Google Translate API key updated for transcription manager")
 
     def start_transcription(
         self,
@@ -241,6 +252,7 @@ class TranscriptionManager:
                             vfo_number=vfo_number,
                             language=language,
                             translate_to=translate_to,
+                            google_translate_api_key=self.google_translate_api_key,
                         )
                     else:
                         raise ValueError(f"Unknown provider: {provider}")
