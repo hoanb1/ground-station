@@ -165,14 +165,21 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
         });
 
         // Build lines by filling them up to maxWordsPerLine
+        // Also start a new line if 1+ minute has passed since last word
         const newLines = [];
         let currentLineWords = [];
         let currentLineSegments = [];
+        let lastTimestamp = null;
 
         for (let i = 0; i < wordsWithTimestamps.length; i++) {
             const { word, timestamp } = wordsWithTimestamps[i];
 
-            if (currentLineWords.length >= maxWordsPerLine) {
+            // Check if we need to start a new line
+            const shouldStartNewLine =
+                currentLineWords.length >= maxWordsPerLine ||
+                (lastTimestamp !== null && (timestamp - lastTimestamp) >= 60000); // 60000ms = 1 minute
+
+            if (shouldStartNewLine && currentLineWords.length > 0) {
                 newLines.push({
                     text: currentLineWords.join(' '),
                     segments: currentLineSegments,
@@ -184,6 +191,8 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                 currentLineWords.push(word);
                 currentLineSegments.push({ word, timestamp });
             }
+
+            lastTimestamp = timestamp;
         }
 
         if (currentLineWords.length > 0) {
