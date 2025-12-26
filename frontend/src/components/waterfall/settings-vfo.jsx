@@ -509,7 +509,7 @@ const VfoAccordion = ({
                                         }
                                     }}
                                 >
-                                    {!vfoMuted[vfoIndex] ? t('vfo.listening', 'Listening') : t('vfo.muted', 'Muted')}
+                                    {!vfoMuted[vfoIndex] ? t('vfo.mute', 'Mute') : t('vfo.muted', 'Muted')}
                                 </ToggleButton>
                             </Box>
 

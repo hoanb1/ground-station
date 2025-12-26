@@ -599,7 +599,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
  *
  * Displays separate subtitle overlays for each active VFO with responsive grid layout
  */
-const TranscriptionSubtitles = ({ maxLines = 3, maxWordsPerLine = 20 }) => {
+const TranscriptionSubtitles = ({ maxLines = 4, maxWordsPerLine = 20 }) => {
     const dispatch = useDispatch();
 
     // Get live transcription state
