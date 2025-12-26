@@ -1753,6 +1753,15 @@ const VfoAccordion = ({
                                 </FormControl>
                             </Box>
 
+                            {/* Deepgram translation info */}
+                            {vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionProvider === 'deepgram' &&
+                             vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionTranslateTo &&
+                             vfoMarkers[transcriptionParamsVfoIndex]?.transcriptionTranslateTo !== 'none' && (
+                                <Alert severity="info" sx={{ mb: 2, fontSize: '0.75rem' }}>
+                                    {t('vfo.deepgram_translation_info', 'Deepgram transcribes audio. Translation uses Google Translate API (configured in Settings).')}
+                                </Alert>
+                            )}
+
                             {/* Transcription Stats Display */}
                             {(() => {
                                 const decoderInfo = getVFODecoderInfo(transcriptionParamsVfoIndex);
