@@ -566,6 +566,28 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                                     mb: lineIdx < lines.length - 1 ? 0.5 : 0,
                                 }}
                             >
+                            {/* Timestamp at the beginning of the line */}
+                            {line.segments.length > 0 && (() => {
+                                const firstTimestamp = line.segments[0].timestamp;
+                                const date = new Date(firstTimestamp);
+                                const hours = String(date.getHours()).padStart(2, '0');
+                                const minutes = String(date.getMinutes()).padStart(2, '0');
+                                const timeString = `[${hours}:${minutes}]`;
+
+                                return (
+                                    <Box
+                                        component="span"
+                                        sx={{
+                                            color: 'rgba(200, 200, 200, 0.8)',
+                                            marginRight: '0.5em',
+                                            fontWeight: 500,
+                                        }}
+                                    >
+                                        {timeString}
+                                    </Box>
+                                );
+                            })()}
+
                             {line.segments.map((segment, segIdx) => {
                                 const ageMs = Date.now() - segment.timestamp;
                                 const isRecent = ageMs < 10000;
