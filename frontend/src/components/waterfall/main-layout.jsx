@@ -201,7 +201,7 @@ const MainLayout = React.memo(function MainLayout() {
 
             {/* Transcription Subtitles Overlay - positioned over entire page */}
             <TranscriptionSubtitles
-                maxLines={3}
+                maxLines={4}
                 maxWordsPerLine={20}
             />
         </>
