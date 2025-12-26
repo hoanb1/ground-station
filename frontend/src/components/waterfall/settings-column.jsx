@@ -705,44 +705,6 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             </TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
 
-                <VfoAccordion
-                    expanded={expandedPanels.includes('vfo')}
-                    onAccordionChange={handleAccordionChange('vfo')}
-                    selectedVFOTab={selectedVFOTab}
-                    onVFOTabChange={handleVFOTabChange}
-                    vfoColors={vfoColors}
-                    vfoMarkers={vfoMarkers}
-                    vfoActive={vfoActive}
-                    onVFOActiveChange={handleVFOActiveChange}
-                    onVFOPropertyChange={handleVFOPropertyChange}
-                    selectedVFO={selectedVFO}
-                    onVFOListenChange={handleVFOListenChange}
-                    onTranscriptionToggle={handleTranscriptionToggle}
-                    geminiConfigured={geminiConfigured}
-                    deepgramConfigured={deepgramConfigured}
-                />
-
-                <FrequencyControlAccordion
-                    expanded={expandedPanels.includes('freqControl')}
-                    onAccordionChange={handleAccordionChange('freqControl')}
-                    centerFrequency={centerFrequency}
-                    onCenterFrequencyChange={(newFrequency) => {
-                        if (!isRecording) {
-                            dispatch(updateCenterFrequency(newFrequency));
-                        }
-                    }}
-                    availableTransmitters={rigData?.transmitters || []}
-                    getProperTransmitterId={getProperTransmitterId}
-                    onTransmitterChange={handleTransmitterChange}
-                    selectedOffsetMode={selectedOffsetMode}
-                    onOffsetModeChange={handleOffsetModeChange}
-                    selectedOffsetValue={selectedOffsetValue}
-                    onOffsetValueChange={handleOffsetValueChange}
-                    isRecording={isRecording}
-                    selectedSDRId={selectedSDRId}
-                    isStreaming={isStreaming}
-                />
-
                 <SdrAccordion
                     expanded={expandedPanels.includes('sdr')}
                     onAccordionChange={handleAccordionChange('sdr')}
@@ -781,6 +743,44 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     rtlAgc={rtlAgc}
                     onRtlAgcChange={(checked) => dispatch(updateRtlAgc(checked))}
                     isRecording={isRecording}
+                />
+
+                <FrequencyControlAccordion
+                    expanded={expandedPanels.includes('freqControl')}
+                    onAccordionChange={handleAccordionChange('freqControl')}
+                    centerFrequency={centerFrequency}
+                    onCenterFrequencyChange={(newFrequency) => {
+                        if (!isRecording) {
+                            dispatch(updateCenterFrequency(newFrequency));
+                        }
+                    }}
+                    availableTransmitters={rigData?.transmitters || []}
+                    getProperTransmitterId={getProperTransmitterId}
+                    onTransmitterChange={handleTransmitterChange}
+                    selectedOffsetMode={selectedOffsetMode}
+                    onOffsetModeChange={handleOffsetModeChange}
+                    selectedOffsetValue={selectedOffsetValue}
+                    onOffsetValueChange={handleOffsetValueChange}
+                    isRecording={isRecording}
+                    selectedSDRId={selectedSDRId}
+                    isStreaming={isStreaming}
+                />
+
+                <VfoAccordion
+                    expanded={expandedPanels.includes('vfo')}
+                    onAccordionChange={handleAccordionChange('vfo')}
+                    selectedVFOTab={selectedVFOTab}
+                    onVFOTabChange={handleVFOTabChange}
+                    vfoColors={vfoColors}
+                    vfoMarkers={vfoMarkers}
+                    vfoActive={vfoActive}
+                    onVFOActiveChange={handleVFOActiveChange}
+                    onVFOPropertyChange={handleVFOPropertyChange}
+                    selectedVFO={selectedVFO}
+                    onVFOListenChange={handleVFOListenChange}
+                    onTranscriptionToggle={handleTranscriptionToggle}
+                    geminiConfigured={geminiConfigured}
+                    deepgramConfigured={deepgramConfigured}
                 />
 
                 <FftAccordion

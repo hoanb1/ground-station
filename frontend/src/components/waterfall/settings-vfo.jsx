@@ -435,31 +435,6 @@ const VfoAccordion = ({
                 {[1, 2, 3, 4].map((vfoIndex) => (
                     <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
                         <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
-                            {/* Frequency Display */}
-                            <Box sx={{
-                                mt: 2,
-                                mb: 0,
-                                width: '100%',
-                                typography: 'body1',
-                                fontWeight: 'medium',
-                                alignItems: 'center'
-                            }}>
-                                <Box
-                                    sx={{
-                                        width: '100%',
-                                        fontFamily: "Monospace",
-                                        color: '#2196f3',
-                                        alignItems: 'center',
-                                        textAlign: 'center',
-                                        justifyContent: 'center'
-                                    }}>
-                                    <LCDFrequencyDisplay
-                                        frequency={vfoMarkers[vfoIndex]?.frequency || 0}
-                                        size={"large"}/>
-                                </Box>
-                            </Box>
-
-                            {/* Active/Mute Buttons */}
                             <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
                                 <ToggleButton
                                     value="active"
@@ -536,6 +511,30 @@ const VfoAccordion = ({
                                 >
                                     {!vfoMuted[vfoIndex] ? t('vfo.mute', 'Mute') : t('vfo.muted', 'Muted')}
                                 </ToggleButton>
+                            </Box>
+
+                            {/* Frequency Display */}
+                            <Box sx={{
+                                mt: 2,
+                                mb: 0,
+                                width: '100%',
+                                typography: 'body1',
+                                fontWeight: 'medium',
+                                alignItems: 'center'
+                            }}>
+                                <Box
+                                    sx={{
+                                        width: '100%',
+                                        fontFamily: "Monospace",
+                                        color: '#2196f3',
+                                        alignItems: 'center',
+                                        textAlign: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                    <LCDFrequencyDisplay
+                                        frequency={vfoMarkers[vfoIndex]?.frequency || 0}
+                                        size={"large"}/>
+                                </Box>
                             </Box>
 
                             {/* VU Meter Display */}
