@@ -146,6 +146,10 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
     const dragStart = useRef({ x: 0, y: 0 });
     const containerRef = useRef(null);
 
+    // Track maximum width reached - never shrink once expanded
+    const maxWidthRef = useRef(0);
+    const contentRef = useRef(null);
+
     useEffect(() => {
         if (!transcription || !transcription.segments || transcription.segments.length === 0) {
             setLines([]);
@@ -207,6 +211,16 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
         const displayLines = newLines.slice(-maxLines);
         setLines(displayLines);
     }, [transcription, maxLines, maxWordsPerLine, vfoNumber]);
+
+    // Track maximum width reached - never shrink
+    useEffect(() => {
+        if (contentRef.current) {
+            const currentWidth = contentRef.current.offsetWidth;
+            if (currentWidth > maxWidthRef.current) {
+                maxWidthRef.current = currentWidth;
+            }
+        }
+    }, [lines]);
 
     // Force re-render every second to update color transitions
     useEffect(() => {
@@ -545,6 +559,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
 
                     {/* Body with subtitle text - dark background */}
                     <Box
+                        ref={contentRef}
                         sx={{
                             backgroundColor: 'rgba(0, 0, 0, 0.85)',
                             padding: { xs: '8px 12px', sm: '10px 16px' },
@@ -553,6 +568,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                             borderTop: 'none',
                             borderBottomLeftRadius: '8px',
                             borderBottomRightRadius: '8px',
+                            minWidth: maxWidthRef.current > 0 ? `${maxWidthRef.current}px` : 'auto',
                         }}
                     >
                         {lines.map((line, lineIdx) => (
