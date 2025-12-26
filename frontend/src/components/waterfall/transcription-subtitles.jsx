@@ -572,7 +572,8 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                                 const date = new Date(firstTimestamp);
                                 const hours = String(date.getHours()).padStart(2, '0');
                                 const minutes = String(date.getMinutes()).padStart(2, '0');
-                                const timeString = `[${hours}:${minutes}]`;
+                                const seconds = String(date.getSeconds()).padStart(2, '0');
+                                const timeString = `[${hours}:${minutes}:${seconds}]`;
 
                                 return (
                                     <Box
