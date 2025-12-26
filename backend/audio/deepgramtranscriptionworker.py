@@ -102,7 +102,7 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
             f"sample_rate={self.target_sample_rate}",
             "channels=1",
             "punctuate=true",
-            "interim_results=true",  # Get partial transcriptions
+            "interim_results=false",  # Only get final transcriptions to avoid repetition
             "utterance_end_ms=1000",  # Detect end of utterance after 1s silence
             "vad_events=true",  # Voice activity detection events
             "diarize=true",  # Speaker diarization
