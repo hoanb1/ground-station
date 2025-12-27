@@ -160,6 +160,9 @@ class WebAudioStreamer(threading.Thread):
                                 ),  # Number of samples (including both L and R for stereo)
                                 "vfo": vfo_data,
                                 "session_id": originating_session_id,
+                                "rf_power_db": audio_message.get(
+                                    "rf_power_db"
+                                ),  # RF power measurement
                             },
                             room=originating_session_id,
                         ),  # Emit ONLY to the originating session

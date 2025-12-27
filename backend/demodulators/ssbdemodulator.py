@@ -83,6 +83,11 @@ class SSBDemodulator(threading.Thread):
         # Squelch state (for hysteresis)
         self.squelch_open = False  # Track if squelch is open (signal present)
 
+        # Power measurement settings
+        self.power_update_rate = 4.0  # Hz - send power measurements 4 times per second
+        self.last_power_time = 0.0
+        self.last_rf_power_db = None  # Cache last measured power
+
         # Processing state
         self.sdr_sample_rate = None
         self.current_center_freq = None
@@ -448,12 +453,23 @@ class SSBDemodulator(threading.Thread):
                 decimated = filtered[::decimation]
 
                 # Measure RF signal power for squelch AFTER filtering
+                # Calculate on every chunk for accurate squelch operation
                 signal_power = np.mean(np.abs(filtered) ** 2)
                 rf_power_db_raw = 10 * np.log10(signal_power + 1e-10)
 
                 # Calibration offset (similar to FM demodulator)
                 calibration_offset_db = 21.0
                 rf_power_db = rf_power_db_raw + calibration_offset_db
+
+                # Update cached power value periodically for UI updates (throttled to N Hz)
+                current_time = time.time()
+                should_update_ui_power = (current_time - self.last_power_time) >= (
+                    1.0 / self.power_update_rate
+                )
+
+                if should_update_ui_power:
+                    self.last_rf_power_db = rf_power_db
+                    self.last_power_time = current_time
 
                 intermediate_rate = sdr_sample_rate / decimation
 
@@ -553,6 +569,7 @@ class SSBDemodulator(threading.Thread):
                             "session_id": self.session_id,
                             "audio": chunk,
                             "vfo_number": self.vfo_number,  # Add VFO number for multi-VFO support
+                            "rf_power_db": self.last_rf_power_db,  # Include latest power measurement
                         }
 
                         # Always output audio (UI handles muting, transcription always active)

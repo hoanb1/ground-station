@@ -94,6 +94,11 @@ class FMDemodulator(threading.Thread):
         # De-emphasis time constant (75 microseconds for US, 50 for EU)
         self.deemphasis_tau = 75e-6
 
+        # Power measurement settings
+        self.power_update_rate = 4.0  # Hz - send power measurements 4 times per second
+        self.last_power_time = 0.0
+        self.last_rf_power_db = None  # Cache last measured power
+
         # Performance monitoring stats
         self.stats: Dict[str, Any] = {
             "iq_chunks_in": 0,
@@ -485,7 +490,7 @@ class FMDemodulator(threading.Thread):
                     decimated = filtered[::stage_decimation]
 
                 # Measure RF signal power for squelch AFTER filtering (within VFO bandwidth)
-                # Use the output from the last stage
+                # Calculate on every chunk for accurate squelch operation
                 signal_power = np.mean(np.abs(decimated) ** 2)
                 rf_power_db_raw = 10 * np.log10(signal_power + 1e-10)
 
@@ -498,6 +503,16 @@ class FMDemodulator(threading.Thread):
                 calibration_offset_db = 21.0
 
                 rf_power_db = rf_power_db_raw + calibration_offset_db
+
+                # Update cached power value periodically for UI updates (throttled to N Hz)
+                current_time = time.time()
+                should_update_ui_power = (current_time - self.last_power_time) >= (
+                    1.0 / self.power_update_rate
+                )
+
+                if should_update_ui_power:
+                    self.last_rf_power_db = rf_power_db
+                    self.last_power_time = current_time
 
                 intermediate_rate = sdr_sample_rate / total_decimation
 
@@ -599,11 +614,12 @@ class FMDemodulator(threading.Thread):
                         chunk = self.audio_buffer[: self.target_chunk_size]
                         self.audio_buffer = self.audio_buffer[self.target_chunk_size :]
 
-                        # Prepare audio message
+                        # Prepare audio message with RF power measurement
                         audio_message = {
                             "session_id": self.session_id,
                             "audio": chunk,
                             "vfo_number": self.vfo_number,  # Tag audio with VFO number
+                            "rf_power_db": self.last_rf_power_db,  # Include latest power measurement
                         }
 
                         # Always output audio (UI handles muting, transcription always active)

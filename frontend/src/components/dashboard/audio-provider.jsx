@@ -16,7 +16,8 @@ const AudioContext = createContext({
     getAudioState: () => {},
     flushAudioBuffers: () => {},
     getAudioBufferLength: () => {},
-    getVfoAudioLevel: () => {}
+    getVfoAudioLevel: () => {},
+    getVfoRfPower: () => {}
 });
 
 export const useAudio = () => {
@@ -42,6 +43,7 @@ export const AudioProvider = ({ children }) => {
     const vfoMutedRef = useRef({}); // { 1: false, 2: false, ... }
     const vfoVolumeRef = useRef({}); // { 1: 1.0, 2: 1.0, ... } - individual VFO volumes
     const vfoAudioLevelRef = useRef({}); // { 1: 0.0, 2: 0.0, ... } - RMS audio levels
+    const vfoRfPowerRef = useRef({}); // { 1: -100, 2: -100, ... } - RF power in dB
 
     // Callback ref to handle audio from workers - must be defined before workers
     const playProcessedAudioRef = useRef(null);
@@ -231,6 +233,11 @@ export const AudioProvider = ({ children }) => {
             return;
         }
 
+        // Extract and store RF power measurement if present
+        if (audioData.rf_power_db !== undefined && audioData.rf_power_db !== null) {
+            vfoRfPowerRef.current[vfoNumber] = audioData.rf_power_db;
+        }
+
         // Send to the correct VFO worker for processing
         const worker = vfoWorkersRef.current[vfoNumber];
         if (worker) {
@@ -389,6 +396,12 @@ export const AudioProvider = ({ children }) => {
         return vfoAudioLevelRef.current[vfoNumber] || 0;
     }, []);
 
+    // Get VFO RF power in dB
+    const getVfoRfPower = useCallback((vfoNumber) => {
+        if (vfoNumber < 1 || vfoNumber > 4) return null;
+        return vfoRfPowerRef.current[vfoNumber] || null;
+    }, []);
+
     // Register flush callback for use by middleware
     useEffect(() => {
         registerFlushCallback(flushAudioBuffers);
@@ -444,8 +457,9 @@ export const AudioProvider = ({ children }) => {
         getAudioState,
         flushAudioBuffers,
         getAudioBufferLength,
-        getVfoAudioLevel
-    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, setVfoMute, setVfoVolume, stopAudio, getAudioState, flushAudioBuffers, getAudioBufferLength, getVfoAudioLevel]);
+        getVfoAudioLevel,
+        getVfoRfPower
+    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, setVfoMute, setVfoVolume, stopAudio, getAudioState, flushAudioBuffers, getAudioBufferLength, getVfoAudioLevel, getVfoRfPower]);
 
     return (
         <AudioContext.Provider value={value}>
