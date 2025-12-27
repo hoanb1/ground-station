@@ -188,7 +188,12 @@ export const vfoSlice = createSlice({
             }
         },
         setVfoInactive: (state, action) => {
-            state.vfoActive[action.payload] = false;
+            const vfoNumber = action.payload;
+            state.vfoActive[vfoNumber] = false;
+            // Reset frequency to null so VFO appears at center when toggled back on
+            if (state.vfoMarkers[vfoNumber]) {
+                state.vfoMarkers[vfoNumber].frequency = null;
+            }
         },
         setSelectedVFOTab: (state, action) => {
             state.selectedVFOTab = action.payload;

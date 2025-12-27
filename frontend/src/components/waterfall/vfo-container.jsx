@@ -261,14 +261,10 @@ const VFOMarkersContainer = ({
                     }
 
                     // Check if frequency needs to be updated
-                    const visibleRange = getVisibleFrequencyRange(centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX);
-                    const needsFrequencyUpdate =
-                        marker.frequency === null ||
-                        marker.frequency < visibleRange.startFrequency ||
-                        marker.frequency > visibleRange.endFrequency;
-
-                    if (needsFrequencyUpdate) {
-                        // Set frequency to center of visible range
+                    // Only set frequency if it's null (uninitialized)
+                    // Do NOT reset frequency if VFO is outside visible range - user may have intentionally placed it there
+                    if (marker.frequency === null) {
+                        const visibleRange = getVisibleFrequencyRange(centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX);
                         updates.frequency = visibleRange.centerFrequency;
                     }
 
