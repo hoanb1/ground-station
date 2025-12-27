@@ -80,6 +80,32 @@ export const SquelchIcon = ({ size = 48, ...props }) => {
     );
 };
 
+// Centered Squelch Icon for IconButton use
+export const SquelchIconCentered = ({ size = 24, ...props }) => {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+            {...props}
+        >
+            <text
+                x="50%"
+                y="50%"
+                dominantBaseline="middle"
+                textAnchor="middle"
+                fontSize="14"
+                fontWeight="bold"
+                fontFamily="monospace"
+            >
+                SQ
+            </text>
+        </svg>
+    );
+};
+
 export const TLEIcon = ({ size = 24, ...props }) => {
     return (
         <Icon {...props}>

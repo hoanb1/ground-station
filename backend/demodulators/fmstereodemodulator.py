@@ -590,8 +590,8 @@ class FMStereoDemodulator(threading.Thread):
                 signal_power = np.mean(np.abs(decimated) ** 2)
                 rf_power_db_raw = 10 * np.log10(signal_power + 1e-10)
 
-                # Empirical calibration offset (same as FM/AM demodulator)
-                calibration_offset_db = 21.0
+                # Empirical calibration offset (matches FM/AM demodulator to align with FFT waterfall)
+                calibration_offset_db = 17.0
                 rf_power_db = rf_power_db_raw + calibration_offset_db
 
                 # Update cached power value periodically for UI updates (throttled to N Hz)

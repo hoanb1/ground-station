@@ -496,11 +496,8 @@ class FMDemodulator(threading.Thread):
 
                 # Empirical calibration offset to match waterfall display
                 # Adjusted based on testing to align with FFT waterfall levels
-                # Noise floor: raw=-95dB → target=-78dB (offset=17)
-                # Signal: raw=-64dB → target=-39dB (offset=25)
-                # Using compromise value: 21 dB
-                # This gives: noise=-74dB (4dB off), signal=-43dB (4dB off)
-                calibration_offset_db = 21.0
+                # Target: FFT noise floor -73dB matches FM demod -73dB
+                calibration_offset_db = 17.0
 
                 rf_power_db = rf_power_db_raw + calibration_offset_db
 

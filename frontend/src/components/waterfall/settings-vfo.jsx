@@ -26,6 +26,8 @@ import {
     IconButton,
     Link,
     Chip,
+    Button,
+    Tooltip,
 } from "@mui/material";
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
@@ -39,7 +41,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 // import TranscribeIcon from '@mui/icons-material/Transcribe';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
-import {SquelchIcon} from "../common/dataurl-icons.jsx";
+import {SquelchIcon, SquelchIconCentered} from "../common/dataurl-icons.jsx";
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import TransmittersTable from '../satellites/transmitters-table.jsx';
@@ -447,81 +449,87 @@ const VfoAccordion = ({
                     <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
                         <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
                             <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
-                                <ToggleButton
-                                    value="active"
-                                    selected={vfoActive[vfoIndex]}
-                                    onChange={() => onVFOActiveChange(vfoIndex, !vfoActive[vfoIndex])}
-                                    sx={{
-                                        flex: 1,
-                                        height: '32px',
-                                        fontSize: '0.8rem',
-                                        border: '1px solid',
-                                        borderColor: 'rgba(255, 255, 255, 0.23)',
-                                        borderRadius: '4px',
-                                        color: 'text.secondary',
-                                        textTransform: 'none',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                        transition: 'all 0.2s ease-in-out',
-                                        '&.Mui-selected': {
-                                            backgroundColor: 'success.main',
-                                            color: 'success.contrastText',
-                                            borderColor: 'success.main',
-                                            fontWeight: 600,
-                                            boxShadow: '0 0 8px rgba(76, 175, 80, 0.4)',
+                                <Tooltip title={vfoActive[vfoIndex] ? "Deactivate VFO" : "Activate VFO"} arrow>
+                                    <ToggleButton
+                                        value="active"
+                                        selected={vfoActive[vfoIndex]}
+                                        onChange={() => onVFOActiveChange(vfoIndex, !vfoActive[vfoIndex])}
+                                        sx={{
+                                            flex: 1,
+                                            height: '32px',
+                                            fontSize: '0.8rem',
+                                            border: '1px solid',
+                                            borderColor: 'rgba(255, 255, 255, 0.23)',
+                                            borderRadius: '4px',
+                                            color: 'text.secondary',
+                                            textTransform: 'none',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                            transition: 'all 0.2s ease-in-out',
+                                            '&.Mui-selected': {
+                                                backgroundColor: 'success.main',
+                                                color: 'success.contrastText',
+                                                borderColor: 'success.main',
+                                                fontWeight: 600,
+                                                boxShadow: '0 0 8px rgba(76, 175, 80, 0.4)',
+                                                '&:hover': {
+                                                    backgroundColor: 'success.dark',
+                                                    boxShadow: '0 0 12px rgba(76, 175, 80, 0.6)',
+                                                }
+                                            },
                                             '&:hover': {
-                                                backgroundColor: 'success.dark',
-                                                boxShadow: '0 0 12px rgba(76, 175, 80, 0.6)',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                                borderColor: 'rgba(255, 255, 255, 0.4)',
                                             }
-                                        },
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                            borderColor: 'rgba(255, 255, 255, 0.4)',
-                                        }
-                                    }}
-                                >
-                                    {vfoActive[vfoIndex] ? t('vfo.active') : t('vfo.activate', 'Activate')}
-                                </ToggleButton>
-                                <ToggleButton
-                                    value="listen"
-                                    selected={!vfoMuted[vfoIndex]}
-                                    disabled={!vfoActive[vfoIndex]}
-                                    onChange={() => handleVfoMuteToggle(vfoIndex)}
-                                    sx={{
-                                        flex: 1,
-                                        height: '32px',
-                                        fontSize: '0.8rem',
-                                        border: '1px solid',
-                                        borderColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.5)' : 'rgba(255, 255, 255, 0.23)',
-                                        borderRadius: '4px',
-                                        color: 'text.secondary',
-                                        textTransform: 'none',
-                                        backgroundColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                                        transition: 'all 0.2s ease-in-out',
-                                        '&.Mui-selected': {
-                                            backgroundColor: 'primary.main',
-                                            color: 'primary.contrastText',
-                                            borderColor: 'primary.main',
-                                            fontWeight: 600,
-                                            boxShadow: '0 0 8px rgba(33, 150, 243, 0.4)',
-                                            '&:hover': {
-                                                backgroundColor: 'primary.dark',
-                                                boxShadow: '0 0 12px rgba(33, 150, 243, 0.6)',
-                                            }
-                                        },
-                                        '&:hover': {
-                                            backgroundColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                                            borderColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.7)' : 'rgba(255, 255, 255, 0.4)',
-                                        },
-                                        '&.Mui-disabled': {
-                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                                            borderColor: 'rgba(255, 255, 255, 0.08)',
-                                            color: 'rgba(255, 255, 255, 0.3)',
-                                            opacity: 0.5,
-                                        }
-                                    }}
-                                >
-                                    {!vfoMuted[vfoIndex] ? t('vfo.mute', 'Mute') : t('vfo.muted', 'Muted')}
-                                </ToggleButton>
+                                        }}
+                                    >
+                                        {vfoActive[vfoIndex] ? t('vfo.active') : t('vfo.activate', 'Activate')}
+                                    </ToggleButton>
+                                </Tooltip>
+                                <Tooltip title={vfoMuted[vfoIndex] ? "Unmute VFO audio" : "Mute VFO audio"} arrow>
+                                    <span>
+                                        <ToggleButton
+                                            value="listen"
+                                            selected={!vfoMuted[vfoIndex]}
+                                            disabled={!vfoActive[vfoIndex]}
+                                            onChange={() => handleVfoMuteToggle(vfoIndex)}
+                                            sx={{
+                                                flex: 1,
+                                                height: '32px',
+                                                fontSize: '0.8rem',
+                                                border: '1px solid',
+                                                borderColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.5)' : 'rgba(255, 255, 255, 0.23)',
+                                                borderRadius: '4px',
+                                                color: 'text.secondary',
+                                                textTransform: 'none',
+                                                backgroundColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                                                transition: 'all 0.2s ease-in-out',
+                                                '&.Mui-selected': {
+                                                    backgroundColor: 'primary.main',
+                                                    color: 'primary.contrastText',
+                                                    borderColor: 'primary.main',
+                                                    fontWeight: 600,
+                                                    boxShadow: '0 0 8px rgba(33, 150, 243, 0.4)',
+                                                    '&:hover': {
+                                                        backgroundColor: 'primary.dark',
+                                                        boxShadow: '0 0 12px rgba(33, 150, 243, 0.6)',
+                                                    }
+                                                },
+                                                '&:hover': {
+                                                    backgroundColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                                                    borderColor: vfoMuted[vfoIndex] ? 'rgba(255, 152, 0, 0.7)' : 'rgba(255, 255, 255, 0.4)',
+                                                },
+                                                '&.Mui-disabled': {
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                                                    color: 'rgba(255, 255, 255, 0.3)',
+                                                    opacity: 0.5,
+                                                }
+                                            }}
+                                        >
+                                            {!vfoMuted[vfoIndex] ? t('vfo.mute', 'Mute') : t('vfo.muted', 'Muted')}
+                                        </ToggleButton>
+                                    </span>
+                                </Tooltip>
                             </Box>
 
                             {/* Frequency Display */}
@@ -743,39 +751,86 @@ const VfoAccordion = ({
 
                             {/* Volume and Squelch Sliders */}
                             <Stack
-                                spacing={2}
+                                spacing={0}
                                 direction="row"
                                 alignItems="center"
                                 sx={{mt: 2}}
                                 data-slider="squelch"
                                 data-vfo-index={vfoIndex}
                             >
-                                <Box sx={{textAlign: 'left'}}><SquelchIcon size={24}/></Box>
+                                <Tooltip title="Auto Squelch (Noise Floor + 5dB)" arrow>
+                                    <span>
+                                        <IconButton
+                                            onClick={() => {
+                                                const currentPower = vfoRfPower[vfoIndex];
+                                                if (currentPower !== null) {
+                                                    // Set squelch to current noise floor + 5 dB
+                                                    const autoSquelch = Math.round(currentPower + 5);
+                                                    onVFOPropertyChange(vfoIndex, {squelch: Math.max(-150, Math.min(0, autoSquelch))});
+                                                }
+                                            }}
+                                            disabled={!vfoActive[vfoIndex] || vfoRfPower[vfoIndex] === null}
+                                            sx={{
+                                                color: 'text.secondary',
+                                                backgroundColor: 'rgba(33, 150, 243, 0.08)',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(33, 150, 243, 0.15)',
+                                                },
+                                                '&:disabled': {
+                                                    backgroundColor: 'transparent',
+                                                },
+                                            }}
+                                        >
+                                            <SquelchIconCentered size={24}/>
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
                                 <Slider
                                     value={vfoMarkers[vfoIndex]?.squelch || -150}
                                     min={-150}
                                     max={0}
                                     onChange={(e, val) => onVFOPropertyChange(vfoIndex, {squelch: val})}
                                     disabled={!vfoActive[vfoIndex]}
+                                    sx={{ ml: '5px' }}
                                 />
-                                <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
+                                <Box sx={{minWidth: 50, fontSize: '0.875rem', textAlign: 'right'}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
                             </Stack>
 
                             <Stack
-                                spacing={2}
+                                spacing={0}
                                 direction="row"
                                 alignItems="center"
                                 sx={{mt: 2}}
                                 data-slider="volume"
                                 data-vfo-index={vfoIndex}
                             >
-                                <Box sx={{textAlign: 'left'}}><VolumeDown/></Box>
+                                <Tooltip title={vfoMuted[vfoIndex] ? "Unmute VFO" : "Mute VFO"} arrow>
+                                    <span>
+                                        <IconButton
+                                            onClick={() => handleVfoMuteToggle(vfoIndex)}
+                                            disabled={!vfoActive[vfoIndex]}
+                                            sx={{
+                                                color: vfoMuted[vfoIndex] ? 'error.main' : 'text.secondary',
+                                                backgroundColor: vfoMuted[vfoIndex] ? 'rgba(244, 67, 54, 0.08)' : 'rgba(33, 150, 243, 0.08)',
+                                                '&:hover': {
+                                                    backgroundColor: vfoMuted[vfoIndex] ? 'rgba(244, 67, 54, 0.15)' : 'rgba(33, 150, 243, 0.15)',
+                                                },
+                                                '&:disabled': {
+                                                    backgroundColor: 'transparent',
+                                                },
+                                            }}
+                                        >
+                                            {vfoMuted[vfoIndex] ? <VolumeOffIcon /> : <VolumeDown />}
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
                                 <Slider
                                     value={vfoMarkers[vfoIndex]?.volume || 50}
                                     onChange={(e, val) => onVFOPropertyChange(vfoIndex, {volume: val})}
                                     disabled={!vfoActive[vfoIndex]}
+                                    sx={{ ml: '5px' }}
                                 />
-                                <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.volume || 50}%</Box>
+                                <Box sx={{minWidth: 50, fontSize: '0.875rem', textAlign: 'right'}}>{vfoMarkers[vfoIndex]?.volume || 50}%</Box>
                             </Stack>
 
                             {/* Decoder/Transcription Status Display - Two lines */}
