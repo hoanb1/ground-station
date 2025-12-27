@@ -159,7 +159,10 @@ export const TitleBar = styled(Paper)(({ theme }) => ({
     borderBottom: `1px solid ${theme.palette.border.light}`,
     textAlign: 'left',
     fontWeight: 'bold',
-    backgroundColor: theme.palette.background.elevated,
+    backgroundColor: theme.palette.background.titleBar || theme.palette.background.elevated,
+    boxShadow: theme.palette.mode === 'dark'
+        ? '0 1px 2px rgba(0, 0, 0, 0.2)'
+        : '0 1px 2px rgba(0, 0, 0, 0.08)',
 }));
 
 export const ThemedLeafletTooltip = styled(LeafletTooltip)(({ theme }) => ({

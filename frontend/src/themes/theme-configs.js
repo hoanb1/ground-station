@@ -35,6 +35,7 @@ export const themeConfigs = {
             default: '#121212',
             paper: '#1e1e1e',
             elevated: '#2a2a2a',
+            titleBar: '#1a3a52',
         },
         border: {
             main: '#424242',
@@ -66,6 +67,7 @@ export const themeConfigs = {
             default: '#e8e8e8',
             paper: '#f0f0f0',
             elevated: '#d8d8d8',
+            titleBar: '#dceaf5',
         },
         border: {
             main: '#b0b0b0',
@@ -85,43 +87,6 @@ export const themeConfigs = {
         },
     },
 
-    cyberpunk: {
-        mode: 'dark',
-        primary: { main: '#00ffff' }, // Cyan
-        secondary: { main: '#ff00ff' }, // Magenta
-        success: { main: '#00ff00' }, // Neon Green
-        warning: { main: '#ffff00' }, // Yellow
-        error: { main: '#ff0055' }, // Hot Pink
-        info: { main: '#00ffff' }, // Cyan
-        background: {
-            default: '#0a0e1a', // Very dark blue
-            paper: '#1a1f35', // Dark blue-gray
-            elevated: '#252b45', // Slightly lighter blue-gray
-        },
-        border: {
-            main: '#00ffff', // Cyan borders
-            light: '#00cccc',
-            dark: '#008888',
-        },
-        overlay: {
-            light: 'rgba(0, 255, 255, 0.08)',
-            medium: 'rgba(0, 255, 255, 0.15)',
-            dark: 'rgba(0, 0, 0, 0.7)',
-        },
-        status: {
-            connected: '#00ff00', // Neon green
-            connecting: '#ffff00', // Yellow
-            disconnected: '#ff0055', // Hot pink
-            polling: '#ff8800', // Orange
-        },
-        // Custom additions
-        neonGlow: {
-            cyan: '0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff',
-            magenta: '0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff',
-            green: '0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00',
-        },
-    },
-
     'high-contrast': {
         mode: 'dark',
         primary: { main: '#ffffff' },
@@ -134,6 +99,7 @@ export const themeConfigs = {
             default: '#000000',
             paper: '#1a1a1a',
             elevated: '#2d2d2d',
+            titleBar: '#2d2d2d',
         },
         border: {
             main: '#ffffff',
@@ -165,6 +131,7 @@ export const themeConfigs = {
             default: '#000000', // Pure black for OLED screens
             paper: '#121212', // Very dark gray
             elevated: '#1e1e1e', // Slightly elevated
+            titleBar: '#1a2838',
         },
         border: {
             main: '#2d2d2d',
@@ -196,6 +163,7 @@ export const themeConfigs = {
             default: '#1a0f00', // Very dark brown/orange
             paper: '#2d1810', // Dark warm brown
             elevated: '#3d2418', // Medium warm brown
+            titleBar: '#3d2820',
         },
         border: {
             main: '#4d3420',
@@ -227,6 +195,7 @@ export const themeConfigs = {
             default: '#0a0d0a', // The Zone darkness
             paper: '#1a1d1a', // Grimy concrete
             elevated: '#252b25', // Rusted metal
+            titleBar: '#2a3a2a',
         },
         border: {
             main: '#3a4a3a', // Weathered steel
@@ -264,6 +233,7 @@ export const themeConfigs = {
             default: '#000000', // Terminal void
             paper: '#0d0d0d', // Command line
             elevated: '#1a1a1a', // Elevated shell
+            titleBar: '#0a1a0a',
         },
         border: {
             main: '#00ff41', // Scan line green
@@ -306,6 +276,7 @@ export const themeConfigs = {
             default: '#000000', // Deep ocean void
             paper: '#0a0f12', // Hull interior
             elevated: '#121a20', // Conning tower
+            titleBar: '#1a2a18',
         },
         border: {
             main: '#3a4520', // Phosphor grid
@@ -378,7 +349,6 @@ export function getAvailableThemesWithMetadata() {
         { id: 'auto', name: 'Auto (System)' },
         { id: 'dark', name: 'Dark' },
         { id: 'light', name: 'Light' },
-        { id: 'cyberpunk', name: 'Cyberpunk' },
         { id: 'high-contrast', name: 'High Contrast' },
         { id: 'night', name: 'Night (OLED)' },
         { id: 'sunset-orange', name: 'Sunset Orange' },

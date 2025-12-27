@@ -465,7 +465,7 @@ const TargetSatelliteMapContainer = ({}) => {
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
                 sx={{
-                    bgcolor: 'background.default',
+                    bgcolor: 'background.titleBar',
                     borderBottom: '1px solid',
                     borderColor: 'border.main',
                     backdropFilter: 'blur(10px)'
