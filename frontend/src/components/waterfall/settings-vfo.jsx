@@ -1848,6 +1848,8 @@ const VfoAccordion = ({
                                         <MenuItem value="ar" sx={{ fontSize: '0.875rem' }}>🇸🇦 {t('vfo.languages.ar', 'Arabic')}</MenuItem>
                                         <MenuItem value="tl" sx={{ fontSize: '0.875rem' }}>🇵🇭 {t('vfo.languages.tl', 'Filipino')}</MenuItem>
                                         <MenuItem value="tr" sx={{ fontSize: '0.875rem' }}>🇹🇷 {t('vfo.languages.tr', 'Turkish')}</MenuItem>
+                                        <MenuItem value="sk" sx={{ fontSize: '0.875rem' }}>🇸🇰 {t('vfo.languages.sk', 'Slovak')}</MenuItem>
+                                        <MenuItem value="hr" sx={{ fontSize: '0.875rem' }}>🇭🇷 {t('vfo.languages.hr', 'Croatian')}</MenuItem>
                                     </Select>
                                 </FormControl>
                             </Box>
@@ -1879,6 +1881,8 @@ const VfoAccordion = ({
                                         <MenuItem value="ar" sx={{ fontSize: '0.875rem' }}>🇸🇦 {t('vfo.languages.ar', 'Arabic')}</MenuItem>
                                         <MenuItem value="tl" sx={{ fontSize: '0.875rem' }}>🇵🇭 {t('vfo.languages.tl', 'Filipino')}</MenuItem>
                                         <MenuItem value="tr" sx={{ fontSize: '0.875rem' }}>🇹🇷 {t('vfo.languages.tr', 'Turkish')}</MenuItem>
+                                        <MenuItem value="sk" sx={{ fontSize: '0.875rem' }}>🇸🇰 {t('vfo.languages.sk', 'Slovak')}</MenuItem>
+                                        <MenuItem value="hr" sx={{ fontSize: '0.875rem' }}>🇭🇷 {t('vfo.languages.hr', 'Croatian')}</MenuItem>
                                     </Select>
                                 </FormControl>
                             </Box>
