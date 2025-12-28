@@ -17,12 +17,10 @@
 import logging
 import multiprocessing
 import os
-import queue
 import signal
 import threading
 import time
 
-from audio.audiobroadcaster import AudioBroadcaster
 from processing.decoderconfigservice import decoder_config_service
 from processing.decoderregistry import decoder_registry
 from processing.demodulatorregistry import demodulator_registry
@@ -266,15 +264,6 @@ class DecoderManager:
                         self.logger.error(f"Unknown demodulator type: {required_demodulator}")
                         return False
 
-                    # Create AudioBroadcaster for distributing demodulated audio to multiple consumers
-                    # This allows the decoder and UI to both receive audio without modifying demodulator code
-                    # Use threading queue since FM demodulator (thread) -> AudioBroadcaster (thread)
-                    broadcaster_input_queue: queue.Queue = queue.Queue(maxsize=10)
-                    audio_broadcaster = AudioBroadcaster(
-                        broadcaster_input_queue, session_id=session_id, vfo_number=vfo_number
-                    )
-                    audio_broadcaster.start()
-
                     # Get VFO center frequency from kwargs if provided
                     vfo_center_freq = kwargs.get("vfo_center_freq", None)
 
@@ -286,17 +275,17 @@ class DecoderManager:
                     self.logger.info(
                         f"Creating internal {required_demodulator.upper()} demodulator "
                         f"{'('+demodulator_mode.upper()+' mode) ' if demodulator_mode else ''}"
-                        f"for {decoder_class.__name__} with AudioBroadcaster"
+                        f"for {decoder_class.__name__}"
                     )
 
                     # Start internal demodulator with internal_mode enabled
-                    # Demodulator writes to broadcaster input queue (single output)
-                    # Pass vfo_number if provided to maintain multi-VFO structure
+                    # Note: DemodulatorManager (consumerbase.py) automatically creates an AudioBroadcaster
+                    # for every demodulator, so we don't need to create one here
                     demod_kwargs = {
                         "sdr_id": sdr_id,
                         "session_id": session_id,
                         "demodulator_class": demod_class,
-                        "audio_queue": broadcaster_input_queue,  # Demodulator feeds broadcaster
+                        "audio_queue": None,  # Will be set by demodulator manager
                         "vfo_number": vfo_number,  # Pass VFO number for multi-VFO mode
                         "internal_mode": True,  # Enable internal mode to bypass VFO checks
                         "center_freq": vfo_center_freq,  # Pass VFO frequency
@@ -313,12 +302,11 @@ class DecoderManager:
                         self.logger.error(
                             f"Failed to start internal {required_demodulator.upper()} demodulator for session {session_id}"
                         )
-                        # Clean up broadcaster if demodulator failed to start
-                        audio_broadcaster.stop()
                         return False
 
                     internal_demod_created = True
-                    demod_entry = process_info.get("demodulators", {}).get(session_id)
+                    # Refresh demod_entry to get the newly created demodulator with its audio broadcaster
+                    demod_entry = process_info.get("demodulators", {})
 
             # Get the appropriate queue for the decoder
             if needs_raw_iq:
@@ -379,9 +367,29 @@ class DecoderManager:
                 subscription_key_to_store = subscription_key
                 audio_broadcaster_instance = None  # Raw IQ decoders don't use audio broadcaster
             else:
-                # Audio decoder - subscribe to AudioBroadcaster
+                # Audio decoder - subscribe to AudioBroadcaster created by demodulator
                 if not internal_demod_created:
                     self.logger.error(f"No internal demodulator created for session {session_id}")
+                    return False
+
+                # Get the audio broadcaster from the demodulator entry
+                # The demodulator manager (consumerbase.py) automatically creates an AudioBroadcaster
+                # for every demodulator and stores it in the demodulator entry
+                if (
+                    vfo_number
+                    and session_id in demod_entry
+                    and vfo_number in demod_entry[session_id]
+                ):
+                    audio_broadcaster = demod_entry[session_id][vfo_number].get("audio_broadcaster")
+                    if not audio_broadcaster:
+                        self.logger.error(
+                            f"No audio broadcaster found for demodulator session {session_id} VFO {vfo_number}"
+                        )
+                        return False
+                else:
+                    self.logger.error(
+                        f"No demodulator entry found for session {session_id} VFO {vfo_number}"
+                    )
                     return False
 
                 # Subscribe decoder to audio broadcaster
@@ -390,9 +398,15 @@ class DecoderManager:
                     f"decoder:{session_id}", maxsize=10, for_process=True
                 )
 
-                # If UI audio streaming requested, subscribe the caller's queue directly
+                # UI audio streaming for decoders
+                # Note: For audio-input decoders (AFSK, Morse), the UI already receives audio
+                # via the web_audio subscription to the AudioBroadcaster. We don't need to
+                # subscribe audio_out_queue again as it would cause duplicate/echo audio.
+                # Only subscribe if the decoder produces different audio than its input.
                 ui_subscription_key = None
-                if audio_out_queue is not None:
+                # Currently no decoders need this - SSTV has integrated FM demod (no audio input)
+                # and AFSK/Morse consume FM audio that's already streamed to UI via web_audio
+                if False and audio_out_queue is not None:  # Disabled - causes echo for AFSK
                     ui_subscription_key = f"ui:{session_id}"
                     audio_broadcaster.subscribe_existing_queue(ui_subscription_key, audio_out_queue)
                     self.logger.info(
