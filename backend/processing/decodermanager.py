@@ -398,21 +398,6 @@ class DecoderManager:
                     f"decoder:{session_id}", maxsize=10, for_process=True
                 )
 
-                # UI audio streaming for decoders
-                # Note: For audio-input decoders (AFSK, Morse), the UI already receives audio
-                # via the web_audio subscription to the AudioBroadcaster. We don't need to
-                # subscribe audio_out_queue again as it would cause duplicate/echo audio.
-                # Only subscribe if the decoder produces different audio than its input.
-                ui_subscription_key = None
-                # Currently no decoders need this - SSTV has integrated FM demod (no audio input)
-                # and AFSK/Morse consume FM audio that's already streamed to UI via web_audio
-                if False and audio_out_queue is not None:  # Disabled - causes echo for AFSK
-                    ui_subscription_key = f"ui:{session_id}"
-                    audio_broadcaster.subscribe_existing_queue(ui_subscription_key, audio_out_queue)
-                    self.logger.info(
-                        "UI audio streaming enabled via direct AudioBroadcaster subscription"
-                    )
-
                 # Resolve decoder configuration using DecoderConfigService
                 # This centralizes all parameter resolution logic
                 satellite = kwargs.get("satellite", {})
@@ -453,7 +438,7 @@ class DecoderManager:
                 subscription_key_to_store = None
                 audio_broadcaster_instance = audio_broadcaster  # Store for cleanup
                 ui_subscription_key_to_store = (
-                    ui_subscription_key  # Store UI subscription for cleanup
+                    None  # UI subscription removed (was causing audio echo)
                 )
 
             # Store reference in multi-VFO structure
@@ -567,7 +552,6 @@ class DecoderManager:
             subscription_key = decoder_entry.get("subscription_key")  # For raw IQ decoders
             needs_raw_iq = decoder_entry.get("needs_raw_iq", False)
             audio_broadcaster = decoder_entry.get("audio_broadcaster")  # AudioBroadcaster instance
-            ui_subscription_key = decoder_entry.get("ui_subscription_key")  # UI subscription key
 
             decoder_name = type(decoder).__name__
             decoder.stop()
@@ -612,12 +596,7 @@ class DecoderManager:
             if audio_broadcaster:
                 # Unsubscribe decoder
                 audio_broadcaster.unsubscribe(f"decoder:{session_id}")
-                # Unsubscribe UI if it was subscribed
-                if ui_subscription_key:
-                    audio_broadcaster.unsubscribe(ui_subscription_key)
-                    self.logger.info(
-                        f"Unsubscribed UI from AudioBroadcaster for session {session_id}"
-                    )
+                # UI subscription no longer used (removed to prevent audio echo)
                 # Stop the broadcaster
                 audio_broadcaster.stop()
                 vfo_info = f" VFO {vfo_number}" if vfo_number else ""
@@ -843,7 +822,6 @@ class DecoderManager:
                         needs_raw_iq = bool(live_entry.get("needs_raw_iq", False))
                         subscription_key = live_entry.get("subscription_key")
                         audio_broadcaster = live_entry.get("audio_broadcaster")
-                        ui_subscription_key = live_entry.get("ui_subscription_key")
                         internal_demod = bool(live_entry.get("internal_demod", False))
 
                         if needs_raw_iq and subscription_key:
@@ -859,17 +837,13 @@ class DecoderManager:
                                     # Best effort; don't block restart
                                     pass
                         else:
-                            # Audio path: unsubscribe decoder and UI, then stop broadcaster
+                            # Audio path: unsubscribe decoder, then stop broadcaster
+                            # (UI subscription no longer used)
                             if audio_broadcaster:
                                 try:
                                     audio_broadcaster.unsubscribe(f"decoder:{session_id}")
                                 except Exception:
                                     pass
-                                if ui_subscription_key:
-                                    try:
-                                        audio_broadcaster.unsubscribe(ui_subscription_key)
-                                    except Exception:
-                                        pass
                                 try:
                                     audio_broadcaster.stop()
                                 except Exception:

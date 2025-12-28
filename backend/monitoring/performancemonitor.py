@@ -276,7 +276,13 @@ class PerformanceMonitor(threading.Thread):
                         connections.append(
                             {"target_type": "decoder", "target_id": f"{session_id}_{decoder_name}"}
                         )
-                        connections.append({"target_type": "ui", "target_id": f"ui:{session_id}"})
+                        # Add connection to WebAudioStreamer (for browser audio playback)
+                        connections.append(
+                            {
+                                "target_type": "audio_streamer",
+                                "target_id": f"web_audio_{session_id}",
+                            }
+                        )
 
                         audio_broadcaster_metrics["connections"] = connections
                         audio_broadcaster_metrics["broadcaster_type"] = "audio"
