@@ -17,6 +17,7 @@
 import logging
 import multiprocessing
 import os
+import queue
 import signal
 import threading
 import time
@@ -267,9 +268,8 @@ class DecoderManager:
 
                     # Create AudioBroadcaster for distributing demodulated audio to multiple consumers
                     # This allows the decoder and UI to both receive audio without modifying demodulator code
-                    broadcaster_input_queue: multiprocessing.Queue = multiprocessing.Queue(
-                        maxsize=10
-                    )
+                    # Use threading queue since FM demodulator (thread) -> AudioBroadcaster (thread)
+                    broadcaster_input_queue: queue.Queue = queue.Queue(maxsize=10)
                     audio_broadcaster = AudioBroadcaster(
                         broadcaster_input_queue, session_id=session_id, vfo_number=vfo_number
                     )
