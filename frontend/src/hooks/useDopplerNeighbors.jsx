@@ -21,13 +21,15 @@ import { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setNeighboringTransmitters } from '../components/waterfall/waterfall-slice.jsx';
 import { calculateNeighboringTransmitters, groupNeighboringTransmitters } from '../utils/doppler-calculator.js';
+import { isSatelliteVisible } from '../components/common/tracking-logic.jsx';
 
 /**
  * Custom hook to calculate doppler-shifted neighboring transmitters.
  *
  * Updates every 3 seconds (similar to overview map satellite updates).
  * Filters transmitters from groupOfSats that fall within the active SDR bandwidth
- * and stores them in the waterfall slice.
+ * and are currently visible (above horizon) from the observer's location.
+ * Stores the results in the waterfall slice.
  */
 export function useDopplerNeighbors() {
     const dispatch = useDispatch();
@@ -54,14 +56,33 @@ export function useDopplerNeighbors() {
         // Function to update neighboring transmitters
         const updateNeighbors = () => {
             try {
+                const now = new Date();
+
+                // Filter to only visible satellites (above horizon)
+                // This dramatically reduces the number of doppler calculations needed
+                const visibleSatellites = groupOfSats.filter(sat => {
+                    if (!sat.tle1 || !sat.tle2) {
+                        return false;
+                    }
+
+                    return isSatelliteVisible(
+                        sat.tle1,
+                        sat.tle2,
+                        now,
+                        { lat: location.lat, lon: location.lon, alt: location.alt },
+                        0 // minimum elevation: 0 degrees (above horizon)
+                    );
+                });
+
+                // Calculate doppler shift only for visible satellites
                 const neighbors = calculateNeighboringTransmitters(
-                    groupOfSats,
+                    visibleSatellites,
                     centerFrequency,
                     sampleRate,
                     location.lat,
                     location.lon,
                     location.alt,
-                    new Date()
+                    now
                 );
 
                 // Group transmitters that are close together (within 50kHz)
