@@ -10,7 +10,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { useTranslation } from 'react-i18next';
 import { BANDWIDTHS, STEP_SIZES } from './vfo-constants.js';
 import { formatDecoderParamsSummary } from './vfo-formatters.js';
-import { isLockedBandwidth, getDecoderConfig } from '../vfo-config.js';
+import { isLockedBandwidth, getDecoderConfig } from '../vfo-marker/vfo-config.js';
 
 // Common toggle button styles
 const toggleButtonStyles = {

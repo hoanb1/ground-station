@@ -63,7 +63,7 @@ import {
     setErrorDialogOpen,
     setStartStreamingLoading,
 } from '../components/waterfall/waterfall-slice.jsx';
-import { updateAllVFOStates, setVFOProperty } from '../components/waterfall/vfo-slice.jsx';
+import { updateAllVFOStates, setVFOProperty } from '../components/waterfall/vfo-marker/vfo-slice.jsx';
 import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
 import { setConnected, setConnecting, setReConnectAttempt } from '../components/dashboard/dashboard-slice.jsx';
 import {

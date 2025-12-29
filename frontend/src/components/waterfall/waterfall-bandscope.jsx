@@ -28,7 +28,7 @@ import {
     setWaterFallScaleX,
     setWaterFallPositionX
 } from "./waterfall-slice.jsx";
-import VFOMarkersContainer from './vfo-container.jsx';
+import VFOMarkersContainer from './vfo-marker/vfo-container.jsx';
 import FrequencyBandOverlay from './bandplan-overlay.jsx';
 import {useDopplerNeighbors} from '../../hooks/useDopplerNeighbors.jsx';
 

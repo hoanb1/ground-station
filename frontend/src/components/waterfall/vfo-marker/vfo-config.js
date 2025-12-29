@@ -694,7 +694,7 @@ export {
     getDecoderParameters,
     getDecoderDefaultParameters,
     mapParametersToBackend
-} from './decoder-parameters.js';
+} from '../decoder-parameters.js';
 
 /**
  * Get default VFO configuration object

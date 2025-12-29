@@ -36,7 +36,7 @@ import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
 import waterfallReducer from '../waterfall/waterfall-slice.jsx';
-import vfoReducer from '../waterfall/vfo-slice.jsx';
+import vfoReducer from '../waterfall/vfo-marker/vfo-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
 import versionReducer from "../dashboard/version-slice.jsx";
 import fileBrowserReducer from '../filebrowser/filebrowser-slice.jsx';
@@ -46,7 +46,7 @@ import performanceReducer from '../performance/performance-slice.jsx';
 import systemInfoReducer from '../settings/system-info-slice.jsx';
 import sessionsReducer from '../settings/sessions-slice.jsx';
 import transcriptionReducer from '../waterfall/transcription-slice.jsx';
-import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
+import backendSyncMiddleware from '../waterfall/vfo-marker/vfo-middleware.jsx';
 
 
 // Persist configuration for waterfall slice

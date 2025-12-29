@@ -59,7 +59,7 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import { useTranslation } from 'react-i18next';
 import { setIsEditing } from "./dashboard-slice.jsx";
-import { addStreamingVFO, removeStreamingVFO } from "../waterfall/vfo-slice.jsx";
+import { addStreamingVFO, removeStreamingVFO } from "../waterfall/vfo-marker/vfo-slice.jsx";
 import WakeLockStatus from "./wake-lock-icon.jsx";
 import ConnectionStatus from "./connection-popover.jsx";
 import Tooltip from "@mui/material/Tooltip";

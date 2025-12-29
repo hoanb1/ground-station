@@ -79,7 +79,7 @@ import {
     setVFOProperty,
     setVfoInactive,
     setVfoActive,
-} from './vfo-slice.jsx';
+} from './vfo-marker/vfo-slice.jsx';
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import { useSocket } from "../common/socket.jsx";
 import {frequencyBands} from "./bandplans.jsx";

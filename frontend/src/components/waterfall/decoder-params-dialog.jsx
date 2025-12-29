@@ -33,7 +33,7 @@ import {
     FormControlLabel,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { getDecoderParameters } from './vfo-config.js';
+import { getDecoderParameters } from './vfo-marker/vfo-config.js';
 
 const DecoderParamsDialog = ({
     open,

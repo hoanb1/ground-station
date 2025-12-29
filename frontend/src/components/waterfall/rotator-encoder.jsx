@@ -2,7 +2,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Box, Typography, Paper, useTheme } from '@mui/material';
-import { setVFOProperty } from './vfo-slice.jsx';
+import { setVFOProperty } from './vfo-marker/vfo-slice.jsx';
 
 const RotaryEncoder = ({
                            vfoNumber,

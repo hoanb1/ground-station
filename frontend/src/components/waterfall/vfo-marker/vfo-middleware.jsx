@@ -1,5 +1,5 @@
 import { backendUpdateVFOParameters, setVFOProperty } from './vfo-slice.jsx';
-import { flushAudioBuffers } from '../dashboard/audio-service.js';
+import { flushAudioBuffers } from '../../dashboard/audio-service.js';
 import { mapParametersToBackend } from './vfo-config.js';
 
 // You might want to pass the socket as a parameter or get it differently

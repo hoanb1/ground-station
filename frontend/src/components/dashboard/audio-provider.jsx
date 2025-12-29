@@ -2,7 +2,7 @@ import React, { createContext, useContext, useRef, useState, useEffect, useCallb
 import { useDispatch } from 'react-redux';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { registerFlushCallback, unregisterFlushCallback } from './audio-service.js';
-import { setVfoMuted } from '../waterfall/vfo-slice.jsx';
+import { setVfoMuted } from '../waterfall/vfo-marker/vfo-slice.jsx';
 
 const AudioContext = createContext({
     audioEnabled: false,
