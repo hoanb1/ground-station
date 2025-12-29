@@ -83,7 +83,7 @@ import getValue from "lodash/_getValue.js";
 import FrequencyControlAccordion from "./settings-frequency.jsx";
 import SdrAccordion from "./settings-sdr.jsx";
 import FftAccordion from "./settings-fft.jsx";
-import VfoAccordion from "./settings-vfo.jsx";
+import VfoAccordion from "./settings-vfo/settings-vfo.jsx";
 import RecordingAccordion from "./settings-recording.jsx";
 import PlaybackAccordion from "./settings-playback.jsx";
 import { useTranslation } from 'react-i18next';
