@@ -23,13 +23,13 @@ export const VfoTab = ({
 }) => {
     const vfoIndex = index + 1;
     const isLocked = vfoMarkers[vfoIndex]?.lockedTransmitterId && vfoMarkers[vfoIndex]?.lockedTransmitterId !== 'none';
-    const isStreaming = streamingVFOs.includes(vfoIndex);
-    const isMuted = vfoMutedRedux[vfoIndex];
-    const isActive = vfoActive[vfoIndex];
+    const isStreaming = streamingVFOs?.includes(vfoIndex) || false;
+    const isMuted = vfoMutedRedux?.[vfoIndex] || false;
+    const isActive = vfoActive?.[vfoIndex] || false;
 
     return (
         <Tab
-            key={index}
+            value={index}
             label={
                 <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
                     {vfoIndex}
@@ -106,7 +106,7 @@ export const VfoTab = ({
             }
             sx={{
                 minWidth: '25%',
-                backgroundColor: `${vfoColors[index]}40`, // 40 = ~25% opacity in hex
+                backgroundColor: `${vfoColors?.[index] || '#000000'}40`, // 40 = ~25% opacity in hex
                 '&.Mui-selected': {
                     fontWeight: 'bold',
                     borderBottom: 'none',

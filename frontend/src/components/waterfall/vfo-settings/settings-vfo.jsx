@@ -7,9 +7,11 @@
 import React from 'react';
 import { Accordion, AccordionSummary, AccordionDetails } from '../settings-elements.jsx';
 import Typography from '@mui/material/Typography';
-import { Tabs } from "@mui/material";
+import { Box, Tabs, Tab } from "@mui/material";
+import LockIcon from '@mui/icons-material/Lock';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeMuteIcon from '@mui/icons-material/VolumeMute';
 import { useTranslation } from 'react-i18next';
-import { VfoTab } from './vfo-tab-header.jsx';
 import { VfoTabPanel } from './vfo-tab-panel.jsx';
 import { TransmittersDialog, TranscriptionParamsDialog } from './vfo-dialogs.jsx';
 import DecoderParamsDialog from '../decoder-params-dialog.jsx';
@@ -105,14 +107,84 @@ const VfoAccordion = ({
                     }}
                 >
                     {[0, 1, 2, 3].map((index) => (
-                        <VfoTab
+                        <Tab
                             key={index}
-                            index={index}
-                            vfoColors={vfoColors}
-                            vfoMarkers={vfoMarkers}
-                            vfoActive={vfoActive}
-                            streamingVFOs={streamingVFOs}
-                            vfoMutedRedux={vfoMutedRedux}
+                            label={
+                                <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                                    {index + 1}
+                                    {vfoMarkers[index + 1]?.lockedTransmitterId && vfoMarkers[index + 1]?.lockedTransmitterId !== 'none' && (
+                                        <LockIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -4,
+                                                right: -8,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                            }}
+                                        />
+                                    )}
+                                    {!streamingVFOs.includes(index + 1) && (
+                                        <VolumeMuteIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: -2,
+                                                right: -6,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                                color: '#888888',
+                                            }}
+                                        />
+                                    )}
+                                    {streamingVFOs.includes(index + 1) && vfoMutedRedux[index + 1] && (
+                                        <VolumeMuteIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: -2,
+                                                right: -6,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                                color: '#00ff00',
+                                            }}
+                                        />
+                                    )}
+                                    {streamingVFOs.includes(index + 1) && !vfoMutedRedux[index + 1] && (
+                                        <VolumeUpIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: -2,
+                                                right: -6,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                                color: '#00ff00',
+                                            }}
+                                        />
+                                    )}
+                                    {vfoActive[index + 1] && (
+                                        <Box
+                                            aria-label={`VFO ${index + 1} active`}
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -4,
+                                                left: -8,
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: '50%',
+                                                bgcolor: 'success.main',
+                                                boxShadow: 1,
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            }
+                            sx={{
+                                minWidth: '25%',
+                                backgroundColor: `${vfoColors[index]}40`,
+                                '&.Mui-selected': {
+                                    fontWeight: 'bold',
+                                    borderBottom: 'none',
+                                    color: 'text.primary',
+                                },
+                            }}
                         />
                     ))}
                 </Tabs>
