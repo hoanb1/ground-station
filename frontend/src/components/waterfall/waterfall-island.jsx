@@ -556,12 +556,6 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
         <div ref={mainWaterFallContainer}>
         <TitleBar
             className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
-            sx={{
-                bgcolor: 'background.default',
-                borderBottom: '1px solid',
-                borderColor: 'border.main',
-                backdropFilter: 'blur(10px)'
-            }}
         >
             <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                 <Box sx={{display: 'flex', alignItems: 'center'}}>
