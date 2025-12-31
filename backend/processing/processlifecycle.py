@@ -45,6 +45,7 @@ class ProcessLifecycleManager:
         demodulator_manager,
         recorder_manager,
         decoder_manager,
+        audio_recorder_manager=None,
         transcription_manager=None,
     ):
         """
@@ -56,6 +57,7 @@ class ProcessLifecycleManager:
             demodulator_manager: DemodulatorManager instance
             recorder_manager: RecorderManager instance
             decoder_manager: DecoderManager instance
+            audio_recorder_manager: AudioRecorderManager instance (optional)
             transcription_manager: TranscriptionManager instance (optional)
         """
         self.logger = logging.getLogger("process-lifecycle")
@@ -64,6 +66,7 @@ class ProcessLifecycleManager:
         self.demodulator_manager = demodulator_manager
         self.recorder_manager = recorder_manager
         self.decoder_manager = decoder_manager
+        self.audio_recorder_manager = audio_recorder_manager
         self.transcription_manager = transcription_manager
         # Optional trace logging toggle
         try:
@@ -401,6 +404,18 @@ class ProcessLifecycleManager:
 
                 # Stop any active recorder for this client
                 self.recorder_manager.stop_recorder(sdr_id, client_id)
+
+                # Stop any active audio recorders for this client
+                if self.audio_recorder_manager:
+                    # Stop all VFO audio recorders for this session
+                    audio_recorders = process_info.get("audio_recorders", {}).get(client_id, {})
+                    for vfo_number in list(audio_recorders.keys()):
+                        self.logger.info(
+                            f"Stopping audio recorder for VFO {vfo_number}, session {client_id}"
+                        )
+                        self.audio_recorder_manager.stop_audio_recorder(
+                            sdr_id, client_id, vfo_number
+                        )
 
                 # Stop any active decoder for this client
                 self.decoder_manager.stop_decoder(sdr_id, client_id)

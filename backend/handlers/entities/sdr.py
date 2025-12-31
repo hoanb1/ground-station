@@ -343,6 +343,68 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 reply["success"] = False
                 reply["error"] = str(e)
 
+        elif cmd == "start-audio-recording":
+            try:
+                from server.audiorecorder import start_audio_recording
+
+                sdr_id = data.get("selectedSDRId")
+                vfo_number = data.get("vfoNumber")
+                recording_name = data.get("recordingName", "")
+                center_frequency = data.get("centerFrequency", 0)
+                vfo_frequency = data.get("vfoFrequency", 0)
+                demodulator_type = data.get("demodulatorType", "")
+                target_satellite_norad_id = data.get("targetSatelliteNoradId", "")
+                target_satellite_name = data.get("targetSatelliteName", "")
+
+                result = start_audio_recording(
+                    sdr_id,
+                    client_id,
+                    vfo_number,
+                    recording_name,
+                    target_satellite_norad_id,
+                    target_satellite_name,
+                    center_frequency,
+                    vfo_frequency,
+                    demodulator_type,
+                )
+                reply.update(result)
+
+                logger.info(f"Started audio recording for VFO {vfo_number}, session {client_id}")
+
+            except Exception as e:
+                logger.error(f"Error starting audio recording: {str(e)}")
+                logger.exception(e)
+                await sio.emit(
+                    "sdr-error",
+                    {"message": f"Failed to start audio recording: {str(e)}"},
+                    room=client_id,
+                )
+                reply["success"] = False
+                reply["error"] = str(e)
+
+        elif cmd == "stop-audio-recording":
+            try:
+                from server.audiorecorder import stop_audio_recording
+
+                sdr_id = data.get("selectedSDRId")
+                vfo_number = data.get("vfoNumber")
+
+                result = stop_audio_recording(sdr_id, client_id, vfo_number)
+                reply.update(result)
+
+                logger.info(f"Stopped audio recording for VFO {vfo_number}, session {client_id}")
+
+            except Exception as e:
+                logger.error(f"Error stopping audio recording: {str(e)}")
+                logger.exception(e)
+                await sio.emit(
+                    "sdr-error",
+                    {"message": f"Failed to stop audio recording: {str(e)}"},
+                    room=client_id,
+                )
+                reply["success"] = False
+                reply["error"] = str(e)
+
         elif cmd == "save-waterfall-snapshot":
             try:
                 from server.snapshots import save_waterfall_snapshot

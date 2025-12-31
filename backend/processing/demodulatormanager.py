@@ -190,13 +190,14 @@ class DemodulatorManager(ConsumerManager):
         """
         return self.stop_demodulator(sdr_id, session_id, vfo_number)
 
-    def get_active_demodulator(self, sdr_id, session_id):
+    def get_active_demodulator(self, sdr_id, session_id, vfo_number=None):
         """
-        Get the active demodulator for a session.
+        Get the active demodulator for a session and VFO.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
+            vfo_number: VFO number (1-4). If None, returns first available demodulator (legacy)
 
         Returns:
             Demodulator instance or None if not found
@@ -206,12 +207,25 @@ class DemodulatorManager(ConsumerManager):
 
         process_info = self.processes[sdr_id]
         demodulators = process_info.get("demodulators", {})
-        demod_entry = demodulators.get(session_id)
+        session_demods = demodulators.get(session_id)
 
-        if demod_entry is None:
+        if session_demods is None:
             return None
 
-        # Handle both old format (direct instance) and new format (dict with instance)
-        if isinstance(demod_entry, dict):
-            return demod_entry.get("instance")
-        return demod_entry
+        # Multi-VFO mode: session_demods is a dict of {vfo_number: demod_entry}
+        if isinstance(session_demods, dict):
+            # If vfo_number specified, get that specific VFO's demodulator
+            if vfo_number is not None:
+                demod_entry = session_demods.get(vfo_number)
+                if demod_entry and isinstance(demod_entry, dict):
+                    return demod_entry.get("instance")
+                return None
+            # Legacy: return first available demodulator
+            else:
+                for vfo_num, demod_entry in session_demods.items():
+                    if isinstance(demod_entry, dict):
+                        return demod_entry.get("instance")
+                return None
+
+        # Old format (shouldn't happen with new code, but handle it)
+        return session_demods

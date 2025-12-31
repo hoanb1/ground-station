@@ -20,6 +20,7 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { getDefaultVFOConfig, DEMODULATORS, getDemodulatorConfig, getDecoderConfig } from './vfo-config.js';
+import { setIsStreaming } from '../waterfall-slice.jsx';
 
 export const backendUpdateVFOParameters = createAsyncThunk(
     'vfo/updateVFOParameters',
@@ -33,6 +34,52 @@ export const backendUpdateVFOParameters = createAsyncThunk(
                     resolve(response.data);
                 } else {
                     reject(rejectWithValue(response.error));
+                }
+            });
+        });
+    }
+);
+
+export const startAudioRecording = createAsyncThunk(
+    'vfo/startAudioRecording',
+    async ({socket, vfoNumber, recordingName, selectedSDRId, centerFrequency, vfoFrequency, demodulatorType}, {getState, rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            const state = getState();
+            const targetNoradId = state.targetSatTrack?.trackingState?.norad_id || '';
+            const targetSatelliteName = state.targetSatTrack?.satelliteData?.details?.name || '';
+
+            socket.emit('sdr_data', 'start-audio-recording', {
+                selectedSDRId,
+                vfoNumber,
+                recordingName,
+                centerFrequency,
+                vfoFrequency,
+                demodulatorType,
+                targetSatelliteNoradId: targetNoradId,
+                targetSatelliteName: targetSatelliteName
+            }, (response) => {
+                if (response?.success) {
+                    resolve({vfoNumber, ...response.data});
+                } else {
+                    reject(rejectWithValue(response?.error || 'Failed to start audio recording'));
+                }
+            });
+        });
+    }
+);
+
+export const stopAudioRecording = createAsyncThunk(
+    'vfo/stopAudioRecording',
+    async ({socket, vfoNumber, selectedSDRId}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('sdr_data', 'stop-audio-recording', {
+                selectedSDRId,
+                vfoNumber
+            }, (response) => {
+                if (response?.success) {
+                    resolve({vfoNumber, ...response.data});
+                } else {
+                    reject(rejectWithValue(response?.error || 'Failed to stop audio recording'));
                 }
             });
         });
@@ -73,6 +120,12 @@ const initialState = {
         2: false,
         3: false,
         4: false,
+    },
+    audioRecording: {
+        1: { isRecording: false, duration: 0 },
+        2: { isRecording: false, duration: 0 },
+        3: { isRecording: false, duration: 0 },
+        4: { isRecording: false, duration: 0 },
     },
     vfoColors: ['#FF0000', '#207820', '#144bff', '#9e129e'],
     selectedVFOTab: 0,
@@ -253,6 +306,39 @@ export const vfoSlice = createSlice({
             })
             .addCase(backendUpdateVFOParameters.rejected, (state, action) => {
                 state.errorMessage = action.payload;
+            })
+            .addCase(startAudioRecording.pending, (state) => {
+                state.errorMessage = null;
+            })
+            .addCase(startAudioRecording.fulfilled, (state, action) => {
+                const {vfoNumber} = action.payload;
+                state.audioRecording[vfoNumber].isRecording = true;
+                state.audioRecording[vfoNumber].duration = 0;
+            })
+            .addCase(startAudioRecording.rejected, (state, action) => {
+                state.errorMessage = action.payload;
+            })
+            .addCase(stopAudioRecording.pending, (state) => {
+                state.errorMessage = null;
+            })
+            .addCase(stopAudioRecording.fulfilled, (state, action) => {
+                const {vfoNumber} = action.payload;
+                state.audioRecording[vfoNumber].isRecording = false;
+                state.audioRecording[vfoNumber].duration = 0;
+            })
+            .addCase(stopAudioRecording.rejected, (state, action) => {
+                state.errorMessage = action.payload;
+            })
+            .addCase(setIsStreaming, (state, action) => {
+                // When streaming stops, reset all audio recording states
+                if (action.payload === false) {
+                    state.audioRecording = {
+                        1: { isRecording: false, duration: 0 },
+                        2: { isRecording: false, duration: 0 },
+                        3: { isRecording: false, duration: 0 },
+                        4: { isRecording: false, duration: 0 },
+                    };
+                }
             });
     }
 });

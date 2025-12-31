@@ -7,6 +7,7 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { VfoActivateButton, VfoMuteButton, VfoFrequencyDisplay } from './vfo-controls.jsx';
+import VFOAudioRecorderButton from './vfo-audio-recorder-button.jsx';
 import { RfPowerMeter, AudioLevelMeter, AudioBufferMeter } from './vfo-meters.jsx';
 import { SquelchSlider, VolumeSlider } from './vfo-sliders.jsx';
 import { DecoderStatusDisplay } from './vfo-decoder-status.jsx';
@@ -52,8 +53,8 @@ export const VfoTabPanel = ({
     return (
         <Box hidden={!visible}>
             <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
-                {/* Activate and Mute Buttons */}
-                <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
+                {/* Activate, Mute, and Record Buttons */}
+                <Box sx={{ display: 'flex', gap: 0.5, mt: 1, alignItems: 'center' }}>
                     <VfoActivateButton
                         vfoIndex={vfoIndex}
                         vfoActive={vfoActive[vfoIndex]}
@@ -65,6 +66,7 @@ export const VfoTabPanel = ({
                         vfoMuted={vfoMuted[vfoIndex]}
                         onMuteToggle={onMuteToggle}
                     />
+                    <VFOAudioRecorderButton vfoNumber={vfoIndex} />
                 </Box>
 
                 {/* Frequency Display */}

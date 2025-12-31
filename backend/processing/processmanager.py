@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from common.constants import SocketEvents
 from monitoring.performancemonitor import PerformanceMonitor
+from processing.audiorecordermanager import AudioRecorderManager
 from processing.decodermanager import DecoderManager
 from processing.demodulatormanager import DemodulatorManager
 from processing.processlifecycle import ProcessLifecycleManager
@@ -49,6 +50,7 @@ class ProcessManager:
         # Initialize specialized managers
         self.demodulator_manager = DemodulatorManager(self.processes)
         self.recorder_manager = RecorderManager(self.processes)
+        self.audio_recorder_manager = AudioRecorderManager(self.processes)
         self.decoder_manager = DecoderManager(self.processes, self.demodulator_manager)
         self.transcription_manager = None  # Will be initialized when event loop is available
         self.lifecycle_manager = ProcessLifecycleManager(
@@ -57,6 +59,7 @@ class ProcessManager:
             self.demodulator_manager,
             self.recorder_manager,
             self.decoder_manager,
+            self.audio_recorder_manager,
         )
 
         # Initialize performance monitor
@@ -417,6 +420,68 @@ class ProcessManager:
             Recorder instance or None if not found
         """
         return self.recorder_manager.get_active_recorder(sdr_id, session_id)
+
+    # ==================== Audio Recorder Methods ====================
+
+    def start_audio_recorder(self, sdr_id, session_id, vfo_number, recorder_class, **kwargs):
+        """
+        Start an audio recorder thread for a specific VFO.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier (client session ID)
+            vfo_number: VFO number (1-4)
+            recorder_class: The recorder class to instantiate
+            **kwargs: Additional arguments to pass to the recorder constructor
+
+        Returns:
+            bool: True if started successfully, False otherwise
+        """
+        return self.audio_recorder_manager.start_audio_recorder(
+            sdr_id, session_id, vfo_number, recorder_class, **kwargs
+        )
+
+    def stop_audio_recorder(self, sdr_id, session_id, vfo_number):
+        """
+        Stop an audio recorder thread for a specific VFO.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+            vfo_number: VFO number
+
+        Returns:
+            bool: True if stopped successfully, False otherwise
+        """
+        return self.audio_recorder_manager.stop_audio_recorder(sdr_id, session_id, vfo_number)
+
+    def get_active_audio_recorder(self, sdr_id, session_id, vfo_number):
+        """
+        Get the active audio recorder for a VFO.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+            vfo_number: VFO number
+
+        Returns:
+            AudioRecorder instance or None if not found
+        """
+        return self.audio_recorder_manager.get_active_recorder(sdr_id, session_id, vfo_number)
+
+    def is_vfo_recording_audio(self, sdr_id, session_id, vfo_number):
+        """
+        Check if a VFO is currently recording audio.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+            vfo_number: VFO number
+
+        Returns:
+            bool: True if VFO is recording audio, False otherwise
+        """
+        return self.audio_recorder_manager.is_vfo_recording(sdr_id, session_id, vfo_number)
 
     # ==================== Decoder Methods ====================
 
