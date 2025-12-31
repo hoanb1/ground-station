@@ -1302,16 +1302,6 @@ export default function FilebrowserMain() {
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
-                                            {item.type === 'audio' && item.satellite_name && (
-                                                <Chip
-                                                    label={item.satellite_name}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="secondary"
-                                                    icon={<SatelliteAltIcon />}
-                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
-                                                />
-                                            )}
                                             {item.type === 'audio' && item.duration_seconds && (
                                                 <Chip
                                                     label={`${Math.floor(item.duration_seconds / 60)}:${String(Math.floor(item.duration_seconds % 60)).padStart(2, '0')}`}
