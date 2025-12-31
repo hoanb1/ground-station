@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
+import numpy as np
+
 logger = logging.getLogger("audio-recorder")
 
 
@@ -120,9 +122,10 @@ class AudioRecorder(threading.Thread):
                     self.start_datetime = timestamp
 
                 # Write audio samples to WAV file
-                # audio_data is int16 numpy array from demodulator
-                self.wav_file.writeframes(audio_data.tobytes())
-                self.total_samples += len(audio_data)
+                # audio_data is float32 numpy array from demodulator, convert to int16
+                audio_int16 = np.clip(audio_data * 32767, -32768, 32767).astype(np.int16)
+                self.wav_file.writeframes(audio_int16.tobytes())
+                self.total_samples += len(audio_int16)
 
                 # Update stats
                 with self.stats_lock:

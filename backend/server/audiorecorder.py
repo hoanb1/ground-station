@@ -93,13 +93,14 @@ def start_audio_recording(
     recording_path = os.path.join(audio_dir, recording_name_full)
 
     # Start recorder
+    # Note: Demodulators output audio at 44.1kHz (see FMDemodulator.audio_sample_rate)
     result = process_manager.audio_recorder_manager.start_audio_recorder(
         sdr_id,
         client_id,
         vfo_number,
         AudioRecorder,
         recording_path=recording_path,
-        sample_rate=48000,
+        sample_rate=44100,  # Match demodulator output rate
         target_satellite_norad_id=target_satellite_norad_id,
         target_satellite_name=target_satellite_name,
         center_frequency=center_frequency,
