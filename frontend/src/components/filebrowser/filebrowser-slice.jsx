@@ -19,16 +19,16 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-// Unified async thunk to fetch all files (recordings, snapshots, and decoded)
+// Unified async thunk to fetch all files (recordings, snapshots, decoded, and audio)
 // Note: This now uses pub/sub model - it sends a request and the response comes via socket event
 // Backend returns ALL files, frontend handles sorting and pagination
 export const fetchFiles = createAsyncThunk(
     'filebrowser/fetchFiles',
-    async ({ socket, showRecordings = true, showSnapshots = true, showDecoded = true }, { rejectWithValue }) => {
+    async ({ socket, showRecordings = true, showSnapshots = true, showDecoded = true, showAudio = true }, { rejectWithValue }) => {
         try {
             // Emit request without callback - response will come via 'file_browser_state' event
             // No pagination or sorting params - backend returns all files
-            socket.emit('file_browser', 'list-files', { showRecordings, showSnapshots, showDecoded });
+            socket.emit('file_browser', 'list-files', { showRecordings, showSnapshots, showDecoded, showAudio });
 
             // Return pending state - actual data will be updated via socket listener
             return { pending: true };
@@ -89,6 +89,23 @@ export const deleteDecoded = createAsyncThunk(
     }
 );
 
+// Async thunk to delete an audio file
+// Note: This now uses pub/sub model - response comes via 'file_browser_state' event
+export const deleteAudio = createAsyncThunk(
+    'filebrowser/deleteAudio',
+    async ({ socket, filename }, { rejectWithValue }) => {
+        try {
+            // Emit request without callback - response will come via 'file_browser_state' event
+            socket.emit('file_browser', 'delete-audio', { filename });
+
+            // Return the filename for optimistic updates if needed
+            return { filename, pending: true };
+        } catch (error) {
+            return rejectWithValue(error.message || 'Failed to delete audio file');
+        }
+    }
+);
+
 // Async thunk to delete multiple items (batch delete)
 export const deleteBatch = createAsyncThunk(
     'filebrowser/deleteBatch',
@@ -106,7 +123,7 @@ export const deleteBatch = createAsyncThunk(
 );
 
 const initialState = {
-    // All files (recordings, snapshots, and decoded)
+    // All files (recordings, snapshots, decoded, and audio)
     files: [],
     filesLoading: false,
     filesError: null,
@@ -119,6 +136,7 @@ const initialState = {
         showRecordings: true,
         showSnapshots: true,
         showDecoded: true,
+        showAudio: true,
     },
     diskUsage: {
         total: 0,
@@ -126,7 +144,7 @@ const initialState = {
         available: 0,
     },
     // Multi-select state
-    selectedItems: [], // Array of item keys (recording names or snapshot/decoded filenames)
+    selectedItems: [], // Array of item keys (recording names or snapshot/decoded/audio filenames)
     selectionMode: false, // Toggle for selection mode
     // New files indicator
     lastVisitedTimestamp: new Date().toISOString(), // ISO timestamp - initialized to app start time
@@ -254,6 +272,14 @@ const fileBrowserSlice = createSlice({
             state.total = Math.max(0, state.total - 1);
         });
 
+        // Delete audio - optimistic update
+        builder.addCase(deleteAudio.fulfilled, (state, action) => {
+            // Remove from files list
+            state.files = state.files.filter(f => !(f.type === 'audio' && f.filename === action.payload.filename));
+            // Update total count
+            state.total = Math.max(0, state.total - 1);
+        });
+
         // Delete batch - optimistic update
         builder.addCase(deleteBatch.fulfilled, (state, action) => {
             const itemsToDelete = action.payload.items;
@@ -264,7 +290,8 @@ const fileBrowserSlice = createSlice({
                     item.type === f.type && (
                         (item.type === 'recording' && item.name === key) ||
                         (item.type === 'snapshot' && item.filename === key) ||
-                        (item.type === 'decoded' && item.filename === key)
+                        (item.type === 'decoded' && item.filename === key) ||
+                        (item.type === 'audio' && item.filename === key)
                     )
                 );
             });

@@ -11,7 +11,9 @@
   "filter": "Filter",
   "filters": {
     "recordings": "Recordings",
-    "snapshots": "Snapshots"
+    "snapshots": "Snapshots",
+    "decoded": "Decoded",
+    "audio": "Audio"
   },
   "sort_order": {
     "ascending": "Ascending",
@@ -38,6 +40,12 @@
   "snapshot": {
     "type": "Snapshot",
     "description": "Ground Station Waterfall Snapshot"
+  },
+  "audio": {
+    "type": "Audio Recording",
+    "description": "VFO Audio Recording",
+    "in_progress": "Recording Audio",
+    "in_progress_message": "Audio Recording in Progress"
   },
   "details": {
     "title": "Recording Details",
@@ -66,14 +74,34 @@
   "delete_dialog": {
     "title_recording": "Delete Recording",
     "title_snapshot": "Delete Snapshot",
+    "title_decoded": "Delete Decoded File",
+    "title_audio": "Delete Audio Recording",
     "warning": "This action cannot be undone!",
     "confirm": "Are you sure you want to delete",
     "cancel": "Cancel",
     "delete": "Delete"
   },
+  "batch_delete_dialog": {
+    "title": "Delete Multiple Items",
+    "confirm": "Are you sure you want to delete {{count}} item(s)?",
+    "message": "This will permanently delete all selected recordings and snapshots."
+  },
+  "selection": {
+    "select": "Select",
+    "exit": "Exit Select",
+    "no_items": "No items selected",
+    "count": "{{count}} item(s) selected",
+    "select_all": "Select All",
+    "clear": "Clear",
+    "delete": "Delete Selected"
+  },
   "toast": {
     "recording_deleted": "Recording \"{{name}}\" deleted successfully",
     "snapshot_deleted": "Snapshot \"{{name}}\" deleted successfully",
-    "delete_failed": "Failed to delete: {{error}}"
+    "decoded_deleted": "Decoded file \"{{name}}\" deleted successfully",
+    "audio_deleted": "Audio recording \"{{name}}\" deleted successfully",
+    "delete_failed": "Failed to delete: {{error}}",
+    "batch_delete_partial": "Some items could not be deleted",
+    "batch_delete_failed": "Failed to delete items: {{error}}"
   }
 }

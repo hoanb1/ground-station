@@ -371,6 +371,19 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                 logger.info(f"Started audio recording for VFO {vfo_number}, session {client_id}")
 
+                # Emit file browser state update so all clients see the new audio recording
+                from handlers.entities.filebrowser import emit_file_browser_state
+
+                await emit_file_browser_state(
+                    sio,
+                    {
+                        "action": "audio-recording-started",
+                        "vfo_number": vfo_number,
+                        "recording_path": result.get("data", {}).get("recording_path", ""),
+                    },
+                    logger,
+                )
+
             except Exception as e:
                 logger.error(f"Error starting audio recording: {str(e)}")
                 logger.exception(e)
@@ -393,6 +406,19 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 reply.update(result)
 
                 logger.info(f"Stopped audio recording for VFO {vfo_number}, session {client_id}")
+
+                # Emit file browser state update so all clients see the finalized audio recording
+                from handlers.entities.filebrowser import emit_file_browser_state
+
+                await emit_file_browser_state(
+                    sio,
+                    {
+                        "action": "audio-recording-stopped",
+                        "vfo_number": vfo_number,
+                        "recording_path": result.get("data", {}).get("recording_path", ""),
+                    },
+                    logger,
+                )
 
             except Exception as e:
                 logger.error(f"Error stopping audio recording: {str(e)}")

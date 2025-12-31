@@ -64,6 +64,7 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import SelectAllIcon from '@mui/icons-material/SelectAll';
 import DeselectIcon from '@mui/icons-material/Deselect';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
@@ -71,6 +72,7 @@ import {
     deleteRecording,
     deleteSnapshot,
     deleteDecoded,
+    deleteAudio,
     deleteBatch,
     setSortBy,
     toggleSortOrder,
@@ -212,9 +214,10 @@ export default function FilebrowserMain() {
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
                 showDecoded: filters.showDecoded,
+                showAudio: filters.showAudio,
             }));
         }
-    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded, filters.showAudio]);
 
     // Listen for file browser state updates to trigger refetch (global handler in useSocketEventHandlers.jsx updates Redux)
     useEffect(() => {
@@ -227,17 +230,21 @@ export default function FilebrowserMain() {
                 case 'delete-recording':
                 case 'delete-snapshot':
                 case 'delete-decoded':
+                case 'delete-audio':
                 case 'delete-batch':
                 case 'recording-started':
                 case 'recording-stopped':
                 case 'snapshot-saved':
                 case 'decoded-saved':
+                case 'audio-recording-started':
+                case 'audio-recording-stopped':
                     // Refetch files to show updated list using current filter state from Redux
                     dispatch(fetchFiles({
                         socket,
                         showRecordings: filters.showRecordings,
                         showSnapshots: filters.showSnapshots,
                         showDecoded: filters.showDecoded,
+                        showAudio: filters.showAudio,
                     }));
 
                     // Show toast for batch delete
@@ -258,7 +265,7 @@ export default function FilebrowserMain() {
         return () => {
             socket.off('file_browser_state', handleFileBrowserState);
         };
-    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, t]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded, filters.showAudio, t]);
 
     // Legacy: Listen for file change events from backend
     useEffect(() => {
@@ -274,6 +281,7 @@ export default function FilebrowserMain() {
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
                 showDecoded: filters.showDecoded,
+                showAudio: filters.showAudio,
             }));
         };
 
@@ -282,7 +290,7 @@ export default function FilebrowserMain() {
         return () => {
             socket.off('file_change', handleFileChangeEvent);
         };
-    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded, filters.showAudio]);
 
     // Sort, paginate, and format files in the frontend
     const displayItems = useMemo(() => {
@@ -297,6 +305,10 @@ export default function FilebrowserMain() {
             const isImage = item.type === 'decoded' && item.file_type &&
                 ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(item.file_type.toLowerCase());
 
+            // Check if audio recording is in progress
+            const isAudioRecording = item.type === 'audio';
+            const audioRecordingInProgress = isAudioRecording && item.status === 'recording';
+
             return {
                 ...item,
                 displayName: item.name || item.filename,
@@ -304,6 +316,7 @@ export default function FilebrowserMain() {
                     ? (item.recording_in_progress ? null : item.snapshot?.url)
                     : (item.type === 'snapshot' || isImage ? item.url : null),
                 duration,
+                audioRecordingInProgress,
             };
         });
 
@@ -354,6 +367,7 @@ export default function FilebrowserMain() {
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
                 showDecoded: filters.showDecoded,
+                showAudio: filters.showAudio,
             }));
         }
     };
@@ -388,6 +402,9 @@ export default function FilebrowserMain() {
                     // Success toast will be shown by socket event listener
                 } else if (itemToDelete.type === 'decoded') {
                     await dispatch(deleteDecoded({ socket, filename: itemToDelete.filename })).unwrap();
+                    // Success toast will be shown by socket event listener
+                } else if (itemToDelete.type === 'audio') {
+                    await dispatch(deleteAudio({ socket, filename: itemToDelete.filename })).unwrap();
                     // Success toast will be shown by socket event listener
                 }
 
@@ -485,7 +502,7 @@ export default function FilebrowserMain() {
                     .map(f => ({
                         type: f.type,
                         name: f.type === 'recording' ? f.name : undefined,
-                        filename: (f.type === 'snapshot' || f.type === 'decoded') ? f.filename : undefined,
+                        filename: (f.type === 'snapshot' || f.type === 'decoded' || f.type === 'audio') ? f.filename : undefined,
                     }));
 
                 await dispatch(deleteBatch({ socket, items: itemsToDelete })).unwrap();
@@ -550,6 +567,7 @@ export default function FilebrowserMain() {
                                     showRecordings: t('filters.recordings', 'Recordings'),
                                     showSnapshots: t('filters.snapshots', 'Snapshots'),
                                     showDecoded: t('filters.decoded', 'Decoded'),
+                                    showAudio: t('filters.audio', 'Audio'),
                                 };
                                 return selected.map(s => labels[s]).join(', ');
                             }}
@@ -566,6 +584,10 @@ export default function FilebrowserMain() {
                             <MenuItem value="showDecoded" onClick={() => dispatch(toggleFilter('showDecoded'))}>
                                 <Checkbox checked={filters.showDecoded} />
                                 <ListItemText primary={t('filters.decoded', 'Decoded')} />
+                            </MenuItem>
+                            <MenuItem value="showAudio" onClick={() => dispatch(toggleFilter('showAudio'))}>
+                                <Checkbox checked={filters.showAudio} />
+                                <ListItemText primary={t('filters.audio', 'Audio')} />
                             </MenuItem>
                         </Select>
                     </FormControl>
@@ -687,7 +709,7 @@ export default function FilebrowserMain() {
                             {formatBytes(diskUsage.available)} available
                             {files.length > 0 && (
                                 <Typography component="span" variant="caption" color="text.disabled" sx={{ ml: 1 }}>
-                                    ({files.filter(f => f.type === 'recording').length}R / {files.filter(f => f.type === 'snapshot').length}S / {files.filter(f => f.type === 'decoded').length}D)
+                                    ({files.filter(f => f.type === 'recording').length}R / {files.filter(f => f.type === 'snapshot').length}S / {files.filter(f => f.type === 'decoded').length}D / {files.filter(f => f.type === 'audio').length}A)
                                 </Typography>
                             )}
                         </Typography>
@@ -719,7 +741,7 @@ export default function FilebrowserMain() {
                         {t('no_files.title', 'No files found')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {!filters.showRecordings && !filters.showSnapshots && !filters.showDecoded
+                        {!filters.showRecordings && !filters.showSnapshots && !filters.showDecoded && !filters.showAudio
                             ? t('no_files.message_filter', 'Enable at least one filter to see files')
                             : t('no_files.message_empty', 'Take snapshots or record IQ data from the waterfall view')}
                     </Typography>
@@ -828,6 +850,8 @@ export default function FilebrowserMain() {
                                                         />
                                                     ) : item.type === 'decoded' ? (
                                                         <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                    ) : item.type === 'audio' ? (
+                                                        <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />
                                                     ) : (
                                                         <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                                                     )}
@@ -921,7 +945,7 @@ export default function FilebrowserMain() {
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                backgroundColor: isRecording && item.recording_in_progress
+                                                backgroundColor: (isRecording && item.recording_in_progress) || item.audioRecordingInProgress
                                                     ? 'rgba(244, 67, 54, 0.1)'
                                                     : 'action.hover',
                                                 position: 'relative',
@@ -951,25 +975,46 @@ export default function FilebrowserMain() {
                                                     )}
                                                 </Box>
                                             )}
-                                            {isRecording && item.recording_in_progress ? (
+                                            {(isRecording && item.recording_in_progress) || item.audioRecordingInProgress ? (
                                                 <>
-                                                    <RadioIcon
-                                                        sx={{
-                                                            fontSize: 80,
-                                                            color: 'error.main',
-                                                            mb: 1,
-                                                            animation: 'pulse 2s infinite',
-                                                            '@keyframes pulse': {
-                                                                '0%, 100%': { opacity: 0.6 },
-                                                                '50%': { opacity: 1 },
-                                                            },
-                                                        }}
-                                                    />
+                                                    {item.audioRecordingInProgress ? (
+                                                        <AudiotrackIcon
+                                                            sx={{
+                                                                fontSize: 80,
+                                                                color: 'error.main',
+                                                                mb: 1,
+                                                                animation: 'pulse 2s infinite',
+                                                                '@keyframes pulse': {
+                                                                    '0%, 100%': { opacity: 0.6 },
+                                                                    '50%': { opacity: 1 },
+                                                                },
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <RadioIcon
+                                                            sx={{
+                                                                fontSize: 80,
+                                                                color: 'error.main',
+                                                                mb: 1,
+                                                                animation: 'pulse 2s infinite',
+                                                                '@keyframes pulse': {
+                                                                    '0%, 100%': { opacity: 0.6 },
+                                                                    '50%': { opacity: 1 },
+                                                                },
+                                                            }}
+                                                        />
+                                                    )}
                                                     <Typography variant="h6" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                        {t('recording.in_progress_message', 'Recording in Progress')}
+                                                        {item.audioRecordingInProgress
+                                                            ? t('audio.in_progress_message', 'Audio Recording in Progress')
+                                                            : t('recording.in_progress_message', 'Recording in Progress')
+                                                        }
                                                     </Typography>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>
-                                                        {t('recording.snapshot_message', 'Waterfall snapshot will be saved on stop')}
+                                                        {item.audioRecordingInProgress
+                                                            ? `VFO ${item.vfo_number} - ${item.demodulator_type}`
+                                                            : t('recording.snapshot_message', 'Waterfall snapshot will be saved on stop')
+                                                        }
                                                     </Typography>
                                                 </>
                                             ) : (
@@ -990,6 +1035,14 @@ export default function FilebrowserMain() {
                                                                 mb: 1,
                                                             }}
                                                         />
+                                                    ) : item.type === 'audio' ? (
+                                                        <AudiotrackIcon
+                                                            sx={{
+                                                                fontSize: 80,
+                                                                color: 'info.main',
+                                                                mb: 1,
+                                                            }}
+                                                        />
                                                     ) : (
                                                         <CameraAltIcon
                                                             sx={{
@@ -1002,6 +1055,8 @@ export default function FilebrowserMain() {
                                                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                                                         {item.type === 'decoded'
                                                             ? (item.decoder_type ? `${item.decoder_type} file` : 'Decoded file')
+                                                            : item.type === 'audio'
+                                                            ? (item.demodulator_type ? `${item.demodulator_type} audio` : 'Audio recording')
                                                             : 'No snapshot available'}
                                                     </Typography>
                                                 </>
@@ -1036,13 +1091,15 @@ export default function FilebrowserMain() {
                                                         />
                                                     ) : item.type === 'decoded' ? (
                                                         <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                    ) : item.type === 'audio' ? (
+                                                        <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />
                                                     ) : (
                                                         <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                                                     )}
                                                 </Box>
                                             )}
                                             {/* Recording badge (top-right) */}
-                                            {isRecording && item.recording_in_progress && (
+                                            {((isRecording && item.recording_in_progress) || item.audioRecordingInProgress) && (
                                                 <Box
                                                     sx={{
                                                         position: 'absolute',
@@ -1064,7 +1121,10 @@ export default function FilebrowserMain() {
                                                             letterSpacing: '0.5px',
                                                         }}
                                                     >
-                                                        {t('recording.in_progress', 'Recording')}
+                                                        {item.audioRecordingInProgress
+                                                            ? t('audio.in_progress', 'Recording Audio')
+                                                            : t('recording.in_progress', 'Recording')
+                                                        }
                                                     </Typography>
                                                 </Box>
                                             )}
@@ -1145,6 +1205,11 @@ export default function FilebrowserMain() {
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                                 {item.decoder_type ? `${item.decoder_type} decoded output` : 'Decoded file'}
                                             </Typography>
+                                        ) : item.type === 'audio' ? (
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                                {item.demodulator_type ? `${item.demodulator_type} audio recording` : 'Audio recording'}
+                                                {item.vfo_number && ` - VFO ${item.vfo_number}`}
+                                            </Typography>
                                         ) : (
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                                 {t('snapshot.description', 'Ground Station Waterfall Snapshot')}
@@ -1213,6 +1278,42 @@ export default function FilebrowserMain() {
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
                                                 />
                                             )}
+                                            {item.type === 'audio' && item.demodulator_type && (
+                                                <Chip
+                                                    label={item.demodulator_type}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="info"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                />
+                                            )}
+                                            {item.type === 'audio' && item.satellite_name && (
+                                                <Chip
+                                                    label={item.satellite_name}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="secondary"
+                                                    icon={<SatelliteAltIcon />}
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
+                                                />
+                                            )}
+                                            {item.type === 'audio' && item.duration_seconds && (
+                                                <Chip
+                                                    label={`${Math.floor(item.duration_seconds / 60)}:${String(Math.floor(item.duration_seconds % 60)).padStart(2, '0')}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="error"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, fontFamily: 'monospace' }}
+                                                />
+                                            )}
+                                            {item.type === 'audio' && item.vfo_number && (
+                                                <Chip
+                                                    label={`VFO ${item.vfo_number}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                />
+                                            )}
                                         </Box>
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                                             {formatDate(item.modified)}
@@ -1237,13 +1338,13 @@ export default function FilebrowserMain() {
                                                 <DownloadIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
-                                        <Tooltip title={item.recording_in_progress ? t('actions.cannot_delete_active', 'Cannot delete active recording') : t('actions.delete', 'Delete')}>
+                                        <Tooltip title={(item.recording_in_progress || item.audioRecordingInProgress) ? t('actions.cannot_delete_active', 'Cannot delete active recording') : t('actions.delete', 'Delete')}>
                                             <span>
                                                 <IconButton
                                                     size="small"
                                                     color="error"
                                                     onClick={() => handleDelete(item)}
-                                                    disabled={item.recording_in_progress}
+                                                    disabled={item.recording_in_progress || item.audioRecordingInProgress}
                                                 >
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
@@ -1439,6 +1540,8 @@ export default function FilebrowserMain() {
                         ? t('delete_dialog.title_recording', 'Delete Recording')
                         : itemToDelete?.type === 'decoded'
                         ? t('delete_dialog.title_decoded', 'Delete Decoded File')
+                        : itemToDelete?.type === 'audio'
+                        ? t('delete_dialog.title_audio', 'Delete Audio Recording')
                         : t('delete_dialog.title_snapshot', 'Delete Snapshot')}
                 </DialogTitle>
                 <DialogContent>

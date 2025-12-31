@@ -262,8 +262,14 @@ export const useSocketEventHandlers = (socket) => {
                 case 'recording-started':
                 case 'recording-stopped':
                 case 'snapshot-saved':
+                case 'audio-recording-started':
+                case 'audio-recording-stopped':
+                    // Set new files indicator when files are created/modified
+                    store.dispatch({ type: 'filebrowser/setHasNewFiles', payload: true });
+                    break;
                 case 'decoded-saved':
-                    // These events trigger refetch in components
+                    // Set new files indicator when decoded files are saved
+                    store.dispatch({ type: 'filebrowser/setHasNewFiles', payload: true });
                     break;
 
                 default:

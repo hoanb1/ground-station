@@ -223,6 +223,37 @@ def delete_decoded_file(decoded_dir: Path, decoded_filename: str, logger) -> boo
     return True
 
 
+def delete_audio_file(audio_dir: Path, audio_filename: str, logger) -> bool:
+    """
+    Delete an audio recording file and its associated metadata.
+
+    Args:
+        audio_dir: Path to audio directory
+        audio_filename: Name of the audio file
+        logger: Logger instance
+
+    Returns:
+        True if file was deleted, False if file did not exist
+    """
+    audio_file = audio_dir / audio_filename
+
+    if not audio_file.exists():
+        return False
+
+    # Delete the audio file
+    audio_file.unlink()
+    logger.info(f"Deleted audio file: {audio_filename}")
+
+    # Delete associated JSON metadata if it exists
+    if audio_filename.endswith(".wav"):
+        json_file = audio_dir / audio_filename.replace(".wav", ".json")
+        if json_file.exists():
+            json_file.unlink()
+            logger.info(f"Deleted audio metadata: {json_file.name}")
+
+    return True
+
+
 def validate_filename(filename: str) -> bool:
     """
     Validate that a filename is safe (no directory traversal attempts).
@@ -257,6 +288,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
     recordings_dir = backend_dir / "data" / "recordings"
     snapshots_dir = backend_dir / "data" / "snapshots"
     decoded_dir = backend_dir / "data" / "decoded"
+    audio_dir = backend_dir / "data" / "audio"
 
     try:
         if cmd == "list-files":
@@ -264,9 +296,10 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             show_recordings = data.get("showRecordings", True) if data else True
             show_snapshots = data.get("showSnapshots", True) if data else True
             show_decoded = data.get("showDecoded", True) if data else True
+            show_audio = data.get("showAudio", True) if data else True
 
             logger.info(
-                f"Listing all files (recordings: {show_recordings}, snapshots: {show_snapshots}, decoded: {show_decoded})"
+                f"Listing all files (recordings: {show_recordings}, snapshots: {show_snapshots}, decoded: {show_decoded}, audio: {show_audio})"
             )
 
             processed_items = []
@@ -421,6 +454,58 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "file_type": decoded_file.suffix.lower(),
                             "decoder_type": decoder_type,
                             "satellite_name": satellite_name,
+                        }
+                    )
+
+            # Gather and process audio files if filter enabled
+            if show_audio and audio_dir.exists():
+                # Find all WAV audio files
+                audio_files = list(audio_dir.glob("*.wav"))
+
+                for audio_file in audio_files:
+                    file_stat = audio_file.stat()
+
+                    # Parse metadata from JSON file
+                    metadata_file = audio_dir / f"{audio_file.stem}.json"
+                    metadata = {}
+                    if metadata_file.exists():
+                        try:
+                            with open(metadata_file, "r") as f:
+                                metadata = json.load(f)
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to parse audio metadata for {audio_file.name}: {e}"
+                            )
+
+                    # Extract key metadata
+                    vfo_number = metadata.get("vfo_number")
+                    demodulator_type = metadata.get("demodulator_type", "")
+                    satellite_name = metadata.get("target_satellite_name")
+                    duration_seconds = metadata.get("duration_seconds")
+                    sample_rate = metadata.get("sample_rate")
+                    status = metadata.get("status", "unknown")
+
+                    processed_items.append(
+                        {
+                            "type": "audio",
+                            "name": audio_file.stem,
+                            "filename": audio_file.name,
+                            "size": file_stat.st_size,
+                            "created": datetime.fromtimestamp(
+                                file_stat.st_ctime, timezone.utc
+                            ).isoformat(),
+                            "modified": datetime.fromtimestamp(
+                                file_stat.st_mtime, timezone.utc
+                            ).isoformat(),
+                            "url": f"/audio/{audio_file.name}",
+                            "file_type": ".wav",
+                            "vfo_number": vfo_number,
+                            "demodulator_type": demodulator_type,
+                            "satellite_name": satellite_name,
+                            "duration_seconds": duration_seconds,
+                            "sample_rate": sample_rate,
+                            "status": status,
+                            "metadata": metadata,
                         }
                     )
 
@@ -707,6 +792,38 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 logger,
             )
 
+        elif cmd == "delete-audio":
+            logger.info(f"Deleting audio file: {data}")
+            audio_filename = data.get("filename")
+
+            if not audio_filename:
+                await emit_file_browser_error(
+                    sio, "Audio filename not provided", "delete-audio", logger
+                )
+                return
+
+            # Validate filename (security check)
+            if not validate_filename(audio_filename):
+                await emit_file_browser_error(sio, "Invalid audio filename", "delete-audio", logger)
+                return
+
+            deleted = delete_audio_file(audio_dir, audio_filename, logger)
+
+            if not deleted:
+                await emit_file_browser_error(sio, "Audio file not found", "delete-audio", logger)
+                return
+
+            # Emit state update with delete action
+            await emit_file_browser_state(
+                sio,
+                {
+                    "action": "delete-audio",
+                    "filename": audio_filename,
+                    "message": f"Deleted audio file: {audio_filename}",
+                },
+                logger,
+            )
+
         elif cmd == "delete-batch":
             logger.info(f"Batch delete: {data}")
             items = data.get("items", [])
@@ -720,6 +837,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             deleted_recordings = []
             deleted_snapshots = []
             deleted_decoded = []
+            deleted_audio = []
             failed_items = []
             total_files_deleted = []
 
@@ -825,11 +943,47 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                                 "error": "Not found",
                             }
                         )
+
+                elif item_type == "audio":
+                    audio_filename = item.get("filename")
+                    if not audio_filename:
+                        failed_items.append({"type": "audio", "error": "Missing filename"})
+                        continue
+
+                    # Validate filename
+                    if not validate_filename(audio_filename):
+                        failed_items.append(
+                            {
+                                "type": "audio",
+                                "filename": audio_filename,
+                                "error": "Invalid filename",
+                            }
+                        )
+                        continue
+
+                    # Delete audio file
+                    deleted = delete_audio_file(audio_dir, audio_filename, logger)
+                    if deleted:
+                        deleted_audio.append(audio_filename)
+                        total_files_deleted.append(audio_filename)
+                    else:
+                        failed_items.append(
+                            {
+                                "type": "audio",
+                                "filename": audio_filename,
+                                "error": "Not found",
+                            }
+                        )
                 else:
                     failed_items.append({"type": item_type, "error": "Unknown type"})
 
             # Build summary message
-            success_count = len(deleted_recordings) + len(deleted_snapshots) + len(deleted_decoded)
+            success_count = (
+                len(deleted_recordings)
+                + len(deleted_snapshots)
+                + len(deleted_decoded)
+                + len(deleted_audio)
+            )
             message_parts = []
             if deleted_recordings:
                 message_parts.append(f"{len(deleted_recordings)} recording(s)")
@@ -837,6 +991,8 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 message_parts.append(f"{len(deleted_snapshots)} snapshot(s)")
             if deleted_decoded:
                 message_parts.append(f"{len(deleted_decoded)} decoded file(s)")
+            if deleted_audio:
+                message_parts.append(f"{len(deleted_audio)} audio file(s)")
 
             message = f"Deleted {', '.join(message_parts)}" if message_parts else "No items deleted"
 
@@ -853,6 +1009,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "deleted_recordings": deleted_recordings,
                     "deleted_snapshots": deleted_snapshots,
                     "deleted_decoded": deleted_decoded,
+                    "deleted_audio": deleted_audio,
                     "deleted_files": total_files_deleted,
                     "failed_items": failed_items,
                     "success_count": success_count,
