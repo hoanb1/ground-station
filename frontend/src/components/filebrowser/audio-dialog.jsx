@@ -205,32 +205,36 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
             ctx.fillRect(progressWidth - 2, 0, 4, height);
         }
 
-        // Draw time markers
+        // Draw time markers - completely reset context state first
         ctx.save();
-        ctx.font = '14px monospace';
-        ctx.textBaseline = 'bottom';
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
+        ctx.font = '13px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
 
         const currentTimeText = formatDuration(currentTime);
         const durationText = formatDuration(duration);
 
-        const padding = 8;
-        const bgPadding = 4;
-        const textBottom = height - 4;
+        const edgePadding = 6;
+        const textPadding = 3;
+        const boxHeight = 16;
+        const textY = height - 6;
+        const boxY = textY - boxHeight + 2;
 
-        // Left side (current time)
-        const leftMetrics = ctx.measureText(currentTimeText);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(padding - bgPadding, textBottom - 16, leftMetrics.width + (bgPadding * 2), 18);
-        ctx.fillStyle = 'white';
-        ctx.fillText(currentTimeText, padding, textBottom);
+        // Left time label
+        const leftWidth = ctx.measureText(currentTimeText).width;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(edgePadding, boxY, leftWidth + (textPadding * 2), boxHeight);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(currentTimeText, edgePadding + textPadding, textY);
 
-        // Right side (duration)
-        const rightMetrics = ctx.measureText(durationText);
-        const rightX = width - rightMetrics.width - padding;
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillRect(rightX - bgPadding, textBottom - 16, rightMetrics.width + (bgPadding * 2), 18);
-        ctx.fillStyle = 'white';
-        ctx.fillText(durationText, rightX, textBottom);
+        // Right time label
+        const rightWidth = ctx.measureText(durationText).width;
+        const rightBoxX = width - rightWidth - (textPadding * 2) - edgePadding;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(rightBoxX, boxY, rightWidth + (textPadding * 2), boxHeight);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(durationText, rightBoxX + textPadding, textY);
 
         ctx.restore();
     }, [currentTime, duration, waveformLoaded]);
