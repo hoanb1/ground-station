@@ -88,6 +88,7 @@ import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import RecordingDialog from './recording-dialog.jsx';
 import TelemetryViewerDialog from './telemetry-viewer-dialog.jsx';
+import AudioDialog from './audio-dialog.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -200,6 +201,9 @@ export default function FilebrowserMain() {
     const [telemetryViewerOpen, setTelemetryViewerOpen] = useState(false);
     const [telemetryFile, setTelemetryFile] = useState(null);
     const [telemetryMetadata, setTelemetryMetadata] = useState(null);
+    const [audioDialogOpen, setAudioDialogOpen] = useState(false);
+    const [audioFile, setAudioFile] = useState(null);
+    const [audioMetadata, setAudioMetadata] = useState(null);
 
     // Mark file browser as visited when component mounts
     useEffect(() => {
@@ -380,6 +384,8 @@ export default function FilebrowserMain() {
         // For decoded files, open telemetry viewer instead of simple preview
         if (item.type === 'decoded') {
             await handleViewTelemetry(item);
+        } else if (item.type === 'audio') {
+            await handleViewAudio(item);
         } else {
             setSelectedItem(item);
             setDetailsOpen(true);
@@ -462,6 +468,15 @@ export default function FilebrowserMain() {
         } catch (error) {
             toast.error(`Failed to load telemetry metadata: ${error.message}`);
         }
+    };
+
+    const handleViewAudio = async (item) => {
+        if (item.type !== 'audio') return;
+
+        // Metadata is already included in the item from the backend
+        setAudioFile(item);
+        setAudioMetadata(item.metadata);
+        setAudioDialogOpen(true);
     };
 
     const handleToggleSelection = (item) => {
@@ -1320,7 +1335,7 @@ export default function FilebrowserMain() {
                                         </Typography>
                                     </CardContent>
                                     <CardActions sx={{ pt: 0 }} onClick={(e) => e.stopPropagation()}>
-                                        {isRecording && (
+                                        {(isRecording || item.type === 'audio') && (
                                             <Tooltip title={t('actions.view_details', 'View Details')}>
                                                 <IconButton
                                                     size="small"
@@ -1596,6 +1611,14 @@ export default function FilebrowserMain() {
                 onClose={() => setTelemetryViewerOpen(false)}
                 file={telemetryFile}
                 metadata={telemetryMetadata}
+            />
+
+            {/* Audio Dialog */}
+            <AudioDialog
+                open={audioDialogOpen}
+                onClose={() => setAudioDialogOpen(false)}
+                audio={audioFile}
+                metadata={audioMetadata}
             />
         </Box>
     );

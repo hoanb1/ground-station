@@ -143,22 +143,25 @@ process_manager.set_sio(sio)
 # Mount static directories
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 
-# Mount data directories for recordings, snapshots, and decoded data (SSTV, AFSK, Morse, etc.)
+# Mount data directories for recordings, snapshots, decoded data (SSTV, AFSK, Morse, etc.), and audio
 # Ensure these directories exist before mounting
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 recordings_dir = os.path.join(backend_dir, "..", "data", "recordings")
 snapshots_dir = os.path.join(backend_dir, "..", "data", "snapshots")
 decoded_dir = os.path.join(backend_dir, "..", "data", "decoded")
+audio_dir = os.path.join(backend_dir, "..", "data", "audio")
 
 # Create directories if they don't exist
 os.makedirs(recordings_dir, exist_ok=True)
 os.makedirs(snapshots_dir, exist_ok=True)
 os.makedirs(decoded_dir, exist_ok=True)
+os.makedirs(audio_dir, exist_ok=True)
 
 # Use html=True to enable directory browsing
 app.mount("/recordings", StaticFiles(directory=recordings_dir, html=True), name="recordings")
 app.mount("/snapshots", StaticFiles(directory=snapshots_dir, html=True), name="snapshots")
 app.mount("/decoded", StaticFiles(directory=decoded_dir, html=True), name="decoded")
+app.mount("/audio", StaticFiles(directory=audio_dir, html=True), name="audio")
 
 
 # Add the version API endpoint BEFORE the catch-all route
@@ -200,6 +203,7 @@ async def init_db():
         os.path.join(
             backend_dir, "data", "decoded"
         ),  # For SSTV images, AFSK packets, Morse audio, etc.
+        os.path.join(backend_dir, "data", "audio"),  # For audio recordings
         os.path.join(backend_dir, "data", "configs"),  # For satellite decoder configurations
         os.path.join(backend_dir, "data", "uhd_images"),  # For UHD FPGA images
         os.path.join(backend_dir, "data", "uhd_config"),  # For UHD configuration files
