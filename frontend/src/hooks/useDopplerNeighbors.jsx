@@ -36,7 +36,7 @@ export function useDopplerNeighbors() {
     const updateIntervalRef = useRef(null);
 
     // Get data from Redux
-    const { groupOfSats } = useSelector(state => state.targetSatTrack);
+    const { groupOfSats, satelliteId } = useSelector(state => state.targetSatTrack);
     const { centerFrequency, sampleRate, showNeighboringTransmitters } = useSelector(state => state.waterfall);
     const { location } = useSelector(state => state.location);
 
@@ -60,8 +60,14 @@ export function useDopplerNeighbors() {
 
                 // Filter to only visible satellites (above horizon)
                 // This dramatically reduces the number of doppler calculations needed
+                // Also exclude the currently targeted satellite
                 const visibleSatellites = groupOfSats.filter(sat => {
                     if (!sat.tle1 || !sat.tle2) {
+                        return false;
+                    }
+
+                    // Exclude the currently targeted satellite
+                    if (satelliteId && sat.norad_id === satelliteId) {
                         return false;
                     }
 
@@ -114,6 +120,7 @@ export function useDopplerNeighbors() {
         centerFrequency,
         sampleRate,
         location,
-        showNeighboringTransmitters
+        showNeighboringTransmitters,
+        satelliteId
     ]);
 }
