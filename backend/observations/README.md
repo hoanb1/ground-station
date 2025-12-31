@@ -1,7 +1,8 @@
 # Automated Observation System - Implementation Plan
 
-**Status**: 🚧 Phase 1 Complete (VFO Manager Extensions)
+**Status**: 🚧 Phase 1 Complete (VFO Manager + SessionTracker/Service Extensions)
 **Started**: 2025-12-31
+**Last Updated**: 2025-12-31
 **Target Completion**: TBD
 
 ---
@@ -286,14 +287,43 @@ def start_scheduler(sio, process_manager):
 
 ## Implementation Phases
 
-### ✅ Phase 1: VFO Manager Extensions (COMPLETE)
+### ✅ Phase 1: VFO Manager + Session Tracking Extensions (COMPLETE)
+
+#### VFOManager (`vfos/state.py`)
 - [x] Add internal session namespace support
 - [x] Add create/configure/cleanup methods
 - [x] Add query methods (list internal/user sessions)
 - [x] Test VFO state embedding in IQ stream
 
-**Effort**: 2-3 hours
+#### SessionTracker (`session/tracker.py`)
+- [x] Add `_internal_sessions` set to track internal observations
+- [x] Add `register_internal_session()` method
+- [x] Add `unregister_internal_session()` method
+- [x] Add `is_internal_session()` method
+- [x] Add `get_all_internal_sessions()` method
+- [x] Add `get_all_user_sessions()` method
+- [x] Add `get_internal_session_count()` method
+- [x] Update `get_runtime_snapshot()` to include `is_internal` flag
+
+#### SessionService (`session/service.py`)
+- [x] Add `register_internal_observation()` method
+- [x] Add `cleanup_internal_observation()` method
+
+#### Session Types (`session/session_types.py`)
+- [x] Add `is_internal` field to `SessionView` type
+
+#### Testing
+- [x] Create integration test script
+- [x] Verify all internal session methods work correctly
+
+**Effort**: 5-6 hours total (VFO Manager 2-3h + Session Tracking 3h)
 **Completed**: 2025-12-31
+
+**Benefits**:
+- ✅ Internal observations visible in runtime snapshots
+- ✅ UI can detect and prevent conflicts with automated observations
+- ✅ Centralized session management (user + internal)
+- ✅ Single cleanup path via SessionService
 
 ---
 
@@ -475,12 +505,30 @@ print(f"Scheduled {len(obs_ids)} observations")
 
 ## Changelog
 
-### 2025-12-31
-- ✅ Phase 1 Complete: VFOManager extensions implemented
-- Added 8 new methods for internal observation support
-- Added namespace prefixing (`"internal:<obs_id>"`)
-- Documented complete implementation plan
-- Created `backend/observations/` directory structure
+### 2025-12-31 (Phase 1 Complete)
+#### VFOManager Extensions
+- ✅ Added 8 new methods for internal observation support
+- ✅ Added namespace prefixing (`"internal:<obs_id>"`)
+- ✅ VFO state flows via IQBroadcaster to decoder processes
+
+#### SessionTracker Extensions
+- ✅ Added `_internal_sessions` set to track observations
+- ✅ Added 6 new methods for internal session management
+- ✅ Updated `get_runtime_snapshot()` to include `is_internal` flag
+
+#### SessionService Extensions
+- ✅ Added `register_internal_observation()` method
+- ✅ Added `cleanup_internal_observation()` method
+- ✅ Integrated with SessionTracker for unified session management
+
+#### Session Types
+- ✅ Updated `SessionView` type with `is_internal` field
+
+#### Testing & Documentation
+- ✅ Created integration test script (`test_session_integration.py`)
+- ✅ All tests passing (10/10)
+- ✅ Documented complete implementation plan
+- ✅ Created `backend/observations/` directory structure
 
 ---
 

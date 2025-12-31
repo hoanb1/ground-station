@@ -109,6 +109,66 @@ class SessionService:
         # Tracker returns a mapping structure; cast to declared type for mypy
         return cast(Dict[str, dict], session_tracker.get_runtime_snapshot(pm))
 
+    # -------------------- Internal observation support --------------------
+    async def register_internal_observation(
+        self,
+        observation_id: str,
+        sdr_device: Dict[str, Any],
+        sdr_config: Dict[str, Any],
+        vfo_number: int,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """
+        Register and start an internal observation session.
+
+        This is the high-level entry point for ObservationScheduler.
+
+        Args:
+            observation_id: Unique observation identifier
+            sdr_device: SDR device dictionary
+            sdr_config: SDR configuration dictionary
+            vfo_number: VFO number (1-4)
+            metadata: Optional additional metadata for the observation
+
+        Returns:
+            Internal session ID (e.g., "internal:obs-abc-123")
+        """
+        from vfos.state import VFOManager
+
+        session_id = VFOManager.make_internal_session_id(observation_id)
+
+        # Register in tracker
+        session_tracker.register_internal_session(
+            observation_id, sdr_config["sdr_id"], vfo_number, metadata
+        )
+
+        # Configure SDR
+        await self.configure_sdr(session_id, sdr_device, sdr_config)
+
+        # Start streaming
+        await self.start_streaming(session_id, sdr_device)
+
+        return str(session_id)
+
+    async def cleanup_internal_observation(self, observation_id: str) -> None:
+        """
+        Cleanup internal observation session.
+
+        Stops SDR, clears tracker, removes config.
+
+        Args:
+            observation_id: Unique observation identifier
+        """
+        from vfos.state import VFOManager
+
+        session_id = VFOManager.make_internal_session_id(observation_id)
+
+        # Full cleanup (stops SDR, clears tracker, removes config)
+        await self.cleanup_session(session_id)
+
+        # Unregister from internal session set
+        session_tracker.unregister_internal_session(observation_id)
+
 
 # Singleton instance
 session_service = SessionService()

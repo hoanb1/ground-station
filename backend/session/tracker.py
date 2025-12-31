@@ -20,6 +20,7 @@ Tracks which sessions are streaming from which SDRs and which VFOs they have sel
 """
 
 import logging
+import time
 from typing import Any, Dict, List, Optional, Set, TypedDict, cast
 
 logger = logging.getLogger("session-tracker")
@@ -80,6 +81,9 @@ class SessionTracker:
 
         # Map session_id -> client metadata (IP, user agent, etc.)
         self._session_metadata: Dict[str, ClientMetadata] = {}
+
+        # NEW: Track internal (automated observation) vs user sessions
+        self._internal_sessions: Set[str] = set()
 
         logger.info("SessionTracker initialized")
 
@@ -397,6 +401,7 @@ class SessionTracker:
                 "rig_id": rig_id,
                 "vfo": vfo_int,  # normalized int or None
                 "metadata": metadata if metadata else {},
+                "is_internal": self.is_internal_session(sid),  # Flag for internal observations
             }
 
         # Query ProcessManager for process/consumer state
@@ -559,6 +564,119 @@ class SessionTracker:
         """
         key = f"{session_id}:{vfo_number}"
         return self._vfo_initialized.get(key, False)
+
+    # ============================================================
+    # INTERNAL OBSERVATION SESSION SUPPORT
+    # Methods for tracking automated observations
+    # ============================================================
+
+    def register_internal_session(
+        self,
+        observation_id: str,
+        sdr_id: str,
+        vfo_number: int,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """
+        Register an internal observation session.
+
+        Args:
+            observation_id: Unique observation identifier
+            sdr_id: SDR device ID
+            vfo_number: VFO number (1-4)
+            metadata: Optional additional metadata
+
+        Returns:
+            Internal session ID (e.g., "internal:obs-abc-123")
+        """
+        from vfos.state import VFOManager
+
+        session_id = VFOManager.make_internal_session_id(observation_id)
+
+        # Mark as internal
+        self._internal_sessions.add(session_id)
+
+        # Register relationships
+        self.register_session_streaming(session_id, sdr_id)
+        self.set_session_vfo_int(session_id, vfo_number)
+
+        # Set metadata (distinguish from user sessions)
+        self.set_session_metadata(
+            session_id,
+            user_agent=f"ObservationScheduler/{observation_id}",
+            origin="internal",
+            connected_at=time.time(),
+        )
+        if metadata:
+            if session_id not in self._session_metadata:
+                self._session_metadata[session_id] = {}
+            # Type ignore for dynamic metadata updates beyond base ClientMetadata fields
+            self._session_metadata[session_id].update(metadata)  # type: ignore[typeddict-item]
+
+        logger.info(f"Registered internal session {session_id} for observation {observation_id}")
+        return str(session_id)
+
+    def unregister_internal_session(self, observation_id: str) -> bool:
+        """
+        Unregister an internal observation session.
+
+        Args:
+            observation_id: Unique observation identifier
+
+        Returns:
+            True if session was found and removed, False otherwise
+        """
+        from vfos.state import VFOManager
+
+        session_id = VFOManager.make_internal_session_id(observation_id)
+
+        if session_id in self._internal_sessions:
+            self._internal_sessions.remove(session_id)
+            self.clear_session(session_id)
+            logger.info(f"Unregistered internal session {session_id}")
+            return True
+
+        logger.warning(f"No internal session found for observation {observation_id}")
+        return False
+
+    def is_internal_session(self, session_id: str) -> bool:
+        """
+        Check if session is an internal observation.
+
+        Args:
+            session_id: Session ID to check
+
+        Returns:
+            True if internal observation, False if user session
+        """
+        return session_id in self._internal_sessions
+
+    def get_all_internal_sessions(self) -> Set[str]:
+        """
+        Get all internal observation session IDs.
+
+        Returns:
+            Set of internal session IDs
+        """
+        return self._internal_sessions.copy()
+
+    def get_all_user_sessions(self) -> Set[str]:
+        """
+        Get all user (non-internal) session IDs.
+
+        Returns:
+            Set of user session IDs
+        """
+        return self.get_all_sessions() - self._internal_sessions
+
+    def get_internal_session_count(self) -> int:
+        """
+        Get count of active internal observation sessions.
+
+        Returns:
+            Number of internal sessions
+        """
+        return len(self._internal_sessions)
 
     def clear_vfo_initialization_state(self, rig_id: Optional[str] = None) -> None:
         """

@@ -44,6 +44,7 @@ class SessionView(TypedDict, total=False):
     rig_id: Optional[str]
     vfo: Optional[int]
     config: SessionConfig
+    is_internal: bool  # True for internal observations, False for user sessions
 
 
 class ConsumerMeta(TypedDict, total=False):
