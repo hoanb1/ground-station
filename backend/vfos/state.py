@@ -34,6 +34,9 @@ class VFOManager:
     _instance = None
     _session_vfo_states: Dict[str, Dict[int, VFOState]] = {}
 
+    # Internal observation namespace prefix
+    INTERNAL_PREFIX = "internal:"
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(VFOManager, cls).__new__(cls)
@@ -212,3 +215,208 @@ class VFOManager:
                 },
                 room=session_id,
             )
+
+    # ============================================================
+    # INTERNAL OBSERVATION SUPPORT
+    # Methods for automated/programmatic observations
+    # ============================================================
+
+    @staticmethod
+    def make_internal_session_id(observation_id: str) -> str:
+        """
+        Generate internal session ID for an automated observation.
+
+        Args:
+            observation_id: Unique observation identifier (UUID)
+
+        Returns:
+            Internal session ID (e.g., "internal:obs-abc-123")
+
+        Example:
+            >>> VFOManager.make_internal_session_id("550e8400-e29b-41d4-a716-446655440000")
+            "internal:550e8400-e29b-41d4-a716-446655440000"
+        """
+        return f"{VFOManager.INTERNAL_PREFIX}{observation_id}"
+
+    @staticmethod
+    def is_internal_session(session_id: str) -> bool:
+        """
+        Check if a session ID belongs to an internal/automated observation.
+
+        Args:
+            session_id: Session ID to check
+
+        Returns:
+            True if internal observation, False if user session
+
+        Example:
+            >>> VFOManager.is_internal_session("internal:obs-123")
+            True
+            >>> VFOManager.is_internal_session("user-session-abc")
+            False
+        """
+        return session_id.startswith(VFOManager.INTERNAL_PREFIX)
+
+    def create_internal_vfos(self, observation_id: str) -> str:
+        """
+        Initialize a new set of VFOs for an automated observation.
+
+        Creates 4 VFOs with default state, isolated from user VFOs.
+
+        Args:
+            observation_id: Unique observation identifier
+
+        Returns:
+            Internal session ID that was created
+
+        Example:
+            >>> vfo_mgr = VFOManager()
+            >>> session_id = vfo_mgr.create_internal_vfos("obs-123")
+            >>> print(session_id)
+            "internal:obs-123"
+        """
+        session_id = self.make_internal_session_id(observation_id)
+        self._ensure_session_vfos(session_id)
+        logger.info(
+            f"Created internal VFOs for observation {observation_id} (session: {session_id})"
+        )
+        return session_id
+
+    def cleanup_internal_vfos(self, observation_id: str) -> bool:
+        """
+        Remove VFOs when automated observation completes.
+
+        Args:
+            observation_id: Unique observation identifier
+
+        Returns:
+            True if VFOs were found and removed, False otherwise
+
+        Example:
+            >>> vfo_mgr.cleanup_internal_vfos("obs-123")
+            True
+        """
+        session_id = self.make_internal_session_id(observation_id)
+
+        if session_id in self._session_vfo_states:
+            del self._session_vfo_states[session_id]
+            logger.info(f"Cleaned up internal VFOs for observation {observation_id}")
+            return True
+
+        logger.warning(f"No internal VFOs found for observation {observation_id}")
+        return False
+
+    def configure_internal_vfo(
+        self,
+        observation_id: str,
+        vfo_number: int,
+        center_freq: int,
+        bandwidth: int,
+        modulation: str,
+        decoder: str = "none",
+        locked_transmitter_id: str = "none",
+        squelch: int = -150,
+        volume: int = 50,
+    ) -> None:
+        """
+        Configure a VFO for automated observation with sensible defaults.
+
+        This is a convenience wrapper around update_vfo_state() with defaults
+        appropriate for unattended observations.
+
+        Args:
+            observation_id: Unique observation identifier
+            vfo_number: VFO number (1-4)
+            center_freq: Center frequency in Hz
+            bandwidth: Bandwidth in Hz
+            modulation: Modulation type (FM, AM, SSB, etc.)
+            decoder: Decoder type (afsk, bpsk, gmsk, lora, sstv, morse, satdump_weather, none)
+            locked_transmitter_id: Transmitter ID for doppler tracking (default: "none")
+            squelch: Squelch level in dB (default: -150, wide open)
+            volume: Audio volume 0-100 (default: 50)
+
+        Example:
+            >>> vfo_mgr.configure_internal_vfo(
+            ...     observation_id="obs-123",
+            ...     vfo_number=1,
+            ...     center_freq=137_500_000,  # 137.5 MHz
+            ...     bandwidth=40_000,          # 40 kHz
+            ...     modulation="FM",
+            ...     decoder="satdump_weather",
+            ...     locked_transmitter_id="noaa-18-apt"
+            ... )
+        """
+        session_id = self.make_internal_session_id(observation_id)
+
+        # Ensure VFOs exist for this observation
+        self._ensure_session_vfos(session_id)
+
+        # Configure VFO with sensible defaults for automation
+        self.update_vfo_state(
+            session_id=session_id,
+            vfo_id=vfo_number,
+            center_freq=center_freq,
+            bandwidth=bandwidth,
+            modulation=modulation,
+            active=True,  # Always active for observations
+            selected=False,  # Not relevant for internal VFOs
+            volume=volume,
+            squelch=squelch,
+            decoder=decoder,
+            locked_transmitter_id=locked_transmitter_id,
+            parameters_enabled=True,
+            transcription_enabled=False,  # Disable transcription by default
+        )
+
+        logger.info(
+            f"Configured internal VFO {vfo_number} for observation {observation_id}: "
+            f"freq={center_freq/1e6:.3f}MHz, bw={bandwidth/1e3:.1f}kHz, "
+            f"mod={modulation}, decoder={decoder}, locked_tx={locked_transmitter_id}"
+        )
+
+    def get_all_internal_sessions(self) -> List[str]:
+        """
+        Get all internal/automated observation session IDs.
+
+        Returns:
+            List of internal session IDs
+
+        Example:
+            >>> vfo_mgr.get_all_internal_sessions()
+            ["internal:obs-123", "internal:obs-456"]
+        """
+        return [
+            session_id
+            for session_id in self._session_vfo_states.keys()
+            if self.is_internal_session(session_id)
+        ]
+
+    def get_all_user_sessions(self) -> List[str]:
+        """
+        Get all user/UI session IDs (excludes internal observations).
+
+        Returns:
+            List of user session IDs
+
+        Example:
+            >>> vfo_mgr.get_all_user_sessions()
+            ["session-abc-123", "session-def-456"]
+        """
+        return [
+            session_id
+            for session_id in self._session_vfo_states.keys()
+            if not self.is_internal_session(session_id)
+        ]
+
+    def get_internal_vfo_count(self) -> int:
+        """
+        Get count of active internal observation sessions.
+
+        Returns:
+            Number of internal sessions
+
+        Example:
+            >>> vfo_mgr.get_internal_vfo_count()
+            2
+        """
+        return len(self.get_all_internal_sessions())
