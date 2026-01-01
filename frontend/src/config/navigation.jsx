@@ -37,6 +37,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import FiberNewIcon from '@mui/icons-material/FiberNew';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import EventNoteIcon from '@mui/icons-material/EventNote';
 import { useSelector } from 'react-redux';
 
 // Helper component to wrap icons with overlay indicators
@@ -249,6 +250,11 @@ export const getNavigation = () => [
         segment: 'filebrowser',
         title: 'File Browser',
         icon: <FileBrowserIconWithStatus />,
+    },
+    {
+        segment: 'scheduler',
+        title: 'Scheduled Observations',
+        icon: <EventNoteIcon />,
     },
     {kind: 'divider'},
     {

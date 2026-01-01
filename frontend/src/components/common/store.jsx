@@ -46,6 +46,7 @@ import performanceReducer from '../performance/performance-slice.jsx';
 import systemInfoReducer from '../settings/system-info-slice.jsx';
 import sessionsReducer from '../settings/sessions-slice.jsx';
 import transcriptionReducer from '../waterfall/transcription-slice.jsx';
+import schedulerReducer from '../scheduler/scheduler-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-marker/vfo-middleware.jsx';
 
 
@@ -237,6 +238,13 @@ const transcriptionPersistConfig = {
     whitelist: []  // Don't persist transcriptions (they're ephemeral)
 };
 
+// Persist configuration for scheduler slice
+const schedulerPersistConfig = {
+    key: 'scheduler',
+    storage,
+    whitelist: ['columnVisibility']  // Persist UI preferences, not observations
+};
+
 
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
@@ -262,6 +270,7 @@ const persistedLibraryVersionsReducer = persistReducer(libraryVersionsPersistCon
 const persistedPerformanceReducer = persistReducer(performancePersistConfig, performanceReducer);
 const persistedSystemInfoReducer = persistReducer(systemInfoPersistConfig, systemInfoReducer);
 const persistedTranscriptionReducer = persistReducer(transcriptionPersistConfig, transcriptionReducer);
+const persistedSchedulerReducer = persistReducer(schedulerPersistConfig, schedulerReducer);
 
 
 export const store = configureStore({
@@ -290,6 +299,7 @@ export const store = configureStore({
         systemInfo: persistedSystemInfoReducer,
         sessions: sessionsReducer,
         transcription: persistedTranscriptionReducer,
+        scheduler: persistedSchedulerReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>

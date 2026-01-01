@@ -315,10 +315,35 @@ export const AFSK_PARAMETERS = {
 
 /**
  * SSTV Decoder Parameters
- * SSTV (Slow Scan Television) has no user-configurable parameters.
- * Mode detection is fully automatic via VIS code.
+ * SSTV (Slow Scan Television) supports multiple transmission modes.
+ * Mode can be auto-detected via VIS code or manually specified.
  */
-export const SSTV_PARAMETERS = {};
+export const SSTV_PARAMETERS = {
+    sstv_mode: {
+        label: 'SSTV Mode',
+        description: 'SSTV transmission mode (auto-detect or manual)',
+        type: 'select',
+        default: 'auto',
+        options: [
+            { value: 'auto', label: 'Auto-detect (VIS code)', tooltip: 'Automatically detect mode from VIS signal' },
+            { value: 'robot36', label: 'Robot 36', tooltip: '36 second color mode' },
+            { value: 'robot72', label: 'Robot 72', tooltip: '72 second color mode' },
+            { value: 'martin_m1', label: 'Martin M1', tooltip: '114 second color mode' },
+            { value: 'martin_m2', label: 'Martin M2', tooltip: '58 second color mode' },
+            { value: 'scottie_s1', label: 'Scottie S1', tooltip: '110 second color mode' },
+            { value: 'scottie_s2', label: 'Scottie S2', tooltip: '71 second color mode' },
+            { value: 'scottie_dx', label: 'Scottie DX', tooltip: '269 second color mode' },
+            { value: 'pd50', label: 'PD 50', tooltip: '50 second color mode' },
+            { value: 'pd90', label: 'PD 90', tooltip: '90 second color mode' },
+            { value: 'pd120', label: 'PD 120', tooltip: '126 second color mode' },
+            { value: 'pd160', label: 'PD 160', tooltip: '161 second color mode' },
+            { value: 'pd180', label: 'PD 180', tooltip: '187 second color mode' },
+            { value: 'pd240', label: 'PD 240', tooltip: '248 second color mode' },
+            { value: 'pd290', label: 'PD 290', tooltip: '289 second color mode' },
+            { value: 'wraase_sc2_180', label: 'Wraase SC2-180', tooltip: '180 second color mode' }
+        ]
+    }
+};
 
 /**
  * Combined parameter definitions for all decoders
