@@ -4,10 +4,25 @@
  * Components for locking VFO to doppler-corrected transmitters
  */
 
-import React from 'react';
-import { Box, FormControl, InputLabel, Select, MenuItem, Link, Alert } from '@mui/material';
+import React, { useState } from 'react';
+import {
+    Box,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Link,
+    Alert,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
+    Button
+} from '@mui/material';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -24,6 +39,8 @@ export const TransmitterLockSelect = ({
     onCenterFrequencyChange
 }) => {
     const { t } = useTranslation('waterfall');
+    const [retuneDialogOpen, setRetuneDialogOpen] = useState(false);
+    const [pendingTransmitter, setPendingTransmitter] = useState(null);
 
     const handleChange = (e) => {
         const transmitterId = e.target.value === 'none' ? 'none' : e.target.value;
@@ -40,19 +57,17 @@ export const TransmitterLockSelect = ({
                 const isOutsideBandwidth = txFrequency < bandwidthStart || txFrequency > bandwidthEnd;
 
                 if (isOutsideBandwidth && onCenterFrequencyChange) {
-                    // Calculate offset to avoid DC spike at center
-                    // Offset by 25% of sample rate to move target signal away from center
-                    const offsetHz = sampleRate * 0.25;
-                    const newCenterFrequency = txFrequency + offsetHz;
-                    onCenterFrequencyChange(newCenterFrequency);
+                    // Show dialog asking user if they want to retune
+                    setPendingTransmitter({ transmitter, transmitterId });
+                    setRetuneDialogOpen(true);
+                } else {
+                    // Lock VFO to transmitter (frequency is within bandwidth)
+                    onVFOPropertyChange(vfoIndex, {
+                        lockedTransmitterId: transmitterId,
+                        frequency: txFrequency,
+                        frequencyOffset: 0
+                    });
                 }
-
-                // Lock VFO to transmitter
-                onVFOPropertyChange(vfoIndex, {
-                    lockedTransmitterId: transmitterId,
-                    frequency: txFrequency,
-                    frequencyOffset: 0
-                });
             }
         } else {
             // Unlocking - just clear the lock and reset offset
@@ -61,6 +76,34 @@ export const TransmitterLockSelect = ({
                 frequencyOffset: 0
             });
         }
+    };
+
+    const handleRetuneConfirm = () => {
+        if (pendingTransmitter) {
+            const { transmitter, transmitterId } = pendingTransmitter;
+            const txFrequency = transmitter.downlink_observed_freq;
+
+            // Calculate offset to avoid DC spike at center
+            // Offset by 25% of sample rate to move target signal away from center
+            const offsetHz = sampleRate * 0.25;
+            const newCenterFrequency = txFrequency + offsetHz;
+            onCenterFrequencyChange(newCenterFrequency);
+
+            // Lock VFO to transmitter
+            onVFOPropertyChange(vfoIndex, {
+                lockedTransmitterId: transmitterId,
+                frequency: txFrequency,
+                frequencyOffset: 0
+            });
+        }
+        setRetuneDialogOpen(false);
+        setPendingTransmitter(null);
+    };
+
+    const handleRetuneCancel = () => {
+        // Don't lock, just close dialog
+        setRetuneDialogOpen(false);
+        setPendingTransmitter(null);
     };
 
     const currentValue = (() => {
@@ -73,62 +116,102 @@ export const TransmitterLockSelect = ({
     const isLocked = lockedTransmitterId && lockedTransmitterId !== 'none';
 
     return (
-        <Box sx={{ mt: 2 }}>
-            <FormControl fullWidth size="small" disabled={!vfoActive} variant="filled">
-                <InputLabel id={`vfo-${vfoIndex}-lock-transmitter-label`}>
-                    {isLocked ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <LockIcon fontSize="small" />
-                            {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
-                        </Box>
-                    ) : (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <LockOpenIcon fontSize="small" />
-                            {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
-                        </Box>
-                    )}
-                </InputLabel>
-                <Select
-                    variant={'filled'}
-                    labelId={`vfo-${vfoIndex}-lock-transmitter-label`}
-                    value={currentValue}
-                    label={t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
-                    onChange={handleChange}
-                    sx={{ fontSize: '0.875rem' }}
-                >
-                    <MenuItem value="none" sx={{ fontSize: '0.875rem' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <LockOpenIcon fontSize="small" />
-                            {t('vfo.none', 'None')}
-                        </Box>
-                    </MenuItem>
-                    {transmitters.map((tx) => (
-                        <MenuItem key={tx.id} value={tx.id} sx={{ fontSize: '0.875rem' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                                <Box
-                                    sx={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: '50%',
-                                        backgroundColor: tx.alive ? 'success.main' : 'error.main',
-                                        boxShadow: (theme) => tx.alive
-                                            ? `0 0 6px ${theme.palette.success.main}99`
-                                            : `0 0 6px ${theme.palette.error.main}99`,
-                                        flexShrink: 0,
-                                    }}
-                                />
-                                <Box sx={{ flex: 1 }}>
-                                    <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
-                                    <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                        {(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
-                                    </Box>
-                                </Box>
+        <>
+            <Box sx={{ mt: 2 }}>
+                <FormControl fullWidth size="small" disabled={!vfoActive} variant="filled">
+                    <InputLabel id={`vfo-${vfoIndex}-lock-transmitter-label`}>
+                        {isLocked ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <LockIcon fontSize="small" />
+                                {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
+                            </Box>
+                        ) : (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <LockOpenIcon fontSize="small" />
+                                {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
+                            </Box>
+                        )}
+                    </InputLabel>
+                    <Select
+                        variant={'filled'}
+                        labelId={`vfo-${vfoIndex}-lock-transmitter-label`}
+                        value={currentValue}
+                        label={t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
+                        onChange={handleChange}
+                        sx={{ fontSize: '0.875rem' }}
+                    >
+                        <MenuItem value="none" sx={{ fontSize: '0.875rem' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <LockOpenIcon fontSize="small" />
+                                {t('vfo.none', 'None')}
                             </Box>
                         </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
-        </Box>
+                        {transmitters.map((tx) => (
+                            <MenuItem key={tx.id} value={tx.id} sx={{ fontSize: '0.875rem' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                    <Box
+                                        sx={{
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: '50%',
+                                            backgroundColor: tx.alive ? 'success.main' : 'error.main',
+                                            boxShadow: (theme) => tx.alive
+                                                ? `0 0 6px ${theme.palette.success.main}99`
+                                                : `0 0 6px ${theme.palette.error.main}99`,
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                    <Box sx={{ flex: 1 }}>
+                                        <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
+                                        <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                                            {(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </Box>
+
+            {/* Retune Confirmation Dialog */}
+            <Dialog
+                open={retuneDialogOpen}
+                onClose={handleRetuneCancel}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TuneIcon />
+                    Retune SDR?
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        The transmitter frequency{' '}
+                        <strong>
+                            {pendingTransmitter?.transmitter?.downlink_observed_freq
+                                ? `${(pendingTransmitter.transmitter.downlink_observed_freq / 1e6).toFixed(6)} MHz`
+                                : ''}
+                        </strong>
+                        {' '}is outside the current SDR bandwidth.
+                        <br /><br />
+                        Would you like to retune the SDR center frequency to receive this transmitter?
+                        <br /><br />
+                        <em style={{ fontSize: '0.875rem', color: 'gray' }}>
+                            Note: The SDR will be offset by 25% of the sample rate to avoid DC spike artifacts.
+                        </em>
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleRetuneCancel} color="inherit">
+                        Cancel
+                    </Button>
+                    <Button onClick={handleRetuneConfirm} variant="contained" color="primary" autoFocus>
+                        Retune SDR
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
     );
 };
 
