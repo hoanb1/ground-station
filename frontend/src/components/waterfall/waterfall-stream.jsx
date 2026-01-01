@@ -25,7 +25,9 @@ const useWaterfallStream = ({
     targetFPSRef,
     playbackElapsedSecondsRef,
     playbackRemainingSecondsRef,
-    playbackTotalSecondsRef
+    playbackTotalSecondsRef,
+    getAudioState,
+    initializeAudio
 }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -170,6 +172,24 @@ const useWaterfallStream = ({
             dispatch(setStartStreamingLoading(true));
             dispatch(setErrorMessage(''));
 
+            // Proactively ensure AudioContext is resumed before streaming starts
+            // This prevents the race condition where audio arrives before context is ready
+            if (getAudioState && initializeAudio) {
+                const audioState = getAudioState();
+                if (audioState.contextState === 'suspended') {
+                    console.log('AudioContext suspended - resuming before stream start');
+                    initializeAudio().catch(err => {
+                        console.warn('Failed to resume AudioContext proactively:', err);
+                        // Continue anyway - audio will try to resume when first packet arrives
+                    });
+                } else if (!audioState.enabled) {
+                    console.log('Audio not enabled - initializing before stream start');
+                    initializeAudio().catch(err => {
+                        console.warn('Failed to initialize audio proactively:', err);
+                    });
+                }
+            }
+
             socket.emit('sdr_data', 'configure-sdr', {
                 selectedSDRId,
                 centerFrequency,
@@ -196,7 +216,7 @@ const useWaterfallStream = ({
                 }
             });
         }
-    }, [isStreaming, dispatch, socket, selectedSDRId, centerFrequency, sampleRate, gain, fftSize, biasT, tunerAgc, rtlAgc, fftWindow, selectedAntenna, selectedOffsetValue, soapyAgc, fftAveraging, workerRef, targetFPSRef]);
+    }, [isStreaming, dispatch, socket, selectedSDRId, centerFrequency, sampleRate, gain, fftSize, biasT, tunerAgc, rtlAgc, fftWindow, selectedAntenna, selectedOffsetValue, soapyAgc, fftAveraging, workerRef, targetFPSRef, getAudioState, initializeAudio]);
 
     const stopStreaming = useCallback(async () => {
         if (isStreaming) {

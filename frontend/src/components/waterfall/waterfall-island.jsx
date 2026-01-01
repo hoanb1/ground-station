@@ -91,6 +91,7 @@ import { useTranslation } from 'react-i18next';
 import { useWaterfallSnapshot } from "./waterfall-snapshot.js";
 import DecodedPacketsDrawer from "./decoded-packets-drawer.jsx";
 import WaterfallRightSidebar from "./waterfall-right-sidebar.jsx";
+import { useAudio } from "../dashboard/audio-provider.jsx";
 import {
     generateSnapshotName,
     toggleFullscreen as toggleFullscreenUtil,
@@ -464,13 +465,17 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
 
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
+    // Get audio context for proactive resume on stream start
+    const { getAudioState, initializeAudio } = useAudio();
 
     const { startStreaming, stopStreaming, playButtonEnabledOrNot } = useWaterfallStream({
         workerRef,
         targetFPSRef,
         playbackElapsedSecondsRef,
         playbackRemainingSecondsRef,
-        playbackTotalSecondsRef
+        playbackTotalSecondsRef,
+        getAudioState,
+        initializeAudio
     });
 
     useEffect(() => {
