@@ -230,93 +230,128 @@ export default function RigTable() {
                             {t('rig.delete')}
                         </Button>
                     </Stack>
-                    <Dialog open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
-                        <DialogTitle>{t('rig.add_dialog_title')}</DialogTitle>
-                        <DialogContent>
-                            <TextField
-                                autoFocus
-                                name="name"
-                                margin="dense"
-                                label={t('rig.name')}
-                                type="text"
-                                fullWidth
-                                variant="filled"
-                                value={formValues.name}
-                                onChange={handleChange}
-                            />
-                            <TextField
-                                name="host"
-                                margin="dense"
-                                label={t('rig.host')}
-                                type="text"
-                                fullWidth
-                                variant="filled"
-                                value={formValues.host}
-                                onChange={handleChange}
-                            />
-                            <TextField
-                                name="port"
-                                margin="dense"
-                                label={t('rig.port')}
-                                type="number"
-                                fullWidth
-                                variant="filled"
-                                value={formValues.port}
-                                onChange={handleChange}
-                            />
-                            <FormControl margin="dense" fullWidth variant="filled">
-                                <InputLabel>{t('rig.radio_type')}</InputLabel>
-                                <Select
-                                    name="radiotype"
-                                    value={formValues.radiotype}
+                    <Dialog
+                        open={openAddDialog}
+                        onClose={() => dispatch(setOpenAddDialog(false))}
+                        fullWidth
+                        maxWidth="sm"
+                        PaperProps={{
+                            sx: {
+                                bgcolor: 'background.paper',
+                                border: (theme) => `1px solid ${theme.palette.divider}`,
+                                borderRadius: 2,
+                            }
+                        }}
+                    >
+                        <DialogTitle
+                            sx={{
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                fontSize: '1.25rem',
+                                fontWeight: 'bold',
+                                py: 2.5,
+                            }}
+                        >
+                            {t('rig.add_dialog_title')}
+                        </DialogTitle>
+                        <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
+                            <Stack spacing={2} sx={{ mt: 3 }}>
+                                <TextField
+                                    autoFocus
+                                    name="name"
+                                    label={t('rig.name')}
+                                    type="text"
+                                    fullWidth
+                                    value={formValues.name}
                                     onChange={handleChange}
-                                    variant={'filled'}>
-                                    <MenuItem value="rx">{t('rig.rx')}</MenuItem>
-                                </Select>
-                            </FormControl>
-                            <FormControl margin="dense" fullWidth variant="filled">
-                                <InputLabel>{t('rig.ptt_status')}</InputLabel>
-                                <Select
-                                    name="pttstatus"
-                                    value={formValues.pttstatus}
+                                />
+                                <TextField
+                                    name="host"
+                                    label={t('rig.host')}
+                                    type="text"
+                                    fullWidth
+                                    value={formValues.host}
                                     onChange={handleChange}
-                                    variant={'filled'}>
-                                    <MenuItem value="normal">{t('rig.normal')}</MenuItem>
-                                </Select>
-                            </FormControl>
-                            <FormControl margin="dense" fullWidth variant="filled">
-                                <InputLabel>{t('rig.vfo_type')}</InputLabel>
-                                <Select
-                                    name="vfotype"
-                                    value={formValues.vfotype}
+                                />
+                                <TextField
+                                    name="port"
+                                    label={t('rig.port')}
+                                    type="number"
+                                    fullWidth
+                                    value={formValues.port}
                                     onChange={handleChange}
-                                    variant={'filled'}>
-                                    <MenuItem value="normal">{t('rig.normal')}</MenuItem>
-                                </Select>
-                            </FormControl>
-                            <TextField
-                                margin="dense"
-                                name="lodown"
-                                label={t('rig.lo_down')}
-                                type="number"
-                                fullWidth
-                                variant="filled"
-                                value={formValues.lodown}
-                                onChange={handleChange}
-                            />
-                            <TextField
-                                margin="dense"
-                                name="loup"
-                                label={t('rig.lo_up')}
-                                type="number"
-                                fullWidth
-                                variant="filled"
-                                value={formValues.loup}
-                                onChange={handleChange}
-                            />
+                                />
+                                <FormControl fullWidth>
+                                    <InputLabel>{t('rig.radio_type')}</InputLabel>
+                                    <Select
+                                        name="radiotype"
+                                        label={t('rig.radio_type')}
+                                        value={formValues.radiotype}
+                                        onChange={handleChange}
+                                    >
+                                        <MenuItem value="rx">{t('rig.rx')}</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <FormControl fullWidth>
+                                    <InputLabel>{t('rig.ptt_status')}</InputLabel>
+                                    <Select
+                                        name="pttstatus"
+                                        label={t('rig.ptt_status')}
+                                        value={formValues.pttstatus}
+                                        onChange={handleChange}
+                                    >
+                                        <MenuItem value="normal">{t('rig.normal')}</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <FormControl fullWidth>
+                                    <InputLabel>{t('rig.vfo_type')}</InputLabel>
+                                    <Select
+                                        name="vfotype"
+                                        label={t('rig.vfo_type')}
+                                        value={formValues.vfotype}
+                                        onChange={handleChange}
+                                    >
+                                        <MenuItem value="normal">{t('rig.normal')}</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <TextField
+                                    name="lodown"
+                                    label={t('rig.lo_down')}
+                                    type="number"
+                                    fullWidth
+                                    value={formValues.lodown}
+                                    onChange={handleChange}
+                                />
+                                <TextField
+                                    name="loup"
+                                    label={t('rig.lo_up')}
+                                    type="number"
+                                    fullWidth
+                                    value={formValues.loup}
+                                    onChange={handleChange}
+                                />
+                            </Stack>
                         </DialogContent>
-                        <DialogActions style={{padding: '0px 24px 20px 20px'}}>
-                            <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error" variant="outlined">
+                        <DialogActions
+                            sx={{
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                                px: 3,
+                                py: 2.5,
+                                gap: 2,
+                            }}
+                        >
+                            <Button
+                                onClick={() => dispatch(setOpenAddDialog(false))}
+                                variant="outlined"
+                                sx={{
+                                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                    '&:hover': {
+                                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                    },
+                                }}
+                            >
                                 {t('rig.cancel')}
                             </Button>
                             <Button onClick={() => handleFormSubmit()} color="success" variant="contained">
@@ -324,16 +359,53 @@ export default function RigTable() {
                             </Button>
                         </DialogActions>
                     </Dialog>
-                    <Dialog open={openDeleteConfirm} onClose={() => dispatch(setOpenDeleteConfirm(false))}>
-                        <DialogTitle>{t('rig.confirm_deletion')}</DialogTitle>
-                        <DialogContent>
+                    <Dialog
+                        open={openDeleteConfirm}
+                        onClose={() => dispatch(setOpenDeleteConfirm(false))}
+                        PaperProps={{
+                            sx: {
+                                bgcolor: 'background.paper',
+                                border: (theme) => `1px solid ${theme.palette.divider}`,
+                                borderRadius: 2,
+                            }
+                        }}
+                    >
+                        <DialogTitle
+                            sx={{
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                fontSize: '1.25rem',
+                                fontWeight: 'bold',
+                                py: 2.5,
+                            }}
+                        >
+                            {t('rig.confirm_deletion')}
+                        </DialogTitle>
+                        <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3, mt: 2 }}>
                             <DialogContentText>
                                 {t('rig.confirm_delete_message')}
                             </DialogContentText>
                         </DialogContent>
-                        <DialogActions>
-                            <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error"
-                                    variant="outlined">
+                        <DialogActions
+                            sx={{
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                                px: 3,
+                                py: 2.5,
+                                gap: 2,
+                            }}
+                        >
+                            <Button
+                                onClick={() => dispatch(setOpenDeleteConfirm(false))}
+                                variant="outlined"
+                                sx={{
+                                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                    '&:hover': {
+                                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                    },
+                                }}
+                            >
                                 {t('rig.cancel')}
                             </Button>
                             <Button

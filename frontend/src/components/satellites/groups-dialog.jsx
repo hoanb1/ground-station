@@ -92,7 +92,6 @@ export function AutocompleteAsync({setSelectedSatelliteCallback}) {
             loading={loading}
             renderInput={(params) => (
                 <TextField
-                    variant={"filled"}
                     fullWidth={true}
                     {...params}
                     label="Add satellites (search by name or NORAD ID)"
@@ -212,49 +211,91 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
     }, []);
 
     return (
-        <Dialog open={formDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
-            <DialogTitle>Add a new satellite group</DialogTitle>
+        <Dialog
+            open={formDialogOpen}
+            onClose={handleDialogClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    bgcolor: 'background.paper',
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                    borderRadius: 2,
+                }
+            }}
+        >
+            <DialogTitle
+                sx={{
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                    fontSize: '1.25rem',
+                    fontWeight: 'bold',
+                    py: 2.5,
+                }}
+            >
+                Add a new satellite group
+            </DialogTitle>
             <form onSubmit={handleFormSubmit}>
-                <DialogContent sx={{minHeight: 600}}>
-                    <TextField
-                        autoComplete="new-password"
-                        autoFocus
-                        id="name"
-                        error={formErrorStatus}
-                        name="name"
-                        margin="dense"
-                        label="Name"
-                        fullWidth
-                        variant={"filled"}
-                        value={formDialogValues.name || ''}
-                        onChange={(e) => setFormDialogValues(prevValues => ({...prevValues, name: e.target.value}))}
-                        required
-                    />
-                    <Box sx={{marginTop: 2}}>
-                        <AutocompleteAsync setSelectedSatelliteCallback={setSelectedSatelliteCallback}/>
-                        <DataGrid
-                            loading={loading}
-                            getRowId={(row) => row['norad_id']}
-                            rows={satellites}
-                            columns={[
-                                {field: 'norad_id', headerName: 'NORAD ID', width: 150},
-                                {field: 'name', headerName: 'Name', width: 300},
-                            ]}
-                            initialState={{pagination: {paginationModel}}}
-                            pageSizeOptions={[5, 10]}
-                            sx={{
-                                height: 400,
-                                marginTop: 2,
-                                border: '1px solid rgba(0, 0, 0, 0.12)',
-                            }}
-                            checkboxSelection
-                            rowSelectionModel={selectionModel}
-                            onRowSelectionModelChange={(newModel) => setSelectionModel(newModel)}
+                <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3, minHeight: 600 }}>
+                    <Box sx={{ mt: 3 }}>
+                        <TextField
+                            autoComplete="new-password"
+                            autoFocus
+                            id="name"
+                            error={formErrorStatus}
+                            name="name"
+                            label="Name"
+                            fullWidth
+                            value={formDialogValues.name || ''}
+                            onChange={(e) => setFormDialogValues(prevValues => ({...prevValues, name: e.target.value}))}
+                            required
                         />
+                        <Box sx={{marginTop: 2}}>
+                            <AutocompleteAsync setSelectedSatelliteCallback={setSelectedSatelliteCallback}/>
+                            <DataGrid
+                                loading={loading}
+                                getRowId={(row) => row['norad_id']}
+                                rows={satellites}
+                                columns={[
+                                    {field: 'norad_id', headerName: 'NORAD ID', width: 150},
+                                    {field: 'name', headerName: 'Name', width: 300},
+                                ]}
+                                initialState={{pagination: {paginationModel}}}
+                                pageSizeOptions={[5, 10]}
+                                sx={{
+                                    height: 400,
+                                    marginTop: 2,
+                                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                                }}
+                                checkboxSelection
+                                rowSelectionModel={selectionModel}
+                                onRowSelectionModelChange={(newModel) => setSelectionModel(newModel)}
+                            />
+                        </Box>
                     </Box>
                 </DialogContent>
-                <DialogActions sx={{padding: '0 24px 24px 24px'}}>
-                    <Button onClick={handleDialogClose}>Cancel</Button>
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2.5,
+                        gap: 2,
+                    }}
+                >
+                    <Button
+                        onClick={handleDialogClose}
+                        variant="outlined"
+                        sx={{
+                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                            '&:hover': {
+                                borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                            },
+                        }}
+                    >
+                        Cancel
+                    </Button>
                     <Button type="submit" variant="contained">Submit</Button>
                 </DialogActions>
             </form>

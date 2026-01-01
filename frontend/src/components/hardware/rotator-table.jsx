@@ -169,31 +169,69 @@ export default function AntennaRotatorTable() {
                         <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
                             {t('rotator.add')}
                         </Button>
-                        <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
-                            <DialogTitle>{t('rotator.add_dialog_title')}</DialogTitle>
-                            <DialogContent>
-                                <Stack spacing={2}>
-                                    <TextField name="name" label={t('rotator.name')} fullWidth variant="filled"
+                        <Dialog
+                            fullWidth={true}
+                            open={openAddDialog}
+                            onClose={() => dispatch(setOpenAddDialog(false))}
+                            PaperProps={{
+                                sx: {
+                                    bgcolor: 'background.paper',
+                                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                                    borderRadius: 2,
+                                }
+                            }}
+                        >
+                            <DialogTitle
+                                sx={{
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                    fontSize: '1.25rem',
+                                    fontWeight: 'bold',
+                                    py: 2.5,
+                                }}
+                            >
+                                {t('rotator.add_dialog_title')}
+                            </DialogTitle>
+                            <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
+                                <Stack spacing={2} sx={{ mt: 3 }}>
+                                    <TextField name="name" label={t('rotator.name')} fullWidth
                                                onChange={handleChange}
                                                value={formValues.name}/>
-                                    <TextField name="host" label={t('rotator.host')} fullWidth variant="filled"
+                                    <TextField name="host" label={t('rotator.host')} fullWidth
                                                onChange={handleChange}
                                                value={formValues.host}/>
-                                    <TextField name="port" label={t('rotator.port')} type="number" fullWidth variant="filled"
+                                    <TextField name="port" label={t('rotator.port')} type="number" fullWidth
                                                onChange={handleChange} value={formValues.port}/>
-                                    <TextField name="minaz" label={t('rotator.min_az')} type="number" fullWidth variant="filled"
+                                    <TextField name="minaz" label={t('rotator.min_az')} type="number" fullWidth
                                                onChange={handleChange} value={formValues.minaz}/>
-                                    <TextField name="maxaz" label={t('rotator.max_az')} type="number" fullWidth variant="filled"
+                                    <TextField name="maxaz" label={t('rotator.max_az')} type="number" fullWidth
                                                onChange={handleChange} value={formValues.maxaz}/>
-                                    <TextField name="minel" label={t('rotator.min_el')} type="number" fullWidth variant="filled"
+                                    <TextField name="minel" label={t('rotator.min_el')} type="number" fullWidth
                                                onChange={handleChange} value={formValues.minel}/>
-                                    <TextField name="maxel" label={t('rotator.max_el')} type="number" fullWidth variant="filled"
+                                    <TextField name="maxel" label={t('rotator.max_el')} type="number" fullWidth
                                                onChange={handleChange} value={formValues.maxel}/>
                                 </Stack>
                             </DialogContent>
-                            <DialogActions style={{padding: '0px 24px 20px 20px'}}>
-                                <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error"
-                                        variant="outlined">
+                            <DialogActions
+                                sx={{
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                                    px: 3,
+                                    py: 2.5,
+                                    gap: 2,
+                                }}
+                            >
+                                <Button
+                                    onClick={() => dispatch(setOpenAddDialog(false))}
+                                    variant="outlined"
+                                    sx={{
+                                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                        '&:hover': {
+                                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                        },
+                                    }}
+                                >
                                     {t('rotator.cancel')}
                                 </Button>
                                 <Button
@@ -229,14 +267,48 @@ export default function AntennaRotatorTable() {
                         <Dialog
                             open={openDeleteConfirm}
                             onClose={() => dispatch(setOpenDeleteConfirm(false))}
+                            PaperProps={{
+                                sx: {
+                                    bgcolor: 'background.paper',
+                                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                                    borderRadius: 2,
+                                }
+                            }}
                         >
-                            <DialogTitle>{t('rotator.confirm_deletion')}</DialogTitle>
-                            <DialogContent>
+                            <DialogTitle
+                                sx={{
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                    fontSize: '1.25rem',
+                                    fontWeight: 'bold',
+                                    py: 2.5,
+                                }}
+                            >
+                                {t('rotator.confirm_deletion')}
+                            </DialogTitle>
+                            <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3, mt: 2 }}>
                                 {t('rotator.confirm_delete_message')}
                             </DialogContent>
-                            <DialogActions>
-                                <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error"
-                                        variant="outlined">
+                            <DialogActions
+                                sx={{
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                                    px: 3,
+                                    py: 2.5,
+                                    gap: 2,
+                                }}
+                            >
+                                <Button
+                                    onClick={() => dispatch(setOpenDeleteConfirm(false))}
+                                    variant="outlined"
+                                    sx={{
+                                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                        '&:hover': {
+                                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                        },
+                                    }}
+                                >
                                     {t('rotator.cancel')}
                                 </Button>
                                 <Button

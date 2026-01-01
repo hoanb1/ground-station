@@ -266,55 +266,15 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
     };
 
     const getFieldSx = (fieldName) => ({
-        '& .MuiOutlinedInput-root': {
-            color: '#ffffff',
-            backgroundColor: '#2a2a2a',
-            '& fieldset': {
-                borderColor: validationErrors[fieldName] ? '#f44336' : '#555555',
-                borderWidth: validationErrors[fieldName] ? '2px' : '1px'
-            },
-            '&:hover fieldset': {
-                borderColor: validationErrors[fieldName] ? '#f44336' : '#777777',
-                borderWidth: validationErrors[fieldName] ? '2px' : '1px'
-            },
-            '&.Mui-focused fieldset': {
-                borderColor: validationErrors[fieldName] ? '#f44336' : '#90caf9',
-                borderWidth: '2px'
-            },
-        },
-        '& .MuiInputLabel-root': {
-            color: validationErrors[fieldName] ? '#f44336' : '#cccccc',
-            '&.Mui-focused': { color: validationErrors[fieldName] ? '#f44336' : '#90caf9' }
-        },
-        '& .MuiSelect-select': {
-            color: '#ffffff',
-        },
-        '& .MuiSelect-icon': {
-            color: '#cccccc',
-        },
         mb: 2.5
     });
 
     const getSelectSx = (fieldName) => ({
-        color: '#ffffff',
-        '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: validationErrors[fieldName] ? '#f44336' : '#555555',
-            borderWidth: validationErrors[fieldName] ? '2px' : '1px'
-        },
-        '& .MuiSelect-icon': { color: '#cccccc' },
-        '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: validationErrors[fieldName] ? '#f44336' : '#777777',
-            borderWidth: validationErrors[fieldName] ? '2px' : '1px'
-        },
-        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: validationErrors[fieldName] ? '#f44336' : '#90caf9',
-            borderWidth: '2px'
-        },
+        // Select styling handled by theme
     });
 
     const getInputLabelSx = (fieldName) => ({
-        color: validationErrors[fieldName] ? '#f44336' : '#cccccc',
-        '&.Mui-focused': { color: validationErrors[fieldName] ? '#f44336' : '#90caf9' }
+        // Label styling handled by theme
     });
 
     const hasFrequencyErrors = validationErrors.uplinkLow || validationErrors.uplinkHigh ||
@@ -328,9 +288,8 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
             fullWidth
             PaperProps={{
                 sx: {
-                    backgroundColor: '#1a1a1a',
-                    color: '#ffffff',
-                    border: '1px solid #333333',
+                    bgcolor: 'background.paper',
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 2,
                     minHeight: '600px'
                 }
@@ -338,9 +297,8 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
         >
             <DialogTitle
                 sx={{
-                    color: '#ffffff',
-                    backgroundColor: '#262626',
-                    borderBottom: '1px solid #444444',
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
                     fontSize: '1.25rem',
                     fontWeight: 'bold',
                     py: 2.5
@@ -348,14 +306,15 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
             >
                 {isNew ? 'Add New Transmitter' : 'Edit Transmitter'}
             </DialogTitle>
-            <DialogContent sx={{ backgroundColor: '#1a1a1a', px: 3, py: 3 }}>
+            <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
+                <Box sx={{ mt: 2 }}>
                 {error && (
                     <Box sx={{
                         mb: 2,
                         p: 2,
-                        backgroundColor: '#d32f2f',
+                        bgcolor: 'error.main',
                         borderRadius: 1,
-                        color: '#ffffff'
+                        color: 'error.contrastText'
                     }}>
                         <Typography variant="body2">
                             Error: {error}
@@ -368,9 +327,9 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         mt: 2,
                         mb: 2,
                         p: 2,
-                        backgroundColor: '#d32f2f',
+                        bgcolor: 'error.main',
                         borderRadius: 1,
-                        color: '#ffffff'
+                        color: 'error.contrastText'
                     }}>
                         <Typography variant="body2">
                             Please fill in all required fields. {hasFrequencyErrors && 'At least one uplink or downlink frequency must be provided.'}
@@ -381,7 +340,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                 <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 0 }}>
 
                     {/* Basic Information Section */}
-                    <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, fontWeight: 'bold' }}>
                         Basic Information
                     </Typography>
 
@@ -390,7 +349,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         label="Description"
                         value={formData.description}
                         onChange={handleChange('description')}
-                        variant="filled"
                         placeholder="Enter transmitter description"
                         sx={getFieldSx('description')}
                         disabled={loading}
@@ -407,18 +365,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                 label="Type *"
                                 disabled={loading}
                                 sx={getSelectSx('type')}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: '#2a2a2a',
-                                            '& .MuiMenuItem-root': {
-                                                color: '#ffffff',
-                                                '&:hover': { backgroundColor: '#3a3a3a' }
-                                            }
-                                        }
-                                    }
-                                }}
-                                variant={'filled'}
                                 required>
                                 {TYPE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
@@ -434,18 +380,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                 label="Status *"
                                 disabled={loading}
                                 sx={getSelectSx('status')}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: '#2a2a2a',
-                                            '& .MuiMenuItem-root': {
-                                                color: '#ffffff',
-                                                '&:hover': { backgroundColor: '#3a3a3a' }
-                                            }
-                                        }
-                                    }
-                                }}
-                                variant={'filled'}
                                 required>
                                 {STATUS_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
@@ -462,18 +396,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                             label="Alive *"
                             disabled={loading}
                             sx={getSelectSx('alive')}
-                            MenuProps={{
-                                PaperProps: {
-                                    sx: {
-                                        backgroundColor: '#2a2a2a',
-                                        '& .MuiMenuItem-root': {
-                                            color: '#ffffff',
-                                            '&:hover': { backgroundColor: '#3a3a3a' }
-                                        }
-                                    }
-                                }}
-                            }
-                            variant={'filled'}
                             required>
                             {ALIVE_OPTIONS.map((option) => (
                                 <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
@@ -482,7 +404,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     </FormControl>
 
                     {/* Uplink Frequencies Section */}
-                    <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, fontWeight: 'bold' }}>
                         Uplink Frequencies
                     </Typography>
 
@@ -491,7 +413,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         label="Uplink Low (Hz)"
                         value={formData.uplinkLow}
                         onChange={handleChange('uplinkLow')}
-                        variant="filled"
                         type="number"
                         placeholder="e.g., 435000000"
                         sx={getFieldSx('uplinkLow')}
@@ -504,7 +425,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         label="Uplink High (Hz)"
                         value={formData.uplinkHigh}
                         onChange={handleChange('uplinkHigh')}
-                        variant="filled"
                         type="number"
                         placeholder="e.g., 438000000"
                         sx={getFieldSx('uplinkHigh')}
@@ -517,7 +437,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         label="Uplink Drift (Hz)"
                         value={formData.uplinkDrift}
                         onChange={handleChange('uplinkDrift')}
-                        variant="filled"
                         type="number"
                         placeholder="e.g., 1000"
                         sx={{ ...getFieldSx('uplinkDrift'), mb: 3 }}
@@ -525,7 +444,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     />
 
                     {/* Downlink Frequencies Section */}
-                    <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, fontWeight: 'bold' }}>
                         Downlink Frequencies
                     </Typography>
 
@@ -534,7 +453,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         label="Downlink Low (Hz)"
                         value={formData.downlinkLow}
                         onChange={handleChange('downlinkLow')}
-                        variant="filled"
                         type="number"
                         placeholder="e.g., 145800000"
                         sx={getFieldSx('downlinkLow')}
@@ -547,7 +465,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         label="Downlink High (Hz)"
                         value={formData.downlinkHigh}
                         onChange={handleChange('downlinkHigh')}
-                        variant="filled"
                         type="number"
                         placeholder="e.g., 145900000"
                         sx={getFieldSx('downlinkHigh')}
@@ -560,7 +477,6 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         label="Downlink Drift (Hz)"
                         value={formData.downlinkDrift}
                         onChange={handleChange('downlinkDrift')}
-                        variant="filled"
                         type="number"
                         placeholder="e.g., 500"
                         sx={{ ...getFieldSx('downlinkDrift'), mb: 3 }}
@@ -568,7 +484,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     />
 
                     {/* Transmission Settings Section */}
-                    <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
+                    <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, fontWeight: 'bold' }}>
                         Transmission Settings
                     </Typography>
 
@@ -581,18 +497,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                 label="Downlink mode"
                                 disabled={loading}
                                 sx={getSelectSx('mode')}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: '#2a2a2a',
-                                            '& .MuiMenuItem-root': {
-                                                color: '#ffffff',
-                                                '&:hover': { backgroundColor: '#3a3a3a' }
-                                            }
-                                        }
-                                    }
-                                }}
-                                variant={'filled'}>
+                            >
                                 {MODE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -607,18 +512,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                 label="Uplink mode"
                                 disabled={loading}
                                 sx={getSelectSx('uplinkMode')}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: '#2a2a2a',
-                                            '& .MuiMenuItem-root': {
-                                                color: '#ffffff',
-                                                '&:hover': { backgroundColor: '#3a3a3a' }
-                                            }
-                                        }
-                                    }
-                                }}
-                                variant={'filled'}>
+                            >
                                 {MODE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -635,18 +529,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                 label="Invert"
                                 disabled={loading}
                                 sx={getSelectSx('invert')}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            backgroundColor: '#2a2a2a',
-                                            '& .MuiMenuItem-root': {
-                                                color: '#ffffff',
-                                                '&:hover': { backgroundColor: '#3a3a3a' }
-                                            }
-                                        }
-                                    }
-                                }}
-                                variant={'filled'}>
+                            >
                                 {INVERT_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -658,45 +541,33 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                             label="Baud Rate"
                             value={formData.baud}
                             onChange={handleChange('baud')}
-                            variant="filled"
                             type="number"
                             placeholder="e.g., 9600"
                             disabled={loading}
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    color: '#ffffff',
-                                    backgroundColor: '#2a2a2a',
-                                    '& fieldset': { borderColor: '#555555' },
-                                    '&:hover fieldset': { borderColor: '#777777' },
-                                    '&.Mui-focused fieldset': { borderColor: '#90caf9' },
-                                },
-                                '& .MuiInputLabel-root': {
-                                    color: '#cccccc',
-                                    '&.Mui-focused': { color: '#90caf9' }
-                                },
-                            }}
                         />
                     </Box>
                 </Box>
+                </Box>
             </DialogContent>
-            <DialogActions sx={{
-                backgroundColor: '#262626',
-                borderTop: '1px solid #444444',
-                px: 3,
-                py: 2.5,
-                gap: 2
-            }}>
+            <DialogActions
+                sx={{
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                    px: 3,
+                    py: 2.5,
+                    gap: 2,
+                }}
+            >
                 <Button
                     onClick={onClose}
                     variant="outlined"
                     disabled={loading}
                     sx={{
-                        color: '#ffffff',
-                        borderColor: '#666666',
+                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
                         '&:hover': {
-                            borderColor: '#888888',
-                            backgroundColor: '#333333'
-                        }
+                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                        },
                     }}
                 >
                     Cancel
@@ -706,12 +577,10 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     variant="contained"
                     disabled={loading}
                     sx={{
-                        backgroundColor: '#1976d2',
-                        '&:hover': { backgroundColor: '#1565c0' },
                         '&.Mui-disabled': {
-                            backgroundColor: '#555555',
-                            color: '#aaaaaa'
-                        }
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',
+                            color: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.600',
+                        },
                     }}
                 >
                     {loading ?
@@ -732,24 +601,51 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, transmitterName 
             onClose={onClose}
             PaperProps={{
                 sx: {
-                    backgroundColor: '#1e1e1e',
-                    color: '#ffffff'
+                    bgcolor: 'background.paper',
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                    borderRadius: 2,
                 }
             }}
         >
-            <DialogTitle sx={{ color: '#ffffff' }}>
+            <DialogTitle
+                sx={{
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                    fontSize: '1.25rem',
+                    fontWeight: 'bold',
+                    py: 2.5,
+                }}
+            >
                 Confirm Delete
             </DialogTitle>
-            <DialogContent>
-                <Typography sx={{ color: '#ffffff' }}>
+            <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3, mt: 2 }}>
+                <Typography>
                     Are you sure you want to delete the transmitter "{transmitterName}"?
                 </Typography>
             </DialogContent>
-            <DialogActions sx={{ p: 3 }}>
-                <Button onClick={onClose} sx={{ color: '#ffffff' }}>
+            <DialogActions
+                sx={{
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                    px: 3,
+                    py: 2.5,
+                    gap: 2,
+                }}
+            >
+                <Button
+                    onClick={onClose}
+                    variant="outlined"
+                    sx={{
+                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                        '&:hover': {
+                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                        },
+                    }}
+                >
                     Cancel
                 </Button>
-                <Button onClick={onConfirm} variant="contained" color="error" sx={{ ml: 2 }}>
+                <Button onClick={onConfirm} variant="contained" color="error">
                     Delete
                 </Button>
             </DialogActions>

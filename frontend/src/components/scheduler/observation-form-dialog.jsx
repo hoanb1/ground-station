@@ -505,7 +505,7 @@ const ObservationFormDialog = () => {
             </DialogTitle>
 
             <DialogContent dividers sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
-                <Stack spacing={3}>
+                <Stack spacing={3} sx={{ mt: 2 }}>
                     {/* Enabled Checkbox */}
                     <Box>
                         <FormControlLabel

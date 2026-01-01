@@ -199,9 +199,29 @@ export default function SourcesTable() {
                             onClick={() => dispatch(setOpenDeleteConfirm(true))}>
                         {t('tle_sources.delete')}
                     </Button>
-                    <Dialog open={openDeleteConfirm} onClose={() => dispatch(setOpenDeleteConfirm(false))}>
-                        <DialogTitle>{t('tle_sources.confirm_deletion')}</DialogTitle>
-                        <DialogContent>
+                    <Dialog
+                        open={openDeleteConfirm}
+                        onClose={() => dispatch(setOpenDeleteConfirm(false))}
+                        PaperProps={{
+                            sx: {
+                                bgcolor: 'background.paper',
+                                border: (theme) => `1px solid ${theme.palette.divider}`,
+                                borderRadius: 2,
+                            }
+                        }}
+                    >
+                        <DialogTitle
+                            sx={{
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                fontSize: '1.25rem',
+                                fontWeight: 'bold',
+                                py: 2.5,
+                            }}
+                        >
+                            {t('tle_sources.confirm_deletion')}
+                        </DialogTitle>
+                        <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3, mt: 2 }}>
                             <p>{t('tle_sources.confirm_delete_intro')}</p>
                             <ul>
                                 <li>{t('tle_sources.delete_item_1')}</li>
@@ -210,8 +230,28 @@ export default function SourcesTable() {
                             </ul>
                             <p><strong>{t('tle_sources.cannot_undo')}</strong></p>
                         </DialogContent>
-                        <DialogActions>
-                            <Button onClick={() => dispatch(setOpenDeleteConfirm(false))}>{t('tle_sources.cancel')}</Button>
+                        <DialogActions
+                            sx={{
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                                px: 3,
+                                py: 2.5,
+                                gap: 2,
+                            }}
+                        >
+                            <Button
+                                onClick={() => dispatch(setOpenDeleteConfirm(false))}
+                                variant="outlined"
+                                sx={{
+                                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                    '&:hover': {
+                                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                    },
+                                }}
+                            >
+                                {t('tle_sources.cancel')}
+                            </Button>
                             <Button
                                 variant="contained"
                                 color="error"
@@ -222,10 +262,32 @@ export default function SourcesTable() {
                         </DialogActions>
                     </Dialog>
                 </Stack>
-                <Dialog open={openAddDialog} onClose={handleClose} sx={{minWidth: 400}} fullWidth maxWidth="sm">
-                    <DialogTitle>{formValues.id ? t('tle_sources.dialog_title_edit') : t('tle_sources.dialog_title_add')}</DialogTitle>
-                    <DialogContent>
-                        <Stack spacing={2} sx={{marginTop: 1}}>
+                <Dialog
+                    open={openAddDialog}
+                    onClose={handleClose}
+                    fullWidth
+                    maxWidth="sm"
+                    PaperProps={{
+                        sx: {
+                            bgcolor: 'background.paper',
+                            border: (theme) => `1px solid ${theme.palette.divider}`,
+                            borderRadius: 2,
+                        }
+                    }}
+                >
+                    <DialogTitle
+                        sx={{
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                            borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                            fontSize: '1.25rem',
+                            fontWeight: 'bold',
+                            py: 2.5,
+                        }}
+                    >
+                        {formValues.id ? t('tle_sources.dialog_title_edit') : t('tle_sources.dialog_title_add')}
+                    </DialogTitle>
+                    <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
+                        <Stack spacing={2} sx={{ mt: 3 }}>
                             <Alert severity="warning" sx={{marginBottom: 2}}>
                                 <AlertTitle>{t('tle_sources.performance_notice')}</AlertTitle>
                                 {t('tle_sources.performance_warning')}
@@ -233,7 +295,6 @@ export default function SourcesTable() {
                             <TextField
                                 label={t('tle_sources.name')}
                                 name="name"
-                                variant={"filled"}
                                 value={formValues.name}
                                 onChange={handleInputChange}
                                 fullWidth
@@ -241,28 +302,47 @@ export default function SourcesTable() {
                             <TextField
                                 label={t('tle_sources.url')}
                                 name="url"
-                                variant={"filled"}
                                 value={formValues.url}
                                 onChange={handleInputChange}
                                 fullWidth
                             />
-                            <FormControl fullWidth variant="filled">
+                            <FormControl fullWidth>
                                 <InputLabel id="format-label">{t('tle_sources.format')}</InputLabel>
                                 <Select
                                     label={t('tle_sources.format')}
                                     name="format"
                                     value={formValues.format || ''}
                                     onChange={handleInputChange}
-                                    variant={'filled'}>
+                                >
                                     <MenuItem value="3le">3LE</MenuItem>
                                 </Select>
                             </FormControl>
                         </Stack>
                     </DialogContent>
-                    <DialogActions style={{margin: '0px 20px 20px 20px'}}>
-                        <Button onClick={handleClose} color={"error"} variant={"outlined"}>{t('tle_sources.cancel')}</Button>
+                    <DialogActions
+                        sx={{
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                            borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                            px: 3,
+                            py: 2.5,
+                            gap: 2,
+                        }}
+                    >
+                        <Button
+                            onClick={handleClose}
+                            variant="outlined"
+                            sx={{
+                                borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                '&:hover': {
+                                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                },
+                            }}
+                        >
+                            {t('tle_sources.cancel')}
+                        </Button>
                         <Button variant="contained" onClick={handleSubmit}
-                                color={"success"}>{formValues.id ? t('tle_sources.edit') : t('tle_sources.submit')}</Button>
+                                color="success">{formValues.id ? t('tle_sources.edit') : t('tle_sources.submit')}</Button>
                     </DialogActions>
                 </Dialog>
             </Box>

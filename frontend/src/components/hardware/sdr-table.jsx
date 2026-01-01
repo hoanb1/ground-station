@@ -282,17 +282,18 @@ export default function SDRsPage() {
 
         // Define common fields that all SDR types have
         const fields = [
-            <FormControl key="type-select" fullWidth variant="filled">
+            <FormControl key="type-select" fullWidth>
                 <InputLabel id="sdr-type-label">{t('sdr.sdr_type')}</InputLabel>
                 <Select
                     name="type"
                     labelId="sdr-type-label"
+                    label={t('sdr.sdr_type')}
                     value={formValues.type || ''}
                     onChange={(e) => {
                         handleChange({target: {name: "type", value: e.target.value}});
                         dispatch(setSelectedSdrDevice('')); // Reset selected SDR when type changes
                     }}
-                    variant={'filled'}>
+                >
                     <MenuItem value="rtlsdrusbv3">{t('sdr.rtlsdr_usb_v3')}</MenuItem>
                     <MenuItem value="rtlsdrtcpv3">{t('sdr.rtlsdr_tcp_v3')}</MenuItem>
                     <MenuItem value="rtlsdrusbv4">{t('sdr.rtlsdr_usb_v4')}</MenuItem>
@@ -348,10 +349,11 @@ export default function SDRsPage() {
                     );
                 } else if (localSoapyDevices && localSoapyDevices.length > 0) {
                     fields.push(
-                        <FormControl key="local-sdr-device-select" fullWidth variant="filled">
+                        <FormControl key="local-sdr-device-select" fullWidth>
                             <InputLabel id="local-sdr-device-label">Local SDR Device</InputLabel>
                             <Select
                                 labelId="local-sdr-device-label"
+                                label="Local SDR Device"
                                 value={selectedSdrDevice}
                                 onChange={(e) => {
                                     const selectedSdrIndex = e.target.value;
@@ -373,7 +375,7 @@ export default function SDRsPage() {
                                         }
                                     }
                                 }}
-                                variant={'filled'}>
+            >
                                 <MenuItem value="">Select SDR Device</MenuItem>
                                 {localSoapyDevices.map((sdr, index) => (
                                     <MenuItem key={index} value={index}>
@@ -398,11 +400,12 @@ export default function SDRsPage() {
                 if (selectedType === 'soapysdrremote' && soapyServers && Object.keys(soapyServers).length > 0) {
                     // For SoapySDRRemote, create a dropdown of available servers
                     fields.push(
-                        <FormControl key="host-select" fullWidth variant="filled">
+                        <FormControl key="host-select" fullWidth>
                             <InputLabel id="host-label">SoapySDR Server</InputLabel>
                             <Select
                                 name="host"
                                 labelId="host-label"
+                                label="SoapySDR Server"
                                 value={formValues.host || ''}
                                 onChange={(e) => {
                                     const serverIp = e.target.value;
@@ -419,7 +422,7 @@ export default function SDRsPage() {
                                         port: serverInfo.port || 1234
                                     }));
                                 }}
-                                variant={'filled'}>
+            >
                                 {Object.entries(soapyServers).map(([key, server]) => (
                                     <MenuItem key={key} value={server.ip}>
                                         {key}: {server.ip}:{server.port} ({server.sdrs.length} SDRs)
@@ -436,10 +439,11 @@ export default function SDRsPage() {
                         
                         if (selectedServerInfo && selectedServerInfo.sdrs && selectedServerInfo.sdrs.length > 0) {
                             fields.push(
-                                <FormControl key="sdr-device-select" fullWidth variant="filled">
+                                <FormControl key="sdr-device-select" fullWidth>
                                     <InputLabel id="sdr-device-label">SDR Device</InputLabel>
                                     <Select
                                         labelId="sdr-device-label"
+                                        label="SDR Device"
                                         value={selectedSdrDevice}
                                         onChange={(e) => {
                                             const selectedSdrIndex = e.target.value;
@@ -461,7 +465,7 @@ export default function SDRsPage() {
                                                 }
                                             }
                                         }}
-                                        variant={'filled'}>
+                    >
                                         <MenuItem value="">Select SDR Device</MenuItem>
                                         {selectedServerInfo.sdrs.map((sdr, index) => (
                                             <MenuItem key={index} value={index}>
@@ -481,8 +485,7 @@ export default function SDRsPage() {
                             name="host"
                             label="Host"
                             fullWidth
-                            variant="filled"
-                            onChange={handleChange}
+                                                        onChange={handleChange}
                             value={getFieldValue('host')}
                         />
                     );
@@ -497,8 +500,7 @@ export default function SDRsPage() {
                         name="port"
                         label="Port"
                         fullWidth
-                        variant="filled"
-                        type="number"
+                                                type="number"
                         onChange={handleChange}
                         value={getFieldValue('port')}
                     />
@@ -512,8 +514,7 @@ export default function SDRsPage() {
                     name="name"
                     label="Name"
                     fullWidth
-                    variant="filled"
-                    onChange={handleChange}
+                                        onChange={handleChange}
                     value={getFieldValue('name')}
                 />,
                 <TextField
@@ -521,8 +522,7 @@ export default function SDRsPage() {
                     name="frequency_min"
                     label="Minimum Frequency (MHz)"
                     fullWidth
-                    variant="filled"
-                    type="number"
+                                        type="number"
                     onChange={handleChange}
                     value={getFieldValue('frequency_min')}
                 />,
@@ -531,8 +531,7 @@ export default function SDRsPage() {
                     name="frequency_max"
                     label="Maximum Frequency (MHz)"
                     fullWidth
-                    variant="filled"
-                    type="number"
+                                        type="number"
                     onChange={handleChange}
                     value={getFieldValue('frequency_max')}
                 />,
@@ -546,8 +545,7 @@ export default function SDRsPage() {
                         name="driver"
                         label="Driver"
                         fullWidth
-                        variant="filled"
-                        onChange={handleChange}
+                                                onChange={handleChange}
                         value={getFieldValue('driver')}
                     />
                 );
@@ -561,8 +559,7 @@ export default function SDRsPage() {
                         name="serial"
                         label="Serial"
                         fullWidth
-                        variant="filled"
-                        onChange={handleChange}
+                                                onChange={handleChange}
                         value={getFieldValue('serial')}
                     />
                 );
@@ -657,15 +654,54 @@ export default function SDRsPage() {
                         <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
                             {t('sdr.add')}
                         </Button>
-                        <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
-                            <DialogTitle>{t('sdr.add_dialog_title')}</DialogTitle>
-                            <DialogContent>
-                                <Stack spacing={2}>
+                        <Dialog
+                            fullWidth={true}
+                            open={openAddDialog}
+                            onClose={() => dispatch(setOpenAddDialog(false))}
+                            PaperProps={{
+                                sx: {
+                                    bgcolor: 'background.paper',
+                                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                                    borderRadius: 2,
+                                }
+                            }}
+                        >
+                            <DialogTitle
+                                sx={{
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                    fontSize: '1.25rem',
+                                    fontWeight: 'bold',
+                                    py: 2.5,
+                                }}
+                            >
+                                {t('sdr.add_dialog_title')}
+                            </DialogTitle>
+                            <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
+                                <Stack spacing={2} sx={{ mt: 3 }}>
                                     {renderFormFields()}
                                 </Stack>
                             </DialogContent>
-                            <DialogActions style={{padding: '0px 24px 20px 20px'}}>
-                                <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error" variant="outlined">
+                            <DialogActions
+                                sx={{
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                                    px: 3,
+                                    py: 2.5,
+                                    gap: 2,
+                                }}
+                            >
+                                <Button
+                                    onClick={() => dispatch(setOpenAddDialog(false))}
+                                    variant="outlined"
+                                    sx={{
+                                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                        '&:hover': {
+                                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                        },
+                                    }}
+                                >
                                     {t('sdr.cancel')}
                                 </Button>
                                 <Button
@@ -701,13 +737,48 @@ export default function SDRsPage() {
                         <Dialog
                             open={openDeleteConfirm}
                             onClose={() => dispatch(setOpenDeleteConfirm(false))}
+                            PaperProps={{
+                                sx: {
+                                    bgcolor: 'background.paper',
+                                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                                    borderRadius: 2,
+                                }
+                            }}
                         >
-                            <DialogTitle>{t('sdr.confirm_deletion')}</DialogTitle>
-                            <DialogContent>
+                            <DialogTitle
+                                sx={{
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                                    fontSize: '1.25rem',
+                                    fontWeight: 'bold',
+                                    py: 2.5,
+                                }}
+                            >
+                                {t('sdr.confirm_deletion')}
+                            </DialogTitle>
+                            <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3, mt: 2 }}>
                                 {t('sdr.confirm_delete_message')}
                             </DialogContent>
-                            <DialogActions>
-                                <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error" variant="outlined">
+                            <DialogActions
+                                sx={{
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                                    px: 3,
+                                    py: 2.5,
+                                    gap: 2,
+                                }}
+                            >
+                                <Button
+                                    onClick={() => dispatch(setOpenDeleteConfirm(false))}
+                                    variant="outlined"
+                                    sx={{
+                                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                        '&:hover': {
+                                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                        },
+                                    }}
+                                >
                                     {t('sdr.cancel')}
                                 </Button>
                                 <Button
