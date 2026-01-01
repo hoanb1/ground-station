@@ -362,7 +362,7 @@ const AboutPage = () => {
 
                         <Grid container spacing={3}>
                             {/* Backend Technologies */}
-                            <Grid size={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Card elevation={1} sx={{ p: 2, height: '100%' }}>
                                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: theme.palette.primary.main, display: 'flex', alignItems: 'center' }}>
                                         <StorageIcon sx={{ mr: 1 }} fontSize="small" />
@@ -394,7 +394,7 @@ const AboutPage = () => {
                             </Grid>
 
                             {/* Frontend Technologies */}
-                            <Grid size={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Card elevation={1} sx={{ p: 2, height: '100%' }}>
                                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: theme.palette.secondary.main, display: 'flex', alignItems: 'center' }}>
                                         <WebIcon sx={{ mr: 1 }} fontSize="small" />
