@@ -36,6 +36,9 @@ const VfoAccordion = ({
     onTranscriptionToggle,
     geminiConfigured,
     deepgramConfigured,
+    centerFrequency,
+    sampleRate,
+    onCenterFrequencyChange,
 }) => {
     const { t } = useTranslation('waterfall');
 
@@ -213,6 +216,9 @@ const VfoAccordion = ({
                         onOpenDecoderParamsDialog={handleOpenDecoderParams}
                         onOpenTranscriptionParamsDialog={handleOpenTranscriptionParams}
                         getVFODecoderInfo={getVFODecoderInfo}
+                        centerFrequency={centerFrequency}
+                        sampleRate={sampleRate}
+                        onCenterFrequencyChange={onCenterFrequencyChange}
                     />
                 ))}
             </AccordionDetails>

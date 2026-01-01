@@ -776,6 +776,12 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     onTranscriptionToggle={handleTranscriptionToggle}
                     geminiConfigured={geminiConfigured}
                     deepgramConfigured={deepgramConfigured}
+                    centerFrequency={centerFrequency}
+                    sampleRate={sampleRate}
+                    onCenterFrequencyChange={(newFreq) => {
+                        dispatch(setCenterFrequency(newFreq));
+                        sendSDRConfigToBackend({centerFrequency: newFreq});
+                    }}
                 />
 
                 <FftAccordion

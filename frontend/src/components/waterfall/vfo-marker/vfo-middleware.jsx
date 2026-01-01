@@ -65,11 +65,51 @@ const filterUIOnlyFields = (vfoState) => {
 };
 
 const backendSyncMiddleware = (store) => (next) => (action) => {
-    const result = next(action);
-    const state = store.getState();
+    // Get state BEFORE action is processed for VFO activation checks
+    const stateBefore = store.getState();
 
     // Use the socket from the module variable instead of state
     const socket = socketInstance;
+
+    if (!socket) {
+        console.warn('Socket not available for backend sync');
+        return next(action);
+    }
+
+    // Handle VFO activation - check BEFORE processing action
+    if (action.type === 'vfo/setVfoActive') {
+        const vfoNumber = action.payload;
+        const vfoState = stateBefore.vfo.vfoMarkers[vfoNumber];
+
+        // Check if VFO frequency is within current SDR bandwidth
+        const centerFrequency = stateBefore.waterfall.centerFrequency;
+        const sampleRate = stateBefore.waterfall.sampleRate;
+        const vfoFrequency = vfoState.frequency;
+
+        // Calculate SDR bandwidth limits
+        const bandwidthStart = centerFrequency - (sampleRate / 2);
+        const bandwidthEnd = centerFrequency + (sampleRate / 2);
+
+        // Check if frequency is outside bandwidth or null
+        const isOutsideBandwidth = vfoFrequency === null ||
+                                   vfoFrequency < bandwidthStart ||
+                                   vfoFrequency > bandwidthEnd;
+
+        if (isOutsideBandwidth) {
+            // VFO is outside bandwidth or uninitialized - reset to center and unlock
+            store.dispatch(setVFOProperty({
+                vfoNumber: vfoNumber,
+                updates: {
+                    frequency: centerFrequency,
+                    lockedTransmitterId: 'none',
+                    frequencyOffset: 0
+                }
+            }));
+        }
+    }
+
+    const result = next(action);
+    const state = store.getState();
 
     if (!socket) {
         console.warn('Socket not available for backend sync');
@@ -173,7 +213,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         }
     }
 
-    // Handle VFO activation
+    // Handle VFO activation - send state to backend
     if (action.type === 'vfo/setVfoActive') {
         const vfoNumber = action.payload;
         const vfoState = state.vfo.vfoMarkers[vfoNumber];

@@ -18,7 +18,10 @@ export const TransmitterLockSelect = ({
     vfoActive,
     lockedTransmitterId,
     transmitters,
-    onVFOPropertyChange
+    onVFOPropertyChange,
+    centerFrequency,
+    sampleRate,
+    onCenterFrequencyChange
 }) => {
     const { t } = useTranslation('waterfall');
 
@@ -29,9 +32,25 @@ export const TransmitterLockSelect = ({
             // Locking to a transmitter - set frequency and lock, but don't change mode
             const transmitter = transmitters.find(tx => tx.id === transmitterId);
             if (transmitter) {
+                const txFrequency = transmitter.downlink_observed_freq;
+
+                // Check if transmitter frequency is within current SDR bandwidth
+                const bandwidthStart = centerFrequency - (sampleRate / 2);
+                const bandwidthEnd = centerFrequency + (sampleRate / 2);
+                const isOutsideBandwidth = txFrequency < bandwidthStart || txFrequency > bandwidthEnd;
+
+                if (isOutsideBandwidth && onCenterFrequencyChange) {
+                    // Calculate offset to avoid DC spike at center
+                    // Offset by 25% of sample rate to move target signal away from center
+                    const offsetHz = sampleRate * 0.25;
+                    const newCenterFrequency = txFrequency + offsetHz;
+                    onCenterFrequencyChange(newCenterFrequency);
+                }
+
+                // Lock VFO to transmitter
                 onVFOPropertyChange(vfoIndex, {
                     lockedTransmitterId: transmitterId,
-                    frequency: transmitter.downlink_observed_freq,
+                    frequency: txFrequency,
                     frequencyOffset: 0
                 });
             }

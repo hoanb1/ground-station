@@ -45,7 +45,10 @@ export const VfoTabPanel = ({
     onOpenTransmittersDialog,
     onOpenDecoderParamsDialog,
     onOpenTranscriptionParamsDialog,
-    getVFODecoderInfo
+    getVFODecoderInfo,
+    centerFrequency,
+    sampleRate,
+    onCenterFrequencyChange
 }) => {
     const vfo = vfoMarkers[vfoIndex];
     const decoderInfo = getVFODecoderInfo(vfoIndex);
@@ -117,6 +120,9 @@ export const VfoTabPanel = ({
                 lockedTransmitterId={vfo?.lockedTransmitterId}
                 transmitters={transmitters}
                 onVFOPropertyChange={onVFOPropertyChange}
+                centerFrequency={centerFrequency}
+                sampleRate={sampleRate}
+                onCenterFrequencyChange={onCenterFrequencyChange}
             />
             <TransmitterEditLink
                 targetSatelliteName={targetSatelliteName}
