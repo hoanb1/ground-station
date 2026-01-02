@@ -261,23 +261,88 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect }) => {
     );
 };
 
-const PassSelector = ({ onPassSelect }) => {
+const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { passes, passesLoading, satelliteId, selectedPassId } = useSelector(
         (state) => state.scheduler?.satelliteSelection || {}
     );
     const observations = useSelector((state) => state.scheduler?.observations || []);
+    const [hasSetInitialPass, setHasSetInitialPass] = React.useState(false);
+
+    // Detect if we're waiting for the correct satellite's passes
+    const hasWrongSatellitePasses = React.useMemo(() => {
+        if (!initialPass || passes.length === 0) return false;
+
+        // Check if any pass matches the initialPass timestamp
+        const hasMatch = passes.some(p => {
+            const passStartTime = new Date(p.event_start).getTime();
+            const initialStartTime = new Date(initialPass.event_start).getTime();
+            return Math.abs(passStartTime - initialStartTime) < 1000;
+        });
+
+        // If we have passes but no match, we have the wrong satellite's passes
+        return !hasMatch;
+    }, [passes, initialPass]);
+
+    // Calculate the effective selected pass ID (either from Redux or matched by timestamp)
+    const effectiveSelectedPassId = React.useMemo(() => {
+        // First try to find by the stored ID
+        let found = passes.find(p => p.id === selectedPassId);
+
+        // If not found by ID but we have an initialPass, try matching by timestamp
+        if (!found && initialPass && passes.length > 0) {
+            found = passes.find(p => {
+                const passStartTime = new Date(p.event_start).getTime();
+                const initialStartTime = new Date(initialPass.event_start).getTime();
+                return Math.abs(passStartTime - initialStartTime) < 1000;
+            });
+        }
+
+        return found ? found.id : '';
+    }, [passes, selectedPassId, initialPass]);
 
     // Fetch passes when satellite changes
     React.useEffect(() => {
+        console.log('*** Fetch passes effect - satelliteId:', satelliteId, 'socket:', !!socket);
         if (satelliteId && socket) {
+            console.log('*** Fetching passes for satellite');
             dispatch(fetchNextPassesForScheduler({ socket, noradId: satelliteId, hours: 72 }));
+            setHasSetInitialPass(false);
         } else {
             // Clear passes if no satellite selected
+            console.log('*** CLEARING selectedPassId because no satellite');
             dispatch(setSelectedPassId(null));
         }
     }, [satelliteId, socket, dispatch]);
+
+    // Set initial pass after passes are loaded
+    React.useEffect(() => {
+        console.log('*** Set initial pass effect - initialPass:', !!initialPass, 'passes:', passes.length, 'hasSetInitialPass:', hasSetInitialPass, 'satelliteId:', satelliteId);
+        if (initialPass && passes.length > 0 && !hasSetInitialPass && satelliteId) {
+            // Try to find a matching pass by comparing start times (with a small tolerance for time differences)
+            const matchingPass = passes.find(p => {
+                const passStartTime = new Date(p.event_start).getTime();
+                const initialStartTime = new Date(initialPass.event_start).getTime();
+                const timeDiff = Math.abs(passStartTime - initialStartTime);
+                // Allow 1 second tolerance for rounding differences
+                return timeDiff < 1000;
+            });
+
+            if (matchingPass) {
+                console.log('*** SETTING selectedPassId to:', matchingPass.id.substring(0, 50) + '...');
+                dispatch(setSelectedPassId(matchingPass.id));
+                setHasSetInitialPass(true);
+                // Also call the callback
+                if (onPassSelect) {
+                    onPassSelect(matchingPass);
+                }
+            } else {
+                console.log('*** No matching pass found');
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialPass?.event_start, passes.length, hasSetInitialPass, satelliteId, dispatch]);
 
     const handlePassClick = (pass) => {
         const newPassId = pass ? pass.id : null;
@@ -293,6 +358,11 @@ const PassSelector = ({ onPassSelect }) => {
         const passEnd = new Date(pass.event_end);
 
         return observations.some(obs => {
+            // Skip the observation we're currently editing
+            if (currentObservationId && obs.id === currentObservationId) {
+                return false;
+            }
+
             if (!obs.pass) return false;
             const obsStart = new Date(obs.pass.event_start);
             const obsEnd = new Date(obs.pass.event_end);
@@ -339,13 +409,19 @@ const PassSelector = ({ onPassSelect }) => {
         return null; // Don't show pass selector if no satellite selected
     }
 
+    const isLoading = passesLoading || (satelliteId && passes.length === 0) || hasWrongSatellitePasses;
+
     return (
         <Box>
-            {passesLoading ? (
+            {isLoading ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
                     <CircularProgress size={20} />
                     <Typography variant="body2" color="text.secondary">
-                        Loading passes...
+                        {hasWrongSatellitePasses
+                            ? 'Loading passes for selected satellite...'
+                            : passesLoading
+                                ? 'Loading passes...'
+                                : 'Fetching satellite passes...'}
                     </Typography>
                 </Box>
             ) : passes.length === 0 ? (
@@ -356,7 +432,7 @@ const PassSelector = ({ onPassSelect }) => {
                 <FormControl fullWidth size="small">
                     <InputLabel>Select Pass</InputLabel>
                     <Select
-                        value={selectedPassId || ''}
+                        value={effectiveSelectedPassId}
                         onChange={(e) => {
                             const passId = e.target.value;
                             const selectedPass = passes.find(p => p.id === passId);
@@ -392,22 +468,28 @@ const PassSelector = ({ onPassSelect }) => {
     );
 };
 
-export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSelector = true, initialSatellite = null }) => {
+export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSelector = true, initialSatellite = null, initialPass = null, currentObservationId = null }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const satGroups = useSelector((state) => state.scheduler?.satelliteSelection?.satGroups || []);
     const [hasInitialized, setHasInitialized] = React.useState(false);
-    
+
     // Initialize satellite selector with initialSatellite when provided
     useEffect(() => {
         if (initialSatellite && socket && satGroups.length > 0 && !hasInitialized) {
             const noradId = initialSatellite.norad_id;
+
+            // Immediately set the satellite ID to trigger pass fetching
+            dispatch(setSatelliteId(noradId));
+            dispatch(setSelectedFromSearch(false));
+            setHasInitialized(true);
+
             let foundGroup = false;
-            
-            // Search through groups to find one containing this satellite
+
+            // Search through groups to find one containing this satellite (for UI purposes)
             satGroups.forEach((group) => {
                 if (foundGroup) return; // Skip if already found
-                
+
                 socket.emit('data_request', 'get-satellites-for-group-id', group.id, (response) => {
                     if (response.success && !foundGroup) {
                         const found = response.data.find(sat => sat.norad_id === noradId);
@@ -415,24 +497,18 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
                             foundGroup = true;
                             dispatch(setGroupId(group.id));
                             dispatch(setGroupOfSats(response.data));
-                            // Delay setting satellite ID to ensure groupOfSats is populated
-                            setTimeout(() => {
-                                dispatch(setSatelliteId(noradId));
-                                dispatch(setSelectedFromSearch(false));
-                                setHasInitialized(true);
-                            }, 100);
                         }
                     }
                 });
             });
         }
     }, [initialSatellite?.norad_id, socket, satGroups.length, hasInitialized, dispatch]);
-    
+
     // Reset initialization flag when initialSatellite changes
     useEffect(() => {
         setHasInitialized(false);
     }, [initialSatellite?.norad_id]);
-    
+
     return (
         <Stack spacing={2}>
             <SatelliteSearchAutocomplete onSatelliteSelect={onSatelliteSelect} />
@@ -440,7 +516,7 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
                 <SatelliteGroupDropdown onSatelliteSelect={onSatelliteSelect} />
                 <SatelliteDropdown onSatelliteSelect={onSatelliteSelect} />
             </Stack>
-            {showPassSelector && <PassSelector onPassSelect={onPassSelect} />}
+            {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} currentObservationId={currentObservationId} />}
         </Stack>
     );
 };

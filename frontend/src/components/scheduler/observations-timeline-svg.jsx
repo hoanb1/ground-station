@@ -61,7 +61,7 @@ const ObservationsTimeline = () => {
         window.addEventListener('resize', updateWidth);
         return () => window.removeEventListener('resize', updateWidth);
     }, [isExpanded]);
-    const marginTop = 10;
+    const marginTop = 25;
     const marginBottom = 30;
     const barHeight = 30;
     const barSpacing = 5;
@@ -232,6 +232,7 @@ const ObservationsTimeline = () => {
                             const x = (hour / durationHours) * width;
                             const time = new Date(now.getTime() + hour * 60 * 60 * 1000);
                             const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                            const tPlusStr = `T+${Math.floor(hour)}:${String(Math.floor((hour % 1) * 60)).padStart(2, '0')}`;
 
                             return (
                                 <g key={`v-grid-${i}`}>
@@ -246,6 +247,18 @@ const ObservationsTimeline = () => {
                                             opacity="0.2"
                                         />
                                     )}
+                                    {/* T+ time axis at top */}
+                                    <text
+                                        x={x}
+                                        y={marginTop - 5}
+                                        textAnchor="middle"
+                                        fontSize="11"
+                                        fill="currentColor"
+                                        opacity="0.7"
+                                    >
+                                        {tPlusStr}
+                                    </text>
+                                    {/* Absolute time axis at bottom */}
                                     <text
                                         x={x}
                                         y={height - 10}

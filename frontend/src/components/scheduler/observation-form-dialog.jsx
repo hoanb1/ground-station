@@ -198,14 +198,19 @@ const ObservationFormDialog = () => {
         }
     }, [selectedObservation, open]);
 
-    // Clear satellite selection state when opening for new observation
+    // Clear satellite selection state when opening dialog
     useEffect(() => {
-        if (open && !selectedObservation) {
-            dispatch(setSatelliteId(''));
-            dispatch(setGroupId(''));
-            dispatch(setGroupOfSats([]));
-            dispatch(setSelectedFromSearch(false));
+        if (open) {
+            // Always clear the pass ID when opening, it will be re-set if editing
             dispatch(setSelectedPassId(null));
+
+            if (!selectedObservation) {
+                // For new observations, clear everything
+                dispatch(setSatelliteId(''));
+                dispatch(setGroupId(''));
+                dispatch(setGroupOfSats([]));
+                dispatch(setSelectedFromSearch(false));
+            }
         }
     }, [open, selectedObservation, dispatch]);
 
@@ -625,6 +630,9 @@ const ObservationFormDialog = () => {
                             Select a satellite using search or browse by group.
                         </Typography>
                         <SatelliteSelector
+                            initialSatellite={selectedObservation?.satellite}
+                            initialPass={selectedObservation?.pass}
+                            currentObservationId={selectedObservation?.id}
                             onSatelliteSelect={(satellite) => {
                                 setFormData((prev) => ({
                                     ...prev,
