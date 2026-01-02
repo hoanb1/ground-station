@@ -391,6 +391,12 @@ const initialState = {
         passesLoading: false,
         selectedPassId: null,  // Selected pass ID
     },
+    // Timeline view configuration
+    timeline: {
+        durationHours: 24,
+        selectedSatelliteFilter: null,  // null = show all, or norad_id to filter
+        isExpanded: true,  // Whether timeline is visible
+    },
 };
 
 const schedulerSlice = createSlice({
@@ -491,6 +497,16 @@ const schedulerSlice = createSlice({
         setSelectedPassId: (state, action) => {
             state.satelliteSelection.selectedPassId = action.payload;
         },
+        // Timeline actions
+        setTimelineDuration: (state, action) => {
+            state.timeline.durationHours = action.payload;
+        },
+        setTimelineSatelliteFilter: (state, action) => {
+            state.timeline.selectedSatelliteFilter = action.payload;
+        },
+        setTimelineExpanded: (state, action) => {
+            state.timeline.isExpanded = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -579,6 +595,9 @@ export const {
     setSearchLoading,
     setSelectedFromSearch,
     setSelectedPassId,
+    setTimelineDuration,
+    setTimelineSatelliteFilter,
+    setTimelineExpanded,
 } = schedulerSlice.actions;
 
 export default schedulerSlice.reducer;

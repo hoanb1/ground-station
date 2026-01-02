@@ -267,6 +267,7 @@ const PassSelector = ({ onPassSelect }) => {
     const { passes, passesLoading, satelliteId, selectedPassId } = useSelector(
         (state) => state.scheduler?.satelliteSelection || {}
     );
+    const observations = useSelector((state) => state.scheduler?.observations || []);
 
     // Fetch passes when satellite changes
     React.useEffect(() => {
@@ -284,6 +285,21 @@ const PassSelector = ({ onPassSelect }) => {
         if (onPassSelect) {
             onPassSelect(pass);
         }
+    };
+
+    // Check if a pass overlaps with any existing observation
+    const isPassOverlapping = (pass) => {
+        const passStart = new Date(pass.event_start);
+        const passEnd = new Date(pass.event_end);
+
+        return observations.some(obs => {
+            if (!obs.pass) return false;
+            const obsStart = new Date(obs.pass.event_start);
+            const obsEnd = new Date(obs.pass.event_end);
+
+            // Check for any overlap
+            return (passStart < obsEnd && passEnd > obsStart);
+        });
     };
 
     const humanizeTime = (isoString) => {
@@ -325,9 +341,6 @@ const PassSelector = ({ onPassSelect }) => {
 
     return (
         <Box>
-            <Typography variant="subtitle2" gutterBottom>
-                Passes
-            </Typography>
             {passesLoading ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2 }}>
                     <CircularProgress size={20} />
@@ -340,26 +353,40 @@ const PassSelector = ({ onPassSelect }) => {
                     No passes found in the next 72 hours
                 </Typography>
             ) : (
-                <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto' }}>
-                    <List dense>
+                <FormControl fullWidth size="small">
+                    <InputLabel>Select Pass</InputLabel>
+                    <Select
+                        value={selectedPassId || ''}
+                        onChange={(e) => {
+                            const passId = e.target.value;
+                            const selectedPass = passes.find(p => p.id === passId);
+                            handlePassClick(selectedPass);
+                        }}
+                        label="Select Pass"
+                    >
                         {passes.map((pass) => {
                             const info = formatPassInfo(pass);
+                            const isOverlapping = isPassOverlapping(pass);
                             return (
-                                <ListItem key={pass.id} disablePadding>
-                                    <ListItemButton
-                                        selected={selectedPassId === pass.id}
-                                        onClick={() => handlePassClick(pass)}
-                                    >
-                                        <ListItemText
-                                            primary={info.primary}
-                                            secondary={info.secondary}
-                                        />
-                                    </ListItemButton>
-                                </ListItem>
+                                <MenuItem
+                                    key={pass.id}
+                                    value={pass.id}
+                                    disabled={isOverlapping}
+                                >
+                                    <Box>
+                                        <Typography variant="body2">
+                                            {info.primary}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {info.secondary}
+                                            {isOverlapping && ' • ⚠ Conflicts with existing observation'}
+                                        </Typography>
+                                    </Box>
+                                </MenuItem>
                             );
                         })}
-                    </List>
-                </Paper>
+                    </Select>
+                </FormControl>
             )}
         </Box>
     );

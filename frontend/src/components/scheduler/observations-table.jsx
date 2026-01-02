@@ -218,6 +218,9 @@ const ObservationsTable = () => {
                             } else if (task.type === 'audio_recording') {
                                 label = 'Audio';
                                 color = 'secondary';
+                            } else if (task.type === 'transcription') {
+                                label = 'Transcription';
+                                color = 'info';
                             } else if (task.type === 'iq_recording') {
                                 label = 'IQ';
                                 color = 'default';

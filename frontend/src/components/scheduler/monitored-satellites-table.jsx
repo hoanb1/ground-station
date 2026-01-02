@@ -41,6 +41,7 @@ import {
     Delete as DeleteIcon,
     Edit as EditIcon,
     Add as AddIcon,
+    Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
 import {
@@ -55,6 +56,7 @@ const MonitoredSatellitesTable = () => {
     const { socket } = useSocket();
     const [selectedIds, setSelectedIds] = useState([]);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+    const [openRegenerateConfirm, setOpenRegenerateConfirm] = useState(false);
 
     const monitoredSatellites = useSelector((state) => state.scheduler?.monitoredSatellites || []);
     const loading = useSelector((state) => state.scheduler?.monitoredSatellitesLoading || false);
@@ -79,6 +81,15 @@ const MonitoredSatellitesTable = () => {
 
     const handleToggleEnabled = (id, currentEnabled) => {
         dispatch(toggleMonitoredSatelliteEnabled({ id, enabled: !currentEnabled }));
+    };
+
+    const handleRegenerateConfirm = () => {
+        if (selectedIds.length > 0 && socket) {
+            selectedIds.forEach(id => {
+                socket.emit('regenerate_observations', { monitored_satellite_id: id });
+            });
+            setOpenRegenerateConfirm(false);
+        }
     };
 
     const columns = [
@@ -159,6 +170,9 @@ const MonitoredSatellitesTable = () => {
                             } else if (task.type === 'audio_recording') {
                                 label = 'Audio';
                                 color = 'secondary';
+                            } else if (task.type === 'transcription') {
+                                label = 'Transcription';
+                                color = 'info';
                             } else if (task.type === 'iq_recording') {
                                 label = 'IQ';
                                 color = 'default';
@@ -259,6 +273,15 @@ const MonitoredSatellitesTable = () => {
                 </Button>
                 <Button
                     variant="contained"
+                    color="warning"
+                    startIcon={<RefreshIcon />}
+                    onClick={() => setOpenRegenerateConfirm(true)}
+                    disabled={selectedIds.length === 0}
+                >
+                    Re-Generate
+                </Button>
+                <Button
+                    variant="contained"
                     color="error"
                     startIcon={<DeleteIcon />}
                     onClick={() => setOpenDeleteConfirm(true)}
@@ -280,6 +303,22 @@ const MonitoredSatellitesTable = () => {
                     </Button>
                     <Button variant="contained" onClick={handleDelete} color="error">
                         Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Re-Generate Confirmation Dialog */}
+            <Dialog open={openRegenerateConfirm} onClose={() => setOpenRegenerateConfirm(false)}>
+                <DialogTitle>Confirm Re-Generation</DialogTitle>
+                <DialogContent>
+                    Are you sure you want to re-generate observations for {selectedIds.length} monitored satellite(s)? This will overwrite any existing scheduled observations with new ones generated now.
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenRegenerateConfirm(false)} variant="outlined">
+                        Cancel
+                    </Button>
+                    <Button variant="contained" onClick={handleRegenerateConfirm} color="warning">
+                        Re-Generate
                     </Button>
                 </DialogActions>
             </Dialog>

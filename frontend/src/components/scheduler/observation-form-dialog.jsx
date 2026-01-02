@@ -39,6 +39,7 @@ import {
     Checkbox,
     FormControlLabel,
     Autocomplete,
+    ListSubheader,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
@@ -76,6 +77,15 @@ const DEMODULATOR_TYPES = [
     { value: 'cw', label: 'CW (Continuous Wave)' },
 ];
 
+const MODULATION_TYPES = [
+    { value: 'fm', label: 'FM (Frequency Modulation)' },
+    { value: 'am', label: 'AM (Amplitude Modulation)' },
+    { value: 'ssb', label: 'SSB (Single Sideband)' },
+    { value: 'cw', label: 'CW (Continuous Wave)' },
+    { value: 'fsk', label: 'FSK (Frequency Shift Keying)' },
+    { value: 'psk', label: 'PSK (Phase Shift Keying)' },
+];
+
 const SAMPLE_RATES = [
     { value: 500000, label: '500 kHz' },
     { value: 1000000, label: '1 MHz' },
@@ -90,6 +100,43 @@ const SAMPLE_RATES = [
     { value: 12000000, label: '12 MHz' },
     { value: 16000000, label: '16 MHz' },
 ];
+
+// Helper function to determine band from frequency in Hz
+const getBand = (frequencyHz) => {
+    const freqMHz = frequencyHz / 1000000;
+    if (freqMHz >= 30 && freqMHz < 300) return 'VHF';
+    if (freqMHz >= 300 && freqMHz < 1000) return 'UHF';
+    if (freqMHz >= 1000 && freqMHz < 2000) return 'L-Band';
+    if (freqMHz >= 2000 && freqMHz < 4000) return 'S-Band';
+    if (freqMHz >= 4000 && freqMHz < 8000) return 'C-Band';
+    if (freqMHz >= 8000 && freqMHz < 12000) return 'X-Band';
+    if (freqMHz < 30) return 'HF';
+    return 'Other';
+};
+
+// Helper function to group transmitters by band
+const groupTransmittersByBand = (transmitters) => {
+    const bandOrder = ['HF', 'VHF', 'UHF', 'L-Band', 'S-Band', 'C-Band', 'X-Band', 'Other'];
+    const grouped = {};
+
+    transmitters.forEach(transmitter => {
+        const band = getBand(transmitter.downlink_low || 0);
+        if (!grouped[band]) {
+            grouped[band] = [];
+        }
+        grouped[band].push(transmitter);
+    });
+
+    // Sort transmitters within each band by frequency
+    Object.keys(grouped).forEach(band => {
+        grouped[band].sort((a, b) => (a.downlink_low || 0) - (b.downlink_low || 0));
+    });
+
+    // Return bands in order
+    return bandOrder
+        .filter(band => grouped[band])
+        .map(band => ({ band, transmitters: grouped[band] }));
+};
 
 const ObservationFormDialog = () => {
     const dispatch = useDispatch();
@@ -147,8 +194,9 @@ const ObservationFormDialog = () => {
                 rotator: { id: null, tracking_enabled: false },
                 rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
             });
+            setExpandedTasks({});
         }
-    }, [selectedObservation]);
+    }, [selectedObservation, open]);
 
     // Clear satellite selection state when opening for new observation
     useEffect(() => {
@@ -216,6 +264,15 @@ const ObservationFormDialog = () => {
                     config: {},
                 };
                 break;
+            case 'transcription':
+                newTask = {
+                    type: 'transcription',
+                    config: {
+                        transmitter_id: '',
+                        modulation: 'fm',
+                    },
+                };
+                break;
             default:
                 return;
         }
@@ -281,8 +338,16 @@ const ObservationFormDialog = () => {
             const transmitterName = transmitter?.description || 'No transmitter';
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
             const demodType = DEMODULATOR_TYPES.find(d => d.value === task.config.demodulator)?.label || task.config.demodulator?.toUpperCase();
-            
+
             const parts = [transmitterName, freqMHz, demodType, 'WAV'].filter(Boolean);
+            return parts.join(' • ');
+        } else if (task.type === 'transcription') {
+            const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+            const transmitterName = transmitter?.description || 'No transmitter';
+            const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
+            const modType = MODULATION_TYPES.find(d => d.value === task.config.modulation)?.label || task.config.modulation?.toUpperCase();
+
+            const parts = [transmitterName, freqMHz, modType, 'Transcription'].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'iq_recording') {
             return 'SigMF recording (cf32_le)';
@@ -690,6 +755,13 @@ const ObservationFormDialog = () => {
                                 <Button
                                     size="small"
                                     startIcon={<AddIcon />}
+                                    onClick={() => handleAddTask('transcription')}
+                                >
+                                    Transcription
+                                </Button>
+                                <Button
+                                    size="small"
+                                    startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('iq_recording')}
                                 >
                                     IQ Recording
@@ -699,7 +771,7 @@ const ObservationFormDialog = () => {
 
                         {formData.tasks.length === 0 ? (
                             <Typography variant="caption" color="text.secondary">
-                                No tasks added. Add decoders, audio recording, or IQ recording tasks.
+                                No tasks added. Add decoders, audio recording, transcription, or IQ recording tasks.
                             </Typography>
                         ) : (
                             <Stack spacing={2}>
@@ -711,7 +783,19 @@ const ObservationFormDialog = () => {
                                             border: '1px solid',
                                             borderColor: 'divider',
                                             borderRadius: 1,
-                                            bgcolor: 'background.paper',
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                                            transition: 'background-color 0.2s',
+                                            cursor: !expandedTasks[index] ? 'pointer' : 'default',
+                                            ...(!expandedTasks[index] && {
+                                                '&:hover': {
+                                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
+                                                },
+                                            }),
+                                        }}
+                                        onClick={(e) => {
+                                            if (!expandedTasks[index] && !e.target.closest('button')) {
+                                                toggleTaskExpanded(index);
+                                            }
                                         }}
                                     >
                                         <Box
@@ -724,8 +808,8 @@ const ObservationFormDialog = () => {
                                                 display="flex"
                                                 alignItems="center"
                                                 gap={1}
-                                                sx={{ cursor: 'pointer', flex: 1 }}
-                                                onClick={() => toggleTaskExpanded(index)}
+                                                sx={{ flex: 1 }}
+                                                onClick={() => expandedTasks[index] && toggleTaskExpanded(index)}
                                             >
                                                 <IconButton
                                                     size="small"
@@ -737,14 +821,24 @@ const ObservationFormDialog = () => {
                                                     <ExpandMoreIcon fontSize="small" />
                                                 </IconButton>
                                                 <Chip
-                                                    label={task.type === 'decoder' ? 'Decoder' : task.type === 'audio_recording' ? 'Audio Recording' : 'IQ Recording'}
+                                                    label={
+                                                        task.type === 'decoder' ? 'Decoder' :
+                                                        task.type === 'audio_recording' ? 'Audio Recording' :
+                                                        task.type === 'transcription' ? 'Transcription' :
+                                                        'IQ Recording'
+                                                    }
                                                     size="small"
-                                                    color={task.type === 'decoder' ? 'primary' : task.type === 'audio_recording' ? 'secondary' : 'default'}
+                                                    color={
+                                                        task.type === 'decoder' ? 'primary' :
+                                                        task.type === 'audio_recording' ? 'secondary' :
+                                                        task.type === 'transcription' ? 'info' :
+                                                        'default'
+                                                    }
                                                     variant="filled"
                                                 />
                                                 {!expandedTasks[index] && (
                                                     <Typography
-                                                        variant="caption"
+                                                        variant="body2"
                                                         color="text.secondary"
                                                         sx={{ ml: 1 }}
                                                     >
@@ -788,16 +882,31 @@ const ObservationFormDialog = () => {
                                                                         No transmitters available
                                                                     </MenuItem>
                                                                 ) : (
-                                                                    availableTransmitters.map((transmitter) => {
-                                                                        const freqMHz = transmitter.downlink_low
-                                                                            ? (transmitter.downlink_low / 1000000).toFixed(3)
-                                                                            : 'N/A';
-                                                                        return (
-                                                                            <MenuItem key={transmitter.id} value={transmitter.id}>
-                                                                                {transmitter.description || 'Unknown'} - {freqMHz} MHz ({transmitter.mode || 'N/A'})
-                                                                            </MenuItem>
-                                                                        );
-                                                                    })
+                                                                    groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
+                                                                        <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                        ...transmitters.map((transmitter) => {
+                                                                            const freqMHz = transmitter.downlink_low
+                                                                                ? (transmitter.downlink_low / 1000000).toFixed(3)
+                                                                                : 'N/A';
+                                                                            return (
+                                                                                <MenuItem key={transmitter.id} value={transmitter.id}>
+                                                                                    <Box>
+                                                                                        <Typography variant="body2">
+                                                                                            {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                        </Typography>
+                                                                                        <Typography variant="caption" color="text.secondary">
+                                                                                            {[
+                                                                                                transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                                transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                                transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
+                                                                                                transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                            ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                        </Typography>
+                                                                                    </Box>
+                                                                                </MenuItem>
+                                                                            );
+                                                                        })
+                                                                    ])
                                                                 )}
                                                             </Select>
                                                         </FormControl>
@@ -858,16 +967,30 @@ const ObservationFormDialog = () => {
                                                                     No transmitters available
                                                                 </MenuItem>
                                                             ) : (
-                                                                availableTransmitters.map((transmitter) => {
-                                                                    const freqMHz = transmitter.downlink_low
-                                                                        ? (transmitter.downlink_low / 1000000).toFixed(3)
-                                                                        : 'N/A';
-                                                                    return (
-                                                                        <MenuItem key={transmitter.id} value={transmitter.id}>
-                                                                            {transmitter.description || 'Unknown'} - {freqMHz} MHz ({transmitter.mode || 'N/A'})
-                                                                        </MenuItem>
-                                                                    );
-                                                                })
+                                                                groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
+                                                                    <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                    ...transmitters.map((transmitter) => {
+                                                                        const freqMHz = transmitter.downlink_low
+                                                                            ? (transmitter.downlink_low / 1000000).toFixed(3)
+                                                                            : 'N/A';
+                                                                        return (
+                                                                            <MenuItem key={transmitter.id} value={transmitter.id}>
+                                                                                <Box>
+                                                                                    <Typography variant="body2">
+                                                                                        {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                    </Typography>
+                                                                                    <Typography variant="caption" color="text.secondary">
+                                                                                        {[
+                                                                                            transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                            transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                            transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                        ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                    </Typography>
+                                                                                </Box>
+                                                                            </MenuItem>
+                                                                        );
+                                                                    })
+                                                                ])
                                                             )}
                                                         </Select>
                                                     </FormControl>
@@ -899,6 +1022,83 @@ const ObservationFormDialog = () => {
                                                 </>
                                             )}
 
+                                            {task.type === 'transcription' && (
+                                                <>
+                                                    <FormControl fullWidth size="small">
+                                                        <InputLabel>Transmitter</InputLabel>
+                                                        <Select
+                                                            value={task.config.transmitter_id || ''}
+                                                            onChange={(e) =>
+                                                                handleTaskConfigChange(
+                                                                    index,
+                                                                    'transmitter_id',
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            label="Transmitter"
+                                                            disabled={availableTransmitters.length === 0}
+                                                        >
+                                                            {availableTransmitters.length === 0 ? (
+                                                                <MenuItem disabled value="">
+                                                                    No transmitters available
+                                                                </MenuItem>
+                                                            ) : (
+                                                                groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
+                                                                    <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                    ...transmitters.map((transmitter) => {
+                                                                        const freqMHz = transmitter.downlink_low
+                                                                            ? (transmitter.downlink_low / 1000000).toFixed(3)
+                                                                            : 'N/A';
+                                                                        return (
+                                                                            <MenuItem key={transmitter.id} value={transmitter.id}>
+                                                                                <Box>
+                                                                                    <Typography variant="body2">
+                                                                                        {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                    </Typography>
+                                                                                    <Typography variant="caption" color="text.secondary">
+                                                                                        {[
+                                                                                            transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                            transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                            transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
+                                                                                            transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                        ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                    </Typography>
+                                                                                </Box>
+                                                                            </MenuItem>
+                                                                        );
+                                                                    })
+                                                                ])
+                                                            )}
+                                                        </Select>
+                                                    </FormControl>
+
+                                                    <FormControl fullWidth size="small">
+                                                        <InputLabel>Modulation</InputLabel>
+                                                        <Select
+                                                            value={task.config.modulation || 'fm'}
+                                                            onChange={(e) =>
+                                                                handleTaskConfigChange(
+                                                                    index,
+                                                                    'modulation',
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            label="Modulation"
+                                                        >
+                                                            {MODULATION_TYPES.map((type) => (
+                                                                <MenuItem key={type.value} value={type.value}>
+                                                                    {type.label}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Audio transcription will be performed using the selected modulation type.
+                                                    </Typography>
+                                                </>
+                                            )}
+
                                             {task.type === 'iq_recording' && (
                                                 <Typography variant="caption" color="text.secondary">
                                                     IQ data will be recorded in SigMF format (cf32_le). The recording uses the SDR sample rate configured above.
@@ -917,7 +1117,7 @@ const ObservationFormDialog = () => {
                     {/* Rotator Selection */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Rotator (Optional)
+                            Rotator
                         </Typography>
                         <Stack spacing={2}>
                             <FormControl fullWidth>

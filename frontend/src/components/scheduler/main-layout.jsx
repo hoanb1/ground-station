@@ -26,6 +26,7 @@ import ObservationsTable from './observations-table.jsx';
 import MonitoredSatellitesTable from './monitored-satellites-table.jsx';
 import ObservationFormDialog from './observation-form-dialog.jsx';
 import MonitoredSatelliteDialog from './monitored-satellite-dialog.jsx';
+import ObservationsTimeline from './observations-timeline-svg.jsx';
 import { observationStatusUpdated, loadSampleData } from './scheduler-slice.jsx';
 
 export default function ScheduledObservationsLayout() {
@@ -80,13 +81,16 @@ export default function ScheduledObservationsLayout() {
                 </IconButton>
             </Tooltip>
 
+            {/* Timeline View */}
+            <ObservationsTimeline />
+
             {/* Monitored Satellites - Top Section */}
-            <Box sx={{ height: '50%', minHeight: '450px', maxHeight: '600px' }}>
+            <Box sx={{ minHeight: '600px', maxHeight: '750px' }}>
                 <MonitoredSatellitesTable />
             </Box>
 
             {/* Scheduled Observations - Bottom Section */}
-            <Box sx={{ flexGrow: 1, minHeight: '300px', overflow: 'hidden' }}>
+            <Box sx={{ minHeight: '600px', overflow: 'hidden' }}>
                 <ObservationsTable />
             </Box>
 
