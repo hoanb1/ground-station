@@ -191,6 +191,7 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect }) => {
 
                 // Step 1: Set the group ID first
                 dispatch(setGroupId(firstGroup.id));
+                dispatch(setSelectedFromSearch(true));
 
                 // Step 2: Fetch satellites for that group
                 if (socket) {
@@ -201,18 +202,29 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect }) => {
 
                             // Step 4: Now set the selected satellite ID (after group satellites are loaded)
                             dispatch(setSatelliteId(selectedSatellite.norad_id));
+
+                            // Step 5: Call onSatelliteSelect AFTER Redux state is updated
+                            // This ensures groupId is available when the dialog reads it
+                            if (onSatelliteSelect) {
+                                console.log('*** Search: Calling onSatelliteSelect after group loaded');
+                                onSatelliteSelect(selectedSatellite);
+                            }
                         }
                     });
+                } else {
+                    // No socket, call callback anyway
+                    if (onSatelliteSelect) {
+                        onSatelliteSelect(selectedSatellite);
+                    }
                 }
             } else {
                 // No groups, just set the satellite ID
                 dispatch(setSatelliteId(selectedSatellite.norad_id));
-            }
+                dispatch(setSelectedFromSearch(true));
 
-            dispatch(setSelectedFromSearch(true));
-
-            if (onSatelliteSelect) {
-                onSatelliteSelect(selectedSatellite);
+                if (onSatelliteSelect) {
+                    onSatelliteSelect(selectedSatellite);
+                }
             }
         } else {
             // Clear selection when autocomplete is cleared
@@ -409,7 +421,9 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
         return null; // Don't show pass selector if no satellite selected
     }
 
-    const isLoading = passesLoading || (satelliteId && passes.length === 0) || hasWrongSatellitePasses;
+    // Show loading only if actually loading or no passes yet, but NOT if we have passes
+    // Even if initialPass doesn't match, show the passes we have
+    const isLoading = passesLoading || (satelliteId && passes.length === 0 && !passesLoading);
 
     return (
         <Box>
@@ -429,40 +443,70 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
                     No passes found in the next 72 hours
                 </Typography>
             ) : (
-                <FormControl fullWidth size="small">
-                    <InputLabel>Select Pass</InputLabel>
-                    <Select
-                        value={effectiveSelectedPassId}
-                        onChange={(e) => {
-                            const passId = e.target.value;
-                            const selectedPass = passes.find(p => p.id === passId);
-                            handlePassClick(selectedPass);
-                        }}
-                        label="Select Pass"
-                    >
-                        {passes.map((pass) => {
-                            const info = formatPassInfo(pass);
-                            const isOverlapping = isPassOverlapping(pass);
-                            return (
-                                <MenuItem
-                                    key={pass.id}
-                                    value={pass.id}
-                                    disabled={isOverlapping}
-                                >
-                                    <Box>
-                                        <Typography variant="body2">
-                                            {info.primary}
+                <Box>
+                    {/* Show message if stored pass is not in future passes */}
+                    {initialPass && !effectiveSelectedPassId && (
+                        <Box sx={{ mb: 2, p: 1.5, bgcolor: 'info.light', borderRadius: 1, border: 1, borderColor: 'info.main' }}>
+                            <Typography variant="body2" fontWeight="bold" gutterBottom>
+                                ℹ️ This observation uses an expired pass
+                            </Typography>
+                            <Typography variant="caption" display="block" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                Renew this observation by selecting a new pass from the list below.
+                            </Typography>
+                        </Box>
+                    )}
+
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Select Pass</InputLabel>
+                        <Select
+                            value={effectiveSelectedPassId || (initialPass && !effectiveSelectedPassId ? 'expired' : '')}
+                            onChange={(e) => {
+                                const passId = e.target.value;
+                                if (passId === 'expired') return; // Don't allow selecting expired pass
+                                const selectedPass = passes.find(p => p.id === passId);
+                                handlePassClick(selectedPass);
+                            }}
+                            label="Select Pass"
+                        >
+                            {/* Show expired pass at the top if present */}
+                            {initialPass && !effectiveSelectedPassId && (
+                                <MenuItem value="expired" disabled>
+                                    <Box sx={{ opacity: 0.7 }}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            [Expired] {new Date(initialPass.event_start).toLocaleString()}
                                         </Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            {info.secondary}
-                                            {isOverlapping && ' • ⚠ Conflicts with existing observation'}
+                                            Peak El: {initialPass.peak_altitude?.toFixed(1)}° • This pass has expired
                                         </Typography>
                                     </Box>
                                 </MenuItem>
-                            );
-                        })}
-                    </Select>
-                </FormControl>
+                            )}
+
+                            {/* Future passes */}
+                            {passes.map((pass) => {
+                                const info = formatPassInfo(pass);
+                                const isOverlapping = isPassOverlapping(pass);
+                                return (
+                                    <MenuItem
+                                        key={pass.id}
+                                        value={pass.id}
+                                        disabled={isOverlapping}
+                                    >
+                                        <Box>
+                                            <Typography variant="body2">
+                                                {info.primary}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {info.secondary}
+                                                {isOverlapping && ' • ⚠ Conflicts with existing observation'}
+                                            </Typography>
+                                        </Box>
+                                    </MenuItem>
+                                );
+                            })}
+                        </Select>
+                    </FormControl>
+                </Box>
             )}
         </Box>
     );
@@ -478,29 +522,83 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
     useEffect(() => {
         if (initialSatellite && socket && satGroups.length > 0 && !hasInitialized) {
             const noradId = initialSatellite.norad_id;
+            const storedGroupId = initialSatellite.group_id;
+
+            console.log('*** SatelliteSelector: Initializing with satellite:', noradId, initialSatellite.name, 'group_id:', storedGroupId);
 
             // Immediately set the satellite ID to trigger pass fetching
             dispatch(setSatelliteId(noradId));
             dispatch(setSelectedFromSearch(false));
+
+            // Temporarily add the initialSatellite to groupOfSats so it shows in the dropdown
+            dispatch(setGroupOfSats([initialSatellite]));
+
             setHasInitialized(true);
 
-            let foundGroup = false;
-
-            // Search through groups to find one containing this satellite (for UI purposes)
-            satGroups.forEach((group) => {
-                if (foundGroup) return; // Skip if already found
-
-                socket.emit('data_request', 'get-satellites-for-group-id', group.id, (response) => {
-                    if (response.success && !foundGroup) {
-                        const found = response.data.find(sat => sat.norad_id === noradId);
+            // If we have a stored group_id, load that group directly
+            if (storedGroupId) {
+                console.log('*** SatelliteSelector: Loading stored group:', storedGroupId);
+                socket.emit('data_request', 'get-satellites-for-group-id', storedGroupId, (response) => {
+                    console.log('*** SatelliteSelector: Response for group:', response);
+                    if (response.success) {
+                        console.log('*** SatelliteSelector: Looking for noradId:', noradId, 'type:', typeof noradId);
+                        console.log('*** SatelliteSelector: First few satellites:', response.data.slice(0, 3).map(s => ({norad_id: s.norad_id, type: typeof s.norad_id})));
+                        const found = response.data.find(sat => sat.norad_id === noradId || sat.norad_id == noradId || String(sat.norad_id) === String(noradId));
+                        console.log('*** SatelliteSelector: Found satellite?', !!found, 'in', response.data.length, 'satellites');
                         if (found) {
-                            foundGroup = true;
-                            dispatch(setGroupId(group.id));
+                            console.log('*** SatelliteSelector: Setting groupId to:', storedGroupId);
+                            dispatch(setGroupId(storedGroupId));
                             dispatch(setGroupOfSats(response.data));
+
+                            // Call onSatelliteSelect to update dialog's formData with group_id
+                            if (onSatelliteSelect) {
+                                console.log('*** SatelliteSelector: Calling onSatelliteSelect with found satellite');
+                                onSatelliteSelect(found);
+                            }
+                        } else {
+                            console.log('*** SatelliteSelector: Satellite not in stored group, searching all');
+                            searchAllGroups();
                         }
+                    } else {
+                        console.log('*** SatelliteSelector: Failed to load stored group (response.success=false), searching all');
+                        searchAllGroups();
                     }
                 });
-            });
+            } else {
+                // No stored group_id, search through all groups
+                searchAllGroups();
+            }
+
+            function searchAllGroups() {
+                let foundGroup = false;
+                let checkedGroups = 0;
+
+                satGroups.forEach((group) => {
+                    if (foundGroup) return;
+
+                    socket.emit('data_request', 'get-satellites-for-group-id', group.id, (response) => {
+                        checkedGroups++;
+                        if (response.success && !foundGroup) {
+                            const found = response.data.find(sat => sat.norad_id === noradId);
+                            if (found) {
+                                foundGroup = true;
+                                console.log('*** SatelliteSelector: Found satellite in group:', group.name);
+                                dispatch(setGroupId(group.id));
+                                dispatch(setGroupOfSats(response.data));
+
+                                // Call onSatelliteSelect to update dialog's formData with group_id
+                                if (onSatelliteSelect) {
+                                    console.log('*** SatelliteSelector: Calling onSatelliteSelect with found satellite');
+                                    onSatelliteSelect(found);
+                                }
+                            }
+                        }
+                        if (checkedGroups === satGroups.length && !foundGroup) {
+                            console.log('*** SatelliteSelector: Satellite not found in any group');
+                        }
+                    });
+                });
+            }
         }
     }, [initialSatellite?.norad_id, socket, satGroups.length, hasInitialized, dispatch]);
 

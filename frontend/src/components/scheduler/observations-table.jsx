@@ -42,6 +42,7 @@ import {
     PlayArrow as PlayIcon,
     Stop as StopIcon,
     Add as AddIcon,
+    ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
 import { styled, darken, lighten } from '@mui/material/styles';
 import { useSocket } from '../common/socket.jsx';
@@ -98,6 +99,17 @@ const ObservationsTable = () => {
 
     const handleEdit = (observation) => {
         dispatch(setSelectedObservation(observation));
+        dispatch(setDialogOpen(true));
+    };
+
+    const handleClone = (observation) => {
+        // Create a copy of the observation without id to treat it as new
+        const { id, created_at, updated_at, status, ...observationData } = observation;
+        const clonedObservation = {
+            ...observationData,
+            name: `${observation.name} (Copy)`,
+        };
+        dispatch(setSelectedObservation(clonedObservation));
         dispatch(setDialogOpen(true));
     };
 
@@ -332,6 +344,20 @@ const ObservationsTable = () => {
                     disabled={selectedIds.length !== 1}
                 >
                     Edit
+                </Button>
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<ContentCopyIcon />}
+                    onClick={() => {
+                        if (selectedIds.length === 1) {
+                            const observation = observations.find(obs => obs.id === selectedIds[0]);
+                            if (observation) handleClone(observation);
+                        }
+                    }}
+                    disabled={selectedIds.length !== 1}
+                >
+                    Duplicate
                 </Button>
                 <Button
                     variant="contained"

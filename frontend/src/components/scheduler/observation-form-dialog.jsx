@@ -146,13 +146,15 @@ const ObservationFormDialog = () => {
     const selectedObservation = useSelector((state) => state.scheduler?.selectedObservation);
     const sdrs = useSelector((state) => state.sdrs?.sdrs || []);
     const selectedSatelliteId = useSelector((state) => state.scheduler?.satelliteSelection?.satelliteId);
+    const selectedGroupId = useSelector((state) => state.scheduler?.satelliteSelection?.groupId);
     const groupOfSats = useSelector((state) => state.scheduler?.satelliteSelection?.groupOfSats || []);
     const rotators = useSelector((state) => state.rotators?.rotators || []);
+    const passes = useSelector((state) => state.scheduler?.satelliteSelection?.passes || []);
 
     const [formData, setFormData] = useState({
         name: '',
         enabled: true,
-        satellite: { norad_id: '', name: '' },
+        satellite: { norad_id: '', name: '', group_id: '' },
         pass: null,
         sdr: { id: '', name: '', sample_rate: 2000000 },
         transmitter: { id: '', frequency: 0, mode: '', bandwidth: 0 },
@@ -170,6 +172,20 @@ const ObservationFormDialog = () => {
     const [passOptions, setPassOptions] = useState([]);
     const [expandedTasks, setExpandedTasks] = useState({});
 
+    // Sync selectedGroupId from Redux into formData.satellite.group_id
+    useEffect(() => {
+        if (selectedGroupId && formData.satellite.norad_id) {
+            console.log('*** ObservationFormDialog: useEffect syncing group_id:', selectedGroupId);
+            setFormData((prev) => ({
+                ...prev,
+                satellite: {
+                    ...prev.satellite,
+                    group_id: selectedGroupId,
+                },
+            }));
+        }
+    }, [selectedGroupId, formData.satellite.norad_id]);
+
     // Load SDRs on mount
     useEffect(() => {
         if (socket) {
@@ -186,7 +202,7 @@ const ObservationFormDialog = () => {
             setFormData({
                 name: '',
                 enabled: true,
-                satellite: { norad_id: '', name: '' },
+                satellite: { norad_id: '', name: '', group_id: '' },
                 pass: null,
                 sdr: { id: '', name: '', sample_rate: 2000000 },
                 transmitter: { id: '', frequency: 0, mode: '', bandwidth: 0 },
@@ -201,33 +217,30 @@ const ObservationFormDialog = () => {
     // Clear satellite selection state when opening dialog
     useEffect(() => {
         if (open) {
-            // Always clear the pass ID when opening, it will be re-set if editing
+            // Always clear satellite selection state to allow fresh initialization
+            // The SatelliteSelector will reinitialize from initialSatellite prop
+            dispatch(setSatelliteId(''));
+            dispatch(setGroupId(''));
+            dispatch(setGroupOfSats([]));
+            dispatch(setSelectedFromSearch(false));
             dispatch(setSelectedPassId(null));
-
-            if (!selectedObservation) {
-                // For new observations, clear everything
-                dispatch(setSatelliteId(''));
-                dispatch(setGroupId(''));
-                dispatch(setGroupOfSats([]));
-                dispatch(setSelectedFromSearch(false));
-            }
         }
-    }, [open, selectedObservation, dispatch]);
+    }, [open, dispatch]);
 
     const handleClose = () => {
         dispatch(setDialogOpen(false));
     };
 
     const handleSave = () => {
-        if (selectedObservation) {
-            // Update existing observation
+        if (selectedObservation?.id) {
+            // Update existing observation (has id)
             dispatch(updateObservation({
                 ...formData,
                 id: selectedObservation.id,
                 updated_at: new Date().toISOString(),
             }));
         } else {
-            // Add new observation
+            // Add new observation (no id, either new or cloned)
             dispatch(addObservation({
                 ...formData,
                 id: `obs-${Date.now()}`,
@@ -236,7 +249,7 @@ const ObservationFormDialog = () => {
                 status: 'scheduled',
             }));
         }
-        
+
         dispatch(setDialogOpen(false));
     };
 
@@ -539,11 +552,19 @@ const ObservationFormDialog = () => {
     const bandwidthValidation = validateTasksWithinBandwidth();
 
     const isFormValid = () => {
+        // Check if CURRENT formData.pass is valid (exists in future passes or is null)
+        const hasValidPass = !formData.pass || passes.some(p => {
+            const passStartTime = new Date(p.event_start).getTime();
+            const currentStartTime = new Date(formData.pass.event_start).getTime();
+            return Math.abs(passStartTime - currentStartTime) < 1000;
+        });
+
         return (
             formData.name.trim() !== '' &&
             formData.satellite.norad_id !== '' &&
             formData.sdr.id !== '' &&
-            bandwidthValidation.valid
+            bandwidthValidation.valid &&
+            hasValidPass  // Enable only if pass is valid (or null for continuous observation)
         );
     };
 
@@ -571,7 +592,7 @@ const ObservationFormDialog = () => {
                     py: 2.5,
                 }}
             >
-                {selectedObservation ? 'Edit Observation' : 'New Observation'}
+                {selectedObservation?.id ? 'Edit Observation' : 'New Observation'}
             </DialogTitle>
 
             <DialogContent dividers sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
@@ -634,11 +655,13 @@ const ObservationFormDialog = () => {
                             initialPass={selectedObservation?.pass}
                             currentObservationId={selectedObservation?.id}
                             onSatelliteSelect={(satellite) => {
+                                console.log('*** ObservationFormDialog: onSatelliteSelect - selectedGroupId:', selectedGroupId);
                                 setFormData((prev) => ({
                                     ...prev,
                                     satellite: {
                                         norad_id: satellite.norad_id,
                                         name: satellite.name,
+                                        group_id: selectedGroupId || '',
                                     },
                                 }));
                             }}

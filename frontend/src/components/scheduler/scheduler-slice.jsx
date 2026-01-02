@@ -235,7 +235,7 @@ const SAMPLE_OBSERVATIONS = [
         id: 'sample-1',
         name: 'ISS APRS Pass',
         enabled: true,
-        satellite: { norad_id: '25544', name: 'ISS (ZARYA)' },
+        satellite: { norad_id: 25544, name: 'ISS (ZARYA)', group_id: 'a27aed54-9163-4b9a-9827-aee9e26e8771' },
         pass: {
             event_start: new Date(Date.now() + 3600000).toISOString(),
             event_end: new Date(Date.now() + 4200000).toISOString(),
@@ -244,7 +244,8 @@ const SAMPLE_OBSERVATIONS = [
             azimuth_at_peak: 180,
             azimuth_at_end: 130,
         },
-        sdr: { id: 'rtlsdr-1', name: 'RTL-SDR', sample_rate: 2000000 },
+        sdr: { id: 'c9f55f19-ebfe-4098-a371-f624573ac544', name: 'BladeRF #0 [3229fe52..a5e92c51]', sample_rate: 2000000 },
+        transmitter: { id: 'iss-aprs', frequency: 145825000, mode: 'FM', bandwidth: 12500 },
         tasks: [
             {
                 type: 'decoder',
@@ -254,7 +255,7 @@ const SAMPLE_OBSERVATIONS = [
                     parameters: { afsk_baudrate: 1200, afsk_af_carrier: 1700, afsk_deviation: 500, afsk_framing: 'ax25' }
                 }
             },
-            { type: 'audio_recording', config: {} }
+            { type: 'audio_recording', config: { transmitter_id: 'iss-aprs', demodulator: 'fm' } }
         ],
         rotator: { id: null, tracking_enabled: false },
         rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
@@ -266,7 +267,7 @@ const SAMPLE_OBSERVATIONS = [
         id: 'sample-2',
         name: 'NOAA-18 APT',
         enabled: true,
-        satellite: { norad_id: '28654', name: 'NOAA 18' },
+        satellite: { norad_id: 28654, name: 'NOAA 18', group_id: '05442bbc-fb36-4fea-bde3-e45c03670e66' },
         pass: {
             event_start: new Date(Date.now() + 7200000).toISOString(),
             event_end: new Date(Date.now() + 8100000).toISOString(),
@@ -275,10 +276,11 @@ const SAMPLE_OBSERVATIONS = [
             azimuth_at_peak: 90,
             azimuth_at_end: 165,
         },
-        sdr: { id: 'airspy-1', name: 'Airspy Mini', sample_rate: 3000000 },
+        sdr: { id: '62bb8dba-09fb-4eeb-a9a9-1740efcd6b7b', name: 'B210 IFQ95S6', sample_rate: 3000000 },
+        transmitter: { id: 'noaa18-apt', frequency: 137912500, mode: 'FM', bandwidth: 34000 },
         tasks: [
             { type: 'iq_recording', config: {} },
-            { type: 'audio_recording', config: {} }
+            { type: 'audio_recording', config: { transmitter_id: 'noaa18-apt', demodulator: 'fm' } }
         ],
         rotator: { id: 'rot-1', tracking_enabled: true },
         rig: { id: null, doppler_correction: true, vfo: 'VFO_A' },
@@ -290,7 +292,7 @@ const SAMPLE_OBSERVATIONS = [
         id: 'sample-3',
         name: 'FO-29 LoRa Beacon',
         enabled: false,
-        satellite: { norad_id: '24278', name: 'FO-29' },
+        satellite: { norad_id: 24278, name: 'FO-29', group_id: '' },
         pass: {
             event_start: new Date(Date.now() + 10800000).toISOString(),
             event_end: new Date(Date.now() + 11700000).toISOString(),
@@ -300,6 +302,7 @@ const SAMPLE_OBSERVATIONS = [
             azimuth_at_end: 50,
         },
         sdr: { id: 'hackrf-1', name: 'HackRF One', sample_rate: 2000000 },
+        transmitter: { id: 'fo29-beacon', frequency: 435850000, mode: 'LoRa', bandwidth: 125000 },
         tasks: [
             {
                 type: 'decoder',
@@ -322,8 +325,8 @@ const SAMPLE_MONITORED_SATELLITES = [
     {
         id: 'monitored-1',
         enabled: true,
-        satellite: { norad_id: '25544', name: 'ISS (ZARYA)' },
-        sdr: { id: 'rtlsdr-1', name: 'RTL-SDR', sample_rate: 2000000 },
+        satellite: { norad_id: 25544, name: 'ISS (ZARYA)', group_id: 'a27aed54-9163-4b9a-9827-aee9e26e8771' },
+        sdr: { id: 'c9f55f19-ebfe-4098-a371-f624573ac544', name: 'BladeRF #0 [3229fe52..a5e92c51]', sample_rate: 2000000 },
         tasks: [
             {
                 type: 'decoder',
@@ -343,8 +346,8 @@ const SAMPLE_MONITORED_SATELLITES = [
     {
         id: 'monitored-2',
         enabled: true,
-        satellite: { norad_id: '28654', name: 'NOAA 18' },
-        sdr: { id: 'airspy-1', name: 'Airspy Mini', sample_rate: 3000000 },
+        satellite: { norad_id: 28654, name: 'NOAA 18', group_id: '05442bbc-fb36-4fea-bde3-e45c03670e66' },
+        sdr: { id: '62bb8dba-09fb-4eeb-a9a9-1740efcd6b7b', name: 'B210 IFQ95S6', sample_rate: 3000000 },
         tasks: [
             { type: 'iq_recording', config: {} },
             { type: 'audio_recording', config: {} }

@@ -141,13 +141,14 @@ export default function MonitoredSatelliteDialog() {
     const selectedMonitoredSatellite = useSelector((state) => state.scheduler?.selectedMonitoredSatellite);
     const sdrs = useSelector((state) => state.sdrs?.sdrs || []);
     const selectedSatelliteId = useSelector((state) => state.scheduler?.satelliteSelection?.satelliteId);
+    const selectedGroupId = useSelector((state) => state.scheduler?.satelliteSelection?.groupId);
     const groupOfSats = useSelector((state) => state.scheduler?.satelliteSelection?.groupOfSats || []);
     const rotators = useSelector((state) => state.rotators?.rotators || []);
     const satGroups = useSelector((state) => state.scheduler?.satelliteSelection?.satGroups || []);
 
     const [formData, setFormData] = useState({
         enabled: true,
-        satellite: { norad_id: '', name: '' },
+        satellite: { norad_id: '', name: '', group_id: '' },
         sdr: { id: '', name: '', sample_rate: 2000000 },
         tasks: [],
         rotator: { id: null, tracking_enabled: false },
@@ -161,13 +162,27 @@ export default function MonitoredSatelliteDialog() {
     const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
     const availableTransmitters = selectedSatellite?.transmitters || [];
 
+    // Sync selectedGroupId from Redux into formData.satellite.group_id
+    useEffect(() => {
+        if (selectedGroupId && formData.satellite.norad_id) {
+            console.log('*** MonitoredSatelliteDialog: useEffect syncing group_id:', selectedGroupId);
+            setFormData((prev) => ({
+                ...prev,
+                satellite: {
+                    ...prev.satellite,
+                    group_id: selectedGroupId,
+                },
+            }));
+        }
+    }, [selectedGroupId, formData.satellite.norad_id]);
+
     useEffect(() => {
         if (selectedMonitoredSatellite) {
             setFormData(selectedMonitoredSatellite);
         } else {
             setFormData({
                 enabled: true,
-                satellite: { norad_id: '', name: '' },
+                satellite: { norad_id: '', name: '', group_id: '' },
                 sdr: { id: '', name: '', sample_rate: 2000000 },
                 tasks: [],
                 rotator: { id: null, tracking_enabled: false },
@@ -178,26 +193,30 @@ export default function MonitoredSatelliteDialog() {
         }
     }, [selectedMonitoredSatellite, open]);
 
-    // Clear satellite selection when opening for new entry
+    // Clear satellite selection state when opening dialog
     useEffect(() => {
-        if (open && !selectedMonitoredSatellite) {
+        if (open) {
+            // Always clear satellite selection state to allow fresh initialization
+            // The SatelliteSelector will reinitialize from initialSatellite prop
             dispatch(setSatelliteId(''));
             dispatch(setGroupId(''));
             dispatch(setGroupOfSats([]));
             dispatch(setSelectedFromSearch(false));
         }
-    }, [open, selectedMonitoredSatellite, dispatch]);
+    }, [open, dispatch]);
 
     const handleClose = () => {
         dispatch(setMonitoredSatelliteDialogOpen(false));
     };
 
     const handleSatelliteSelect = (satellite) => {
+        console.log('*** MonitoredSatelliteDialog: handleSatelliteSelect - selectedGroupId:', selectedGroupId);
         setFormData((prev) => ({
             ...prev,
             satellite: {
                 norad_id: satellite.norad_id,
                 name: satellite.name,
+                group_id: selectedGroupId || '',
             },
         }));
     };
