@@ -50,6 +50,8 @@ import {
     fetchScheduledObservations,
     deleteObservations,
     toggleObservationEnabledLocal,
+    toggleObservationEnabled,
+    cancelRunningObservation,
     setSelectedObservation,
     setDialogOpen,
 } from './scheduler-slice.jsx';

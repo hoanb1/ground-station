@@ -353,8 +353,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
                 console.log('*** No matching pass found');
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialPass?.event_start, passes.length, hasSetInitialPass, satelliteId, dispatch]);
+    }, [initialPass?.event_start, passes.length, hasSetInitialPass, satelliteId, dispatch, onPassSelect]);
 
     const handlePassClick = (pass) => {
         const newPassId = pass ? pass.id : null;

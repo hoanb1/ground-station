@@ -256,7 +256,7 @@ const ObservationFormDialog = () => {
     const handleAddTask = (taskType) => {
         let newTask;
         switch (taskType) {
-            case 'decoder':
+            case 'decoder': {
                 const defaultDecoderType = 'none';
                 newTask = {
                     type: 'decoder',
@@ -267,6 +267,7 @@ const ObservationFormDialog = () => {
                     },
                 };
                 break;
+            }
             case 'audio_recording':
                 newTask = {
                     type: 'audio_recording',

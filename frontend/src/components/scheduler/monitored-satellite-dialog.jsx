@@ -224,7 +224,7 @@ export default function MonitoredSatelliteDialog() {
     const handleAddTask = (taskType) => {
         let newTask;
         switch (taskType) {
-            case 'decoder':
+            case 'decoder': {
                 const defaultDecoderType = 'none';
                 newTask = {
                     type: 'decoder',
@@ -235,6 +235,7 @@ export default function MonitoredSatelliteDialog() {
                     },
                 };
                 break;
+            }
             case 'audio_recording':
                 newTask = {
                     type: 'audio_recording',
