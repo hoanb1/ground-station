@@ -319,7 +319,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
         console.log('*** Fetch passes effect - satelliteId:', satelliteId, 'socket:', !!socket);
         if (satelliteId && socket) {
             console.log('*** Fetching passes for satellite');
-            dispatch(fetchNextPassesForScheduler({ socket, noradId: satelliteId, hours: 72 }));
+            dispatch(fetchNextPassesForScheduler({ socket, noradId: satelliteId, hours: 24 }));
             setHasSetInitialPass(false);
         } else {
             // Clear passes if no satellite selected
@@ -439,7 +439,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
                 </Box>
             ) : passes.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                    No passes found in the next 72 hours
+                    No passes found in the next 24 hours
                 </Typography>
             ) : (
                 <Box>
