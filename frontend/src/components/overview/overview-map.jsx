@@ -143,6 +143,60 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     const arrowControlsRef = useRef(null);
     const elevationHistoryRef = useRef({}); // Store elevation history for each satellite
     const mapInvalidateIntervalRef = useRef(null); // Store interval ID for cleanup
+    const selectedSatellitesRef = useRef(selectedSatellites); // Store satellites in ref to avoid re-renders
+    const positionDispatchTimeoutRef = useRef(null); // Debounce position updates
+
+    // Keep satellites ref updated
+    useEffect(() => {
+        selectedSatellitesRef.current = selectedSatellites;
+    }, [selectedSatellites]);
+
+    // Use refs for visualization settings to prevent re-renders when they change
+    const visualizationSettingsRef = useRef({
+        showPastOrbitPath,
+        showFutureOrbitPath,
+        showSatelliteCoverage,
+        showSunIcon,
+        showMoonIcon,
+        showTerminatorLine,
+        showTooltip,
+        showGrid,
+        pastOrbitLineColor,
+        futureOrbitLineColor,
+        satelliteCoverageColor,
+        orbitProjectionDuration,
+    });
+
+    // Keep refs updated
+    useEffect(() => {
+        visualizationSettingsRef.current = {
+            showPastOrbitPath,
+            showFutureOrbitPath,
+            showSatelliteCoverage,
+            showSunIcon,
+            showMoonIcon,
+            showTerminatorLine,
+            showTooltip,
+            showGrid,
+            pastOrbitLineColor,
+            futureOrbitLineColor,
+            satelliteCoverageColor,
+            orbitProjectionDuration,
+        };
+    }, [
+        showPastOrbitPath,
+        showFutureOrbitPath,
+        showSatelliteCoverage,
+        showSunIcon,
+        showMoonIcon,
+        showTerminatorLine,
+        showTooltip,
+        showGrid,
+        pastOrbitLineColor,
+        futureOrbitLineColor,
+        satelliteCoverageColor,
+        orbitProjectionDuration,
+    ]);
 
     const handleSetMapZoomLevel = useCallback(
         (zoomLevel) => {
@@ -233,7 +287,9 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
         let satIndex = 0;
         let selectedSatPos = {};
 
-        selectedSatellites.forEach((satellite) => {
+        // Use ref to get current satellites without causing re-renders
+        const satellites = selectedSatellitesRef.current || [];
+        satellites.forEach((satellite) => {
             try {
                 if (satIndex++ >= viewSatelliteLimit) {
                     return;
@@ -366,10 +422,11 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 }
 
                 if (selectedSatelliteId === noradId) {
-                    // calculate paths
+                    // calculate paths - use ref to get current settings
+                    const vizSettings = visualizationSettingsRef.current;
                     let paths = getSatellitePaths(
                         [satellite['tle1'], satellite['tle2']],
-                        orbitProjectionDuration,
+                        vizSettings.orbitProjectionDuration,
                         1,
                         noradId
                     );
@@ -380,7 +437,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                             key={`past-path-${noradId}`}
                             positions={paths.past}
                             pathOptions={{
-                                color: pastOrbitLineColor,
+                                color: vizSettings.pastOrbitLineColor,
                                 weight: 2,
                                 opacity: 0.5,
                                 smoothFactor: 1,
@@ -394,7 +451,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                             key={`future-path-${noradId}`}
                             positions={paths.future}
                             pathOptions={{
-                                color: futureOrbitLineColor,
+                                color: vizSettings.futureOrbitLineColor,
                                 weight: 2,
                                 opacity: 1,
                                 dashArray: '2 4',
@@ -466,16 +523,17 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     );
                 }
 
-                // If the satellite is visible, draw the coverage circle
-                if (isVisible && showSatelliteCoverage) {
+                // If the satellite is visible, draw the coverage circle - use ref
+                const vizSettings = visualizationSettingsRef.current;
+                if (isVisible && vizSettings.showSatelliteCoverage) {
                     let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
                     currentCoverage.push(
                         <Polyline
                             noClip={true}
                             key={'coverage-' + satellite['name']}
                             pathOptions={{
-                                color: selectedSatelliteId === noradId ? 'white' : satelliteCoverageColor,
-                                fillColor: satelliteCoverageColor,
+                                color: selectedSatelliteId === noradId ? 'white' : vizSettings.satelliteCoverageColor,
+                                fillColor: vizSettings.satelliteCoverageColor,
                                 weight: selectedSatelliteId === noradId ? 2 : 1,
                                 fill: true,
                                 opacity: 1,
@@ -495,7 +553,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                 key={'coverage-' + satellite['name']}
                                 pathOptions={{
                                     color: 'white',
-                                    fillColor: satelliteCoverageColor,
+                                    fillColor: vizSettings.satelliteCoverageColor,
                                     weight: 2,
                                     fill: true,
                                     opacity: 1,
@@ -508,7 +566,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     }
                 }
 
-                if (showTooltip || selectedSatelliteId === noradId || trackingSatelliteId === noradId) {
+                if (vizSettings.showTooltip || selectedSatelliteId === noradId || trackingSatelliteId === noradId) {
                     currentPos.push(
                         <SatelliteMarker
                             key={`satellite-marker-${satellite.norad_id}`}
@@ -572,7 +630,13 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
         setSunPos(sunPos);
         setMoonPos(moonPos);
 
-        dispatch(setSelectedSatellitePositions(selectedSatPos));
+        // Debounce position dispatch to reduce Redux updates
+        if (positionDispatchTimeoutRef.current) {
+            clearTimeout(positionDispatchTimeoutRef.current);
+        }
+        positionDispatchTimeoutRef.current = setTimeout(() => {
+            dispatch(setSelectedSatellitePositions(selectedSatPos));
+        }, 500); // Update Redux every 500ms instead of every render
     }
 
     // Update the satellites position, day/night terminator every 3 seconds
@@ -594,19 +658,8 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
             clearInterval(updateTimeRef.current);
         };
     }, [
-        selectedSatellites,
-        showPastOrbitPath,
-        showFutureOrbitPath,
-        showSatelliteCoverage,
-        showSunIcon,
-        showMoonIcon,
-        showTerminatorLine,
-        pastOrbitLineColor,
-        futureOrbitLineColor,
-        satelliteCoverageColor,
-        orbitProjectionDuration,
-        mapZoomLevel,
-        showTooltip,
+        // CRITICAL: Only include dependencies that MUST trigger a full recalculation
+        // Removed most visualization settings that don't require orbit recalculation
         selectedSatelliteId,
         trackingSatelliteId,
     ]);
@@ -742,13 +795,13 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     }}
                 />
 
-                {sunPos && showSunIcon ? <Marker position={sunPos} icon={sunIcon} opacity={0.5}/> : null}
+                {sunPos && visualizationSettingsRef.current.showSunIcon ? <Marker position={sunPos} icon={sunIcon} opacity={0.5}/> : null}
 
-                {moonPos && showMoonIcon ? (
+                {moonPos && visualizationSettingsRef.current.showMoonIcon ? (
                     <Marker position={moonPos} icon={moonIcon} opacity={0.5}/>
                 ) : null}
 
-                {daySidePolygon.length > 1 && showTerminatorLine && (
+                {daySidePolygon.length > 1 && visualizationSettingsRef.current.showTerminatorLine && (
                     <Polygon
                         positions={daySidePolygon}
                         pathOptions={{
@@ -762,7 +815,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     />
                 )}
 
-                {terminatorLine.length > 1 && showTerminatorLine && (
+                {terminatorLine.length > 1 && visualizationSettingsRef.current.showTerminatorLine && (
                     <Polyline
                         positions={terminatorLine}
                         pathOptions={{
@@ -777,8 +830,8 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
 
                 <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
 
-                {showPastOrbitPath ? currentPastSatellitesPaths : null}
-                {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
+                {visualizationSettingsRef.current.showPastOrbitPath ? currentPastSatellitesPaths : null}
+                {visualizationSettingsRef.current.showFutureOrbitPath ? currentFutureSatellitesPaths : null}
                 {currentSatellitesPosition}
                 {currentSatellitesCoverage}
                 {currentCrosshairs}
@@ -788,7 +841,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     <MapArrowControls mapObject={MapObject}/>
                 </div>
 
-                {showGrid && (
+                {visualizationSettingsRef.current.showGrid && (
                     <CoordinateGrid
                         latInterval={15}
                         lngInterval={15}
