@@ -41,10 +41,10 @@ import {
     ListSubheader,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
-import { 
+import {
     setMonitoredSatelliteDialogOpen,
-    addMonitoredSatellite,
-    updateMonitoredSatellite,
+    createMonitoredSatellite,
+    updateMonitoredSatelliteAsync,
     setSatelliteId,
     setGroupId,
     setGroupOfSats,
@@ -432,22 +432,27 @@ export default function MonitoredSatelliteDialog() {
 
     const handleSubmit = () => {
         if (!isFormValid()) return;
-        
+
         if (selectedMonitoredSatellite) {
             // Update existing monitored satellite
-            dispatch(updateMonitoredSatellite({
-                ...formData,
+            dispatch(updateMonitoredSatelliteAsync({
+                socket,
                 id: selectedMonitoredSatellite.id,
+                satellite: formData,
             }));
         } else {
             // Add new monitored satellite
-            dispatch(addMonitoredSatellite({
+            const newSatellite = {
                 ...formData,
                 id: `monitored-${Date.now()}`,
+            };
+            dispatch(createMonitoredSatellite({
+                socket,
+                satellite: newSatellite,
             }));
         }
-        
-        dispatch(setMonitoredSatelliteDialogOpen(false));
+
+        // Dialog will be closed automatically by the fulfilled reducer
     };
 
     return (

@@ -81,13 +81,13 @@ export default function ScheduledObservationsLayout() {
                 </IconButton>
             </Tooltip>
 
-            {/* Timeline View */}
-            <ObservationsTimeline />
-
             {/* Monitored Satellites - Top Section */}
             <Box sx={{ minHeight: '600px', maxHeight: '750px' }}>
                 <MonitoredSatellitesTable />
             </Box>
+
+            {/* Timeline View */}
+            <ObservationsTimeline />
 
             {/* Scheduled Observations - Bottom Section */}
             <Box sx={{ minHeight: '600px', overflow: 'hidden' }}>

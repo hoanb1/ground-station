@@ -205,6 +205,106 @@ export const cancelRunningObservation = createAsyncThunk(
     }
 );
 
+// Fetch all monitored satellites
+export const fetchMonitoredSatellites = createAsyncThunk(
+    'scheduler/fetchMonitoredSatellites',
+    async ({ socket }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-monitored-satellites', null, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to fetch monitored satellites'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+// Create a new monitored satellite
+export const createMonitoredSatellite = createAsyncThunk(
+    'scheduler/createMonitoredSatellite',
+    async ({ socket, satellite }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'create-monitored-satellite', satellite, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to create monitored satellite'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+// Update an existing monitored satellite
+export const updateMonitoredSatelliteAsync = createAsyncThunk(
+    'scheduler/updateMonitoredSatelliteAsync',
+    async ({ socket, id, satellite }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'update-monitored-satellite', { id, ...satellite }, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to update monitored satellite'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+// Delete monitored satellite(s)
+export const deleteMonitoredSatellitesAsync = createAsyncThunk(
+    'scheduler/deleteMonitoredSatellitesAsync',
+    async ({ socket, ids }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'delete-monitored-satellites', ids, (res) => {
+                    if (res.success) {
+                        resolve({ ids });
+                    } else {
+                        reject(new Error('Failed to delete monitored satellites'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+// Toggle monitored satellite enabled
+export const toggleMonitoredSatelliteEnabledAsync = createAsyncThunk(
+    'scheduler/toggleMonitoredSatelliteEnabledAsync',
+    async ({ socket, id, enabled }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'toggle-monitored-satellite-enabled', { id, enabled }, (res) => {
+                    if (res.success) {
+                        resolve({ id, enabled });
+                    } else {
+                        reject(new Error('Failed to toggle monitored satellite'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // Fetch next passes for a satellite
 export const fetchNextPassesForScheduler = createAsyncThunk(
     'scheduler/fetchNextPasses',
@@ -570,6 +670,43 @@ const schedulerSlice = createSlice({
             .addCase(fetchNextPassesForScheduler.rejected, (state) => {
                 state.satelliteSelection.passesLoading = false;
                 state.satelliteSelection.passes = [];
+            })
+            // Fetch monitored satellites
+            .addCase(fetchMonitoredSatellites.pending, (state) => {
+                state.monitoredSatellitesLoading = true;
+            })
+            .addCase(fetchMonitoredSatellites.fulfilled, (state, action) => {
+                state.monitoredSatellitesLoading = false;
+                state.monitoredSatellites = action.payload;
+            })
+            .addCase(fetchMonitoredSatellites.rejected, (state) => {
+                state.monitoredSatellitesLoading = false;
+            })
+            // Create monitored satellite
+            .addCase(createMonitoredSatellite.fulfilled, (state, action) => {
+                state.monitoredSatellites.push(action.payload);
+                state.monitoredSatelliteDialogOpen = false;
+            })
+            // Update monitored satellite
+            .addCase(updateMonitoredSatelliteAsync.fulfilled, (state, action) => {
+                const index = state.monitoredSatellites.findIndex(sat => sat.id === action.payload.id);
+                if (index !== -1) {
+                    state.monitoredSatellites[index] = action.payload;
+                }
+                state.monitoredSatelliteDialogOpen = false;
+            })
+            // Delete monitored satellites
+            .addCase(deleteMonitoredSatellitesAsync.fulfilled, (state, action) => {
+                state.monitoredSatellites = state.monitoredSatellites.filter(
+                    sat => !action.payload.ids.includes(sat.id)
+                );
+            })
+            // Toggle monitored satellite enabled
+            .addCase(toggleMonitoredSatelliteEnabledAsync.fulfilled, (state, action) => {
+                const satellite = state.monitoredSatellites.find(sat => sat.id === action.payload.id);
+                if (satellite) {
+                    satellite.enabled = action.payload.enabled;
+                }
             });
     },
 });

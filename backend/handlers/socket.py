@@ -12,6 +12,7 @@ from handlers.entities import (
     locations,
     preferences,
     satellites,
+    scheduler,
     sessions,
     systeminfo,
 )
@@ -48,6 +49,7 @@ def _register_all_handlers():
     vfo.register_handlers(handler_registry)
     systeminfo.register_handlers(handler_registry)
     sessions.register_handlers(handler_registry)
+    scheduler.register_handlers(handler_registry)
 
 
 # Register all handlers at module load time
