@@ -214,14 +214,14 @@ const FrequencyControlAccordion = ({
                 {/* Original Dropdown - Commented Out */}
                 {/*
                 <FormControl disabled={isRecording || isPlayingback}
-                             sx={{minWidth: 200, marginTop: 1, marginBottom: 0}} fullWidth variant="filled"
+                             sx={{minWidth: 200, marginTop: 1, marginBottom: 0}} fullWidth variant="outlined"
                              size="small">
                     <InputLabel htmlFor="transmitter-select">{t('frequency.go_to_transmitter')}</InputLabel>
                     <Select
                         id="transmitter-select"
                         value={getProperTransmitterId()}
                         onChange={onTransmitterChange}
-                        variant={'filled'}>
+                        size="small">
                         <MenuItem value="none" sx={{ fontSize: '0.875rem' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Box sx={{ width: 8, height: 8 }} />
@@ -265,14 +265,15 @@ const FrequencyControlAccordion = ({
                     disabled={isRecording || isPlayingback}
                     sx={{minWidth: 200, marginTop: 1, marginBottom: 0}}
                     fullWidth
-                    variant="filled"
+                    variant="outlined"
                     size="small">
                     <InputLabel htmlFor="frequency-offset-select">{t('frequency.frequency_offset')}</InputLabel>
                     <Select
                         id="frequency-offset-select"
                         value={selectedOffsetMode || "none"}
                         onChange={onOffsetModeChange}
-                        variant={'filled'}>
+                        label={t('frequency.frequency_offset')}
+                        size="small">
                         <MenuItem value="none" sx={{ fontSize: '0.875rem' }}>
                             <Box>
                                 <Box sx={{ fontWeight: 600 }}>{t('frequency.no_frequency_offset')}</Box>
@@ -328,13 +329,13 @@ const FrequencyControlAccordion = ({
                 </FormControl>
 
                 <FormControl disabled={selectedOffsetMode !== "manual" || isRecording || isPlayingback} sx={{minWidth: 200, marginTop: 1}}
-                             fullWidth variant="filled"
+                             fullWidth variant="outlined"
                              size="small">
                     <TextField
                         disabled={selectedOffsetMode !== "manual" || isRecording || isPlayingback}
                         label={t('frequency.manual_offset_hz')}
                         value={selectedOffsetValue}
-                        variant="filled"
+                        variant="outlined"
                         size="small"
                         type="number"
                         onChange={(e) => {

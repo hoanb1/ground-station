@@ -119,11 +119,12 @@ const DecoderParamsDialog = ({
                         return (
                             <Box key={paramKey} sx={{ mb: 2.5 }}>
                                 {paramDef.type === 'select' && (
-                                    <FormControl fullWidth size="small" variant="filled">
+                                    <FormControl fullWidth size="small" variant="outlined">
                                         <InputLabel>{paramDef.label}</InputLabel>
                                         <Select
                                             value={JSON.stringify(currentValue)}
                                             label={paramDef.label}
+                                            size="small"
                                             disabled={!vfoActive[vfoIndex] || !parametersEnabled}
                                             onChange={(e) => {
                                                 // Parse the JSON string back to the original value

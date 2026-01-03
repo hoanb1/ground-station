@@ -118,25 +118,19 @@ export const TransmitterLockSelect = ({
     return (
         <>
             <Box sx={{ mt: 2 }}>
-                <FormControl fullWidth size="small" disabled={!vfoActive} variant="filled">
-                    <InputLabel id={`vfo-${vfoIndex}-lock-transmitter-label`}>
-                        {isLocked ? (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <LockIcon fontSize="small" />
-                                {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
-                            </Box>
-                        ) : (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <LockOpenIcon fontSize="small" />
-                                {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
-                            </Box>
-                        )}
+                <FormControl fullWidth size="small" disabled={!vfoActive} variant="outlined">
+                    <InputLabel
+                        id={`vfo-${vfoIndex}-lock-transmitter-label`}
+                        sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                    >
+                        {isLocked ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
+                        {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
                     </InputLabel>
                     <Select
-                        variant={'filled'}
+                        size="small"
                         labelId={`vfo-${vfoIndex}-lock-transmitter-label`}
                         value={currentValue}
-                        label={t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
+                        label={`\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${t('vfo.lock_to_transmitter', 'Lock to Transmitter')}`}
                         onChange={handleChange}
                         sx={{ fontSize: '0.875rem' }}
                     >

@@ -57,7 +57,7 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
 
     return (
         <Autocomplete
-            size={"small"}
+            size="small"
             sx={{ minWidth: 200, margin: 0 }}
             open={open}
             fullWidth={true}
@@ -73,8 +73,7 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
             loading={loading}
             renderInput={(params) => (
                 <TextField
-                    size={"small"}
-                    variant={"filled"}
+                    size="small"
                     fullWidth={true}
                     {...params}
                     label={t('satellite_search.search_label')}

@@ -69,8 +69,7 @@ const GroupDropdown = React.memo(function GroupDropdown() {
             disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"}
             sx={{ minWidth: 200, margin: 0 }}
             fullWidth
-            variant={"filled"}
-            size={"small"}
+            size="small"
         >
             <InputLabel htmlFor="grouped-select">{t('group_dropdown.label')}</InputLabel>
             <Select
@@ -80,8 +79,7 @@ const GroupDropdown = React.memo(function GroupDropdown() {
                 value={satGroups.length > 0 ? groupId : ""}
                 id="grouped-select"
                 label={t('group_dropdown.label')}
-                variant={"filled"}
-                size={"small"}
+                size="small"
             >
                 <ListSubheader>{t('group_dropdown.user_groups')}</ListSubheader>
                 {satGroups.filter(group => group.type === "user").length === 0 ? (

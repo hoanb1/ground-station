@@ -114,13 +114,14 @@ export const TranscriptionParamsDialog = ({
 
                     {/* Source Language */}
                     <Box sx={{ mb: 2.5 }}>
-                        <FormControl fullWidth size="small" variant="filled">
+                        <FormControl fullWidth size="small" variant="outlined">
                             <InputLabel>{t('vfo.source_language', 'Source Language')}</InputLabel>
                             <Select
                                 value={vfo.transcriptionLanguage || 'auto'}
                                 label={t('vfo.source_language', 'Source Language')}
                                 onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionLanguage: e.target.value })}
                                 disabled={!vfo.transcriptionEnabled || !geminiConfigured}
+                                size="small"
                                 sx={{ fontSize: '0.875rem' }}
                             >
                                 <MenuItem value="auto" sx={{ fontSize: '0.875rem' }}>🌐 {t('vfo.languages.auto', 'Auto-detect')}</MenuItem>
@@ -147,13 +148,14 @@ export const TranscriptionParamsDialog = ({
 
                     {/* Translate To */}
                     <Box sx={{ mb: 2.5 }}>
-                        <FormControl fullWidth size="small" variant="filled">
+                        <FormControl fullWidth size="small" variant="outlined">
                             <InputLabel>{t('vfo.translate_to', 'Translate To')}</InputLabel>
                             <Select
                                 value={vfo.transcriptionTranslateTo || 'none'}
                                 label={t('vfo.translate_to', 'Translate To')}
                                 onChange={(e) => onVFOPropertyChange(vfoIndex, { transcriptionTranslateTo: e.target.value })}
                                 disabled={!vfo.transcriptionEnabled}
+                                size="small"
                                 sx={{ fontSize: '0.875rem' }}
                             >
                                 <MenuItem value="none" sx={{ fontSize: '0.875rem' }}>⭕ {t('vfo.languages.none', 'No Translation')}</MenuItem>

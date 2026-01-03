@@ -99,12 +99,14 @@ function SatelliteList() {
         <FormControl
             disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"}
             sx={{ margin: 0 }}
-            fullWidth={true} variant={"filled"} size={"small"}>
+            fullWidth={true}
+            size="small">
             <InputLabel htmlFor="satellite-select">{t('satellite_dropdown.label')}</InputLabel>
             <Select onClose={handleSelectCloseEvent}
                     onOpen={handleSelectOpenEvent}
                     value={groupOfSats.length > 0 && groupOfSats.find(s => s.norad_id === satelliteId) ? satelliteId : ""}
-                    id="satellite-select" label={t('satellite_dropdown.label')} variant={"filled"} size={"small"}
+                    id="satellite-select" label={t('satellite_dropdown.label')}
+                    size="small"
                     onChange={setTargetSatellite}>
                 {groupOfSats.map((satellite, index) => {
                     return <MenuItem value={satellite['norad_id']}

@@ -185,7 +185,7 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.timezone')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant="outlined"
                             disabled={isLoading}
                             size="small"
                         >
@@ -194,7 +194,7 @@ const PreferencesForm = () => {
                                 value={getPreferenceValue('timezone')}
                                 onChange={handleChange('timezone')}
                                 label={t('preferences.timezone')}
-                             variant={'filled'}>
+                                size="small">
                                 {timezoneOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
                                         {option.name}
@@ -209,7 +209,7 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.language')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant="outlined"
                             disabled={isLoading}
                             size="small"
                         >
@@ -218,7 +218,7 @@ const PreferencesForm = () => {
                                 value={getPreferenceValue('language')}
                                 onChange={handleChange('language')}
                                 label={t('preferences.language')}
-                             variant={'filled'}>
+                                size="small">
                                 {languageOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
                                         {option.name}
@@ -233,7 +233,7 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.theme')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant="outlined"
                             disabled={isLoading}
                             size="small"
                         >
@@ -243,7 +243,7 @@ const PreferencesForm = () => {
                                 value={localThemeValue || getPreferenceValue('theme')}
                                 onChange={handleChange('theme')}
                                 label={t('preferences.theme')}
-                             variant={'filled'}>
+                                size="small">
                                 {themesOptions.map((option) => (
                                     <MenuItem key={option.id} value={option.id}>
                                         {option.name}
@@ -263,7 +263,7 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.toast_position')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant="outlined"
                             disabled={isLoading}
                             size="small"
                         >
@@ -273,7 +273,7 @@ const PreferencesForm = () => {
                                 value={getPreferenceValue('toast_position')}
                                 onChange={handleChange('toast_position')}
                                 label={t('preferences.toast_position')}
-                                variant={'filled'}>
+                                size="small">
                                 {toastPositionOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
                                         {option.name}
@@ -296,22 +296,24 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.stadia_maps_api_key')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"outlined"}
-                            disabled={isLoading}
+                        <TextField
+                            fullWidth
+                            id="stadia-api-key"
+                            variant="outlined"
+                            type="text"
                             size="small"
-                        >
-                            <TextField
-                                fullWidth
-                                id="stadia-api-key"
-                                variant="filled"
-                                type="text"
-                                size="small"
-                                disabled={isLoading}
-                                label={t('preferences.stadia_maps_api_key')}
-                                value={getPreferenceValue('stadia_maps_api_key')}
-                                onChange={handleChange('stadia_maps_api_key')}
-                            />
-                        </FormControl>
+                            disabled={isLoading}
+                            label={t('preferences.stadia_maps_api_key')}
+                            value={getPreferenceValue('stadia_maps_api_key')}
+                            onChange={handleChange('stadia_maps_api_key')}
+                            sx={{
+                                marginTop: 1,
+                                marginBottom: 1,
+                                '& .MuiInputBase-root': {
+                                    backgroundColor: 'transparent'
+                                }
+                            }}
+                        />
                     </Grid>
 
                     {/* OpenWeatherMap API Key */}
@@ -319,23 +321,25 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.openweather_api_key')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                            disabled={isLoading}
+                        <TextField
+                            style={{fontFamily: 'monospace'}}
+                            fullWidth
+                            id="openweather-api-key"
+                            variant="outlined"
+                            type="text"
                             size="small"
-                        >
-                            <TextField
-                                style={{fontFamily: 'monospace'}}
-                                fullWidth
-                                id="openweather-api-key"
-                                variant="filled"
-                                type="text"
-                                size="small"
-                                disabled={isLoading}
-                                label={t('preferences.openweather_api_key')}
-                                value={getPreferenceValue('openweather_api_key')}
-                                onChange={handleChange('openweather_api_key')}
-                            />
-                        </FormControl>
+                            disabled={isLoading}
+                            label={t('preferences.openweather_api_key')}
+                            value={getPreferenceValue('openweather_api_key')}
+                            onChange={handleChange('openweather_api_key')}
+                            sx={{
+                                marginTop: 1,
+                                marginBottom: 1,
+                                '& .MuiInputBase-root': {
+                                    backgroundColor: 'transparent'
+                                }
+                            }}
+                        />
                     </Grid>
 
                     {/* DeBabel Transcription Service */}
@@ -351,15 +355,12 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.gemini_api_key', 'Gemini API Key')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                            disabled={isLoading}
-                            size="small"
-                        >
+                        <Box sx={{ backgroundColor: 'transparent' }}>
                             <TextField
                                 style={{fontFamily: 'monospace'}}
                                 fullWidth
                                 id="gemini-api-key"
-                                variant="filled"
+                                variant="outlined"
                                 type="text"
                                 size="small"
                                 disabled={isLoading}
@@ -367,15 +368,33 @@ const PreferencesForm = () => {
                                 placeholder="AIza..."
                                 value={getPreferenceValue('gemini_api_key')}
                                 onChange={handleChange('gemini_api_key')}
-                                helperText={t('preferences.gemini_api_key_help', 'Google Gemini API key for audio transcription. Get yours at ai.google.dev')}
+                                slotProps={{
+                                    formHelperText: {
+                                        sx: {
+                                            marginLeft: 0,
+                                            marginRight: 0,
+                                            backgroundColor: 'transparent'
+                                        }
+                                    }
+                                }}
                                 autoComplete="off"
                                 inputProps={{
                                     autoComplete: 'off',
                                     'data-form-type': 'other',
                                     'data-lpignore': 'true'
                                 }}
+                                sx={{
+                                    marginTop: 1,
+                                    marginBottom: 0,
+                                    '& .MuiInputBase-root': {
+                                        backgroundColor: 'transparent'
+                                    }
+                                }}
                             />
-                        </FormControl>
+                            <Typography variant="caption" sx={{ display: 'block', mt: '3px', ml: '14px', mr: '14px', color: 'text.secondary' }}>
+                                {t('preferences.gemini_api_key_help', 'Google Gemini API key for audio transcription. Get yours at ai.google.dev')}
+                            </Typography>
+                        </Box>
                         <Alert severity="info" sx={{ mt: 1, fontSize: '0.75rem' }}>
                             <AlertTitle sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Privacy & Terms</AlertTitle>
                             When enabled, audio is sent to Google's servers. You are responsible for costs (~$0.27/hour).
@@ -395,15 +414,12 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.deepgram_api_key', 'Deepgram API Key')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                            disabled={isLoading}
-                            size="small"
-                        >
+                        <Box sx={{ backgroundColor: 'transparent' }}>
                             <TextField
                                 style={{fontFamily: 'monospace'}}
                                 fullWidth
                                 id="deepgram-api-key"
-                                variant="filled"
+                                variant="outlined"
                                 type="text"
                                 size="small"
                                 disabled={isLoading}
@@ -411,15 +427,24 @@ const PreferencesForm = () => {
                                 placeholder="..."
                                 value={getPreferenceValue('deepgram_api_key')}
                                 onChange={handleChange('deepgram_api_key')}
-                                helperText={t('preferences.deepgram_api_key_help', 'Deepgram API key for audio transcription. Get yours at deepgram.com')}
                                 autoComplete="off"
                                 inputProps={{
                                     autoComplete: 'off',
                                     'data-form-type': 'other',
                                     'data-lpignore': 'true'
                                 }}
+                                sx={{
+                                    marginTop: 1,
+                                    marginBottom: 0,
+                                    '& .MuiInputBase-root': {
+                                        backgroundColor: 'transparent'
+                                    }
+                                }}
                             />
-                        </FormControl>
+                            <Typography variant="caption" sx={{ display: 'block', mt: '3px', ml: '14px', mr: '14px', color: 'text.secondary' }}>
+                                {t('preferences.deepgram_api_key_help', 'Deepgram API key for audio transcription. Get yours at deepgram.com')}
+                            </Typography>
+                        </Box>
                         <Alert severity="info" sx={{ mt: 1, fontSize: '0.75rem' }}>
                             <AlertTitle sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Privacy & Terms</AlertTitle>
                             When enabled, audio is sent to Deepgram's servers. You are responsible for costs (~$0.015/hour).
@@ -439,15 +464,12 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.google_translate_api_key', 'Google Translate API Key')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                            disabled={isLoading}
-                            size="small"
-                        >
+                        <Box sx={{ backgroundColor: 'transparent' }}>
                             <TextField
                                 style={{fontFamily: 'monospace'}}
                                 fullWidth
                                 id="google-translate-api-key"
-                                variant="filled"
+                                variant="outlined"
                                 type="text"
                                 size="small"
                                 disabled={isLoading}
@@ -455,15 +477,24 @@ const PreferencesForm = () => {
                                 placeholder="AIza..."
                                 value={getPreferenceValue('google_translate_api_key')}
                                 onChange={handleChange('google_translate_api_key')}
-                                helperText={t('preferences.google_translate_api_key_help', 'Google Cloud Translation API key for translating Deepgram transcriptions. Get yours at cloud.google.com')}
                                 autoComplete="off"
                                 inputProps={{
                                     autoComplete: 'off',
                                     'data-form-type': 'other',
                                     'data-lpignore': 'true'
                                 }}
+                                sx={{
+                                    marginTop: 1,
+                                    marginBottom: 0,
+                                    '& .MuiInputBase-root': {
+                                        backgroundColor: 'transparent'
+                                    }
+                                }}
                             />
-                        </FormControl>
+                            <Typography variant="caption" sx={{ display: 'block', mt: '3px', ml: '14px', mr: '14px', color: 'text.secondary' }}>
+                                {t('preferences.google_translate_api_key_help', 'Google Cloud Translation API key for translating Deepgram transcriptions. Get yours at cloud.google.com')}
+                            </Typography>
+                        </Box>
                         <Alert severity="info" sx={{ mt: 1, fontSize: '0.75rem' }}>
                             <AlertTitle sx={{ fontSize: '0.8rem', fontWeight: 600 }}>Privacy & Terms</AlertTitle>
                             Used for translating Deepgram transcriptions. Text is sent to Google's servers. See pricing at cloud.google.com/translate/pricing.

@@ -182,8 +182,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                     <Grid container direction="row" spacing={1} sx={{ alignItems: 'flex-end' }}>
                         <Grid size="grow">
                             <FormControl disabled={isRotatorSelectionDisabled(trackingState)}
-                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                         size="small">
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="outlined" size="small">
                                 <InputLabel htmlFor="rotator-select">{t('rotator_control_labels.rotator_label')}</InputLabel>
                                 <Select
                                     id="rotator-select"
@@ -191,7 +190,8 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     onChange={(event) => {
                                         handleRotatorChange(event);
                                     }}
-                                    variant={'filled'}>
+                                    size="small"
+                                    label={t('rotator_control_labels.rotator_label')}>
                                     <MenuItem value="none">
                                         {t('rotator_control_labels.no_rotator_control')}
                                     </MenuItem>

@@ -359,8 +359,7 @@ const RigControl = React.memo(function RigControl() {
                     <Grid container direction="row" spacing={1} sx={{ alignItems: 'flex-end' }}>
                         <Grid size="grow">
                             <FormControl disabled={rigData['connected'] === true}
-                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                         size="small">
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="outlined" size="small">
                                 <InputLabel htmlFor="radiorig-select">{t('rig_control_labels.rig_label')}</InputLabel>
                                 <Select
                                     id="radiorig-select"
@@ -368,7 +367,8 @@ const RigControl = React.memo(function RigControl() {
                                     onChange={(event) => {
                                         handleRigChange(event);
                                     }}
-                                    variant={'filled'}>
+                                    size="small"
+                                    label={t('rig_control_labels.rig_label')}>
                                     <MenuItem value="none">
                                         {t('rig_control_labels.no_rig_control')}
                                     </MenuItem>
@@ -404,8 +404,7 @@ const RigControl = React.memo(function RigControl() {
                 {/* 2. Transmitter Selection */}
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={rigData['tracking'] === true}
-                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                 size="small">
+                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="outlined" size="small">
                         <InputLabel htmlFor="transmitter-select">{t('rig_control_labels.transmitter_label')}</InputLabel>
                         <Select
                             id="transmitter-select"
@@ -413,7 +412,8 @@ const RigControl = React.memo(function RigControl() {
                             onChange={(event) => {
                                 handleTransmitterChange(event);
                             }}
-                            variant={'filled'}>
+                            size="small"
+                            label={t('rig_control_labels.transmitter_label')}>
                             <MenuItem value="none">
                                 {t('rig_control_labels.no_frequency_control')}
                             </MenuItem>
@@ -457,8 +457,7 @@ const RigControl = React.memo(function RigControl() {
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
                             {/* VFO 1 */}
                             <FormControl disabled={rigData['tracking'] === true}
-                                         sx={{marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
-                                         size="small">
+                                         sx={{marginTop: 0, marginBottom: 0}} fullWidth variant="outlined" size="small">
                                 <InputLabel htmlFor="vfo1-select">VFO 1</InputLabel>
                                 <Select
                                     id="vfo1-select"
@@ -466,7 +465,8 @@ const RigControl = React.memo(function RigControl() {
                                     onChange={(event) => {
                                         handleVFO1Change(event);
                                     }}
-                                    variant={'filled'}>
+                                    size="small"
+                                    label="VFO 1">
                                     <MenuItem value="none">[none]</MenuItem>
                                     <MenuItem value="uplink">
                                         {selectedTransmitter && selectedTransmitter !== "none" && rigData?.transmitters?.length > 0 ? (
@@ -493,8 +493,7 @@ const RigControl = React.memo(function RigControl() {
 
                             {/* VFO 2 */}
                             <FormControl disabled={rigData['tracking'] === true}
-                                         sx={{marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                         size="small">
+                                         sx={{marginTop: 0, marginBottom: 1}} fullWidth variant="outlined" size="small">
                                 <InputLabel htmlFor="vfo2-select">VFO 2</InputLabel>
                                 <Select
                                     id="vfo2-select"
@@ -502,7 +501,8 @@ const RigControl = React.memo(function RigControl() {
                                     onChange={(event) => {
                                         handleVFO2Change(event);
                                     }}
-                                    variant={'filled'}>
+                                    size="small"
+                                    label="VFO 2">
                                     <MenuItem value="none">[none]</MenuItem>
                                     <MenuItem value="downlink">
                                         {selectedTransmitter && selectedTransmitter !== "none" && rigData?.transmitters?.length > 0 ? (

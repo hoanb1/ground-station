@@ -49,7 +49,7 @@ const FftAccordion = ({
                     <Box sx={{mb: 2}}>
                         <FormControl disabled={gettingSDRParameters}
                                      margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
-                                     fullWidth={true} variant="filled"
+                                     fullWidth={true} variant="outlined"
                                      size="small">
                             <InputLabel>{t('fft.fft_size')}</InputLabel>
                             <Select
@@ -57,7 +57,8 @@ const FftAccordion = ({
                                 size={'small'}
                                 value={fftSizeValues.length ? localFFTSize : ""}
                                 onChange={(e) => onFFTSizeChange(e.target.value)}
-                                variant={'filled'}>
+                                label={t('fft.fft_size')}
+                                size="small">
                                 {fftSizeValues.map(size => (
                                     <MenuItem key={size} value={size}>{size}</MenuItem>
                                 ))}
@@ -66,14 +67,15 @@ const FftAccordion = ({
 
                         <FormControl disabled={gettingSDRParameters}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                     variant="filled" size="small">
+                                     variant="outlined" size="small">
                             <InputLabel>{t('fft.fft_window')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
                                 value={fftWindowValues.length ? fftWindow : ""}
                                 onChange={(e) => onFFTWindowChange(e.target.value)}
-                                variant={'filled'}>
+                                label={t('fft.fft_window')}
+                                size="small">
                                 {fftWindowValues.map(window => (
                                     <MenuItem key={window} value={window}>
                                         {window.charAt(0).toUpperCase() + window.slice(1)}
@@ -84,14 +86,15 @@ const FftAccordion = ({
 
                         <FormControl disabled={gettingSDRParameters}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                     variant="filled" size="small">
+                                     variant="outlined" size="small">
                             <InputLabel>{t('fft.fft_averaging')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
                                 value={fftAveraging}
                                 onChange={(e) => onFFTAveragingChange(e.target.value)}
-                                variant={'filled'}>
+                                label={t('fft.fft_averaging')}
+                                size="small">
                                 <MenuItem value={1}>{t('fft.averaging_none')}</MenuItem>
                                 <MenuItem value={2}>{t('fft.averaging_samples', { count: 2 })}</MenuItem>
                                 <MenuItem value={3}>{t('fft.averaging_samples', { count: 3 })}</MenuItem>
@@ -102,7 +105,7 @@ const FftAccordion = ({
                         </FormControl>
                         <FormControl disabled={gettingSDRParameters}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                     variant="filled"
+                                     variant="outlined"
                                      size="small">
                             <InputLabel>{t('fft.color_map')}</InputLabel>
                             <Select
@@ -111,7 +114,7 @@ const FftAccordion = ({
                                 value={localColorMap}
                                 onChange={(e) => onColorMapChange(e.target.value)}
                                 label={t('fft.color_map')}
-                                variant={'filled'}>
+                                size="small">
                                 {colorMaps.map(map => (
                                     <MenuItem key={map.id} value={map.id}>
                                         {map.name}

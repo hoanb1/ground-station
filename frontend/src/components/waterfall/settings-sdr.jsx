@@ -68,14 +68,15 @@ const SdrAccordion = ({
 
                         <FormControl disabled={isStreaming} margin="normal"
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth
-                                     variant="filled"
+                                     variant="outlined"
                                      size="small">
                             <InputLabel htmlFor="sdr-select">{t('sdr.sdr_label')}</InputLabel>
                             <Select
                                 id="sdr-select"
                                 value={sdrs.length > 0 ? selectedSDRId : "none"}
                                 onChange={onSDRChange}
-                                variant={'filled'}>
+                                size="small"
+                                label={t('sdr.sdr_label')}>
                                 <MenuItem value="none">
                                     {t('sdr.no_sdr_selected')}
                                 </MenuItem>
@@ -123,14 +124,14 @@ const SdrAccordion = ({
                         <FormControl disabled={gettingSDRParameters || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
-                                     variant="filled" size="small">
+                                     variant="outlined" size="small">
                             <InputLabel>{t('sdr.gain_db')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size={'small'}
+                                label={t('sdr.gain_db')}
                                 value={gainValues.length ? localGain : "none"}
-                                onChange={(e) => onGainChange(e.target.value)}
-                                variant={'filled'}>
+                                onChange={(e) => onGainChange(e.target.value)}>
                                 <MenuItem value="none">
                                     {t('sdr.no_gain_selected')}
                                 </MenuItem>
@@ -144,14 +145,15 @@ const SdrAccordion = ({
                         <FormControl disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
-                                     variant="filled" size="small">
+                                     variant="outlined" size="small">
                             <InputLabel>{t('sdr.sample_rate')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size={'small'}
                                 value={sampleRateValues.includes(localSampleRate) ? localSampleRate : "none"}
                                 onChange={(e) => onSampleRateChange(e.target.value)}
-                                variant={'filled'}>
+                                label={t('sdr.sample_rate')}
+                                size="small">
                                 <MenuItem value="none">
                                     {t('sdr.no_rate_selected')}
                                 </MenuItem>
@@ -174,14 +176,15 @@ const SdrAccordion = ({
                         <FormControl disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
-                                     variant="filled" size="small">
+                                     variant="outlined" size="small">
                             <InputLabel>{t('sdr.antenna')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size={'small'}
                                 value={antennasList.rx.includes(selectedAntenna) ? selectedAntenna : "none"}
                                 onChange={(e) => onAntennaChange(e.target.value)}
-                                variant={'filled'}>
+                                label={t('sdr.antenna')}
+                                size="small">
                                 <MenuItem value="none">
                                     {t('sdr.no_antenna_selected')}
                                 </MenuItem>

@@ -193,7 +193,7 @@ const RecordingAccordion = ({
                         disabled={isRecording}
                         size="small"
                         fullWidth
-                        variant="filled"
+                        variant="outlined"
                         placeholder="unknown_recording"
                     />
 
