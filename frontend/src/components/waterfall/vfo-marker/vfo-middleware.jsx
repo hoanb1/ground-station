@@ -11,7 +11,7 @@ export const setSocketForMiddleware = (socket) => {
 };
 
 // Debounce delay for backend VFO parameter updates (milliseconds)
-const BACKEND_UPDATE_DEBOUNCE_MS = 50;
+const BACKEND_UPDATE_DEBOUNCE_MS = 150;
 
 // Debounce timers for each VFO (keyed by vfoNumber)
 const debounceTimers = {};
