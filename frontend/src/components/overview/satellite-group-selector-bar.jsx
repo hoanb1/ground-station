@@ -213,6 +213,7 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
             <FormControl
                 sx={{ minWidth: 200, maxWidth: 300, flexShrink: 0 }}
                 disabled={passesLoading}
+                variant="outlined"
                 size="small"
             >
                 <InputLabel htmlFor="grouped-select">{t('satellite_selector.group_label')}</InputLabel>
@@ -220,7 +221,7 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
                     disabled={passesLoading}
                     value={satGroups.length ? selectedSatGroupId : ""}
                     id="grouped-select"
-                    label="Grouping"
+                    label={t('satellite_selector.group_label')}
                     size="small"
                     onChange={handleOnGroupChange}
                 >
