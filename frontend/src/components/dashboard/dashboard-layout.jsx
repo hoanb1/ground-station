@@ -448,6 +448,7 @@ export default function Layout() {
     const streamingTimeoutsRef = useRef({}); // Track per-VFO timeouts
     const streamingVFOsRef = useRef([]); // Track which VFOs are streaming (ref to avoid useEffect re-runs)
     const streamingVFOs = useSelector((state) => state.vfo.streamingVFOs); // Get Redux state for syncing
+    const isStreaming = useSelector((state) => state.waterfall.isStreaming); // Get streaming state to filter audio
 
     // Sync ref with Redux state
     useEffect(() => {
@@ -501,7 +502,10 @@ export default function Layout() {
                     }, 500);
                 }
 
-                playAudioSamples(data);
+                // Only play audio if streaming (prevents delayed audio after stop)
+                if (isStreaming) {
+                    playAudioSamples(data);
+                }
             });
         }
 
@@ -515,7 +519,7 @@ export default function Layout() {
             });
             streamingTimeoutsRef.current = {};
         };
-    }, [socket, playAudioSamples, dispatch]);
+    }, [socket, playAudioSamples, dispatch, isStreaming]);
 
     const handleDrawerToggle = () => {
         // On mobile, toggle the temporary drawer
