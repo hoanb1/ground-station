@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { registerFlushCallback, unregisterFlushCallback } from './audio-service.js';
 import { setVfoMuted } from '../waterfall/vfo-marker/vfo-slice.jsx';
@@ -30,6 +30,14 @@ export const useAudio = () => {
 
 export const AudioProvider = ({ children }) => {
     const dispatch = useDispatch();
+
+    // Get persisted mute state from Redux
+    const vfoMutedRedux = useSelector(state => state.vfo.vfoMuted || {
+        1: false,
+        2: false,
+        3: false,
+        4: false
+    });
 
     // Audio context for Web Audio API (must stay in main thread)
     const audioContextRef = useRef(null);
@@ -116,13 +124,17 @@ export const AudioProvider = ({ children }) => {
             for (let vfoNumber = 1; vfoNumber <= 4; vfoNumber++) {
                 const gainNode = audioContextRef.current.createGain();
                 gainNode.connect(audioContextRef.current.destination);
-                gainNode.gain.value = volume;
+
+                // Initialize per-VFO state from Redux (for mute) or defaults
+                const isMuted = vfoMutedRedux[vfoNumber] || false;
+                vfoMutedRef.current[vfoNumber] = isMuted;
+                vfoVolumeRef.current[vfoNumber] = 1.0;
+
+                // Set gain based on mute state
+                gainNode.gain.value = isMuted ? 0 : volume;
                 vfoGainNodesRef.current[vfoNumber] = gainNode;
 
-                // Initialize per-VFO state
                 vfoNextPlayTimeRef.current[vfoNumber] = audioContextRef.current.currentTime;
-                vfoMutedRef.current[vfoNumber] = false;
-                vfoVolumeRef.current[vfoNumber] = 1.0;
                 vfoAudioLevelRef.current[vfoNumber] = 0.0;
             }
 
@@ -141,7 +153,7 @@ export const AudioProvider = ({ children }) => {
             console.error('Failed to initialize audio:', error);
             toast.error(`Failed to initialize audio: ${error.message}`);
         }
-    }, [volume, initializeWorkers]);
+    }, [volume, initializeWorkers, vfoMutedRedux]);
 
     // Play processed audio from worker (main thread only) - per VFO
     const playProcessedAudio = useCallback((processedData, vfoNumber) => {

@@ -64,7 +64,7 @@ const waterfallPersistConfig = {
 const vfoPersistConfig = {
     key: 'vfo',
     storage,
-    whitelist: ['vfoMarkers']
+    whitelist: ['vfoMarkers', 'vfoMuted']
 };
 
 // Persist configuration for the 'rigs' slice
