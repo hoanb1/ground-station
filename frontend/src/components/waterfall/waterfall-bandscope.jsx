@@ -435,6 +435,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         resetCustomTransform,
         getCurrentScale: () => scaleRef.current,
         getCurrentPosition: () => positionXRef.current,
+        getContainerWidth: () => containerWidthRef.current,
     }), [zoomOnXAxisOnly, panOnXAxisOnly, resetCustomTransform]);
 
     // Set touch actions for mobile scrolling

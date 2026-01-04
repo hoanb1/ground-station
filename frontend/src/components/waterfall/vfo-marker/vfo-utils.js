@@ -506,44 +506,23 @@ export const generateVFOLabelText = (marker, mode, bandwidth, formatFrequency) =
  * @returns {Object} Visible frequency range
  */
 export const getVisibleFrequencyRange = (centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX) => {
-    // When zoomed out (actualWidth < containerWidth), we see the full spectrum
-    if (actualWidth <= containerWidth) {
+    // Use the global waterfall transform function if available for accurate zoom/pan calculation
+    if (typeof window !== 'undefined' && window.getWaterfallTransform) {
+        const transform = window.getWaterfallTransform();
         return {
-            startFrequency: centerFrequency - sampleRate / 2,
-            endFrequency: centerFrequency + sampleRate / 2,
-            centerFrequency: centerFrequency,
-            bandwidth: sampleRate
+            startFrequency: transform.startFreq,
+            endFrequency: transform.endFreq,
+            centerFrequency: (transform.startFreq + transform.endFreq) / 2,
+            bandwidth: transform.visibleBandwidth
         };
     }
 
-    // When zoomed in (actualWidth > containerWidth), calculate visible portion
-    const zoomFactor = actualWidth / containerWidth;
-
-    // Calculate the visible width as a fraction of the total zoomed width
-    const visibleWidthRatio = containerWidth / actualWidth;
-
-    // Calculate the pan offset as a fraction of the total zoomed width
-    // currentPositionX is negative when panned right
-    const panOffsetRatio = -currentPositionX / actualWidth;
-
-    // Calculate start and end ratios, ensuring they stay within bounds
-    const startRatio = Math.max(0, Math.min(1 - visibleWidthRatio, panOffsetRatio));
-    const endRatio = Math.min(1, startRatio + visibleWidthRatio);
-
-    // Calculate the full frequency range
-    const fullStartFreq = centerFrequency - sampleRate / 2;
-    const fullEndFreq = centerFrequency + sampleRate / 2;
-    const fullFreqRange = fullEndFreq - fullStartFreq;
-
-    // Calculate visible frequency range
-    const visibleStartFreq = fullStartFreq + (startRatio * fullFreqRange);
-    const visibleEndFreq = fullStartFreq + (endRatio * fullFreqRange);
-
+    // Fallback to basic calculation (when waterfall transform not available yet)
     return {
-        startFrequency: visibleStartFreq,
-        endFrequency: visibleEndFreq,
-        centerFrequency: (visibleStartFreq + visibleEndFreq) / 2,
-        bandwidth: visibleEndFreq - visibleStartFreq
+        startFrequency: centerFrequency - sampleRate / 2,
+        endFrequency: centerFrequency + sampleRate / 2,
+        centerFrequency: centerFrequency,
+        bandwidth: sampleRate
     };
 };
 

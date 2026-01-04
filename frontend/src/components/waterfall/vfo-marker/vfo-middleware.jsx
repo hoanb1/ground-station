@@ -95,11 +95,18 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                                    vfoFrequency > bandwidthEnd;
 
         if (isOutsideBandwidth) {
-            // VFO is outside bandwidth or uninitialized - reset to center and unlock
+            // VFO is outside bandwidth or uninitialized - reset to visible center and unlock
+            // Use the visible center frequency if zoom/pan is active
+            let targetFrequency = centerFrequency;
+            if (typeof window !== 'undefined' && window.getWaterfallTransform) {
+                const transform = window.getWaterfallTransform();
+                targetFrequency = (transform.startFreq + transform.endFreq) / 2;
+            }
+
             store.dispatch(setVFOProperty({
                 vfoNumber: vfoNumber,
                 updates: {
-                    frequency: centerFrequency,
+                    frequency: targetFrequency,
                     lockedTransmitterId: 'none',
                     frequencyOffset: 0
                 }

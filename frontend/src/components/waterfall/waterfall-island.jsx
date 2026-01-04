@@ -313,6 +313,42 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
         };
     }, [handleCaptureSnapshotWithOverlay]);
 
+    // Expose waterfall zoom and pan transform values globally for real-time access
+    useEffect(() => {
+        window.getWaterfallTransform = () => {
+            const scale = waterfallControlRef.current?.getCurrentScale() || 1;
+            const positionX = waterfallControlRef.current?.getCurrentPosition() || 0;
+            const containerWidth = waterfallControlRef.current?.getContainerWidth() || waterFallVisualWidth;
+            const canvasWidth = waterFallCanvasWidth;
+
+            // Calculate Hz per container pixel at current zoom
+            const hzPerContainerPixel = sampleRate / (containerWidth * scale);
+
+            // Calculate visible frequency range
+            const startFreqOffset = -positionX * hzPerContainerPixel;
+            const endFreqOffset = startFreqOffset + (containerWidth * hzPerContainerPixel);
+
+            const startFreq = centerFrequency - (sampleRate / 2) + startFreqOffset;
+            const endFreq = centerFrequency - (sampleRate / 2) + endFreqOffset;
+            const visibleBandwidth = endFreq - startFreq;
+
+            return {
+                scale,
+                positionX,
+                containerWidth,
+                canvasWidth,
+                startFreq,
+                endFreq,
+                visibleBandwidth,
+                centerFrequency,
+                sampleRate
+            };
+        };
+        return () => {
+            delete window.getWaterfallTransform;
+        };
+    }, [centerFrequency, sampleRate, waterFallVisualWidth, waterFallCanvasWidth]);
+
     const toggleFullscreen = useCallback(() => {
         toggleFullscreenUtil(mainWaterFallContainer.current, setIsFullscreen);
     }, []);
