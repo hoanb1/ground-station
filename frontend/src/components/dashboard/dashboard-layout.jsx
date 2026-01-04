@@ -446,7 +446,13 @@ export default function Layout() {
     // Use the audio context
     const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
     const streamingTimeoutsRef = useRef({}); // Track per-VFO timeouts
-    const streamingVFOs = useSelector((state) => state.vfo.streamingVFOs); // Track which VFOs are streaming
+    const streamingVFOsRef = useRef([]); // Track which VFOs are streaming (ref to avoid useEffect re-runs)
+    const streamingVFOs = useSelector((state) => state.vfo.streamingVFOs); // Get Redux state for syncing
+
+    // Sync ref with Redux state
+    useEffect(() => {
+        streamingVFOsRef.current = streamingVFOs;
+    }, [streamingVFOs]);
 
     // Update navigation when language changes or state changes
     React.useEffect(() => {
@@ -483,7 +489,8 @@ export default function Layout() {
 
                     // Only dispatch if VFO is not already marked as streaming
                     // This prevents flooding Redux store with redundant actions
-                    if (!streamingVFOs.includes(vfoNumber)) {
+                    // Use ref instead of state to avoid triggering useEffect re-runs
+                    if (!streamingVFOsRef.current.includes(vfoNumber)) {
                         dispatch(addStreamingVFO(vfoNumber));
                     }
 
@@ -508,7 +515,7 @@ export default function Layout() {
             });
             streamingTimeoutsRef.current = {};
         };
-    }, [socket, playAudioSamples, dispatch, streamingVFOs]);
+    }, [socket, playAudioSamples, dispatch]);
 
     const handleDrawerToggle = () => {
         // On mobile, toggle the temporary drawer
