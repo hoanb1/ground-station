@@ -15,13 +15,17 @@ import { useAudio } from '../../dashboard/audio-provider.jsx';
 export const useVfoAudioState = () => {
     const { setVfoMute, getAudioBufferLength, getVfoAudioLevel, getVfoRfPower } = useAudio();
 
-    // Track mute state for each VFO (0-3, but UI uses 1-4)
-    const [vfoMuted, setVfoMuted] = React.useState({
+    // Get persisted mute state from Redux
+    const vfoMutedRedux = useSelector(state => state.vfo.vfoMuted || {
         1: false,
         2: false,
         3: false,
         4: false
     });
+
+    // Track mute state for each VFO (0-3, but UI uses 1-4)
+    // Initialize from Redux to preserve state across navigation
+    const [vfoMuted, setVfoMuted] = React.useState(vfoMutedRedux);
 
     // Track audio buffer length per VFO
     const [vfoBufferLengths, setVfoBufferLengths] = React.useState({
@@ -46,6 +50,11 @@ export const useVfoAudioState = () => {
         3: null,
         4: null
     });
+
+    // Sync local mute state with Redux when it changes
+    React.useEffect(() => {
+        setVfoMuted(vfoMutedRedux);
+    }, [vfoMutedRedux]);
 
     // Update buffer lengths, audio levels, and RF power every 500ms
     React.useEffect(() => {

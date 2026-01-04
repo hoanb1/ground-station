@@ -651,8 +651,7 @@ const DecodedPacketsDrawer = () => {
                     backgroundColor: theme.palette.background.paper,
                 }}
             >
-                <Box sx={{ height: '100%', width: '100%' }}>
-                    <DataGrid
+                <DataGrid
                         rows={rows}
                         columns={columns}
                         density="compact"
@@ -686,7 +685,6 @@ const DecodedPacketsDrawer = () => {
                             },
                         }}
                     />
-                </Box>
             </Box>
 
             {/* Telemetry Viewer Dialog */}

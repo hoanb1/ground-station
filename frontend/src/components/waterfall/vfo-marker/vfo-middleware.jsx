@@ -72,7 +72,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     const socket = socketInstance;
 
     if (!socket) {
-        console.warn('Socket not available for backend sync');
         return next(action);
     }
 
@@ -112,7 +111,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     const state = store.getState();
 
     if (!socket) {
-        console.warn('Socket not available for backend sync');
         return result;
     }
 
