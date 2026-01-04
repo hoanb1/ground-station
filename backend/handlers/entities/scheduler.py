@@ -44,7 +44,7 @@ async def get_scheduled_observations(
     Returns:
         Dictionary with success status and observations list
     """
-    logger.debug("Getting scheduled observations")
+    logger.info(f"[GET_SCHEDULED_OBSERVATIONS] data={data}, sid={sid}")
     observations_list = list(_scheduled_observations.values())
     return {"success": True, "data": observations_list}
 
@@ -64,7 +64,7 @@ async def create_scheduled_observation(
     Returns:
         Dictionary with success status and created observation
     """
-    logger.debug(f"Adding scheduled observation, data: {data}")
+    logger.info(f"[CREATE_SCHEDULED_OBSERVATION] data={data}, sid={sid}")
 
     if not data:
         logger.error("No data provided")
@@ -94,7 +94,7 @@ async def update_scheduled_observation(
     Returns:
         Dictionary with success status and updated observation
     """
-    logger.debug(f"Editing scheduled observation, data: {data}")
+    logger.info(f"[UPDATE_SCHEDULED_OBSERVATION] data={data}, sid={sid}")
 
     if not data:
         logger.error("No data provided")
@@ -128,7 +128,7 @@ async def delete_scheduled_observations(
     Returns:
         Dictionary with success status
     """
-    logger.debug(f"Delete scheduled observations, data: {data}")
+    logger.info(f"[DELETE_SCHEDULED_OBSERVATIONS] data={data}, sid={sid}")
 
     if not data or not isinstance(data, list):
         logger.error("Invalid data - list of IDs required")
@@ -158,7 +158,7 @@ async def toggle_observation_enabled(
     Returns:
         Dictionary with success status
     """
-    logger.debug(f"Toggle observation enabled, data: {data}")
+    logger.info(f"[TOGGLE_OBSERVATION_ENABLED] data={data}, sid={sid}")
 
     if not data:
         logger.error("No data provided")
@@ -194,7 +194,7 @@ async def cancel_observation(
     Returns:
         Dictionary with success status
     """
-    logger.debug(f"Cancel observation, data: {data}")
+    logger.info(f"[CANCEL_OBSERVATION] data={data}, sid={sid}")
 
     if not data:
         logger.error("No observation ID provided")
@@ -229,7 +229,7 @@ async def get_monitored_satellites(
     Returns:
         Dictionary with success status and monitored satellites list
     """
-    logger.debug("Getting monitored satellites")
+    logger.info(f"[GET_MONITORED_SATELLITES] data={data}, sid={sid}")
     satellites_list = list(_monitored_satellites.values())
     return {"success": True, "data": satellites_list}
 
@@ -249,7 +249,7 @@ async def create_monitored_satellite(
     Returns:
         Dictionary with success status and created monitored satellite
     """
-    logger.debug(f"Adding monitored satellite, data: {data}")
+    logger.info(f"[CREATE_MONITORED_SATELLITE] data={data}, sid={sid}")
 
     if not data:
         logger.error("No data provided")
@@ -279,7 +279,7 @@ async def update_monitored_satellite(
     Returns:
         Dictionary with success status and updated monitored satellite
     """
-    logger.debug(f"Editing monitored satellite, data: {data}")
+    logger.info(f"[UPDATE_MONITORED_SATELLITE] data={data}, sid={sid}")
 
     if not data:
         logger.error("No data provided")
@@ -313,7 +313,7 @@ async def delete_monitored_satellites(
     Returns:
         Dictionary with success status
     """
-    logger.debug(f"Delete monitored satellites, data: {data}")
+    logger.info(f"[DELETE_MONITORED_SATELLITES] data={data}, sid={sid}")
 
     if not data or not isinstance(data, list):
         logger.error("Invalid data - list of IDs required")
@@ -343,7 +343,7 @@ async def toggle_monitored_satellite_enabled(
     Returns:
         Dictionary with success status
     """
-    logger.debug(f"Toggle monitored satellite enabled, data: {data}")
+    logger.info(f"[TOGGLE_MONITORED_SATELLITE_ENABLED] data={data}, sid={sid}")
 
     if not data:
         logger.error("No data provided")

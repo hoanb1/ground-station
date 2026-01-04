@@ -46,6 +46,8 @@ import { useSocket } from '../common/socket.jsx';
 import {
     addObservation,
     updateObservation,
+    createScheduledObservation,
+    updateScheduledObservation,
     setDialogOpen,
     setSatelliteId,
     setGroupId,
@@ -234,23 +236,30 @@ const ObservationFormDialog = () => {
     const handleSave = () => {
         if (selectedObservation?.id) {
             // Update existing observation (has id)
-            dispatch(updateObservation({
-                ...formData,
+            dispatch(updateScheduledObservation({
+                socket,
                 id: selectedObservation.id,
-                updated_at: new Date().toISOString(),
+                observation: {
+                    ...formData,
+                    updated_at: new Date().toISOString(),
+                }
             }));
         } else {
             // Add new observation (no id, either new or cloned)
-            dispatch(addObservation({
+            const newObservation = {
                 ...formData,
                 id: `obs-${Date.now()}`,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 status: 'scheduled',
+            };
+            dispatch(createScheduledObservation({
+                socket,
+                observation: newObservation
             }));
         }
 
-        dispatch(setDialogOpen(false));
+        // Dialog will be closed automatically by the fulfilled reducer
     };
 
     const handleAddTask = (taskType) => {
