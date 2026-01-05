@@ -879,9 +879,46 @@ export default function MonitoredSatelliteDialog() {
 
                     {/* Tasks */}
                     <Box>
-                        <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Tasks
-                        </Typography>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                            <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                                Tasks
+                            </Typography>
+                            <Stack direction="row" spacing={1}>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => handleAddTask('decoder')}
+                                >
+                                    Decoder
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => handleAddTask('audio_recording')}
+                                >
+                                    Audio Recording
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => handleAddTask('transcription')}
+                                >
+                                    Transcription
+                                </Button>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<AddIcon />}
+                                    onClick={() => handleAddTask('iq_recording')}
+                                >
+                                    IQ Recording
+                                </Button>
+                            </Stack>
+                        </Box>
+
                         {formData.tasks.length === 0 ? (
                             <Typography variant="body2" color="text.secondary">
                                 No tasks added yet. Add decoders, audio recording, transcription, or IQ recording.
@@ -949,6 +986,7 @@ export default function MonitoredSatelliteDialog() {
                                                             'default'
                                                         }
                                                         variant="filled"
+                                                        sx={{ minWidth: 130 }}
                                                     />
                                                     {!expandedTasks[index] && (
                                                         <Typography
@@ -1272,37 +1310,6 @@ export default function MonitoredSatelliteDialog() {
                                 ))}
                             </Stack>
                         )}
-
-                        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                            <Button
-                                size="small"
-                                startIcon={<AddIcon />}
-                                onClick={() => handleAddTask('decoder')}
-                            >
-                                Decoder
-                            </Button>
-                            <Button
-                                size="small"
-                                startIcon={<AddIcon />}
-                                onClick={() => handleAddTask('audio_recording')}
-                            >
-                                Audio Recording
-                            </Button>
-                            <Button
-                                size="small"
-                                startIcon={<AddIcon />}
-                                onClick={() => handleAddTask('transcription')}
-                            >
-                                Transcription
-                            </Button>
-                            <Button
-                                size="small"
-                                startIcon={<AddIcon />}
-                                onClick={() => handleAddTask('iq_recording')}
-                            >
-                                IQ Recording
-                            </Button>
-                        </Stack>
                     </Box>
 
                     <Divider />

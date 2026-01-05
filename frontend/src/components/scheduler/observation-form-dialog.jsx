@@ -973,6 +973,7 @@ const ObservationFormDialog = () => {
                             <Stack direction="row" spacing={1}>
                                 <Button
                                     size="small"
+                                    variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('decoder')}
                                 >
@@ -980,6 +981,7 @@ const ObservationFormDialog = () => {
                                 </Button>
                                 <Button
                                     size="small"
+                                    variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('audio_recording')}
                                 >
@@ -987,6 +989,7 @@ const ObservationFormDialog = () => {
                                 </Button>
                                 <Button
                                     size="small"
+                                    variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('transcription')}
                                 >
@@ -994,6 +997,7 @@ const ObservationFormDialog = () => {
                                 </Button>
                                 <Button
                                     size="small"
+                                    variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('iq_recording')}
                                 >
@@ -1068,6 +1072,7 @@ const ObservationFormDialog = () => {
                                                         'default'
                                                     }
                                                     variant="filled"
+                                                    sx={{ minWidth: 130 }}
                                                 />
                                                 {!expandedTasks[index] && (
                                                     <Typography
