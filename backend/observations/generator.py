@@ -30,7 +30,7 @@ from crud.monitoredsatellites import (
 )
 from crud.satellites import fetch_satellites
 from crud.scheduledobservations import add_scheduled_observation, edit_scheduled_observation
-from observations.conflicts import find_overlapping_observation, should_update_observation
+from observations.conflicts import find_overlapping_observation
 from tracking.passes import calculate_next_events
 
 
@@ -189,13 +189,10 @@ async def _generate_observations_for_satellite(
             )
 
             if existing:
-                if should_update_observation(existing):
-                    # Update existing failed/cancelled observation
-                    await _update_observation(session, existing, monitored_sat, pass_data)
-                    stats["updated"] += 1
-                else:
-                    # Skip existing valid observation
-                    stats["skipped"] += 1
+                # Always update auto-generated observations from monitored satellites
+                # This ensures they get the latest tasks, SDR config, etc.
+                await _update_observation(session, existing, monitored_sat, pass_data)
+                stats["updated"] += 1
             else:
                 # Create new observation
                 await _create_observation(session, monitored_sat, pass_data)
