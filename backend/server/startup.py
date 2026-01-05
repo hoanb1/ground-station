@@ -21,7 +21,7 @@ from hardware.soapysdrbrowser import discover_soapy_servers
 from processing.processmanager import process_manager
 from server import shutdown
 from server.firsttime import first_time_initialization, run_initial_sync
-from server.scheduler import start_scheduler, stop_scheduler
+from server.scheduler import run_initial_observation_generation, start_scheduler, stop_scheduler
 from server.sessionsnapshot import start_session_runtime_emitter
 from server.systeminfo import start_system_info_emitter
 from server.version import get_full_version_info
@@ -62,6 +62,11 @@ async def lifespan(fastapiapp: FastAPI):
     # In an async context, prefer get_running_loop() (get_event_loop() is deprecated when no loop set)
     event_loop = asyncio.get_running_loop()
 
+    # Set socketio instance for observations events
+    from observations.events import set_socketio_instance
+
+    set_socketio_instance(sio)
+
     # Start audio broadcaster
     audio_broadcaster.start()
     shutdown.audio_broadcaster = audio_broadcaster
@@ -87,6 +92,9 @@ async def lifespan(fastapiapp: FastAPI):
 
     # Start the background task scheduler
     start_scheduler(sio, process_manager)
+
+    # Run initial observation generation
+    asyncio.create_task(run_initial_observation_generation())
 
     # Start performance monitoring
     process_manager.start_monitoring()
@@ -119,6 +127,15 @@ sio = socketio.AsyncServer(
     binary=True,
     max_http_buffer_size=10 * 1024 * 1024,  # 10MB to handle large waterfall PNG images
 )
+
+
+async def emit_scheduled_observations_changed():
+    """Emit event to all clients that scheduled observations have changed."""
+    from observations.events import emit_scheduled_observations_changed as _emit
+
+    await _emit()
+
+
 app = FastAPI(
     lifespan=lifespan,
     title="Ground Station API",

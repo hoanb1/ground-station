@@ -40,6 +40,7 @@ import {
     FormControlLabel,
     Autocomplete,
     ListSubheader,
+    CircularProgress,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
@@ -54,6 +55,7 @@ import {
     setGroupOfSats,
     setSelectedFromSearch,
     setSelectedPassId,
+    fetchSDRParameters,
 } from './scheduler-slice.jsx';
 import { fetchSDRs } from '../hardware/sdr-slice.jsx';
 import { fetchSatellite } from '../satellites/satellite-slice.jsx';
@@ -152,13 +154,17 @@ const ObservationFormDialog = () => {
     const groupOfSats = useSelector((state) => state.scheduler?.satelliteSelection?.groupOfSats || []);
     const rotators = useSelector((state) => state.rotators?.rotators || []);
     const passes = useSelector((state) => state.scheduler?.satelliteSelection?.passes || []);
+    const observations = useSelector((state) => state.scheduler?.observations || []);
+    const sdrParameters = useSelector((state) => state.scheduler?.sdrParameters || {});
+    const sdrParametersLoading = useSelector((state) => state.scheduler?.sdrParametersLoading || false);
+    const sdrParametersError = useSelector((state) => state.scheduler?.sdrParametersError || {});
 
     const [formData, setFormData] = useState({
         name: '',
         enabled: true,
         satellite: { norad_id: '', name: '', group_id: '' },
         pass: null,
-        sdr: { id: '', name: '', sample_rate: 2000000 },
+        sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '' },
         transmitter: { id: '', frequency: 0, mode: '', bandwidth: 0 },
         tasks: [],
         rotator: { id: null, tracking_enabled: false },
@@ -195,6 +201,13 @@ const ObservationFormDialog = () => {
         }
     }, [socket, dispatch]);
 
+    // Fetch SDR parameters when SDR is selected
+    useEffect(() => {
+        if (socket && formData.sdr.id) {
+            dispatch(fetchSDRParameters({ socket, sdrId: formData.sdr.id }));
+        }
+    }, [socket, formData.sdr.id, dispatch]);
+
     // Populate form when editing
     useEffect(() => {
         if (selectedObservation) {
@@ -206,7 +219,7 @@ const ObservationFormDialog = () => {
                 enabled: true,
                 satellite: { norad_id: '', name: '', group_id: '' },
                 pass: null,
-                sdr: { id: '', name: '', sample_rate: 2000000 },
+                sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '' },
                 transmitter: { id: '', frequency: 0, mode: '', bandwidth: 0 },
                 tasks: [],
                 rotator: { id: null, tracking_enabled: false },
@@ -569,12 +582,30 @@ const ObservationFormDialog = () => {
             return Math.abs(passStartTime - currentStartTime) < 1000;
         });
 
+        // Check if selected pass conflicts with existing observations
+        const hasConflict = formData.pass && observations.some(obs => {
+            // Skip the observation we're currently editing
+            if (selectedObservation?.id && obs.id === selectedObservation.id) {
+                return false;
+            }
+            if (!obs.pass) return false;
+            const passStart = new Date(formData.pass.event_start);
+            const passEnd = new Date(formData.pass.event_end);
+            const obsStart = new Date(obs.pass.event_start);
+            const obsEnd = new Date(obs.pass.event_end);
+            // Check for any overlap
+            return (passStart < obsEnd && passEnd > obsStart);
+        });
+
         return (
             formData.name.trim() !== '' &&
             formData.satellite.norad_id !== '' &&
             formData.sdr.id !== '' &&
+            formData.sdr.gain !== '' &&
+            formData.sdr.antenna_port !== '' &&
             bandwidthValidation.valid &&
-            hasValidPass  // Enable only if pass is valid (or null for continuous observation)
+            hasValidPass &&  // Enable only if pass is valid (or null for continuous observation)
+            !hasConflict  // Disable if pass conflicts with existing observation
         );
     };
 
@@ -702,12 +733,48 @@ const ObservationFormDialog = () => {
                     <Divider />
 
                     {/* SDR */}
-                    <Box>
+                    <Box sx={{ position: 'relative' }}>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
                             SDR Configuration
                         </Typography>
+                        {sdrParametersLoading && (
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    bgcolor: 'rgba(0, 0, 0, 0.3)',
+                                    zIndex: 1,
+                                    borderRadius: 1,
+                                }}
+                            >
+                                <CircularProgress />
+                            </Box>
+                        )}
                         <Stack spacing={2}>
-                            <FormControl fullWidth required>
+                            {sdrParametersError[formData.sdr.id] && (
+                                <Box
+                                    sx={{
+                                        p: 1.5,
+                                        bgcolor: 'error.main',
+                                        color: 'error.contrastText',
+                                        borderRadius: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
+                                    <Typography variant="body2">
+                                        ⚠ {sdrParametersError[formData.sdr.id]}
+                                    </Typography>
+                                </Box>
+                            )}
+                            <FormControl fullWidth required error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>SDR</InputLabel>
                                 <Select
                                     value={formData.sdr.id}
@@ -719,12 +786,14 @@ const ObservationFormDialog = () => {
                                                 ...prev.sdr,
                                                 id: e.target.value,
                                                 name: selectedSdr?.name || '',
+                                                gain: '',
+                                                antenna_port: '',
                                             },
                                         }));
                                     }}
                                     label="SDR"
                                 >
-                                    {sdrs.map((sdr) => (
+                                    {sdrs.filter(sdr => sdr.id !== 'sigmf-playback').map((sdr) => (
                                         <MenuItem key={sdr.id} value={sdr.id}>
                                             {sdr.name} ({sdr.type})
                                         </MenuItem>
@@ -768,6 +837,52 @@ const ObservationFormDialog = () => {
                                         ✓ All tasks fit within bandwidth (using {(bandwidthValidation.requiredBandwidth / 1000000).toFixed(2)} MHz of {(bandwidthValidation.sampleRate / 1000000).toFixed(2)} MHz)
                                     </Typography>
                                 )}
+                            </FormControl>
+
+                            <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                                <InputLabel>Gain</InputLabel>
+                                <Select
+                                    value={formData.sdr.gain}
+                                    onChange={(e) => {
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            sdr: {
+                                                ...prev.sdr,
+                                                gain: e.target.value,
+                                            },
+                                        }));
+                                    }}
+                                    label="Gain"
+                                >
+                                    {sdrParameters[formData.sdr.id]?.gain_values?.map((gain) => (
+                                        <MenuItem key={gain} value={gain}>
+                                            {gain} dB
+                                        </MenuItem>
+                                    )) || []}
+                                </Select>
+                            </FormControl>
+
+                            <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                                <InputLabel>Antenna Port</InputLabel>
+                                <Select
+                                    value={formData.sdr.antenna_port}
+                                    onChange={(e) => {
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            sdr: {
+                                                ...prev.sdr,
+                                                antenna_port: e.target.value,
+                                            },
+                                        }));
+                                    }}
+                                    label="Antenna Port"
+                                >
+                                    {sdrParameters[formData.sdr.id]?.antennas?.rx?.map((port) => (
+                                        <MenuItem key={port} value={port}>
+                                            {port}
+                                        </MenuItem>
+                                    )) || []}
+                                </Select>
                             </FormControl>
                         </Stack>
                     </Box>

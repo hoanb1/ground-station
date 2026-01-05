@@ -8,6 +8,9 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from common.logger import logger
 from db import AsyncSessionLocal
+from observations.constants import DEFAULT_AUTO_GENERATE_INTERVAL_HOURS
+from observations.events import emit_scheduled_observations_changed
+from observations.generator import generate_observations_for_monitored_satellites
 from tlesync.logic import synchronize_satellite_data
 
 # Suppress apscheduler internal INFO logs (only show warnings and errors)
@@ -40,6 +43,62 @@ def check_and_restart_decoders_job(process_manager):
         logger.exception(e)
 
 
+async def generate_observations_job():
+    """Job to automatically generate scheduled observations from monitored satellites."""
+    try:
+        logger.info("Running automatic observation generation...")
+        async with AsyncSessionLocal() as session:
+            result = await generate_observations_for_monitored_satellites(session)
+
+            if result["success"]:
+                stats = result.get("data", {})
+                logger.info(
+                    f"Automatic observation generation completed: "
+                    f"{stats.get('generated', 0)} created, "
+                    f"{stats.get('updated', 0)} updated, "
+                    f"{stats.get('skipped', 0)} skipped, "
+                    f"{stats.get('satellites_processed', 0)} satellites processed"
+                )
+
+                # Emit event to all clients if observations were changed
+                if stats.get("generated", 0) > 0 or stats.get("updated", 0) > 0:
+                    await emit_scheduled_observations_changed()
+            else:
+                logger.error(f"Automatic observation generation failed: {result.get('error')}")
+
+    except Exception as e:
+        logger.error(f"Error during automatic observation generation: {e}")
+        logger.exception(e)
+
+
+async def run_initial_observation_generation():
+    """Run observation generation once on startup."""
+    try:
+        logger.info("Running initial observation generation on startup...")
+        async with AsyncSessionLocal() as session:
+            result = await generate_observations_for_monitored_satellites(session)
+
+            if result["success"]:
+                stats = result.get("data", {})
+                logger.info(
+                    f"Initial observation generation completed: "
+                    f"{stats.get('generated', 0)} created, "
+                    f"{stats.get('updated', 0)} updated, "
+                    f"{stats.get('skipped', 0)} skipped, "
+                    f"{stats.get('satellites_processed', 0)} satellites processed"
+                )
+
+                # Emit event to all clients if observations were changed
+                if stats.get("generated", 0) > 0 or stats.get("updated", 0) > 0:
+                    await emit_scheduled_observations_changed()
+            else:
+                logger.error(f"Initial observation generation failed: {result.get('error')}")
+
+    except Exception as e:
+        logger.error(f"Error during initial observation generation: {e}")
+        logger.exception(e)
+
+
 def start_scheduler(sio, process_manager):
     """Initialize and start the background task scheduler."""
     global scheduler
@@ -69,6 +128,16 @@ def start_scheduler(sio, process_manager):
         args=[process_manager],
         id="check_restart_decoders",
         name="Check and restart decoders (fallback)",
+        replace_existing=True,
+    )
+
+    # Schedule automatic observation generation
+    # Default: every 12 hours (configurable via preferences)
+    scheduler.add_job(
+        generate_observations_job,
+        trigger=IntervalTrigger(hours=DEFAULT_AUTO_GENERATE_INTERVAL_HOURS),
+        id="generate_observations",
+        name="Generate scheduled observations",
         replace_existing=True,
     )
 

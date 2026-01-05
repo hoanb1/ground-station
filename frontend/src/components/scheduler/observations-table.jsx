@@ -44,11 +44,11 @@ import {
     Add as AddIcon,
     ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
-import { styled, darken, lighten } from '@mui/material/styles';
+import { darken, lighten } from '@mui/material/styles';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchScheduledObservations,
-    deleteObservations,
+    deleteScheduledObservations,
     toggleObservationEnabledLocal,
     toggleObservationEnabled,
     cancelRunningObservation,
@@ -92,8 +92,8 @@ const ObservationsTable = () => {
     }, [socket, dispatch]);
 
     const handleDelete = () => {
-        if (selectedIds.length > 0) {
-            dispatch(deleteObservations(selectedIds));
+        if (selectedIds.length > 0 && socket) {
+            dispatch(deleteScheduledObservations({ socket, ids: selectedIds }));
             setSelectedIds([]);
             setOpenDeleteConfirm(false);
         }
@@ -132,20 +132,6 @@ const ObservationsTable = () => {
         }
     };
 
-    const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
-        backgroundColor: theme.palette.background.paper,
-        [`& .${gridClasses.row}.status-running`]: {
-            backgroundColor: theme.palette.mode === 'dark'
-                ? darken(theme.palette.success.main, 0.7)
-                : lighten(theme.palette.success.main, 0.8),
-        },
-        [`& .${gridClasses.row}.status-failed`]: {
-            backgroundColor: theme.palette.mode === 'dark'
-                ? darken(theme.palette.error.main, 0.7)
-                : lighten(theme.palette.error.main, 0.8),
-        },
-    }));
-
     const columns = [
         {
             field: 'enabled',
@@ -164,20 +150,20 @@ const ObservationsTable = () => {
             field: 'name',
             headerName: 'Name',
             flex: 1.5,
-            minWidth: 150,
+            minWidth: 200,
         },
         {
             field: 'satellite',
             headerName: 'Satellite',
-            flex: 1,
-            minWidth: 120,
+            flex: 0.8,
+            minWidth: 100,
             valueGetter: (value, row) => row.satellite?.name || '-',
         },
         {
             field: 'pass_start',
             headerName: 'Pass Start',
-            flex: 1.2,
-            minWidth: 180,
+            flex: 0.6,
+            minWidth: 120,
             valueGetter: (value, row) => row.pass?.event_start || '-',
             renderCell: (params) => {
                 if (!params.row.pass) return 'Geostationary';
@@ -187,8 +173,8 @@ const ObservationsTable = () => {
         {
             field: 'pass_end',
             headerName: 'Pass End',
-            flex: 1.2,
-            minWidth: 180,
+            flex: 0.6,
+            minWidth: 120,
             valueGetter: (value, row) => row.pass?.event_end || '-',
             renderCell: (params) => {
                 if (!params.row.pass) return 'Always visible';
@@ -198,8 +184,8 @@ const ObservationsTable = () => {
         {
             field: 'sdr',
             headerName: 'SDR',
-            flex: 1.2,
-            minWidth: 150,
+            flex: 1.5,
+            minWidth: 180,
             renderCell: (params) => {
                 if (!params.row.sdr?.name) return '-';
                 const sampleRateMHz = params.row.sdr.sample_rate
@@ -280,13 +266,12 @@ const ObservationsTable = () => {
             </Alert>
 
             <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0, mt: 2 }}>
-                <StyledDataGrid
+                <DataGrid
                     rows={observations}
                     columns={columns}
                     loading={loading}
                     checkboxSelection
                     disableSelectionOnClick
-                    rowSelectionModel={selectedIds}
                     onRowSelectionModelChange={(newSelection) => {
                         setSelectedIds(newSelection);
                     }}
@@ -306,11 +291,22 @@ const ObservationsTable = () => {
                     }}
                     sx={{
                         border: 0,
+                        backgroundColor: 'background.paper',
                         [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                             outline: 'none',
                         },
                         [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]: {
                             outline: 'none',
+                        },
+                        [`& .${gridClasses.row}.status-running`]: {
+                            backgroundColor: (theme) => theme.palette.mode === 'dark'
+                                ? darken(theme.palette.success.main, 0.7)
+                                : lighten(theme.palette.success.main, 0.8),
+                        },
+                        [`& .${gridClasses.row}.status-failed`]: {
+                            backgroundColor: (theme) => theme.palette.mode === 'dark'
+                                ? darken(theme.palette.error.main, 0.7)
+                                : lighten(theme.palette.error.main, 0.8),
                         },
                         '& .MuiDataGrid-overlay': {
                             fontSize: '0.875rem',
@@ -387,6 +383,7 @@ const ObservationsTable = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
         </Paper>
     );
 };

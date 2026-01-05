@@ -202,13 +202,14 @@ async def fetch_next_passes(
     """
     norad_id = data.get("norad_id", None) if data else None
     hours = data.get("hours", 4.0) if data else 4.0
+    min_elevation = data.get("min_elevation", 0) if data else 0
     force_recalculate = data.get("force_recalculate", False) if data else False
     logger.info(
         f"Handling request from client_id={sid}, norad_id={norad_id}, hours={hours}, "
-        f"force_recalculate={force_recalculate} (get_next_passes)"
+        f"min_elevation={min_elevation}, force_recalculate={force_recalculate} (get_next_passes)"
     )
     next_passes = await fetch_next_events_for_satellite(
-        norad_id=norad_id, hours=hours, force_recalculate=force_recalculate
+        norad_id=norad_id, hours=hours, above_el=min_elevation, force_recalculate=force_recalculate
     )
     return {
         "success": next_passes["success"],

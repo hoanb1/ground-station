@@ -18,8 +18,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { Box, Button, IconButton, Tooltip } from '@mui/material';
-import { BugReport as BugReportIcon } from '@mui/icons-material';
+import { Box } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { useSocket } from '../common/socket.jsx';
 import ObservationsTable from './observations-table.jsx';
@@ -27,7 +26,7 @@ import MonitoredSatellitesTable from './monitored-satellites-table.jsx';
 import ObservationFormDialog from './observation-form-dialog.jsx';
 import MonitoredSatelliteDialog from './monitored-satellite-dialog.jsx';
 import ObservationsTimeline from './observations-timeline-svg.jsx';
-import { observationStatusUpdated, loadSampleData } from './scheduler-slice.jsx';
+import { observationStatusUpdated, fetchScheduledObservations } from './scheduler-slice.jsx';
 
 export default function ScheduledObservationsLayout() {
     const dispatch = useDispatch();
@@ -48,6 +47,21 @@ export default function ScheduledObservationsLayout() {
         };
     }, [socket, dispatch]);
 
+    // Listen for scheduled observations changes from backend
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleObservationsChanged = () => {
+            dispatch(fetchScheduledObservations({ socket }));
+        };
+
+        socket.on('scheduled-observations-changed', handleObservationsChanged);
+
+        return () => {
+            socket.off('scheduled-observations-changed', handleObservationsChanged);
+        };
+    }, [socket, dispatch]);
+
     return (
         <Box
             sx={{
@@ -61,26 +75,6 @@ export default function ScheduledObservationsLayout() {
                 position: 'relative',
             }}
         >
-            {/* Dev Button - Load Sample Data */}
-            <Tooltip title="Load sample data for testing">
-                <IconButton
-                    onClick={() => dispatch(loadSampleData())}
-                    sx={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        zIndex: 1000,
-                        bgcolor: 'background.paper',
-                        '&:hover': {
-                            bgcolor: 'action.hover',
-                        },
-                    }}
-                    size="small"
-                >
-                    <BugReportIcon fontSize="small" />
-                </IconButton>
-            </Tooltip>
-
             {/* Monitored Satellites - Top Section */}
             <Box sx={{ minHeight: '600px', maxHeight: '750px' }}>
                 <MonitoredSatellitesTable />

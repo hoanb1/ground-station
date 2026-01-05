@@ -28,37 +28,19 @@ from typing import Any, Dict
 import numpy as np
 import pmt
 import psutil
-
-# Add setproctitle import for process naming
-try:
-    import setproctitle
-
-    HAS_SETPROCTITLE = True
-except ImportError:
-    HAS_SETPROCTITLE = False
+import setproctitle
 
 # Configure GNU Radio to use mmap-based buffers instead of shmget
 # This prevents shared memory segment exhaustion
 os.environ.setdefault("GR_BUFFER_TYPE", "vmcirc_mmap_tmpfile")
 
-from gnuradio import blocks, gr  # noqa: E402
+from gnuradio import blocks, gr, lora_sdr  # noqa: E402
 from scipy import signal  # noqa: E402
 
 from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 
 logger = logging.getLogger("loradecoder")
-
-# Try to import gr-lora_sdr (optional module)
-LORA_SDR_AVAILABLE = False
-try:
-    from gnuradio import lora_sdr
-
-    LORA_SDR_AVAILABLE = True
-    logger.info("gr-lora_sdr available - LoRa decoder enabled")
-except ImportError as e:
-    logger.warning(f"gr-lora_sdr not available: {e}")
-    logger.warning("LoRa decoder will not be functional")
 
 
 class DecoderStatus(Enum):
@@ -283,8 +265,6 @@ class LoRaFlowgraph(gr.top_block):
             preamble_len: Preamble length (default: 8)
             fldro: Low Data Rate Optimization (default: False)
         """
-        if not LORA_SDR_AVAILABLE:
-            raise RuntimeError("gr-lora_sdr not available - LoRa decoder cannot be initialized")
 
         super().__init__("LoRa Decoder")
 
@@ -447,9 +427,6 @@ class LoRaDecoder(BaseDecoderProcess):
         shm_monitor_interval=10,  # Check SHM every 60 seconds
         shm_restart_threshold=1000,  # Restart when segments exceed this
     ):
-        if not LORA_SDR_AVAILABLE:
-            logger.error("gr-lora_sdr not available - LoRa decoder cannot be initialized")
-            raise RuntimeError("gr-lora_sdr not available")
 
         # Initialize base process (handles multiprocessing setup)
         super().__init__(
@@ -785,8 +762,7 @@ class LoRaDecoder(BaseDecoderProcess):
     def run(self):
         """Main thread loop"""
         # Set process name for visibility in system monitoring tools
-        if HAS_SETPROCTITLE:
-            setproctitle.setproctitle(f"Ground Station - LoRa Decoder (VFO {self.vfo})")
+        setproctitle.setproctitle(f"Ground Station - LoRa Decoder (VFO {self.vfo})")
 
         # Initialize components in subprocess (CRITICAL!)
         self.telemetry_parser = TelemetryParser()

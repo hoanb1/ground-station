@@ -332,3 +332,107 @@ class Cameras(Base):
         default=datetime.now(timezone.utc),
         onupdate=datetime.now(timezone.utc),
     )
+
+
+class ObservationStatus(str, PyEnum):
+    SCHEDULED = "scheduled"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+
+
+class MonitoredSatellites(Base):
+    """
+    Satellites monitored for automatic observation generation.
+    Stores configuration templates used to generate scheduled observations.
+    """
+
+    __tablename__ = "monitored_satellites"
+
+    # Identity & Query Keys
+    id = Column(String, primary_key=True, nullable=False)
+    enabled = Column(Boolean, nullable=False, default=True, index=True)
+    norad_id = Column(
+        Integer,
+        ForeignKey("satellites.norad_id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    # Hardware FKs (for referential integrity & "what's using this hardware?")
+    sdr_id = Column(UUID(as_uuid=True), ForeignKey("sdrs.id"), nullable=True)
+    rotator_id = Column(UUID(as_uuid=True), ForeignKey("rotators.id"), nullable=True)
+    rig_id = Column(UUID(as_uuid=True), ForeignKey("rigs.id"), nullable=True)
+
+    # Grouped config as JSON (flexible, maps to frontend structure)
+    satellite_config = Column(JSON, nullable=False)  # {"name": "ISS (ZARYA)", "group_id": "..."}
+    hardware_config = Column(JSON, nullable=False)  # {"sdr": {...}, "rotator": {...}, "rig": {...}}
+    generation_config = Column(JSON, nullable=False)  # {"min_elevation": 20, "lookahead_hours": 24}
+    tasks = Column(JSON, nullable=False)  # [{"type": "iq_recording", "config": {}}]
+
+    # Metadata
+    created_at = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(
+        AwareDateTime,
+        nullable=False,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+    )
+
+
+class ScheduledObservations(Base):
+    """
+    Individual scheduled observations for specific satellite passes.
+    Can be created manually or auto-generated from MonitoredSatellites.
+    """
+
+    __tablename__ = "scheduled_observations"
+
+    # Identity & Query Keys
+    id = Column(String, primary_key=True, nullable=False)
+    name = Column(String, nullable=False)
+    enabled = Column(Boolean, nullable=False, default=True, index=True)
+    status = Column(
+        Enum(ObservationStatus),
+        nullable=False,
+        default=ObservationStatus.SCHEDULED,
+        index=True,
+    )
+    norad_id = Column(Integer, ForeignKey("satellites.norad_id"), nullable=False, index=True)
+
+    # Pass timing (critical for scheduling queries)
+    event_start = Column(AwareDateTime, nullable=False, index=True)
+    event_end = Column(AwareDateTime, nullable=False)
+
+    # Hardware FKs
+    sdr_id = Column(UUID(as_uuid=True), ForeignKey("sdrs.id"), nullable=True)
+    rotator_id = Column(UUID(as_uuid=True), ForeignKey("rotators.id"), nullable=True)
+    rig_id = Column(UUID(as_uuid=True), ForeignKey("rigs.id"), nullable=True)
+
+    # Grouped config as JSON
+    satellite_config = Column(JSON, nullable=False)  # {"name": "ISS (ZARYA)", "group_id": "..."}
+    pass_config = Column(JSON, nullable=False)  # {"peak_altitude": 22.268358}
+    hardware_config = Column(
+        JSON, nullable=False
+    )  # {"sdr": {...}, "rotator": {...}, "rig": {...}, "transmitter": {...}}
+    tasks = Column(JSON, nullable=False)  # [{"type": "iq_recording", "config": {}}]
+
+    # Auto-generation tracking (nullable if manually created)
+    monitored_satellite_id = Column(
+        String,
+        ForeignKey("monitored_satellites.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    generated_at = Column(AwareDateTime, nullable=True)
+
+    # Metadata
+    created_at = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(
+        AwareDateTime,
+        nullable=False,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+    )

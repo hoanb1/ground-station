@@ -564,9 +564,9 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
         reply["error"] = error_msg
 
     except Exception as e:
-        error_msg = f"Error occurred while getting parameters from SDR with id {sdr_id}"
+        error_msg = str(e)
+        logger.error(f"Error occurred while getting parameters from SDR with id {sdr_id}")
         logger.error(error_msg)
-        logger.exception(e)
         reply["success"] = False
         reply["error"] = error_msg
 

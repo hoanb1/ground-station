@@ -17,12 +17,11 @@
 
 from typing import Any, Dict, List, Optional, Union
 
-# In-memory storage for scheduled observations (will be replaced with DB later)
-_scheduled_observations: Dict[str, Dict] = {}
-
-# In-memory storage for monitored satellites (will be replaced with DB later)
-_monitored_satellites: Dict[str, Dict] = {}
-
+import crud.monitoredsatellites as crud_satellites
+import crud.scheduledobservations as crud_observations
+from db import AsyncSessionLocal
+from observations.events import emit_scheduled_observations_changed
+from observations.generator import generate_observations_for_monitored_satellites
 
 # ============================================================================
 # SCHEDULED OBSERVATIONS
@@ -44,9 +43,9 @@ async def get_scheduled_observations(
     Returns:
         Dictionary with success status and observations list
     """
-    logger.info(f"[GET_SCHEDULED_OBSERVATIONS] data={data}, sid={sid}")
-    observations_list = list(_scheduled_observations.values())
-    return {"success": True, "data": observations_list}
+    async with AsyncSessionLocal() as dbsession:
+        result = await crud_observations.fetch_scheduled_observations(dbsession)
+        return {"success": result["success"], "data": result.get("data", [])}
 
 
 async def create_scheduled_observation(
@@ -64,8 +63,6 @@ async def create_scheduled_observation(
     Returns:
         Dictionary with success status and created observation
     """
-    logger.info(f"[CREATE_SCHEDULED_OBSERVATION] data={data}, sid={sid}")
-
     if not data:
         logger.error("No data provided")
         return {"success": False, "error": "No data provided"}
@@ -75,8 +72,13 @@ async def create_scheduled_observation(
         logger.error("No ID provided in observation data")
         return {"success": False, "error": "Observation ID is required"}
 
-    _scheduled_observations[observation_id] = data
-    return {"success": True, "data": data}
+    async with AsyncSessionLocal() as dbsession:
+        result = await crud_observations.add_scheduled_observation(dbsession, data)
+        return {
+            "success": result["success"],
+            "data": result.get("data"),
+            "error": result.get("error"),
+        }
 
 
 async def update_scheduled_observation(
@@ -94,8 +96,6 @@ async def update_scheduled_observation(
     Returns:
         Dictionary with success status and updated observation
     """
-    logger.info(f"[UPDATE_SCHEDULED_OBSERVATION] data={data}, sid={sid}")
-
     if not data:
         logger.error("No data provided")
         return {"success": False, "error": "No data provided"}
@@ -105,12 +105,13 @@ async def update_scheduled_observation(
         logger.error("No ID provided in observation data")
         return {"success": False, "error": "Observation ID is required"}
 
-    if observation_id not in _scheduled_observations:
-        logger.error(f"Observation not found: {observation_id}")
-        return {"success": False, "error": f"Observation not found: {observation_id}"}
-
-    _scheduled_observations[observation_id] = data
-    return {"success": True, "data": data}
+    async with AsyncSessionLocal() as dbsession:
+        result = await crud_observations.edit_scheduled_observation(dbsession, data)
+        return {
+            "success": result["success"],
+            "data": result.get("data"),
+            "error": result.get("error"),
+        }
 
 
 async def delete_scheduled_observations(
@@ -128,19 +129,17 @@ async def delete_scheduled_observations(
     Returns:
         Dictionary with success status
     """
-    logger.info(f"[DELETE_SCHEDULED_OBSERVATIONS] data={data}, sid={sid}")
-
     if not data or not isinstance(data, list):
         logger.error("Invalid data - list of IDs required")
         return {"success": False, "error": "List of IDs required"}
 
-    deleted_count = 0
-    for observation_id in data:
-        if observation_id in _scheduled_observations:
-            del _scheduled_observations[observation_id]
-            deleted_count += 1
-
-    return {"success": True, "data": {"deleted": deleted_count}}
+    async with AsyncSessionLocal() as dbsession:
+        result = await crud_observations.delete_scheduled_observations(dbsession, data)
+        return {
+            "success": result["success"],
+            "data": result.get("data"),
+            "error": result.get("error"),
+        }
 
 
 async def toggle_observation_enabled(
@@ -158,8 +157,6 @@ async def toggle_observation_enabled(
     Returns:
         Dictionary with success status
     """
-    logger.info(f"[TOGGLE_OBSERVATION_ENABLED] data={data}, sid={sid}")
-
     if not data:
         logger.error("No data provided")
         return {"success": False, "error": "No data provided"}
@@ -171,12 +168,14 @@ async def toggle_observation_enabled(
         logger.error("Missing id or enabled field")
         return {"success": False, "error": "ID and enabled status required"}
 
-    if observation_id not in _scheduled_observations:
-        logger.error(f"Observation not found: {observation_id}")
-        return {"success": False, "error": f"Observation not found: {observation_id}"}
-
-    _scheduled_observations[observation_id]["enabled"] = enabled
-    return {"success": True, "data": {"id": observation_id, "enabled": enabled}}
+    async with AsyncSessionLocal() as dbsession:
+        # Use edit_scheduled_observation to update the enabled field
+        result = await crud_observations.edit_scheduled_observation(
+            dbsession, {"id": observation_id, "enabled": enabled}
+        )
+        if result["success"]:
+            return {"success": True, "data": {"id": observation_id, "enabled": enabled}}
+        return {"success": result["success"], "error": result.get("error")}
 
 
 async def cancel_observation(
@@ -194,19 +193,19 @@ async def cancel_observation(
     Returns:
         Dictionary with success status
     """
-    logger.info(f"[CANCEL_OBSERVATION] data={data}, sid={sid}")
-
     if not data:
         logger.error("No observation ID provided")
         return {"success": False, "error": "Observation ID required"}
 
     observation_id = data
-    if observation_id not in _scheduled_observations:
-        logger.error(f"Observation not found: {observation_id}")
-        return {"success": False, "error": f"Observation not found: {observation_id}"}
-
-    _scheduled_observations[observation_id]["status"] = "cancelled"
-    return {"success": True, "data": {"id": observation_id}}
+    async with AsyncSessionLocal() as dbsession:
+        # Use edit_scheduled_observation to update the status
+        result = await crud_observations.edit_scheduled_observation(
+            dbsession, {"id": observation_id, "status": "cancelled"}
+        )
+        if result["success"]:
+            return {"success": True, "data": {"id": observation_id}}
+        return {"success": result["success"], "error": result.get("error")}
 
 
 # ============================================================================
@@ -229,9 +228,9 @@ async def get_monitored_satellites(
     Returns:
         Dictionary with success status and monitored satellites list
     """
-    logger.info(f"[GET_MONITORED_SATELLITES] data={data}, sid={sid}")
-    satellites_list = list(_monitored_satellites.values())
-    return {"success": True, "data": satellites_list}
+    async with AsyncSessionLocal() as dbsession:
+        result = await crud_satellites.fetch_monitored_satellites(dbsession)
+        return {"success": result["success"], "data": result.get("data", [])}
 
 
 async def create_monitored_satellite(
@@ -249,8 +248,6 @@ async def create_monitored_satellite(
     Returns:
         Dictionary with success status and created monitored satellite
     """
-    logger.info(f"[CREATE_MONITORED_SATELLITE] data={data}, sid={sid}")
-
     if not data:
         logger.error("No data provided")
         return {"success": False, "error": "No data provided"}
@@ -260,8 +257,13 @@ async def create_monitored_satellite(
         logger.error("No ID provided in monitored satellite data")
         return {"success": False, "error": "Satellite ID is required"}
 
-    _monitored_satellites[satellite_id] = data
-    return {"success": True, "data": data}
+    async with AsyncSessionLocal() as dbsession:
+        result = await crud_satellites.add_monitored_satellite(dbsession, data)
+        return {
+            "success": result["success"],
+            "data": result.get("data"),
+            "error": result.get("error"),
+        }
 
 
 async def update_monitored_satellite(
@@ -279,8 +281,6 @@ async def update_monitored_satellite(
     Returns:
         Dictionary with success status and updated monitored satellite
     """
-    logger.info(f"[UPDATE_MONITORED_SATELLITE] data={data}, sid={sid}")
-
     if not data:
         logger.error("No data provided")
         return {"success": False, "error": "No data provided"}
@@ -290,12 +290,13 @@ async def update_monitored_satellite(
         logger.error("No ID provided in monitored satellite data")
         return {"success": False, "error": "Satellite ID is required"}
 
-    if satellite_id not in _monitored_satellites:
-        logger.error(f"Monitored satellite not found: {satellite_id}")
-        return {"success": False, "error": f"Monitored satellite not found: {satellite_id}"}
-
-    _monitored_satellites[satellite_id] = data
-    return {"success": True, "data": data}
+    async with AsyncSessionLocal() as dbsession:
+        result = await crud_satellites.edit_monitored_satellite(dbsession, data)
+        return {
+            "success": result["success"],
+            "data": result.get("data"),
+            "error": result.get("error"),
+        }
 
 
 async def delete_monitored_satellites(
@@ -313,19 +314,17 @@ async def delete_monitored_satellites(
     Returns:
         Dictionary with success status
     """
-    logger.info(f"[DELETE_MONITORED_SATELLITES] data={data}, sid={sid}")
-
     if not data or not isinstance(data, list):
         logger.error("Invalid data - list of IDs required")
         return {"success": False, "error": "List of IDs required"}
 
-    deleted_count = 0
-    for satellite_id in data:
-        if satellite_id in _monitored_satellites:
-            del _monitored_satellites[satellite_id]
-            deleted_count += 1
-
-    return {"success": True, "data": {"deleted": deleted_count}}
+    async with AsyncSessionLocal() as dbsession:
+        result = await crud_satellites.delete_monitored_satellites(dbsession, data)
+        return {
+            "success": result["success"],
+            "data": result.get("data"),
+            "error": result.get("error"),
+        }
 
 
 async def toggle_monitored_satellite_enabled(
@@ -343,8 +342,6 @@ async def toggle_monitored_satellite_enabled(
     Returns:
         Dictionary with success status
     """
-    logger.info(f"[TOGGLE_MONITORED_SATELLITE_ENABLED] data={data}, sid={sid}")
-
     if not data:
         logger.error("No data provided")
         return {"success": False, "error": "No data provided"}
@@ -356,12 +353,65 @@ async def toggle_monitored_satellite_enabled(
         logger.error("Missing id or enabled field")
         return {"success": False, "error": "ID and enabled status required"}
 
-    if satellite_id not in _monitored_satellites:
-        logger.error(f"Monitored satellite not found: {satellite_id}")
-        return {"success": False, "error": f"Monitored satellite not found: {satellite_id}"}
+    async with AsyncSessionLocal() as dbsession:
+        # Use edit_monitored_satellite to update the enabled field
+        result = await crud_satellites.edit_monitored_satellite(
+            dbsession, {"id": satellite_id, "enabled": enabled}
+        )
+        if result["success"]:
+            return {"success": True, "data": {"id": satellite_id, "enabled": enabled}}
+        return {"success": result["success"], "error": result.get("error")}
 
-    _monitored_satellites[satellite_id]["enabled"] = enabled
-    return {"success": True, "data": {"id": satellite_id, "enabled": enabled}}
+
+# ============================================================================
+# OBSERVATION GENERATION
+# ============================================================================
+
+
+async def regenerate_observations(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, Dict[str, int], str]]:
+    """
+    Regenerate scheduled observations for monitored satellites.
+
+    Args:
+        sio: Socket.IO server instance
+        data: Optional dict with monitored_satellite_id to regenerate for specific satellite
+        logger: Logger instance
+        sid: Socket.IO session ID
+
+    Returns:
+        Dictionary with success status and generation statistics
+    """
+    monitored_satellite_id = data.get("monitored_satellite_id") if data else None
+
+    logger.info(
+        f"Regenerating observations for {'all satellites' if not monitored_satellite_id else f'satellite {monitored_satellite_id}'}"
+    )
+
+    async with AsyncSessionLocal() as dbsession:
+        result = await generate_observations_for_monitored_satellites(
+            dbsession, monitored_satellite_id
+        )
+
+        if result["success"]:
+            # Emit event to all clients that observations have changed
+            await emit_scheduled_observations_changed()
+
+            stats = result.get("data", {})
+            logger.info(
+                f"Observation generation complete: "
+                f"{stats.get('generated', 0)} created, "
+                f"{stats.get('updated', 0)} updated, "
+                f"{stats.get('skipped', 0)} skipped, "
+                f"{stats.get('satellites_processed', 0)} satellites processed"
+            )
+
+        return {
+            "success": result["success"],
+            "data": result.get("data", {}),
+            "error": result.get("error"),
+        }
 
 
 def register_handlers(registry):
@@ -384,5 +434,7 @@ def register_handlers(registry):
                 toggle_monitored_satellite_enabled,
                 "data_submission",
             ),
+            # Observation generation
+            "regenerate-observations": (regenerate_observations, "data_submission"),
         }
     )

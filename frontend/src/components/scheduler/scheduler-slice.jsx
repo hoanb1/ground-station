@@ -265,6 +265,22 @@ export const updateMonitoredSatelliteAsync = createAsyncThunk(
     }
 );
 
+// Fetch SDR parameters (gain values, antenna ports, etc.)
+export const fetchSDRParameters = createAsyncThunk(
+    'scheduler/fetchSDRParameters',
+    async ({ socket, sdrId }, { rejectWithValue }) => {
+        return await new Promise((resolve, reject) => {
+            socket.emit('data_request', 'get-sdr-parameters', sdrId, (res) => {
+                if (res.success) {
+                    resolve({ sdrId, parameters: res.data, error: null });
+                } else {
+                    reject(rejectWithValue({ sdrId, error: res.error || 'Failed to fetch SDR parameters' }));
+                }
+            });
+        });
+    }
+);
+
 // Delete monitored satellite(s)
 export const deleteMonitoredSatellitesAsync = createAsyncThunk(
     'scheduler/deleteMonitoredSatellitesAsync',
@@ -308,12 +324,13 @@ export const toggleMonitoredSatelliteEnabledAsync = createAsyncThunk(
 // Fetch next passes for a satellite
 export const fetchNextPassesForScheduler = createAsyncThunk(
     'scheduler/fetchNextPasses',
-    async ({ socket, noradId, hours = 72, forceRecalculate = false }, { rejectWithValue }) => {
+    async ({ socket, noradId, hours = 72, minElevation = 0, forceRecalculate = false }, { rejectWithValue }) => {
         try {
             return await new Promise((resolve, reject) => {
                 socket.emit('data_request', 'fetch-next-passes', {
                     norad_id: noradId,
                     hours: hours,
+                    min_elevation: minElevation,
                     force_recalculate: forceRecalculate
                 }, (response) => {
                     if (response.success) {
@@ -470,6 +487,10 @@ const initialState = {
     monitoredSatellitesLoading: false,
     selectedMonitoredSatellite: null,
     monitoredSatelliteDialogOpen: false,
+    // SDR parameters (gain values, antenna ports) fetched when SDR is selected
+    sdrParameters: {},
+    sdrParametersLoading: false,
+    sdrParametersError: {},
     columnVisibility: {
         name: true,
         satellite: true,
@@ -681,6 +702,31 @@ const schedulerSlice = createSlice({
             })
             .addCase(fetchMonitoredSatellites.rejected, (state) => {
                 state.monitoredSatellitesLoading = false;
+            })
+            // Fetch SDR parameters
+            .addCase(fetchSDRParameters.pending, (state, action) => {
+                state.sdrParametersLoading = true;
+                // Clear previous error for this SDR
+                const sdrId = action.meta.arg.sdrId;
+                if (sdrId && state.sdrParametersError[sdrId]) {
+                    delete state.sdrParametersError[sdrId];
+                }
+            })
+            .addCase(fetchSDRParameters.fulfilled, (state, action) => {
+                state.sdrParametersLoading = false;
+                const { sdrId, parameters } = action.payload;
+                state.sdrParameters[sdrId] = parameters;
+                // Clear any error for this SDR
+                if (state.sdrParametersError[sdrId]) {
+                    delete state.sdrParametersError[sdrId];
+                }
+            })
+            .addCase(fetchSDRParameters.rejected, (state, action) => {
+                state.sdrParametersLoading = false;
+                const { sdrId, error } = action.payload || {};
+                if (sdrId) {
+                    state.sdrParametersError[sdrId] = error || 'Failed to fetch SDR parameters';
+                }
             })
             // Create monitored satellite
             .addCase(createMonitoredSatellite.fulfilled, (state, action) => {

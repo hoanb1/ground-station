@@ -49,6 +49,7 @@ import {
     setMonitoredSatelliteDialogOpen,
     deleteMonitoredSatellites,
     toggleMonitoredSatelliteEnabled,
+    fetchMonitoredSatellites,
 } from './scheduler-slice.jsx';
 
 const MonitoredSatellitesTable = () => {
@@ -60,6 +61,12 @@ const MonitoredSatellitesTable = () => {
 
     const monitoredSatellites = useSelector((state) => state.scheduler?.monitoredSatellites || []);
     const loading = useSelector((state) => state.scheduler?.monitoredSatellitesLoading || false);
+
+    useEffect(() => {
+        if (socket) {
+            dispatch(fetchMonitoredSatellites({ socket }));
+        }
+    }, [socket, dispatch]);
 
     const handleDelete = () => {
         if (selectedIds.length > 0) {
@@ -86,7 +93,13 @@ const MonitoredSatellitesTable = () => {
     const handleRegenerateConfirm = () => {
         if (selectedIds.length > 0 && socket) {
             selectedIds.forEach(id => {
-                socket.emit('regenerate_observations', { monitored_satellite_id: id });
+                socket.emit('data_submission', 'regenerate-observations', { monitored_satellite_id: id }, (response) => {
+                    if (response.success) {
+                        console.log(`Regeneration successful for satellite ${id}:`, response.data);
+                    } else {
+                        console.error(`Regeneration failed for satellite ${id}:`, response.error);
+                    }
+                });
             });
             setOpenRegenerateConfirm(false);
         }
