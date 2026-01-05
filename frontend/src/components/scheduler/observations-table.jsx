@@ -299,7 +299,18 @@ const ObservationsTable = () => {
                     onRowSelectionModelChange={(newSelection) => {
                         setSelectedIds(newSelection);
                     }}
-                    getRowClassName={(params) => `status-${params.row.status}`}
+                    getRowClassName={(params) => {
+                        // Check if observation is currently happening (between start and end time)
+                        const now = new Date();
+                        const startTime = params.row.pass?.event_start ? new Date(params.row.pass.event_start) : null;
+                        const endTime = params.row.pass?.event_end ? new Date(params.row.pass.event_end) : null;
+
+                        if (startTime && endTime && now >= startTime && now <= endTime) {
+                            return 'status-running';
+                        }
+
+                        return `status-${params.row.status}`;
+                    }}
                     columnVisibilityModel={columnVisibility}
                     initialState={{
                         pagination: {
