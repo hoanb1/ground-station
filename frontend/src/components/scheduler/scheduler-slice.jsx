@@ -487,6 +487,8 @@ const initialState = {
     monitoredSatellitesLoading: false,
     selectedMonitoredSatellite: null,
     monitoredSatelliteDialogOpen: false,
+    isSavingObservation: false,
+    isSavingMonitoredSatellite: false,
     // SDR parameters (gain values, antenna ports) fetched when SDR is selected
     sdrParameters: {},
     sdrParametersLoading: false,
@@ -648,17 +650,31 @@ const schedulerSlice = createSlice({
                 state.error = action.payload;
             })
             // Create observation
+            .addCase(createScheduledObservation.pending, (state) => {
+                state.isSavingObservation = true;
+            })
             .addCase(createScheduledObservation.fulfilled, (state, action) => {
                 state.observations.push(action.payload);
                 state.dialogOpen = false;
+                state.isSavingObservation = false;
+            })
+            .addCase(createScheduledObservation.rejected, (state) => {
+                state.isSavingObservation = false;
             })
             // Update observation
+            .addCase(updateScheduledObservation.pending, (state) => {
+                state.isSavingObservation = true;
+            })
             .addCase(updateScheduledObservation.fulfilled, (state, action) => {
                 const index = state.observations.findIndex(obs => obs.id === action.payload.id);
                 if (index !== -1) {
                     state.observations[index] = action.payload;
                 }
                 state.dialogOpen = false;
+                state.isSavingObservation = false;
+            })
+            .addCase(updateScheduledObservation.rejected, (state) => {
+                state.isSavingObservation = false;
             })
             // Delete observations
             .addCase(deleteScheduledObservations.fulfilled, (state, action) => {
@@ -729,17 +745,31 @@ const schedulerSlice = createSlice({
                 }
             })
             // Create monitored satellite
+            .addCase(createMonitoredSatellite.pending, (state) => {
+                state.isSavingMonitoredSatellite = true;
+            })
             .addCase(createMonitoredSatellite.fulfilled, (state, action) => {
                 state.monitoredSatellites.push(action.payload);
                 state.monitoredSatelliteDialogOpen = false;
+                state.isSavingMonitoredSatellite = false;
+            })
+            .addCase(createMonitoredSatellite.rejected, (state) => {
+                state.isSavingMonitoredSatellite = false;
             })
             // Update monitored satellite
+            .addCase(updateMonitoredSatelliteAsync.pending, (state) => {
+                state.isSavingMonitoredSatellite = true;
+            })
             .addCase(updateMonitoredSatelliteAsync.fulfilled, (state, action) => {
                 const index = state.monitoredSatellites.findIndex(sat => sat.id === action.payload.id);
                 if (index !== -1) {
                     state.monitoredSatellites[index] = action.payload;
                 }
                 state.monitoredSatelliteDialogOpen = false;
+                state.isSavingMonitoredSatellite = false;
+            })
+            .addCase(updateMonitoredSatelliteAsync.rejected, (state) => {
+                state.isSavingMonitoredSatellite = false;
             })
             // Delete monitored satellites
             .addCase(deleteMonitoredSatellitesAsync.fulfilled, (state, action) => {

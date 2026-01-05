@@ -41,6 +41,7 @@ import {
     Autocomplete,
     ListSubheader,
     CircularProgress,
+    Backdrop,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
@@ -158,13 +159,14 @@ const ObservationFormDialog = () => {
     const sdrParameters = useSelector((state) => state.scheduler?.sdrParameters || {});
     const sdrParametersLoading = useSelector((state) => state.scheduler?.sdrParametersLoading || false);
     const sdrParametersError = useSelector((state) => state.scheduler?.sdrParametersError || {});
+    const isSaving = useSelector((state) => state.scheduler?.isSavingObservation || false);
 
     const [formData, setFormData] = useState({
         name: '',
         enabled: true,
         satellite: { norad_id: '', name: '', group_id: '' },
         pass: null,
-        sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '' },
+        sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '', center_frequency: 0 },
         transmitter: { id: '', frequency: 0, mode: '', bandwidth: 0 },
         tasks: [],
         rotator: { id: null, tracking_enabled: false },
@@ -174,6 +176,9 @@ const ObservationFormDialog = () => {
     // Get transmitters from selected satellite
     const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
     const availableTransmitters = selectedSatellite?.transmitters || [];
+
+    // Check if we're waiting for transmitters to load
+    const isLoadingTransmitters = selectedObservation && selectedSatelliteId && availableTransmitters.length === 0;
 
     const [satelliteSearch, setSatelliteSearch] = useState('');
     const [satelliteOptions, setSatelliteOptions] = useState([]);
@@ -208,6 +213,51 @@ const ObservationFormDialog = () => {
         }
     }, [socket, formData.sdr.id, dispatch]);
 
+    // Calculate center frequency when tasks or sample rate changes
+    useEffect(() => {
+        const sampleRate = formData.sdr.sample_rate;
+        if (!sampleRate) return;
+
+        // Collect all transmitter frequencies from tasks
+        const frequencies = [];
+        formData.tasks.forEach((task) => {
+            if (task.config.transmitter_id) {
+                const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+                if (transmitter && transmitter.downlink_low) {
+                    frequencies.push(transmitter.downlink_low);
+                }
+            }
+        });
+
+        if (frequencies.length === 0) {
+            setFormData((prev) => ({
+                ...prev,
+                sdr: {
+                    ...prev.sdr,
+                    center_frequency: 0,
+                },
+            }));
+            return;
+        }
+
+        // Calculate center frequency avoiding DC spike
+        const minFreq = Math.min(...frequencies);
+        const maxFreq = Math.max(...frequencies);
+        const naiveCenter = (minFreq + maxFreq) / 2;
+
+        // Offset by 1/4 of sample rate to avoid DC spike at center
+        const dcOffset = sampleRate / 4;
+        const centerFreq = Math.round(naiveCenter + dcOffset);
+
+        setFormData((prev) => ({
+            ...prev,
+            sdr: {
+                ...prev.sdr,
+                center_frequency: centerFreq,
+            },
+        }));
+    }, [formData.tasks, formData.sdr.sample_rate, availableTransmitters]);
+
     // Populate form when editing
     useEffect(() => {
         if (selectedObservation) {
@@ -219,7 +269,7 @@ const ObservationFormDialog = () => {
                 enabled: true,
                 satellite: { norad_id: '', name: '', group_id: '' },
                 pass: null,
-                sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '' },
+                sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '', center_frequency: 0 },
                 transmitter: { id: '', frequency: 0, mode: '', bandwidth: 0 },
                 tasks: [],
                 rotator: { id: null, tracking_enabled: false },
@@ -302,7 +352,9 @@ const ObservationFormDialog = () => {
             case 'iq_recording':
                 newTask = {
                     type: 'iq_recording',
-                    config: {},
+                    config: {
+                        transmitter_id: '',
+                    },
                 };
                 break;
             case 'transcription':
@@ -391,7 +443,11 @@ const ObservationFormDialog = () => {
             const parts = [transmitterName, freqMHz, modType, 'Transcription'].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'iq_recording') {
-            return 'SigMF recording (cf32_le)';
+            const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+            const transmitterName = transmitter?.description || 'No transmitter';
+            const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
+            const parts = [transmitterName, freqMHz, 'SigMF (cf32_le)'].filter(Boolean);
+            return parts.join(' • ');
         }
         return '';
     };
@@ -524,7 +580,7 @@ const ObservationFormDialog = () => {
         const details = [];
 
         formData.tasks.forEach((task, index) => {
-            if (task.type === 'decoder' && task.config.transmitter_id) {
+            if (task.config.transmitter_id) {
                 const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
                 if (transmitter && transmitter.downlink_low) {
                     const bandwidth = transmitter.downlink_high && transmitter.downlink_low
@@ -545,7 +601,6 @@ const ObservationFormDialog = () => {
                     });
                 }
             }
-            // Audio and IQ recording don't add frequency constraints
         });
 
         if (frequencies.length === 0) {
@@ -624,6 +679,20 @@ const ObservationFormDialog = () => {
                 },
             }}
         >
+            {/* Loading overlay while fetching transmitters */}
+            {isLoadingTransmitters && (
+                <Backdrop
+                    open={isLoadingTransmitters}
+                    sx={{
+                        position: 'absolute',
+                        zIndex: (theme) => theme.zIndex.drawer + 1,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    }}
+                >
+                    <CircularProgress color="primary" />
+                </Backdrop>
+            )}
+
             <DialogTitle
                 sx={{
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
@@ -834,10 +903,18 @@ const ObservationFormDialog = () => {
                                 )}
                                 {bandwidthValidation.valid && bandwidthValidation.requiredBandwidth > 0 && (
                                     <Typography variant="caption" color="success.main" sx={{ mt: 0.5 }}>
-                                        ✓ All tasks fit within bandwidth (using {(bandwidthValidation.requiredBandwidth / 1000000).toFixed(2)} MHz of {(bandwidthValidation.sampleRate / 1000000).toFixed(2)} MHz)
+                                        ✓ All tasks fit within bandwidth
                                     </Typography>
                                 )}
                             </FormControl>
+
+                            <TextField
+                                fullWidth
+                                label="Center Frequency"
+                                value={formData.sdr.center_frequency ? `${(formData.sdr.center_frequency / 1000000).toFixed(6)} MHz` : 'N/A'}
+                                disabled
+                                helperText="Auto-calculated to avoid DC spike and cover all transmitters"
+                            />
 
                             <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>Gain</InputLabel>
@@ -1256,9 +1333,58 @@ const ObservationFormDialog = () => {
                                             )}
 
                                             {task.type === 'iq_recording' && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    IQ data will be recorded in SigMF format (cf32_le). The recording uses the SDR sample rate configured above.
-                                                </Typography>
+                                                <>
+                                                    <FormControl fullWidth size="small">
+                                                        <InputLabel>Transmitter</InputLabel>
+                                                        <Select
+                                                            value={task.config.transmitter_id || ''}
+                                                            onChange={(e) =>
+                                                                handleTaskConfigChange(
+                                                                    index,
+                                                                    'transmitter_id',
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            label="Transmitter"
+                                                        >
+                                                            {availableTransmitters.length === 0 ? (
+                                                                <MenuItem disabled value="">
+                                                                    No transmitters available
+                                                                </MenuItem>
+                                                            ) : (
+                                                                groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
+                                                                    <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                    ...transmitters.map((transmitter) => {
+                                                                        const freqMHz = transmitter.downlink_low
+                                                                            ? (transmitter.downlink_low / 1000000).toFixed(3)
+                                                                            : 'N/A';
+                                                                        return (
+                                                                            <MenuItem key={transmitter.id} value={transmitter.id}>
+                                                                                <Box>
+                                                                                    <Typography variant="body2">
+                                                                                        {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                    </Typography>
+                                                                                    <Typography variant="caption" color="text.secondary">
+                                                                                        {[
+                                                                                            transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                            transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                            transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
+                                                                                            transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                        ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                    </Typography>
+                                                                                </Box>
+                                                                            </MenuItem>
+                                                                        );
+                                                                    })
+                                                                ])
+                                                            )}
+                                                        </Select>
+                                                    </FormControl>
+
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        IQ data will be recorded in SigMF format (cf32_le). The recording uses the SDR sample rate configured above.
+                                                    </Typography>
+                                                </>
                                             )}
                                             </Stack>
                                         )}
@@ -1336,7 +1462,8 @@ const ObservationFormDialog = () => {
                 <Button
                     onClick={handleSave}
                     variant="contained"
-                    disabled={!isFormValid()}
+                    disabled={!isFormValid() || isSaving}
+                    startIcon={isSaving && <CircularProgress size={20} color="inherit" />}
                     sx={{
                         '&.Mui-disabled': {
                             bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',
@@ -1344,7 +1471,7 @@ const ObservationFormDialog = () => {
                         },
                     }}
                 >
-                    {selectedObservation ? 'Update' : 'Create'}
+                    {isSaving ? 'Saving...' : (selectedObservation ? 'Update' : 'Create')}
                 </Button>
             </DialogActions>
         </Dialog>

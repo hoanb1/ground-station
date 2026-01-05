@@ -40,6 +40,7 @@ import {
     IconButton,
     ListSubheader,
     CircularProgress,
+    Backdrop,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import {
@@ -150,11 +151,12 @@ export default function MonitoredSatelliteDialog() {
     const sdrParameters = useSelector((state) => state.scheduler?.sdrParameters || {});
     const sdrParametersLoading = useSelector((state) => state.scheduler?.sdrParametersLoading || false);
     const sdrParametersError = useSelector((state) => state.scheduler?.sdrParametersError || {});
+    const isSaving = useSelector((state) => state.scheduler?.isSavingMonitoredSatellite || false);
 
     const [formData, setFormData] = useState({
         enabled: true,
         satellite: { norad_id: '', name: '', group_id: '' },
-        sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '' },
+        sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '', center_frequency: 0 },
         tasks: [],
         rotator: { id: null, tracking_enabled: false },
         rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
@@ -166,6 +168,9 @@ export default function MonitoredSatelliteDialog() {
 
     const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
     const availableTransmitters = selectedSatellite?.transmitters || [];
+
+    // Check if we're waiting for transmitters to load
+    const isLoadingTransmitters = selectedMonitoredSatellite && selectedSatelliteId && availableTransmitters.length === 0;
 
     // Sync selectedGroupId from Redux into formData.satellite.group_id
     useEffect(() => {
@@ -187,6 +192,51 @@ export default function MonitoredSatelliteDialog() {
         }
     }, [socket, formData.sdr.id, dispatch]);
 
+    // Calculate center frequency when tasks or sample rate changes
+    useEffect(() => {
+        const sampleRate = formData.sdr.sample_rate;
+        if (!sampleRate) return;
+
+        // Collect all transmitter frequencies from tasks
+        const frequencies = [];
+        formData.tasks.forEach((task) => {
+            if (task.config.transmitter_id) {
+                const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+                if (transmitter && transmitter.downlink_low) {
+                    frequencies.push(transmitter.downlink_low);
+                }
+            }
+        });
+
+        if (frequencies.length === 0) {
+            setFormData((prev) => ({
+                ...prev,
+                sdr: {
+                    ...prev.sdr,
+                    center_frequency: 0,
+                },
+            }));
+            return;
+        }
+
+        // Calculate center frequency avoiding DC spike
+        const minFreq = Math.min(...frequencies);
+        const maxFreq = Math.max(...frequencies);
+        const naiveCenter = (minFreq + maxFreq) / 2;
+
+        // Offset by 1/4 of sample rate to avoid DC spike at center
+        const dcOffset = sampleRate / 4;
+        const centerFreq = Math.round(naiveCenter + dcOffset);
+
+        setFormData((prev) => ({
+            ...prev,
+            sdr: {
+                ...prev.sdr,
+                center_frequency: centerFreq,
+            },
+        }));
+    }, [formData.tasks, formData.sdr.sample_rate, availableTransmitters]);
+
     useEffect(() => {
         if (selectedMonitoredSatellite) {
             setFormData(selectedMonitoredSatellite);
@@ -194,7 +244,7 @@ export default function MonitoredSatelliteDialog() {
             setFormData({
                 enabled: true,
                 satellite: { norad_id: '', name: '', group_id: '' },
-                sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '' },
+                sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '', center_frequency: 0 },
                 tasks: [],
                 rotator: { id: null, tracking_enabled: false },
                 rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
@@ -258,7 +308,9 @@ export default function MonitoredSatelliteDialog() {
             case 'iq_recording':
                 newTask = {
                     type: 'iq_recording',
-                    config: {},
+                    config: {
+                        transmitter_id: '',
+                    },
                 };
                 break;
             case 'transcription':
@@ -426,10 +478,72 @@ export default function MonitoredSatelliteDialog() {
             const parts = [transmitterName, freqMHz, modType, 'Transcription'].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'iq_recording') {
-            return 'SigMF recording (cf32_le)';
+            const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+            const transmitterName = transmitter?.description || 'No transmitter';
+            const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
+            const parts = [transmitterName, freqMHz, 'SigMF (cf32_le)'].filter(Boolean);
+            return parts.join(' • ');
         }
         return '';
     };
+
+    const validateTasksWithinBandwidth = () => {
+        const sampleRate = formData.sdr.sample_rate;
+        if (!sampleRate) return { valid: true, message: '', details: [] };
+
+        // Collect all transmitter frequencies from tasks
+        const frequencies = [];
+        const details = [];
+
+        formData.tasks.forEach((task, index) => {
+            if (task.config.transmitter_id) {
+                const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+                if (transmitter && transmitter.downlink_low) {
+                    const bandwidth = transmitter.downlink_high && transmitter.downlink_low
+                        ? transmitter.downlink_high - transmitter.downlink_low
+                        : 0;
+
+                    frequencies.push({
+                        freq: transmitter.downlink_low,
+                        bandwidth: bandwidth,
+                        transmitter: transmitter
+                    });
+
+                    details.push({
+                        taskIndex: index,
+                        name: transmitter.description || 'Unknown',
+                        freq: transmitter.downlink_low,
+                        bandwidth: bandwidth
+                    });
+                }
+            }
+        });
+
+        if (frequencies.length === 0) {
+            return { valid: true, message: '', details: [] };
+        }
+
+        // Find min and max frequencies including their bandwidths
+        const minFreq = Math.min(...frequencies.map(f => f.freq - f.bandwidth / 2));
+        const maxFreq = Math.max(...frequencies.map(f => f.freq + f.bandwidth / 2));
+        const requiredBandwidth = maxFreq - minFreq;
+
+        const valid = requiredBandwidth <= sampleRate;
+
+        return {
+            valid,
+            message: valid
+                ? ''
+                : `Required bandwidth for the combination of transmitters you chose (${(requiredBandwidth / 1000000).toFixed(2)} MHz) exceeds the selected SDR sample rate (${(sampleRate / 1000000).toFixed(2)} MHz). Please increase sample rate or select transmitters closer in frequency.`,
+            requiredBandwidth,
+            sampleRate,
+            minFreq,
+            maxFreq,
+            details
+        };
+    };
+
+    const bandwidthValidation = validateTasksWithinBandwidth();
 
     const isFormValid = () => {
         return (
@@ -438,7 +552,8 @@ export default function MonitoredSatelliteDialog() {
             formData.sdr.gain !== '' &&
             formData.sdr.antenna_port !== '' &&
             formData.min_elevation >= 0 &&
-            formData.lookahead_hours > 0
+            formData.lookahead_hours > 0 &&
+            bandwidthValidation.valid
         );
     };
 
@@ -481,6 +596,20 @@ export default function MonitoredSatelliteDialog() {
                 },
             }}
         >
+            {/* Loading overlay while fetching transmitters */}
+            {isLoadingTransmitters && (
+                <Backdrop
+                    open={isLoadingTransmitters}
+                    sx={{
+                        position: 'absolute',
+                        zIndex: (theme) => theme.zIndex.drawer + 1,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    }}
+                >
+                    <CircularProgress color="primary" />
+                </Backdrop>
+            )}
+
             <DialogTitle
                 sx={{
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
@@ -652,7 +781,7 @@ export default function MonitoredSatelliteDialog() {
                                 </Select>
                             </FormControl>
 
-                            <FormControl fullWidth required>
+                            <FormControl fullWidth required error={!bandwidthValidation.valid}>
                                 <InputLabel>Sample Rate</InputLabel>
                                 <Select
                                     value={formData.sdr.sample_rate}
@@ -673,7 +802,30 @@ export default function MonitoredSatelliteDialog() {
                                         </MenuItem>
                                     ))}
                                 </Select>
+                                {!bandwidthValidation.valid && bandwidthValidation.details.length > 0 && (
+                                    <Box sx={{ mt: 0.5 }}>
+                                        <Typography variant="caption" color="error">
+                                            {bandwidthValidation.message}
+                                        </Typography>
+                                        <Typography variant="caption" display="block" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
+                                            ({(bandwidthValidation.maxFreq / 1000000).toFixed(3)} MHz - {(bandwidthValidation.minFreq / 1000000).toFixed(3)} MHz = {(bandwidthValidation.requiredBandwidth / 1000000).toFixed(2)} MHz)
+                                        </Typography>
+                                    </Box>
+                                )}
+                                {bandwidthValidation.valid && bandwidthValidation.requiredBandwidth > 0 && (
+                                    <Typography variant="caption" color="success.main" sx={{ mt: 0.5 }}>
+                                        ✓ All tasks fit within bandwidth
+                                    </Typography>
+                                )}
                             </FormControl>
+
+                            <TextField
+                                fullWidth
+                                label="Center Frequency"
+                                value={formData.sdr.center_frequency ? `${(formData.sdr.center_frequency / 1000000).toFixed(6)} MHz` : 'N/A'}
+                                disabled
+                                helperText="Auto-calculated to avoid DC spike and cover all transmitters"
+                            />
 
                             <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>Gain</InputLabel>
@@ -1060,9 +1212,58 @@ export default function MonitoredSatelliteDialog() {
                                                     )}
 
                                                     {task.type === 'iq_recording' && (
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            IQ data will be recorded in SigMF format (cf32_le). The recording uses the SDR sample rate configured above.
-                                                        </Typography>
+                                                        <>
+                                                            <FormControl fullWidth size="small">
+                                                                <InputLabel>Transmitter</InputLabel>
+                                                                <Select
+                                                                    value={task.config.transmitter_id || ''}
+                                                                    onChange={(e) =>
+                                                                        handleTaskConfigChange(
+                                                                            index,
+                                                                            'transmitter_id',
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                    label="Transmitter"
+                                                                    disabled={availableTransmitters.length === 0}
+                                                                >
+                                                                    {availableTransmitters.length === 0 ? (
+                                                                        <MenuItem disabled value="">
+                                                                            No transmitters available
+                                                                        </MenuItem>
+                                                                    ) : (
+                                                                        groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
+                                                                            <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                            ...transmitters.map((transmitter) => {
+                                                                                const freqMHz = transmitter.downlink_low
+                                                                                    ? (transmitter.downlink_low / 1000000).toFixed(3)
+                                                                                    : 'N/A';
+                                                                                return (
+                                                                                    <MenuItem key={transmitter.id} value={transmitter.id}>
+                                                                                        <Box>
+                                                                                            <Typography variant="body2">
+                                                                                                {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                            </Typography>
+                                                                                            <Typography variant="caption" color="text.secondary">
+                                                                                                {[
+                                                                                                    transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                                    transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                                    transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                                ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                            </Typography>
+                                                                                        </Box>
+                                                                                    </MenuItem>
+                                                                                );
+                                                                            })
+                                                                        ])
+                                                                    )}
+                                                                </Select>
+                                                            </FormControl>
+
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                IQ data will be recorded in SigMF format (cf32_le). The recording uses the SDR sample rate configured above.
+                                                            </Typography>
+                                                        </>
                                                     )}
                                                 </Stack>
                                             )}
@@ -1172,7 +1373,8 @@ export default function MonitoredSatelliteDialog() {
                 <Button
                     variant="contained"
                     onClick={handleSubmit}
-                    disabled={!isFormValid()}
+                    disabled={!isFormValid() || isSaving}
+                    startIcon={isSaving && <CircularProgress size={20} color="inherit" />}
                     sx={{
                         '&.Mui-disabled': {
                             bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',
@@ -1180,7 +1382,7 @@ export default function MonitoredSatelliteDialog() {
                         },
                     }}
                 >
-                    {selectedMonitoredSatellite ? 'Update' : 'Save'}
+                    {isSaving ? 'Saving...' : (selectedMonitoredSatellite ? 'Update' : 'Save')}
                 </Button>
             </DialogActions>
         </Dialog>
