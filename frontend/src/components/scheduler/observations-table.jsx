@@ -305,8 +305,14 @@ const ObservationsTable = () => {
                         const startTime = params.row.pass?.event_start ? new Date(params.row.pass.event_start) : null;
                         const endTime = params.row.pass?.event_end ? new Date(params.row.pass.event_end) : null;
 
+                        // Currently happening
                         if (startTime && endTime && now >= startTime && now <= endTime) {
                             return 'status-running';
+                        }
+
+                        // Both start and end are in the past
+                        if (startTime && endTime && now > endTime) {
+                            return 'status-past';
                         }
 
                         return `status-${params.row.status}`;
@@ -342,6 +348,12 @@ const ObservationsTable = () => {
                             backgroundColor: (theme) => theme.palette.mode === 'dark'
                                 ? darken(theme.palette.error.main, 0.7)
                                 : lighten(theme.palette.error.main, 0.8),
+                        },
+                        [`& .${gridClasses.row}.status-past`]: {
+                            backgroundColor: (theme) => theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.05)'
+                                : 'rgba(0, 0, 0, 0.04)',
+                            opacity: 0.6,
                         },
                         '& .MuiDataGrid-overlay': {
                             fontSize: '0.875rem',
