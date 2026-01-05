@@ -696,7 +696,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
             </TitleBar>
             <Box sx={{position: 'relative', width: '100%', height: 'calc(100% - 60px)'}}>
                 <Backdrop
-                    open={loadingSatellites}
+                    open={loadingSatellites && selectedSatGroupId}
                     sx={{
                         position: 'absolute',
                         zIndex: 1000,
