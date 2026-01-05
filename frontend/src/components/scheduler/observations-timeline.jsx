@@ -465,7 +465,11 @@ const ObservationsTimeline = () => {
                                     <Chip
                                         key={idx}
                                         label={
-                                            task.type === 'decoder' ? task.config.decoder_type?.toUpperCase() :
+                                            task.type === 'decoder' ? (
+                                                task.config.decoder_type === 'lora' ? 'LoRa' :
+                                                task.config.decoder_type === 'none' ? 'No Decoder' :
+                                                task.config.decoder_type?.toUpperCase()
+                                            ) :
                                             task.type === 'audio_recording' ? 'Audio' :
                                             task.type === 'transcription' ? 'Transcription' :
                                             'IQ'

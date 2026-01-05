@@ -177,8 +177,12 @@ const MonitoredSatellitesTable = () => {
                             let color = 'default';
 
                             if (task.type === 'decoder') {
-                                const decoderType = task.config.decoder_type?.toUpperCase() || 'UNKNOWN';
-                                label = decoderType === 'NONE' ? 'No Decoder' : decoderType;
+                                const decoderType = task.config.decoder_type || 'unknown';
+                                const typeMap = {
+                                    'lora': 'LoRa',
+                                    'none': 'No Decoder'
+                                };
+                                label = typeMap[decoderType] || decoderType.toUpperCase();
                                 color = 'primary';
                             } else if (task.type === 'audio_recording') {
                                 label = 'Audio';
