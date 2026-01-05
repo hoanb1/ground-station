@@ -47,8 +47,8 @@ import { useSocket } from '../common/socket.jsx';
 import {
     setSelectedMonitoredSatellite,
     setMonitoredSatelliteDialogOpen,
-    deleteMonitoredSatellites,
-    toggleMonitoredSatelliteEnabled,
+    deleteMonitoredSatellitesAsync,
+    toggleMonitoredSatelliteEnabledAsync,
     fetchMonitoredSatellites,
 } from './scheduler-slice.jsx';
 
@@ -69,8 +69,8 @@ const MonitoredSatellitesTable = () => {
     }, [socket, dispatch]);
 
     const handleDelete = () => {
-        if (selectedIds.length > 0) {
-            dispatch(deleteMonitoredSatellites(selectedIds));
+        if (selectedIds.length > 0 && socket) {
+            dispatch(deleteMonitoredSatellitesAsync({ socket, ids: selectedIds }));
             setSelectedIds([]);
             setOpenDeleteConfirm(false);
         }
@@ -87,7 +87,9 @@ const MonitoredSatellitesTable = () => {
     };
 
     const handleToggleEnabled = (id, currentEnabled) => {
-        dispatch(toggleMonitoredSatelliteEnabled({ id, enabled: !currentEnabled }));
+        if (socket) {
+            dispatch(toggleMonitoredSatelliteEnabledAsync({ socket, id, enabled: !currentEnabled }));
+        }
     };
 
     const handleRegenerateConfirm = () => {

@@ -55,7 +55,7 @@ import {
     setSelectedObservation,
     setDialogOpen,
 } from './scheduler-slice.jsx';
-import { TitleBar, getTimeFromISO } from '../common/common.jsx';
+import { TitleBar, getTimeFromISO, humanizeFutureDateInMinutes } from '../common/common.jsx';
 import Button from '@mui/material/Button';
 import ObservationsTimeline from './observations-timeline-svg.jsx';
 
@@ -75,6 +75,25 @@ const getStatusColor = (status) => {
             return 'default';
     }
 };
+
+// Time formatter component that updates every second
+const TimeFormatter = React.memo(function TimeFormatter({ value }) {
+    const [, setForceUpdate] = useState(0);
+
+    // Force component to update every second
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setForceUpdate(prev => prev + 1);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    if (!value || value === '-') {
+        return '-';
+    }
+
+    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+});
 
 const ObservationsTable = () => {
     const dispatch = useDispatch();
@@ -156,30 +175,30 @@ const ObservationsTable = () => {
         {
             field: 'satellite',
             headerName: 'Satellite',
-            flex: 0.8,
-            minWidth: 100,
+            flex: 1.1,
+            minWidth: 150,
             valueGetter: (value, row) => row.satellite?.name || '-',
         },
         {
             field: 'pass_start',
             headerName: 'Pass Start',
-            flex: 0.6,
-            minWidth: 120,
+            flex: 1.3,
+            minWidth: 220,
             valueGetter: (value, row) => row.pass?.event_start || '-',
             renderCell: (params) => {
                 if (!params.row.pass) return 'Geostationary';
-                return getTimeFromISO(params.value);
+                return <TimeFormatter value={params.value} />;
             },
         },
         {
             field: 'pass_end',
             headerName: 'Pass End',
-            flex: 0.6,
-            minWidth: 120,
+            flex: 1.3,
+            minWidth: 220,
             valueGetter: (value, row) => row.pass?.event_end || '-',
             renderCell: (params) => {
                 if (!params.row.pass) return 'Always visible';
-                return getTimeFromISO(params.value);
+                return <TimeFormatter value={params.value} />;
             },
         },
         {
@@ -202,8 +221,8 @@ const ObservationsTable = () => {
         {
             field: 'tasks',
             headerName: 'Tasks',
-            flex: 2,
-            minWidth: 250,
+            flex: 1.2,
+            minWidth: 180,
             renderCell: (params) => {
                 if (!params.value || params.value.length === 0) return '-';
                 return (

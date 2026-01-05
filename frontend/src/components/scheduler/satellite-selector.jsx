@@ -317,7 +317,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
     // Fetch passes when satellite changes
     React.useEffect(() => {
         if (satelliteId && socket) {
-            dispatch(fetchNextPassesForScheduler({ socket, noradId: satelliteId, hours: 24, minElevation: 20 }));
+            dispatch(fetchNextPassesForScheduler({ socket, noradId: satelliteId, hours: 24, minElevation: 0 }));
             setHasSetInitialPass(false);
         } else {
             // Clear passes if no satellite selected

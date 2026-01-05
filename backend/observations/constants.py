@@ -25,3 +25,21 @@ DEFAULT_AUTO_GENERATE_INTERVAL_HOURS = 12
 
 # Preference key for auto-generation interval
 AUTO_GENERATE_INTERVAL_PREFERENCE = "scheduler.auto_generate_interval_hours"
+
+# Observation status constants
+# These match the ObservationStatus enum in db.models but are provided as strings
+# for easier comparison in business logic
+STATUS_SCHEDULED = "scheduled"
+STATUS_RUNNING = "running"
+STATUS_COMPLETED = "completed"
+STATUS_CANCELLED = "cancelled"
+STATUS_FAILED = "failed"
+
+# All valid observation statuses
+VALID_STATUSES = (
+    STATUS_SCHEDULED,
+    STATUS_RUNNING,
+    STATUS_COMPLETED,
+    STATUS_CANCELLED,
+    STATUS_FAILED,
+)

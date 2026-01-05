@@ -31,6 +31,7 @@ from crud.monitoredsatellites import (
 from crud.satellites import fetch_satellites
 from crud.scheduledobservations import add_scheduled_observation, edit_scheduled_observation
 from observations.conflicts import find_overlapping_observation
+from observations.constants import STATUS_SCHEDULED
 from tracking.passes import calculate_next_events
 
 
@@ -149,17 +150,21 @@ async def _generate_observations_for_satellite(
 
     satellite_data = sat_result["data"][0]  # fetch_satellites returns a list
 
-    # Extract generation config
-    gen_config = monitored_sat.get("generation_config", {})
-    min_elevation = gen_config.get("min_elevation", 20)
-    lookahead_hours = gen_config.get("lookahead_hours", 24)
+    # Extract generation config (flattened in the dict by CRUD transform)
+    min_elevation = monitored_sat.get("min_elevation", 20)
+    lookahead_hours = monitored_sat.get("lookahead_hours", 24)
 
-    # Calculate passes
+    logger.info(
+        f"Generating observations for {satellite_data['name']} (NORAD {norad_id}): "
+        f"min_elevation={min_elevation}°, lookahead={lookahead_hours}h"
+    )
+
+    # Calculate passes from horizon (above_el=0) to get complete passes
     passes_result = calculate_next_events(
         satellite_data=satellite_data,
         home_location=home_location,
         hours=lookahead_hours,
-        above_el=min_elevation,
+        above_el=0,  # Always calculate from horizon to get full pass times
     )
 
     if not passes_result["success"]:
@@ -170,12 +175,22 @@ async def _generate_observations_for_satellite(
 
     passes = passes_result["data"]
 
-    # Filter passes by peak elevation (passes already filtered by above_el during calculation)
+    # Filter passes by peak elevation to only include passes that reach min_elevation
     valid_passes = [p for p in passes if p["peak_altitude"] >= min_elevation]
 
     logger.info(
-        f"Found {len(valid_passes)} valid passes for {satellite_data['name']} (NORAD {norad_id})"
+        f"Pass filtering for {satellite_data['name']} (NORAD {norad_id}): "
+        f"total_passes={len(passes)}, min_elevation={min_elevation}°, "
+        f"valid_passes={len(valid_passes)}"
     )
+
+    # Log details of filtered passes
+    if len(passes) > 0 and len(valid_passes) < len(passes):
+        filtered_out = [p for p in passes if p["peak_altitude"] < min_elevation]
+        logger.debug(
+            f"Filtered out {len(filtered_out)} passes below {min_elevation}°: "
+            f"peaks={[round(p['peak_altitude'], 1) for p in filtered_out[:5]]}"
+        )
 
     # Process each pass
     for pass_data in valid_passes:
@@ -226,7 +241,7 @@ async def _create_observation(session: AsyncSession, monitored_sat: dict, pass_d
         "id": f"obs-{int(datetime.now(timezone.utc).timestamp() * 1000)}",
         "name": obs_name,
         "enabled": True,
-        "status": "scheduled",
+        "status": STATUS_SCHEDULED,
         "satellite": satellite,
         "pass": {
             "event_start": pass_data["event_start"],
@@ -279,7 +294,7 @@ async def _update_observation(
         "id": existing_obs.id,
         "name": obs_name,
         "enabled": True,
-        "status": "scheduled",  # Reset status to scheduled
+        "status": STATUS_SCHEDULED,  # Reset status to scheduled
         "satellite": satellite,
         "pass": {
             "event_start": pass_data["event_start"],

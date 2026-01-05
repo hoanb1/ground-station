@@ -22,7 +22,14 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import ScheduledObservations
-from observations.constants import PASS_OVERLAP_TOLERANCE_MINUTES
+from observations.constants import (
+    PASS_OVERLAP_TOLERANCE_MINUTES,
+    STATUS_CANCELLED,
+    STATUS_COMPLETED,
+    STATUS_FAILED,
+    STATUS_RUNNING,
+    STATUS_SCHEDULED,
+)
 
 
 async def find_overlapping_observation(
@@ -76,11 +83,11 @@ def should_update_observation(existing_obs: ScheduledObservations) -> bool:
         True if the observation should be updated, False if it should be left alone
     """
     # Update failed or cancelled observations
-    if existing_obs.status in ["cancelled", "failed"]:
+    if existing_obs.status in [STATUS_CANCELLED, STATUS_FAILED]:
         return True
 
     # Skip scheduled, running, or completed observations
-    if existing_obs.status in ["scheduled", "running", "completed"]:
+    if existing_obs.status in [STATUS_SCHEDULED, STATUS_RUNNING, STATUS_COMPLETED]:
         return False
 
     # Default: don't update

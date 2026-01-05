@@ -18,6 +18,9 @@
 # Global socketio instance (set by startup.py)
 _sio = None
 
+# Global observation sync instance (set by startup.py)
+observation_sync = None
+
 
 def set_socketio_instance(sio):
     """Set the global socketio instance for event emission."""

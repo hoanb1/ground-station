@@ -91,10 +91,41 @@ async def lifespan(fastapiapp: FastAPI):
         asyncio.create_task(run_initial_sync(sio))
 
     # Start the background task scheduler
-    start_scheduler(sio, process_manager)
+    scheduler = start_scheduler(sio, process_manager)
+
+    # Initialize observation executor and scheduler sync
+    from observations.executor import ObservationExecutor
+    from observations.sync import ObservationSchedulerSync
+
+    observation_executor = ObservationExecutor(process_manager, sio)
+    observation_sync = ObservationSchedulerSync(scheduler, observation_executor)
+
+    # Store observation_sync globally for use in handlers
+    from observations import events as obs_events
+
+    obs_events.observation_sync = observation_sync
 
     # Run initial observation generation
     asyncio.create_task(run_initial_observation_generation())
+
+    # Sync all observations to APScheduler after a brief delay
+    # (allows initial generation to complete first)
+    async def sync_observations_after_delay():
+        await asyncio.sleep(2)
+        logger.info("Syncing scheduled observations to APScheduler...")
+        result = await observation_sync.sync_all_observations()
+        if result["success"]:
+            stats = result.get("stats", {})
+            logger.info(
+                f"Observation sync complete: {stats.get('scheduled', 0)} scheduled, "
+                f"{stats.get('skipped_disabled', 0)} disabled, "
+                f"{stats.get('skipped_status', 0)} wrong status, "
+                f"{stats.get('skipped_past', 0)} past events"
+            )
+        else:
+            logger.error(f"Observation sync failed: {result.get('error')}")
+
+    asyncio.create_task(sync_observations_after_delay())
 
     # Start performance monitoring
     process_manager.start_monitoring()

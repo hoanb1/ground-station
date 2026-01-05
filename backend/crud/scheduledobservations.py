@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.common import logger, serialize_object
 from db.models import ScheduledObservations
+from observations.constants import STATUS_SCHEDULED
 
 
 def _transform_to_db_format(data: dict) -> dict:
@@ -70,7 +71,7 @@ def _transform_to_db_format(data: dict) -> dict:
         "id": data.get("id"),
         "name": data.get("name"),
         "enabled": data.get("enabled", True),
-        "status": data.get("status", "scheduled"),
+        "status": data.get("status", STATUS_SCHEDULED),
         "norad_id": norad_id,
         "event_start": (
             datetime.fromisoformat(event_start.replace("Z", "+00:00")) if event_start else None
@@ -303,6 +304,44 @@ async def edit_scheduled_observation(session: AsyncSession, data: dict) -> dict:
     except Exception as e:
         await session.rollback()
         logger.error(f"Error editing scheduled observation: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def update_scheduled_observation_status(
+    session: AsyncSession, observation_id: str, status: str, error_message: Optional[str] = None
+) -> dict:
+    """
+    Update only the status of a scheduled observation (used by executor).
+    This is a lightweight update that doesn't require all observation fields.
+    """
+    try:
+        if not observation_id:
+            return {"success": False, "error": "Observation ID is required"}
+
+        update_data = {
+            "status": status,
+            "updated_at": datetime.now(timezone.utc),
+        }
+
+        if error_message:
+            # Store error message in a way that makes sense for your schema
+            # You might need to add an error_message field or store in metadata
+            pass
+
+        stmt = (
+            update(ScheduledObservations)
+            .where(ScheduledObservations.id == observation_id)
+            .values(**update_data)
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+        return {"success": True, "data": {"id": observation_id, "status": status}, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error updating observation status: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 

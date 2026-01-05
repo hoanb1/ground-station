@@ -74,6 +74,14 @@ async def create_scheduled_observation(
 
     async with AsyncSessionLocal() as dbsession:
         result = await crud_observations.add_scheduled_observation(dbsession, data)
+
+        # Sync to APScheduler if successful
+        if result["success"]:
+            from observations.events import observation_sync
+
+            if observation_sync:
+                await observation_sync.sync_observation(observation_id)
+
         return {
             "success": result["success"],
             "data": result.get("data"),
@@ -107,6 +115,14 @@ async def update_scheduled_observation(
 
     async with AsyncSessionLocal() as dbsession:
         result = await crud_observations.edit_scheduled_observation(dbsession, data)
+
+        # Sync to APScheduler if successful
+        if result["success"]:
+            from observations.events import observation_sync
+
+            if observation_sync:
+                await observation_sync.sync_observation(observation_id)
+
         return {
             "success": result["success"],
             "data": result.get("data"),
@@ -135,6 +151,15 @@ async def delete_scheduled_observations(
 
     async with AsyncSessionLocal() as dbsession:
         result = await crud_observations.delete_scheduled_observations(dbsession, data)
+
+        # Remove from APScheduler if successful
+        if result["success"]:
+            from observations.events import observation_sync
+
+            if observation_sync:
+                for observation_id in data:
+                    await observation_sync.remove_observation(observation_id)
+
         return {
             "success": result["success"],
             "data": result.get("data"),
@@ -173,7 +198,14 @@ async def toggle_observation_enabled(
         result = await crud_observations.edit_scheduled_observation(
             dbsession, {"id": observation_id, "enabled": enabled}
         )
+
+        # Sync to APScheduler if successful
         if result["success"]:
+            from observations.events import observation_sync
+
+            if observation_sync:
+                await observation_sync.sync_observation(observation_id)
+
             return {"success": True, "data": {"id": observation_id, "enabled": enabled}}
         return {"success": result["success"], "error": result.get("error")}
 
@@ -198,14 +230,24 @@ async def cancel_observation(
         return {"success": False, "error": "Observation ID required"}
 
     observation_id = data
-    async with AsyncSessionLocal() as dbsession:
-        # Use edit_scheduled_observation to update the status
-        result = await crud_observations.edit_scheduled_observation(
-            dbsession, {"id": observation_id, "status": "cancelled"}
-        )
-        if result["success"]:
-            return {"success": True, "data": {"id": observation_id}}
-        return {"success": result["success"], "error": result.get("error")}
+
+    # Cancel via executor (handles running observations properly)
+    from observations.events import observation_sync
+
+    if observation_sync and observation_sync.executor:
+        cancel_result = await observation_sync.executor.cancel_observation(observation_id)
+        if not cancel_result.get("success", False):
+            return {
+                "success": bool(cancel_result.get("success", False)),
+                "data": cancel_result.get("data", {}),
+                "error": str(cancel_result.get("error", "")),
+            }
+
+    # Remove from APScheduler
+    if observation_sync:
+        await observation_sync.remove_observation(observation_id)
+
+    return {"success": True, "data": {"id": observation_id}}
 
 
 # ============================================================================
@@ -407,10 +449,21 @@ async def regenerate_observations(
                 f"{stats.get('satellites_processed', 0)} satellites processed"
             )
 
+            # Sync all observations to APScheduler
+            from observations.events import observation_sync
+
+            if observation_sync:
+                sync_result = await observation_sync.sync_all_observations()
+                if sync_result["success"]:
+                    sync_stats = sync_result.get("stats", {})
+                    logger.info(
+                        f"APScheduler sync complete: {sync_stats.get('scheduled', 0)} scheduled"
+                    )
+
         return {
-            "success": result["success"],
+            "success": bool(result.get("success", False)),
             "data": result.get("data", {}),
-            "error": result.get("error"),
+            "error": str(result.get("error", "")),
         }
 
 

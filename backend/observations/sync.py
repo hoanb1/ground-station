@@ -1,0 +1,339 @@
+# Copyright (c) 2025 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+"""Observation scheduler synchronization - keeps APScheduler in sync with database."""
+
+import traceback
+from datetime import datetime, timezone
+from typing import Any, Dict, List
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.date import DateTrigger
+
+from common.logger import logger
+from crud.scheduledobservations import fetch_scheduled_observations
+from db import AsyncSessionLocal
+from observations.constants import STATUS_SCHEDULED
+from observations.executor import ObservationExecutor
+
+
+class ObservationSchedulerSync:
+    """
+    Synchronizes scheduled observations between database and APScheduler.
+
+    This service ensures that APScheduler jobs are created/updated/removed
+    whenever observations are created/updated/deleted in the database.
+    """
+
+    def __init__(self, scheduler: AsyncIOScheduler, executor: ObservationExecutor):
+        """
+        Initialize the scheduler sync service.
+
+        Args:
+            scheduler: APScheduler instance
+            executor: ObservationExecutor instance for task execution
+        """
+        self.scheduler = scheduler
+        self.executor = executor
+        self._job_prefix = "obs"  # Prefix for all observation jobs
+
+    def _make_job_id(self, observation_id: str, event_type: str) -> str:
+        """
+        Generate a unique job ID for an observation event.
+
+        Args:
+            observation_id: The observation ID
+            event_type: Either "start" (AOS) or "stop" (LOS)
+
+        Returns:
+            Unique job ID string
+        """
+        return f"{self._job_prefix}_{observation_id}_{event_type}"
+
+    async def sync_observation(self, observation_id: str) -> Dict[str, Any]:
+        """
+        Synchronize a single observation with APScheduler.
+
+        This method:
+        1. Fetches observation from database
+        2. Removes existing APScheduler jobs for this observation
+        3. If observation is enabled and scheduled, creates new jobs:
+           - AOS job: executor.start_observation() at event_start
+           - LOS job: executor.stop_observation() at event_end
+
+        Args:
+            observation_id: The observation ID to sync
+
+        Returns:
+            Dictionary with success status and error message if failed
+        """
+        try:
+            logger.debug(f"Syncing observation {observation_id} to APScheduler")
+
+            # 1. Fetch observation from database
+            async with AsyncSessionLocal() as session:
+                result = await fetch_scheduled_observations(session, observation_id)
+                if not result["success"] or not result["data"]:
+                    logger.warning(f"Observation not found: {observation_id}")
+                    # Remove jobs if they exist (observation was deleted)
+                    await self._remove_observation_jobs(observation_id)
+                    return {"success": True, "action": "removed"}
+
+                observation = result["data"]
+
+            # 2. Remove existing jobs first
+            await self._remove_observation_jobs(observation_id)
+
+            # 3. Check if observation should be scheduled
+            enabled = observation.get("enabled", True)
+            status = observation.get("status", STATUS_SCHEDULED)
+            pass_info = observation.get("pass", {})
+            event_start = pass_info.get("event_start")
+            event_end = pass_info.get("event_end")
+
+            # Only schedule if enabled, scheduled status, and has valid times
+            if not enabled:
+                logger.debug(f"Observation {observation_id} is disabled, not scheduling")
+                return {"success": True, "action": "skipped_disabled"}
+
+            # Normalize status to lowercase for comparison
+            status_lower = status.lower() if isinstance(status, str) else ""
+            if status_lower != STATUS_SCHEDULED:
+                logger.warning(
+                    f"Observation {observation_id} ({observation.get('name')}) has status '{status}', not scheduling (expected '{STATUS_SCHEDULED}')"
+                )
+                return {"success": True, "action": "skipped_status"}
+
+            if not event_start or not event_end:
+                logger.warning(f"Observation {observation_id} missing event times")
+                return {"success": False, "error": "Missing event times"}
+
+            # 4. Parse event times
+            aos_time = datetime.fromisoformat(event_start.replace("Z", "+00:00"))
+            los_time = datetime.fromisoformat(event_end.replace("Z", "+00:00"))
+            now = datetime.now(timezone.utc)
+
+            # Skip if event has already passed
+            if los_time < now:
+                logger.debug(f"Observation {observation_id} is in the past, not scheduling")
+                return {"success": True, "action": "skipped_past"}
+
+            # 5. Schedule AOS job (start observation)
+            if aos_time > now:
+                aos_job_id = self._make_job_id(observation_id, "start")
+                self.scheduler.add_job(
+                    self.executor.start_observation,
+                    trigger=DateTrigger(run_date=aos_time),
+                    args=[observation_id],
+                    id=aos_job_id,
+                    name=f"Start observation: {observation.get('name', observation_id)}",
+                    replace_existing=True,
+                    misfire_grace_time=300,  # 5 minute grace period
+                )
+                logger.info(
+                    f"Scheduled AOS job for {observation.get('name')} at {aos_time.isoformat()}"
+                )
+            else:
+                logger.debug(
+                    f"AOS time for observation {observation_id} has passed, not scheduling start job"
+                )
+
+            # 6. Schedule LOS job (stop observation)
+            los_job_id = self._make_job_id(observation_id, "stop")
+            self.scheduler.add_job(
+                self.executor.stop_observation,
+                trigger=DateTrigger(run_date=los_time),
+                args=[observation_id],
+                id=los_job_id,
+                name=f"Stop observation: {observation.get('name', observation_id)}",
+                replace_existing=True,
+                misfire_grace_time=300,  # 5 minute grace period
+            )
+            logger.info(
+                f"Scheduled LOS job for {observation.get('name')} at {los_time.isoformat()}"
+            )
+
+            return {"success": True, "action": "scheduled"}
+
+        except Exception as e:
+            error_msg = f"Error syncing observation {observation_id}: {e}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            return {"success": False, "error": error_msg}
+
+    async def sync_all_observations(self) -> Dict[str, Any]:
+        """
+        Synchronize all observations from database to APScheduler.
+
+        This is typically called:
+        - On startup to rebuild scheduler state
+        - After bulk operations (auto-generation, regeneration)
+
+        Returns:
+            Dictionary with success status, statistics, and errors
+        """
+        try:
+            logger.info("Starting full observation synchronization to APScheduler")
+
+            # 1. Remove all existing observation jobs
+            removed_count = await self._remove_all_observation_jobs()
+            logger.info(f"Removed {removed_count} existing observation jobs")
+
+            # 2. Fetch all observations from database
+            async with AsyncSessionLocal() as session:
+                result = await fetch_scheduled_observations(session)
+                if not result["success"]:
+                    error_msg = f"Failed to fetch observations: {result.get('error')}"
+                    logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
+
+                observations = result.get("data", [])
+
+            logger.info(f"Found {len(observations)} observations in database")
+
+            # 3. Sync each observation
+            stats = {
+                "total": len(observations),
+                "scheduled": 0,
+                "skipped_disabled": 0,
+                "skipped_status": 0,
+                "skipped_past": 0,
+                "errors": 0,
+            }
+            errors = []
+
+            for observation in observations:
+                obs_id = observation.get("id")
+                if not obs_id:
+                    continue
+
+                result = await self.sync_observation(obs_id)
+                if result["success"]:
+                    action = result.get("action", "unknown")
+                    if action in stats:
+                        stats[action] += 1
+                else:
+                    stats["errors"] += 1
+                    errors.append({"id": obs_id, "error": result.get("error")})
+
+            logger.info(
+                f"Full synchronization complete: {stats['scheduled']} scheduled, "
+                f"{stats['skipped_disabled']} disabled, {stats['skipped_status']} wrong status, "
+                f"{stats['skipped_past']} past, {stats['errors']} errors"
+            )
+
+            return {"success": True, "stats": stats, "errors": errors}
+
+        except Exception as e:
+            error_msg = f"Error during full observation synchronization: {e}"
+            logger.error(error_msg)
+            logger.error(traceback.format_exc())
+            return {"success": False, "error": error_msg}
+
+    async def remove_observation(self, observation_id: str) -> Dict[str, Any]:
+        """
+        Remove an observation from APScheduler.
+
+        Args:
+            observation_id: The observation ID to remove
+
+        Returns:
+            Dictionary with success status
+        """
+        try:
+            await self._remove_observation_jobs(observation_id)
+            logger.info(f"Removed observation jobs for {observation_id}")
+            return {"success": True}
+        except Exception as e:
+            error_msg = f"Error removing observation {observation_id}: {e}"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
+
+    # ============================================================================
+    # HELPER METHODS
+    # ============================================================================
+
+    async def _remove_observation_jobs(self, observation_id: str) -> int:
+        """
+        Remove all APScheduler jobs for a specific observation.
+
+        Args:
+            observation_id: The observation ID
+
+        Returns:
+            Number of jobs removed
+        """
+        count = 0
+        for event_type in ["start", "stop"]:
+            job_id = self._make_job_id(observation_id, event_type)
+            try:
+                self.scheduler.remove_job(job_id)
+                count += 1
+                logger.debug(f"Removed job {job_id}")
+            except Exception:
+                # Job doesn't exist, that's fine
+                pass
+        return count
+
+    async def _remove_all_observation_jobs(self) -> int:
+        """
+        Remove all observation jobs from APScheduler.
+
+        Returns:
+            Number of jobs removed
+        """
+        count = 0
+        jobs = self.scheduler.get_jobs()
+        for job in jobs:
+            if job.id.startswith(f"{self._job_prefix}_"):
+                try:
+                    self.scheduler.remove_job(job.id)
+                    count += 1
+                    logger.debug(f"Removed job {job.id}")
+                except Exception as e:
+                    logger.warning(f"Failed to remove job {job.id}: {e}")
+        return count
+
+    def get_scheduled_observation_jobs(self) -> List[Dict[str, Any]]:
+        """
+        Get all currently scheduled observation jobs.
+
+        Returns:
+            List of job info dictionaries
+        """
+        jobs = []
+        for job in self.scheduler.get_jobs():
+            if job.id.startswith(f"{self._job_prefix}_"):
+                # Extract observation ID and event type from job ID
+                parts = job.id.split("_", 2)
+                if len(parts) >= 3:
+                    obs_id = parts[1]
+                    event_type = parts[2]
+                else:
+                    obs_id = job.id
+                    event_type = "unknown"
+
+                jobs.append(
+                    {
+                        "job_id": job.id,
+                        "observation_id": obs_id,
+                        "event_type": event_type,
+                        "name": job.name,
+                        "next_run_time": (
+                            job.next_run_time.isoformat() if job.next_run_time else None
+                        ),
+                    }
+                )
+        return jobs

@@ -63,6 +63,17 @@ async def generate_observations_job():
                 # Emit event to all clients if observations were changed
                 if stats.get("generated", 0) > 0 or stats.get("updated", 0) > 0:
                     await emit_scheduled_observations_changed()
+
+                    # Sync all observations to APScheduler
+                    from observations.events import observation_sync
+
+                    if observation_sync:
+                        sync_result = await observation_sync.sync_all_observations()
+                        if sync_result["success"]:
+                            sync_stats = sync_result.get("stats", {})
+                            logger.info(
+                                f"APScheduler sync complete: {sync_stats.get('scheduled', 0)} scheduled"
+                            )
             else:
                 logger.error(f"Automatic observation generation failed: {result.get('error')}")
 
@@ -91,6 +102,8 @@ async def run_initial_observation_generation():
                 # Emit event to all clients if observations were changed
                 if stats.get("generated", 0) > 0 or stats.get("updated", 0) > 0:
                     await emit_scheduled_observations_changed()
+
+                # Note: Sync to APScheduler is handled by startup.py after this completes
             else:
                 logger.error(f"Initial observation generation failed: {result.get('error')}")
 

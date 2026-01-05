@@ -174,7 +174,7 @@ export default function MonitoredSatelliteDialog() {
 
     // Sync selectedGroupId from Redux into formData.satellite.group_id
     useEffect(() => {
-        if (selectedGroupId && formData.satellite.norad_id) {
+        if (selectedGroupId) {
             setFormData((prev) => ({
                 ...prev,
                 satellite: {
@@ -183,7 +183,7 @@ export default function MonitoredSatelliteDialog() {
                 },
             }));
         }
-    }, [selectedGroupId, formData.satellite.norad_id]);
+    }, [selectedGroupId]);
 
     // Fetch SDR parameters when SDR is selected
     useEffect(() => {
@@ -209,13 +209,18 @@ export default function MonitoredSatelliteDialog() {
         });
 
         if (frequencies.length === 0) {
-            setFormData((prev) => ({
-                ...prev,
-                sdr: {
-                    ...prev.sdr,
-                    center_frequency: 0,
-                },
-            }));
+            setFormData((prev) => {
+                if (prev.sdr.center_frequency !== 0) {
+                    return {
+                        ...prev,
+                        sdr: {
+                            ...prev.sdr,
+                            center_frequency: 0,
+                        },
+                    };
+                }
+                return prev;
+            });
             return;
         }
 
@@ -228,13 +233,18 @@ export default function MonitoredSatelliteDialog() {
         const dcOffset = sampleRate / 4;
         const centerFreq = Math.round(naiveCenter + dcOffset);
 
-        setFormData((prev) => ({
-            ...prev,
-            sdr: {
-                ...prev.sdr,
-                center_frequency: centerFreq,
-            },
-        }));
+        setFormData((prev) => {
+            if (prev.sdr.center_frequency !== centerFreq) {
+                return {
+                    ...prev,
+                    sdr: {
+                        ...prev.sdr,
+                        center_frequency: centerFreq,
+                    },
+                };
+            }
+            return prev;
+        });
     }, [formData.tasks, formData.sdr.sample_rate, availableTransmitters]);
 
     useEffect(() => {
@@ -830,7 +840,11 @@ export default function MonitoredSatelliteDialog() {
                             <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>Gain</InputLabel>
                                 <Select
-                                    value={formData.sdr.gain}
+                                    value={
+                                        formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
+                                            ? formData.sdr.gain
+                                            : ''
+                                    }
                                     onChange={(e) => {
                                         setFormData((prev) => ({
                                             ...prev,
@@ -853,7 +867,11 @@ export default function MonitoredSatelliteDialog() {
                             <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>Antenna Port</InputLabel>
                                 <Select
-                                    value={formData.sdr.antenna_port}
+                                    value={
+                                        formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
+                                            ? formData.sdr.antenna_port
+                                            : ''
+                                    }
                                     onChange={(e) => {
                                         setFormData((prev) => ({
                                             ...prev,

@@ -187,8 +187,7 @@ const ObservationFormDialog = () => {
 
     // Sync selectedGroupId from Redux into formData.satellite.group_id
     useEffect(() => {
-        if (selectedGroupId && formData.satellite.norad_id) {
-            console.log('*** ObservationFormDialog: useEffect syncing group_id:', selectedGroupId);
+        if (selectedGroupId) {
             setFormData((prev) => ({
                 ...prev,
                 satellite: {
@@ -197,7 +196,7 @@ const ObservationFormDialog = () => {
                 },
             }));
         }
-    }, [selectedGroupId, formData.satellite.norad_id]);
+    }, [selectedGroupId]);
 
     // Load SDRs on mount
     useEffect(() => {
@@ -230,13 +229,18 @@ const ObservationFormDialog = () => {
         });
 
         if (frequencies.length === 0) {
-            setFormData((prev) => ({
-                ...prev,
-                sdr: {
-                    ...prev.sdr,
-                    center_frequency: 0,
-                },
-            }));
+            setFormData((prev) => {
+                if (prev.sdr.center_frequency !== 0) {
+                    return {
+                        ...prev,
+                        sdr: {
+                            ...prev.sdr,
+                            center_frequency: 0,
+                        },
+                    };
+                }
+                return prev;
+            });
             return;
         }
 
@@ -249,13 +253,18 @@ const ObservationFormDialog = () => {
         const dcOffset = sampleRate / 4;
         const centerFreq = Math.round(naiveCenter + dcOffset);
 
-        setFormData((prev) => ({
-            ...prev,
-            sdr: {
-                ...prev.sdr,
-                center_frequency: centerFreq,
-            },
-        }));
+        setFormData((prev) => {
+            if (prev.sdr.center_frequency !== centerFreq) {
+                return {
+                    ...prev,
+                    sdr: {
+                        ...prev.sdr,
+                        center_frequency: centerFreq,
+                    },
+                };
+            }
+            return prev;
+        });
     }, [formData.tasks, formData.sdr.sample_rate, availableTransmitters]);
 
     // Populate form when editing
@@ -765,7 +774,6 @@ const ObservationFormDialog = () => {
                             initialPass={selectedObservation?.pass}
                             currentObservationId={selectedObservation?.id}
                             onSatelliteSelect={(satellite) => {
-                                console.log('*** ObservationFormDialog: onSatelliteSelect - selectedGroupId:', selectedGroupId);
                                 setFormData((prev) => ({
                                     ...prev,
                                     satellite: {
@@ -919,7 +927,11 @@ const ObservationFormDialog = () => {
                             <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>Gain</InputLabel>
                                 <Select
-                                    value={formData.sdr.gain}
+                                    value={
+                                        formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
+                                            ? formData.sdr.gain
+                                            : ''
+                                    }
                                     onChange={(e) => {
                                         setFormData((prev) => ({
                                             ...prev,
@@ -942,7 +954,11 @@ const ObservationFormDialog = () => {
                             <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>Antenna Port</InputLabel>
                                 <Select
-                                    value={formData.sdr.antenna_port}
+                                    value={
+                                        formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
+                                            ? formData.sdr.antenna_port
+                                            : ''
+                                    }
                                     onChange={(e) => {
                                         setFormData((prev) => ({
                                             ...prev,

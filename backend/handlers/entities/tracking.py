@@ -208,9 +208,18 @@ async def fetch_next_passes(
         f"Handling request from client_id={sid}, norad_id={norad_id}, hours={hours}, "
         f"min_elevation={min_elevation}, force_recalculate={force_recalculate} (get_next_passes)"
     )
+    # Always calculate passes from horizon (above_el=0) to get complete pass times
     next_passes = await fetch_next_events_for_satellite(
-        norad_id=norad_id, hours=hours, above_el=min_elevation, force_recalculate=force_recalculate
+        norad_id=norad_id, hours=hours, above_el=0, force_recalculate=force_recalculate
     )
+
+    # Filter passes by peak elevation if min_elevation is specified
+    if next_passes["success"] and min_elevation > 0:
+        filtered_passes = [
+            p for p in next_passes.get("data", []) if p.get("peak_altitude", 0) >= min_elevation
+        ]
+        next_passes["data"] = filtered_passes
+
     return {
         "success": next_passes["success"],
         "data": next_passes.get("data", []),
