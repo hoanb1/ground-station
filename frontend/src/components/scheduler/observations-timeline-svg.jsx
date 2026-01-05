@@ -31,19 +31,18 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
-    Collapse,
+    useTheme,
 } from '@mui/material';
-import {
-    ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon,
-} from '@mui/icons-material';
-import { setTimelineDuration, setTimelineExpanded, setSelectedObservation, setDialogOpen } from './scheduler-slice.jsx';
+import SunCalc from 'suncalc';
+import { setTimelineDuration, setSelectedObservation, setDialogOpen } from './scheduler-slice.jsx';
 
 const ObservationsTimeline = () => {
     const dispatch = useDispatch();
+    const theme = useTheme();
     const observations = useSelector((state) => state.scheduler?.observations || []);
     const timeline = useSelector((state) => state.scheduler?.timeline);
-    const { durationHours, isExpanded } = timeline;
+    const { durationHours } = timeline;
+    const groundStationLocation = useSelector((state) => state.location.location);
 
     const [hoveredObservation, setHoveredObservation] = useState(null);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -60,9 +59,11 @@ const ObservationsTimeline = () => {
         updateWidth();
         window.addEventListener('resize', updateWidth);
         return () => window.removeEventListener('resize', updateWidth);
-    }, [isExpanded]);
+    }, []);
     const marginTop = 25;
     const marginBottom = 30;
+    const marginLeft = 30;
+    const marginRight = 30;
     const barHeight = 30;
     const barSpacing = 5;
     const rowHeight = barHeight + barSpacing;
@@ -82,10 +83,97 @@ const ObservationsTimeline = () => {
     }, [observations, durationHours]);
 
     // Layout observations to avoid overlaps
-    const { layoutData, requiredRows } = useMemo(() => {
+    const { layoutData, requiredRows, sunData } = useMemo(() => {
         const now = new Date();
         const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
         const totalMs = endTime - now;
+        const drawableWidth = width - marginLeft - marginRight;
+
+        // Calculate sun times for the timeline window
+        let sunData = { nightPeriods: [], sunEvents: [] };
+        if (groundStationLocation) {
+            const { lat, lon } = groundStationLocation;
+
+            const nightPeriods = [];
+            const sunEvents = [];
+
+            // Calculate for each day in the timeline window
+            // Start from 1 day before to catch night periods that started before the window
+            const startDate = new Date(now);
+            startDate.setDate(startDate.getDate() - 1);
+            startDate.setHours(0, 0, 0, 0);
+
+            const endDate = new Date(endTime);
+            endDate.setDate(endDate.getDate() + 1);
+            endDate.setHours(23, 59, 59, 999);
+
+            let currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+                const sunTimes = SunCalc.getTimes(currentDate, lat, lon);
+                const sunrise = sunTimes.sunrise;
+                const sunset = sunTimes.sunset;
+
+                // Check if sunrise is valid and within window
+                if (sunrise && !isNaN(sunrise.getTime()) && sunrise >= now && sunrise <= endTime) {
+                    sunEvents.push({ time: sunrise.getTime(), type: 'sunrise' });
+                }
+
+                // Check if sunset is valid and within window
+                if (sunset && !isNaN(sunset.getTime()) && sunset >= now && sunset <= endTime) {
+                    sunEvents.push({ time: sunset.getTime(), type: 'sunset' });
+                }
+
+                // Move to next day
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Sort events by time
+            sunEvents.sort((a, b) => a.time - b.time);
+
+            // Build night periods from events
+            // Start by checking if we're in night at the start of the timeline
+            const firstDayTimes = SunCalc.getTimes(new Date(now), lat, lon);
+            const isNightAtStart = now < firstDayTimes.sunrise || now > firstDayTimes.sunset;
+
+            if (isNightAtStart) {
+                // Find first sunrise
+                const firstSunrise = sunEvents.find(e => e.type === 'sunrise');
+                if (firstSunrise) {
+                    nightPeriods.push({
+                        start: now.getTime(),
+                        end: firstSunrise.time
+                    });
+                } else {
+                    // Entire window is night
+                    nightPeriods.push({
+                        start: now.getTime(),
+                        end: endTime.getTime()
+                    });
+                }
+            }
+
+            // Create night periods between sunset and sunrise events
+            for (let i = 0; i < sunEvents.length; i++) {
+                if (sunEvents[i].type === 'sunset') {
+                    // Find next sunrise
+                    const nextSunrise = sunEvents.slice(i + 1).find(e => e.type === 'sunrise');
+                    if (nextSunrise) {
+                        nightPeriods.push({
+                            start: sunEvents[i].time,
+                            end: nextSunrise.time
+                        });
+                    } else {
+                        // No more sunrises, night until end of timeline
+                        nightPeriods.push({
+                            start: sunEvents[i].time,
+                            end: endTime.getTime()
+                        });
+                    }
+                }
+            }
+
+            sunData = { nightPeriods, sunEvents };
+        }
 
         const rows = [];
 
@@ -93,8 +181,8 @@ const ObservationsTimeline = () => {
             const startTime = new Date(obs.pass.event_start);
             const obsEndTime = new Date(obs.pass.event_end);
 
-            const startX = Math.max(0, ((startTime - now) / totalMs) * width);
-            const endX = Math.min(width, ((obsEndTime - now) / totalMs) * width);
+            const startX = marginLeft + Math.max(0, ((startTime - now) / totalMs) * drawableWidth);
+            const endX = marginLeft + Math.min(drawableWidth, ((obsEndTime - now) / totalMs) * drawableWidth);
             const barWidth = endX - startX;
 
             let rowIndex = 0;
@@ -119,8 +207,8 @@ const ObservationsTimeline = () => {
         });
 
         const layoutData = rows.flat();
-        return { layoutData, requiredRows: Math.max(1, rows.length) };
-    }, [filteredObservations, durationHours, width]);
+        return { layoutData, requiredRows: Math.max(1, rows.length), sunData };
+    }, [filteredObservations, durationHours, width, marginLeft, marginRight, groundStationLocation]);
 
     const height = Math.max(200, requiredRows * rowHeight + marginTop + marginBottom);
 
@@ -143,38 +231,29 @@ const ObservationsTimeline = () => {
     };
 
     return (
-        <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+        <Box>
             <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Stack direction="row" spacing={2} alignItems="center">
-                    <Typography variant="h6">Observations Timeline</Typography>
-                    <Chip
-                        label={`${filteredObservations.length} observation${filteredObservations.length !== 1 ? 's' : ''}`}
-                        size="small"
-                        color="primary"
-                    />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>Timeline</Typography>
                 </Stack>
                 <Stack direction="row" spacing={2} alignItems="center">
-                    <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <InputLabel>Duration</InputLabel>
+                    <FormControl size="small" sx={{ minWidth: 85, '& .MuiInputBase-root': { fontSize: '0.875rem' } }}>
+                        <InputLabel sx={{ fontSize: '0.875rem' }}>Duration</InputLabel>
                         <Select
                             value={durationHours}
                             onChange={(e) => dispatch(setTimelineDuration(e.target.value))}
                             label="Duration"
                         >
-                            <MenuItem value={12}>12 hours</MenuItem>
-                            <MenuItem value={24}>24 hours</MenuItem>
-                            <MenuItem value={48}>48 hours</MenuItem>
-                            <MenuItem value={72}>72 hours</MenuItem>
+                            <MenuItem value={12} sx={{ fontSize: '0.875rem' }}>12h</MenuItem>
+                            <MenuItem value={24} sx={{ fontSize: '0.875rem' }}>24h</MenuItem>
+                            <MenuItem value={48} sx={{ fontSize: '0.875rem' }}>48h</MenuItem>
+                            <MenuItem value={72} sx={{ fontSize: '0.875rem' }}>72h</MenuItem>
                         </Select>
                     </FormControl>
-                    <IconButton onClick={() => dispatch(setTimelineExpanded(!isExpanded))}>
-                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </IconButton>
                 </Stack>
             </Box>
 
-            <Collapse in={isExpanded}>
-                <Box ref={containerRef} sx={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
+            <Box ref={containerRef} sx={{ position: 'relative', width: '100%', overflow: 'hidden' }}>
                     <svg
                         width="100%"
                         height={height}
@@ -195,13 +274,13 @@ const ObservationsTimeline = () => {
                         </defs>
 
                         {/* Alternating background */}
-                        <rect x="0" y={marginTop} width={width} height={height - marginTop - marginBottom} fill="url(#alternatingBg)" />
+                        <rect x={marginLeft} y={marginTop} width={width - marginLeft - marginRight} height={height - marginTop - marginBottom} fill="url(#alternatingBg)" />
 
                         {/* Timeline border */}
                         <rect
-                            x="0"
+                            x={marginLeft}
                             y={marginTop}
-                            width={width}
+                            width={width - marginLeft - marginRight}
                             height={height - marginTop - marginBottom}
                             fill="none"
                             stroke="currentColor"
@@ -209,27 +288,71 @@ const ObservationsTimeline = () => {
                             opacity="0.3"
                         />
 
-                        {/* Horizontal grid lines */}
-                        {Array.from({ length: requiredRows - 1 }).map((_, i) => {
-                            const y = marginTop + ((i + 1) * rowHeight);
+                        {/* Night period shading */}
+                        {sunData && sunData.nightPeriods.map((period, index) => {
+                            const totalDuration = endTime.getTime() - now.getTime();
+                            const leftPercent = ((period.start - now.getTime()) / totalDuration);
+                            const widthPercent = ((period.end - period.start) / totalDuration);
+                            const xPos = marginLeft + leftPercent * (width - marginLeft - marginRight);
+                            const rectWidth = widthPercent * (width - marginLeft - marginRight);
+
                             return (
-                                <line
-                                    key={`h-grid-${i}`}
-                                    x1="0"
-                                    y1={y}
-                                    x2={width}
-                                    y2={y}
-                                    stroke="currentColor"
-                                    strokeWidth="0.5"
-                                    opacity="0.15"
+                                <rect
+                                    key={`night-${index}`}
+                                    x={xPos}
+                                    y={marginTop}
+                                    width={rectWidth}
+                                    height={height - marginTop - marginBottom}
+                                    fill={theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.15)'}
+                                    style={{ pointerEvents: 'none' }}
                                 />
+                            );
+                        })}
+
+                        {/* Sun event markers - sunrise/sunset lines */}
+                        {sunData && sunData.sunEvents.map((event, index) => {
+                            const totalDuration = endTime.getTime() - now.getTime();
+                            const position = ((event.time - now.getTime()) / totalDuration);
+                            const xPos = marginLeft + position * (width - marginLeft - marginRight);
+                            const isSunrise = event.type === 'sunrise';
+                            const color = isSunrise ? '#6b5110' : '#2a5070';
+                            const eventTime = new Date(event.time);
+                            const timeStr = eventTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+                            return (
+                                <g key={`sun-${index}`}>
+                                    {/* Vertical line */}
+                                    <line
+                                        x1={xPos}
+                                        y1={marginTop}
+                                        x2={xPos}
+                                        y2={height - marginBottom}
+                                        stroke={color}
+                                        strokeWidth="2"
+                                        opacity="0.8"
+                                        style={{ pointerEvents: 'none' }}
+                                    />
+                                    {/* Label at top */}
+                                    <text
+                                        x={xPos}
+                                        y={marginTop - 8}
+                                        textAnchor="middle"
+                                        fontSize="10"
+                                        fontWeight="bold"
+                                        fill={color}
+                                        opacity="0.8"
+                                        style={{ pointerEvents: 'none' }}
+                                    >
+                                        {isSunrise ? '☀ Sunrise' : '☾ Sunset'}
+                                    </text>
+                                </g>
                             );
                         })}
 
                         {/* Vertical grid lines */}
                         {Array.from({ length: Math.floor(hoursToShow / hourStep) + 1 }).map((_, i) => {
                             const hour = i * hourStep;
-                            const x = (hour / durationHours) * width;
+                            const x = marginLeft + (hour / durationHours) * (width - marginLeft - marginRight);
                             const time = new Date(now.getTime() + hour * 60 * 60 * 1000);
                             const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
                             const tPlusStr = `T+${Math.floor(hour)}:${String(Math.floor((hour % 1) * 60)).padStart(2, '0')}`;
@@ -275,14 +398,14 @@ const ObservationsTimeline = () => {
                         {/* Current time marker */}
                         <g>
                             <line
-                                x1="0"
+                                x1={marginLeft}
                                 y1={marginTop}
-                                x2="0"
+                                x2={marginLeft}
                                 y2={height - marginBottom}
                                 stroke="#f50057"
                                 strokeWidth="2"
                             />
-                            <text x="5" y={marginTop + 12} fontSize="12" fill="#f50057" fontWeight="bold">
+                            <text x={marginLeft + 5} y={marginTop + 12} fontSize="12" fill="#f50057" fontWeight="bold">
                                 NOW
                             </text>
                         </g>
@@ -405,8 +528,7 @@ const ObservationsTimeline = () => {
                         </Box>
                     )}
                 </Box>
-            </Collapse>
-        </Paper>
+        </Box>
     );
 };
 

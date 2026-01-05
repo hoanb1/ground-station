@@ -57,6 +57,7 @@ import {
 } from './scheduler-slice.jsx';
 import { TitleBar, getTimeFromISO } from '../common/common.jsx';
 import Button from '@mui/material/Button';
+import ObservationsTimeline from './observations-timeline-svg.jsx';
 
 const getStatusColor = (status) => {
     switch (status) {
@@ -260,16 +261,16 @@ const ObservationsTable = () => {
 
     return (
         <Paper elevation={3} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <Typography variant="h6" gutterBottom>
+            {/* Timeline View */}
+            <Box sx={{ flexShrink: 0 }}>
+                <ObservationsTimeline />
+            </Box>
+
+            <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 600, color: 'text.primary' }}>
                 Scheduled Observations
             </Typography>
 
-            <Alert severity="info" sx={{ mb: 2, flexShrink: 0 }}>
-                <AlertTitle>One-Time Observations</AlertTitle>
-                Manually scheduled observations for specific satellite passes. These are executed once and then marked as completed.
-            </Alert>
-
-            <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0, mt: 2 }}>
+            <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0 }}>
                 <DataGrid
                     rows={observations}
                     columns={columns}
