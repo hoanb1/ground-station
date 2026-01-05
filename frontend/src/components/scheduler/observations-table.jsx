@@ -354,6 +354,7 @@ const ObservationsTable = () => {
                                 ? 'rgba(255, 255, 255, 0.05)'
                                 : 'rgba(0, 0, 0, 0.04)',
                             opacity: 0.6,
+                            textDecoration: 'line-through',
                         },
                         '& .MuiDataGrid-overlay': {
                             fontSize: '0.875rem',
