@@ -300,7 +300,7 @@ class VFOManager:
 
         if session_id in self._session_vfo_states:
             del self._session_vfo_states[session_id]
-            logger.info(f"Cleaned up internal VFOs for observation {observation_id}")
+            logger.debug(f"Cleaned up internal VFOs for observation {observation_id}")
             return True
 
         logger.warning(f"No internal VFOs found for observation {observation_id}")

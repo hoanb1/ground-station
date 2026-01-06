@@ -18,7 +18,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import ScheduledObservations
@@ -99,31 +99,47 @@ async def find_any_time_conflict(
     event_start: datetime,
     event_end: datetime,
     exclude_observation_id: Optional[str] = None,
+    task_start: Optional[datetime] = None,
+    task_end: Optional[datetime] = None,
 ) -> Optional[ScheduledObservations]:
     """
     Check if ANY observation exists that overlaps with this time window,
     regardless of satellite or monitored satellite.
 
+    If task_start/task_end are provided, uses those times (actual execution window).
+    Otherwise falls back to event_start/event_end (full visibility window).
+
     Args:
         session: Database session
-        event_start: Start time of the pass
-        event_end: End time of the pass
+        event_start: Start time of the pass (AOS)
+        event_end: End time of the pass (LOS)
         exclude_observation_id: Optional observation ID to exclude (for updates)
+        task_start: Optional actual task start time (when satellite reaches elevation threshold)
+        task_end: Optional actual task end time (when satellite drops below elevation threshold)
 
     Returns:
         First conflicting observation found, or None
     """
     tolerance = timedelta(minutes=PASS_OVERLAP_TOLERANCE_MINUTES)
 
-    # Expand the search window by tolerance
-    search_start = event_start - tolerance
-    search_end = event_end + tolerance
+    # Use task times if available, otherwise use event times
+    check_start = task_start if task_start else event_start
+    check_end = task_end if task_end else event_end
 
+    # Expand the search window by tolerance
+    search_start = check_start - tolerance
+    search_end = check_end + tolerance
+
+    # Check for overlaps using task_start/task_end if available, otherwise event_start/event_end
+    # An observation conflicts if the execution windows overlap
+    # Use COALESCE to fall back to event times for observations without task times
     conditions = [
         ScheduledObservations.status.in_([STATUS_SCHEDULED, STATUS_RUNNING]),
-        # Check for time window overlap
-        ScheduledObservations.event_start < search_end,
-        ScheduledObservations.event_end > search_start,
+        # Check for time window overlap using task times (with fallback to event times)
+        func.coalesce(ScheduledObservations.task_start, ScheduledObservations.event_start)
+        < search_end,
+        func.coalesce(ScheduledObservations.task_end, ScheduledObservations.event_end)
+        > search_start,
     ]
 
     if exclude_observation_id:

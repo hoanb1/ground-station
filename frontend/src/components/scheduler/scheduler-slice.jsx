@@ -346,136 +346,6 @@ export const fetchNextPassesForScheduler = createAsyncThunk(
     }
 );
 
-// Sample data for development/testing
-const SAMPLE_OBSERVATIONS = [
-    {
-        id: 'sample-1',
-        name: 'ISS APRS Pass',
-        enabled: true,
-        satellite: { norad_id: 25544, name: 'ISS (ZARYA)', group_id: 'a27aed54-9163-4b9a-9827-aee9e26e8771' },
-        pass: {
-            event_start: new Date(Date.now() + 3600000).toISOString(),
-            event_end: new Date(Date.now() + 4200000).toISOString(),
-            peak_altitude: 45.2,
-            azimuth_at_start: 230,
-            azimuth_at_peak: 180,
-            azimuth_at_end: 130,
-        },
-        sdr: { id: 'c9f55f19-ebfe-4098-a371-f624573ac544', name: 'BladeRF #0 [3229fe52..a5e92c51]', sample_rate: 2000000 },
-        transmitter: { id: 'iss-aprs', frequency: 145825000, mode: 'FM', bandwidth: 12500 },
-        tasks: [
-            {
-                type: 'decoder',
-                config: {
-                    decoder_type: 'afsk',
-                    transmitter_id: 'iss-aprs',
-                    parameters: { afsk_baudrate: 1200, afsk_af_carrier: 1700, afsk_deviation: 500, afsk_framing: 'ax25' }
-                }
-            },
-            { type: 'audio_recording', config: { transmitter_id: 'iss-aprs', demodulator: 'fm' } }
-        ],
-        rotator: { id: null, tracking_enabled: false },
-        rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: 'scheduled',
-    },
-    {
-        id: 'sample-2',
-        name: 'NOAA-18 APT',
-        enabled: true,
-        satellite: { norad_id: 28654, name: 'NOAA 18', group_id: '05442bbc-fb36-4fea-bde3-e45c03670e66' },
-        pass: {
-            event_start: new Date(Date.now() + 7200000).toISOString(),
-            event_end: new Date(Date.now() + 8100000).toISOString(),
-            peak_altitude: 72.8,
-            azimuth_at_start: 15,
-            azimuth_at_peak: 90,
-            azimuth_at_end: 165,
-        },
-        sdr: { id: '62bb8dba-09fb-4eeb-a9a9-1740efcd6b7b', name: 'B210 IFQ95S6', sample_rate: 3000000 },
-        transmitter: { id: 'noaa18-apt', frequency: 137912500, mode: 'FM', bandwidth: 34000 },
-        tasks: [
-            { type: 'iq_recording', config: {} },
-            { type: 'audio_recording', config: { transmitter_id: 'noaa18-apt', demodulator: 'fm' } }
-        ],
-        rotator: { id: 'rot-1', tracking_enabled: true },
-        rig: { id: null, doppler_correction: true, vfo: 'VFO_A' },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: 'scheduled',
-    },
-    {
-        id: 'sample-3',
-        name: 'FO-29 LoRa Beacon',
-        enabled: false,
-        satellite: { norad_id: 24278, name: 'FO-29', group_id: '' },
-        pass: {
-            event_start: new Date(Date.now() + 10800000).toISOString(),
-            event_end: new Date(Date.now() + 11700000).toISOString(),
-            peak_altitude: 38.5,
-            azimuth_at_start: 310,
-            azimuth_at_peak: 0,
-            azimuth_at_end: 50,
-        },
-        sdr: { id: 'hackrf-1', name: 'HackRF One', sample_rate: 2000000 },
-        transmitter: { id: 'fo29-beacon', frequency: 435850000, mode: 'LoRa', bandwidth: 125000 },
-        tasks: [
-            {
-                type: 'decoder',
-                config: {
-                    decoder_type: 'lora',
-                    transmitter_id: 'fo29-beacon',
-                    parameters: { lora_sf: 7, lora_bw: 125000, lora_cr: 1, lora_sync_word: [0x12], lora_preamble_len: 8, lora_fldro: false }
-                }
-            }
-        ],
-        rotator: { id: 'rot-1', tracking_enabled: true },
-        rig: { id: null, doppler_correction: true, vfo: 'VFO_A' },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: 'scheduled',
-    },
-];
-
-const SAMPLE_MONITORED_SATELLITES = [
-    {
-        id: 'monitored-1',
-        enabled: true,
-        satellite: { norad_id: 25544, name: 'ISS (ZARYA)', group_id: 'a27aed54-9163-4b9a-9827-aee9e26e8771' },
-        sdr: { id: 'c9f55f19-ebfe-4098-a371-f624573ac544', name: 'BladeRF #0 [3229fe52..a5e92c51]', sample_rate: 2000000 },
-        tasks: [
-            {
-                type: 'decoder',
-                config: {
-                    decoder_type: 'afsk',
-                    transmitter_id: 'iss-aprs',
-                    parameters: { afsk_baudrate: 1200, afsk_af_carrier: 1700, afsk_deviation: 500, afsk_framing: 'ax25' }
-                }
-            },
-            { type: 'audio_recording', config: {} }
-        ],
-        rotator: { id: null, tracking_enabled: false },
-        rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
-        min_elevation: 20,
-        lookahead_hours: 24,
-    },
-    {
-        id: 'monitored-2',
-        enabled: true,
-        satellite: { norad_id: 28654, name: 'NOAA 18', group_id: '05442bbc-fb36-4fea-bde3-e45c03670e66' },
-        sdr: { id: '62bb8dba-09fb-4eeb-a9a9-1740efcd6b7b', name: 'B210 IFQ95S6', sample_rate: 3000000 },
-        tasks: [
-            { type: 'iq_recording', config: {} },
-            { type: 'audio_recording', config: {} }
-        ],
-        rotator: { id: 'rot-1', tracking_enabled: true },
-        rig: { id: null, doppler_correction: true, vfo: 'VFO_A' },
-        min_elevation: 30,
-        lookahead_hours: 48,
-    },
-];
-
 const initialState = {
     observations: [],
     loading: false,
@@ -584,11 +454,6 @@ const schedulerSlice = createSlice({
             if (observation) {
                 observation.enabled = action.payload.enabled;
             }
-        },
-        // Dev actions for testing
-        loadSampleData: (state) => {
-            state.observations = SAMPLE_OBSERVATIONS;
-            state.monitoredSatellites = SAMPLE_MONITORED_SATELLITES;
         },
         // Handle real-time observation status updates from socket
         observationStatusUpdated: (state, action) => {
@@ -802,7 +667,6 @@ export const {
     updateObservation,
     deleteObservations,
     toggleObservationEnabledLocal,
-    loadSampleData,
     setSatGroups,
     setGroupId,
     setGroupOfSats,

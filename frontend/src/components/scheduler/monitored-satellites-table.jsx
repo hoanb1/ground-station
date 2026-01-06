@@ -165,10 +165,18 @@ const MonitoredSatellitesTable = () => {
         },
         {
             field: 'min_elevation',
-            headerName: 'Min Elevation',
-            width: 120,
+            headerName: 'Peak El.',
+            width: 90,
             renderCell: (params) => (
                 <Typography variant="body2">{params.value}°</Typography>
+            ),
+        },
+        {
+            field: 'task_start_elevation',
+            headerName: 'Start El.',
+            width: 90,
+            renderCell: (params) => (
+                <Typography variant="body2">{params.value !== undefined ? `${params.value}°` : '-'}</Typography>
             ),
         },
         {

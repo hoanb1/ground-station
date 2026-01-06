@@ -49,9 +49,8 @@ const ObservationsTimeline = () => {
     const [width, setWidth] = useState(1200);
     const containerRef = useRef(null);
 
-    // Capture "now" once at mount and keep it static
-    const staticNowRef = useRef(new Date());
-    const staticNow = staticNowRef.current;
+    // Capture "now" and update it every minute
+    const [staticNow, setStaticNow] = useState(new Date());
 
     useEffect(() => {
         const updateWidth = () => {
@@ -63,6 +62,15 @@ const ObservationsTimeline = () => {
         updateWidth();
         window.addEventListener('resize', updateWidth);
         return () => window.removeEventListener('resize', updateWidth);
+    }, []);
+
+    // Update timeline every minute
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            setStaticNow(new Date());
+        }, 60000); // Update every minute
+
+        return () => clearInterval(intervalId);
     }, []);
     const marginTop = 25;
     const marginBottom = 30;

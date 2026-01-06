@@ -58,6 +58,7 @@ def _transform_to_db_format(data: dict) -> dict:
 
     generation_config = {
         "min_elevation": data.get("min_elevation", 20),
+        "task_start_elevation": data.get("task_start_elevation", 10),
         "lookahead_hours": data.get("lookahead_hours", 24),
     }
 
@@ -112,6 +113,7 @@ def _transform_from_db_format(db_obj: dict) -> dict:
         "rotator": hardware_config.get("rotator", {}),
         "rig": hardware_config.get("rig", {}),
         "min_elevation": generation_config.get("min_elevation", 20),
+        "task_start_elevation": generation_config.get("task_start_elevation", 10),
         "lookahead_hours": generation_config.get("lookahead_hours", 24),
         "tasks": db_obj.get("tasks", []),
         "created_at": created_at,

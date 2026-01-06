@@ -49,6 +49,8 @@ def _transform_to_db_format(data: dict) -> dict:
     pass_data = data.get("pass", {})
     event_start = pass_data.get("event_start")
     event_end = pass_data.get("event_end")
+    task_start = data.get("task_start")
+    task_end = data.get("task_end")
 
     # Build grouped JSON configs
     satellite_config = {
@@ -58,6 +60,7 @@ def _transform_to_db_format(data: dict) -> dict:
 
     pass_config = {
         "peak_altitude": pass_data.get("peak_altitude"),
+        "task_start_elevation": data.get("task_start_elevation", 10),
     }
 
     hardware_config = {
@@ -79,6 +82,10 @@ def _transform_to_db_format(data: dict) -> dict:
         "event_end": (
             datetime.fromisoformat(event_end.replace("Z", "+00:00")) if event_end else None
         ),
+        "task_start": (
+            datetime.fromisoformat(task_start.replace("Z", "+00:00")) if task_start else None
+        ),
+        "task_end": (datetime.fromisoformat(task_end.replace("Z", "+00:00")) if task_end else None),
         "sdr_id": sdr_id,
         "rotator_id": rotator_id,
         "rig_id": rig_id,
@@ -114,6 +121,14 @@ def _transform_from_db_format(db_obj: dict) -> dict:
     if event_end and hasattr(event_end, "isoformat"):
         event_end = event_end.isoformat()
 
+    task_start = db_obj.get("task_start")
+    if task_start and hasattr(task_start, "isoformat"):
+        task_start = task_start.isoformat()
+
+    task_end = db_obj.get("task_end")
+    if task_end and hasattr(task_end, "isoformat"):
+        task_end = task_end.isoformat()
+
     created_at = db_obj.get("created_at")
     if created_at and hasattr(created_at, "isoformat"):
         created_at = created_at.isoformat()
@@ -137,6 +152,9 @@ def _transform_from_db_format(db_obj: dict) -> dict:
             "event_end": event_end,
             "peak_altitude": pass_config.get("peak_altitude"),
         },
+        "task_start": task_start,
+        "task_end": task_end,
+        "task_start_elevation": pass_config.get("task_start_elevation", 10),
         "sdr": hardware_config.get("sdr", {}),
         "rotator": hardware_config.get("rotator", {}),
         "rig": hardware_config.get("rig", {}),

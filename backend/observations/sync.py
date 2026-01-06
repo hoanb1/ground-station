@@ -130,40 +130,68 @@ class ObservationSchedulerSync:
                 logger.debug(f"Observation {observation_id} is in the past, not scheduling")
                 return {"success": True, "action": "skipped_past"}
 
-            # 5. Schedule AOS job (start observation)
-            if aos_time > now:
-                aos_job_id = self._make_job_id(observation_id, "start")
+            # 4.5. Get task start/end times (pre-calculated and stored in observation)
+            task_start_str = observation.get("task_start")
+            task_end_str = observation.get("task_end")
+
+            task_start_time = (
+                datetime.fromisoformat(task_start_str.replace("Z", "+00:00"))
+                if task_start_str
+                else aos_time
+            )
+            task_end_time = (
+                datetime.fromisoformat(task_end_str.replace("Z", "+00:00"))
+                if task_end_str
+                else los_time
+            )
+
+            # 5. Schedule observation start job
+            # If task_start differs from AOS, schedule start at task_start time
+            # Otherwise, schedule at AOS time
+            # TODO: Split this into separate AOS (SDR/tracking only) and task_start (decoders/recorders) jobs
+            start_time = (
+                task_start_time if (task_start_time and task_start_time > aos_time) else aos_time
+            )
+
+            if start_time > now:
+                start_job_id = self._make_job_id(observation_id, "start")
                 self.scheduler.add_job(
                     self.executor.start_observation,
-                    trigger=DateTrigger(run_date=aos_time),
+                    trigger=DateTrigger(run_date=start_time),
                     args=[observation_id],
-                    id=aos_job_id,
+                    id=start_job_id,
                     name=f"Start observation: {observation.get('name', observation_id)}",
                     replace_existing=True,
                     misfire_grace_time=300,  # 5 minute grace period
                 )
                 logger.info(
-                    f"Scheduled AOS job for {observation.get('name')} at {aos_time.isoformat()}"
+                    f"Scheduled start job for {observation.get('name')} at {start_time.isoformat()}"
                 )
             else:
                 logger.debug(
-                    f"AOS time for observation {observation_id} has passed, not scheduling start job"
+                    f"Start time for observation {observation_id} has passed, not scheduling start job"
                 )
 
-            # 6. Schedule LOS job (stop observation)
-            los_job_id = self._make_job_id(observation_id, "stop")
-            self.scheduler.add_job(
-                self.executor.stop_observation,
-                trigger=DateTrigger(run_date=los_time),
-                args=[observation_id],
-                id=los_job_id,
-                name=f"Stop observation: {observation.get('name', observation_id)}",
-                replace_existing=True,
-                misfire_grace_time=300,  # 5 minute grace period
-            )
-            logger.info(
-                f"Scheduled LOS job for {observation.get('name')} at {los_time.isoformat()}"
-            )
+            # 6. Schedule observation stop job
+            # If task_end differs from LOS, schedule stop at task_end time
+            # Otherwise, schedule at LOS time
+            # TODO: Split this into separate task_end (decoders/recorders) and LOS (SDR/tracking) jobs
+            stop_time = task_end_time if (task_end_time and task_end_time < los_time) else los_time
+
+            if stop_time > now:
+                stop_job_id = self._make_job_id(observation_id, "stop")
+                self.scheduler.add_job(
+                    self.executor.stop_observation,
+                    trigger=DateTrigger(run_date=stop_time),
+                    args=[observation_id],
+                    id=stop_job_id,
+                    name=f"Stop observation: {observation.get('name', observation_id)}",
+                    replace_existing=True,
+                    misfire_grace_time=300,  # 5 minute grace period
+                )
+                logger.info(
+                    f"Scheduled stop job for {observation.get('name')} at {stop_time.isoformat()}"
+                )
 
             return {"success": True, "action": "scheduled"}
 

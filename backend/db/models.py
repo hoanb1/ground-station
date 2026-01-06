@@ -403,8 +403,14 @@ class ScheduledObservations(Base):
     norad_id = Column(Integer, ForeignKey("satellites.norad_id"), nullable=False, index=True)
 
     # Pass timing (critical for scheduling queries)
-    event_start = Column(AwareDateTime, nullable=False, index=True)
-    event_end = Column(AwareDateTime, nullable=False)
+    event_start = Column(AwareDateTime, nullable=False, index=True)  # AOS - horizon crossing
+    event_end = Column(AwareDateTime, nullable=False)  # LOS - horizon crossing
+    task_start = Column(
+        AwareDateTime, nullable=True, index=True
+    )  # When tasks actually start (at elevation threshold)
+    task_end = Column(
+        AwareDateTime, nullable=True
+    )  # When tasks actually end (usually same as event_end)
 
     # Hardware FKs
     sdr_id = Column(UUID(as_uuid=True), ForeignKey("sdrs.id"), nullable=True)

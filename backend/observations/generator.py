@@ -306,6 +306,10 @@ async def _generate_observations_for_satellite(
     # Process each pass
     for pass_data in valid_passes:
         try:
+            # Add TLE to pass_data for elevation calculations
+            pass_data["tle1"] = satellite_data.get("tle1")
+            pass_data["tle2"] = satellite_data.get("tle2")
+
             event_start = datetime.fromisoformat(pass_data["event_start"].replace("Z", "+00:00"))
             event_end = datetime.fromisoformat(pass_data["event_end"].replace("Z", "+00:00"))
 
@@ -452,8 +456,46 @@ async def _create_observation(session: AsyncSession, monitored_sat: dict, pass_d
         monitored_sat: Monitored satellite configuration
         pass_data: Pass prediction data
     """
+    import crud.locations
+    from tracking.elcalculator import calculate_elevation_crossing_time
+
     satellite = monitored_sat["satellite"]
     event_start = datetime.fromisoformat(pass_data["event_start"].replace("Z", "+00:00"))
+    event_end = datetime.fromisoformat(pass_data["event_end"].replace("Z", "+00:00"))
+
+    # Calculate task start/end times based on elevation threshold
+    task_start_elevation = monitored_sat.get("task_start_elevation", 10)
+    task_start = None
+    task_end = None
+
+    if task_start_elevation > 0:
+        # Get satellite TLE
+        satellite_tle = {"tle1": pass_data.get("tle1"), "tle2": pass_data.get("tle2")}
+
+        # Get ground station location
+        location_result = await crud.locations.fetch_all_locations(session)
+        if (
+            location_result
+            and location_result.get("success")
+            and len(location_result.get("data", [])) > 0
+        ):
+            location = location_result["data"][0]
+            home_location = {"lat": location.get("lat"), "lon": location.get("lon")}
+
+            # Calculate when satellite crosses task_start_elevation (both ascending and descending)
+            task_start, task_end = calculate_elevation_crossing_time(
+                satellite_tle=satellite_tle,
+                home_location=home_location,
+                aos_time=event_start,
+                los_time=event_end,
+                target_elevation=task_start_elevation,
+            )
+
+    # Fall back to event_start/event_end if calculation failed or elevation never reached
+    if not task_start:
+        task_start = event_start
+    if not task_end:
+        task_end = event_end
 
     # Format observation name
     obs_name = f"{satellite['name']} - {event_start.strftime('%Y-%m-%d %H:%M UTC')}"
@@ -479,6 +521,9 @@ async def _create_observation(session: AsyncSession, monitored_sat: dict, pass_d
         "rig": monitored_sat.get("rig", {}),
         "transmitter": {},
         "tasks": monitored_sat.get("tasks", []),
+        "task_start_elevation": monitored_sat.get("task_start_elevation", 10),
+        "task_start": task_start.isoformat() if task_start else None,
+        "task_end": task_end.isoformat() if task_end else None,
     }
 
     # Create the observation
@@ -505,8 +550,46 @@ async def _update_observation(
         monitored_sat: Monitored satellite configuration
         pass_data: New pass prediction data
     """
+    import crud.locations
+    from tracking.elcalculator import calculate_elevation_crossing_time
+
     satellite = monitored_sat["satellite"]
     event_start = datetime.fromisoformat(pass_data["event_start"].replace("Z", "+00:00"))
+    event_end = datetime.fromisoformat(pass_data["event_end"].replace("Z", "+00:00"))
+
+    # Calculate task start/end times based on elevation threshold
+    task_start_elevation = monitored_sat.get("task_start_elevation", 10)
+    task_start = None
+    task_end = None
+
+    if task_start_elevation > 0:
+        # Get satellite TLE
+        satellite_tle = {"tle1": pass_data.get("tle1"), "tle2": pass_data.get("tle2")}
+
+        # Get ground station location
+        location_result = await crud.locations.fetch_all_locations(session)
+        if (
+            location_result
+            and location_result.get("success")
+            and len(location_result.get("data", [])) > 0
+        ):
+            location = location_result["data"][0]
+            home_location = {"lat": location.get("lat"), "lon": location.get("lon")}
+
+            # Calculate when satellite crosses task_start_elevation (both ascending and descending)
+            task_start, task_end = calculate_elevation_crossing_time(
+                satellite_tle=satellite_tle,
+                home_location=home_location,
+                aos_time=event_start,
+                los_time=event_end,
+                target_elevation=task_start_elevation,
+            )
+
+    # Fall back to event_start/event_end if calculation failed or elevation never reached
+    if not task_start:
+        task_start = event_start
+    if not task_end:
+        task_end = event_end
 
     # Format observation name
     obs_name = f"{satellite['name']} - {event_start.strftime('%Y-%m-%d %H:%M UTC')}"
@@ -532,6 +615,9 @@ async def _update_observation(
         "rig": monitored_sat.get("rig", {}),
         "transmitter": {},
         "tasks": monitored_sat.get("tasks", []),
+        "task_start_elevation": monitored_sat.get("task_start_elevation", 10),
+        "task_start": task_start.isoformat() if task_start else None,
+        "task_end": task_end.isoformat() if task_end else None,
     }
 
     # Update the observation

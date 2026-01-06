@@ -156,11 +156,12 @@ export default function MonitoredSatelliteDialog() {
     const [formData, setFormData] = useState({
         enabled: true,
         satellite: { norad_id: '', name: '', group_id: '' },
-        sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '', center_frequency: 0 },
+        sdr: { id: '', name: '', sample_rate: 1000000, gain: '', antenna_port: '', center_frequency: 0 },
         tasks: [],
         rotator: { id: null, tracking_enabled: false },
         rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
         min_elevation: 20,
+        task_start_elevation: 10,
         lookahead_hours: 24,
     });
 
@@ -254,11 +255,12 @@ export default function MonitoredSatelliteDialog() {
             setFormData({
                 enabled: true,
                 satellite: { norad_id: '', name: '', group_id: '' },
-                sdr: { id: '', name: '', sample_rate: 2000000, gain: '', antenna_port: '', center_frequency: 0 },
+                sdr: { id: '', name: '', sample_rate: 1000000, gain: '', antenna_port: '', center_frequency: 0 },
                 tasks: [],
                 rotator: { id: null, tracking_enabled: false },
                 rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
                 min_elevation: 20,
+                task_start_elevation: 10,
                 lookahead_hours: 24,
             });
         }
@@ -562,6 +564,8 @@ export default function MonitoredSatelliteDialog() {
             formData.sdr.gain !== '' &&
             formData.sdr.antenna_port !== '' &&
             formData.min_elevation >= 0 &&
+            formData.task_start_elevation >= 0 &&
+            formData.task_start_elevation <= formData.min_elevation &&
             formData.lookahead_hours > 0 &&
             bandwidthValidation.valid
         );
@@ -683,7 +687,7 @@ export default function MonitoredSatelliteDialog() {
                         <Stack spacing={2}>
                             <Box>
                                 <TextField
-                                    label="Minimum Elevation (degrees)"
+                                    label="Minimum Peak Elevation (degrees)"
                                     type="number"
                                     fullWidth
                                     value={formData.min_elevation}
@@ -697,6 +701,30 @@ export default function MonitoredSatelliteDialog() {
                                 />
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                                     Only passes with peak elevation above this threshold will be scheduled
+                                </Typography>
+                            </Box>
+                            <Box>
+                                <TextField
+                                    label="Task Start Elevation (degrees)"
+                                    type="number"
+                                    fullWidth
+                                    value={formData.task_start_elevation}
+                                    onChange={(e) =>
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            task_start_elevation: parseInt(e.target.value) || 0,
+                                        }))
+                                    }
+                                    required
+                                    error={formData.task_start_elevation > formData.min_elevation}
+                                    helperText={
+                                        formData.task_start_elevation > formData.min_elevation
+                                            ? 'Must be less than or equal to Minimum Peak Elevation'
+                                            : ''
+                                    }
+                                />
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                    Observation tasks will start executing when satellite reaches this elevation
                                 </Typography>
                             </Box>
                             <Box>
@@ -837,59 +865,61 @@ export default function MonitoredSatelliteDialog() {
                                 helperText="Auto-calculated to avoid DC spike and cover all transmitters"
                             />
 
-                            <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
-                                <InputLabel>Gain</InputLabel>
-                                <Select
-                                    value={
-                                        formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
-                                            ? formData.sdr.gain
-                                            : ''
-                                    }
-                                    onChange={(e) => {
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            sdr: {
-                                                ...prev.sdr,
-                                                gain: e.target.value,
-                                            },
-                                        }));
-                                    }}
-                                    label="Gain"
-                                >
-                                    {sdrParameters[formData.sdr.id]?.gain_values?.map((gain) => (
-                                        <MenuItem key={gain} value={gain}>
-                                            {gain} dB
-                                        </MenuItem>
-                                    )) || []}
-                                </Select>
-                            </FormControl>
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                                    <InputLabel>Gain</InputLabel>
+                                    <Select
+                                        value={
+                                            formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
+                                                ? formData.sdr.gain
+                                                : ''
+                                        }
+                                        onChange={(e) => {
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                sdr: {
+                                                    ...prev.sdr,
+                                                    gain: e.target.value,
+                                                },
+                                            }));
+                                        }}
+                                        label="Gain"
+                                    >
+                                        {sdrParameters[formData.sdr.id]?.gain_values?.map((gain) => (
+                                            <MenuItem key={gain} value={gain}>
+                                                {gain} dB
+                                            </MenuItem>
+                                        )) || []}
+                                    </Select>
+                                </FormControl>
 
-                            <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
-                                <InputLabel>Antenna Port</InputLabel>
-                                <Select
-                                    value={
-                                        formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
-                                            ? formData.sdr.antenna_port
-                                            : ''
-                                    }
-                                    onChange={(e) => {
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            sdr: {
-                                                ...prev.sdr,
-                                                antenna_port: e.target.value,
-                                            },
-                                        }));
-                                    }}
-                                    label="Antenna Port"
-                                >
-                                    {sdrParameters[formData.sdr.id]?.antennas?.rx?.map((port) => (
-                                        <MenuItem key={port} value={port}>
-                                            {port}
-                                        </MenuItem>
-                                    )) || []}
-                                </Select>
-                            </FormControl>
+                                <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                                    <InputLabel>Antenna Port</InputLabel>
+                                    <Select
+                                        value={
+                                            formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
+                                                ? formData.sdr.antenna_port
+                                                : ''
+                                        }
+                                        onChange={(e) => {
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                sdr: {
+                                                    ...prev.sdr,
+                                                    antenna_port: e.target.value,
+                                                },
+                                            }));
+                                        }}
+                                        label="Antenna Port"
+                                    >
+                                        {sdrParameters[formData.sdr.id]?.antennas?.rx?.map((port) => (
+                                            <MenuItem key={port} value={port}>
+                                                {port}
+                                            </MenuItem>
+                                        )) || []}
+                                    </Select>
+                                </FormControl>
+                            </Box>
                         </Stack>
                     </Box>
 

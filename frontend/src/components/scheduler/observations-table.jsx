@@ -19,7 +19,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { DataGrid, gridClasses } from '@mui/x-data-grid';
+import { DataGrid, gridClasses, useGridApiRef } from '@mui/x-data-grid';
 import {
     Box,
     Chip,
@@ -98,6 +98,7 @@ const TimeFormatter = React.memo(function TimeFormatter({ value }) {
 const ObservationsTable = () => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
+    const apiRef = useGridApiRef();
     const [selectedIds, setSelectedIds] = useState([]);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
 
@@ -110,6 +111,28 @@ const ObservationsTable = () => {
             dispatch(fetchScheduledObservations({ socket }));
         }
     }, [socket, dispatch]);
+
+    // Force row className re-evaluation every second to update colors in real-time
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            const rowIds = apiRef.current.getAllRowIds();
+            rowIds.forEach((rowId) => {
+                const rowNode = apiRef.current.getRowNode(rowId);
+                if (!rowNode) {
+                    return;
+                }
+                // Trigger row update to force getRowClassName re-evaluation
+                apiRef.current.updateRows([{
+                    id: rowId,
+                    _rowClassName: ''
+                }]);
+            });
+        }, 1000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, []);
 
     const handleDelete = () => {
         if (selectedIds.length > 0 && socket) {
@@ -167,12 +190,6 @@ const ObservationsTable = () => {
             ),
         },
         {
-            field: 'name',
-            headerName: 'Name',
-            flex: 1.5,
-            minWidth: 200,
-        },
-        {
             field: 'satellite',
             headerName: 'Satellite',
             flex: 1.1,
@@ -181,9 +198,9 @@ const ObservationsTable = () => {
         },
         {
             field: 'pass_start',
-            headerName: 'Pass Start',
-            flex: 1.3,
-            minWidth: 220,
+            headerName: 'AOS',
+            flex: 1.2,
+            minWidth: 180,
             valueGetter: (value, row) => row.pass?.event_start || '-',
             renderCell: (params) => {
                 if (!params.row.pass) return 'Geostationary';
@@ -191,10 +208,32 @@ const ObservationsTable = () => {
             },
         },
         {
+            field: 'task_start',
+            headerName: 'Task Start',
+            flex: 1.2,
+            minWidth: 180,
+            valueGetter: (value, row) => row.task_start || row.pass?.event_start || '-',
+            renderCell: (params) => {
+                if (!params.row.pass) return '-';
+                return <TimeFormatter value={params.value} />;
+            },
+        },
+        {
+            field: 'task_end',
+            headerName: 'Task End',
+            flex: 1.2,
+            minWidth: 180,
+            valueGetter: (value, row) => row.task_end || row.pass?.event_end || '-',
+            renderCell: (params) => {
+                if (!params.row.pass) return '-';
+                return <TimeFormatter value={params.value} />;
+            },
+        },
+        {
             field: 'pass_end',
-            headerName: 'Pass End',
-            flex: 1.3,
-            minWidth: 220,
+            headerName: 'LOS',
+            flex: 1.2,
+            minWidth: 180,
             valueGetter: (value, row) => row.pass?.event_end || '-',
             renderCell: (params) => {
                 if (!params.row.pass) return 'Always visible';
@@ -294,6 +333,7 @@ const ObservationsTable = () => {
 
             <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0 }}>
                 <DataGrid
+                    apiRef={apiRef}
                     rows={observations}
                     columns={columns}
                     loading={loading}
@@ -303,18 +343,18 @@ const ObservationsTable = () => {
                         setSelectedIds(newSelection);
                     }}
                     getRowClassName={(params) => {
-                        // Check if observation is currently happening (between start and end time)
+                        // Check if satellite is currently visible (between AOS and LOS)
                         const now = new Date();
-                        const startTime = params.row.pass?.event_start ? new Date(params.row.pass.event_start) : null;
-                        const endTime = params.row.pass?.event_end ? new Date(params.row.pass.event_end) : null;
+                        const aosTime = params.row.pass?.event_start ? new Date(params.row.pass.event_start) : null;
+                        const losTime = params.row.pass?.event_end ? new Date(params.row.pass.event_end) : null;
 
-                        // Currently happening
-                        if (startTime && endTime && now >= startTime && now <= endTime) {
+                        // Satellite is currently visible (above horizon)
+                        if (aosTime && losTime && now >= aosTime && now <= losTime) {
                             return 'status-running';
                         }
 
-                        // Both start and end are in the past
-                        if (startTime && endTime && now > endTime) {
+                        // Pass has completed (satellite has set below horizon)
+                        if (losTime && now > losTime) {
                             return 'status-past';
                         }
 

@@ -633,7 +633,7 @@ class SessionTracker:
         if session_id in self._internal_sessions:
             self._internal_sessions.remove(session_id)
             self.clear_session(session_id)
-            logger.info(f"Unregistered internal session {session_id}")
+            logger.debug(f"Unregistered internal session {session_id}")
             return True
 
         logger.warning(f"No internal session found for observation {observation_id}")

@@ -150,13 +150,14 @@ class ObservationExecutor:
                 observation = result["data"]
 
             # 2. Stop placeholder observation task
-            logger.info(f"Stopping observation task for {observation['name']}")
             await self._stop_observation_task(observation_id, observation)
 
             # 3. Update observation status to COMPLETED
             await self._update_observation_status(observation_id, STATUS_COMPLETED)
 
-            logger.info(f"Observation {observation_id} stopped successfully")
+            logger.info(
+                f"Observation {observation['name']} ({observation_id}) stopped successfully"
+            )
             return {"success": True}
 
         except Exception as e:
@@ -451,13 +452,13 @@ class ObservationExecutor:
             # - Unregister from internal sessions
             await session_service.cleanup_internal_observation(observation_id)
 
-            logger.info(f"Internal session cleaned up for {observation_id}")
-
             # 3. Cleanup VFO state
             vfo_manager = VFOManager()
             vfo_manager.cleanup_internal_vfos(observation_id)
 
-            logger.info(f"Observation {observation_id} stopped successfully")
+            logger.info(
+                f"Observation task {observation_id} cleaned up (session unregistered, VFOs cleaned)"
+            )
 
         except Exception as e:
             logger.error(f"Failed to stop observation {observation_id}: {e}")

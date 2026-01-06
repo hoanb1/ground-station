@@ -370,8 +370,11 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
             }
 
             if (!obs.pass) return false;
-            const obsStart = new Date(obs.pass.event_start);
-            const obsEnd = new Date(obs.pass.event_end);
+
+            // Use task_start/task_end if available (actual execution window),
+            // otherwise fall back to event_start/event_end (full visibility window)
+            const obsStart = obs.task_start ? new Date(obs.task_start) : new Date(obs.pass.event_start);
+            const obsEnd = obs.task_end ? new Date(obs.task_end) : new Date(obs.pass.event_end);
 
             // Check for any overlap
             return (passStart < obsEnd && passEnd > obsStart);
