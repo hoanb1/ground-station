@@ -435,29 +435,7 @@ const ObservationsTimeline = () => {
                                         width={barWidth}
                                         height={height - marginTop - marginBottom}
                                         fill={barColor}
-                                        opacity={hoveredObservation?.id === obs.id ? 0.15 : 0.1}
-                                    />
-                                    {/* Start line */}
-                                    <line
-                                        x1={startX}
-                                        y1={marginTop}
-                                        x2={startX}
-                                        y2={height - marginBottom}
-                                        stroke={barColor}
-                                        strokeWidth="3"
-                                        filter="url(#shadow)"
-                                        opacity={hoveredObservation?.id === obs.id ? 0.9 : 1}
-                                    />
-                                    {/* End line */}
-                                    <line
-                                        x1={endX}
-                                        y1={marginTop}
-                                        x2={endX}
-                                        y2={height - marginBottom}
-                                        stroke={barColor}
-                                        strokeWidth="3"
-                                        filter="url(#shadow)"
-                                        opacity={hoveredObservation?.id === obs.id ? 0.9 : 1}
+                                        opacity={hoveredObservation?.id === obs.id ? 0.4 : 0.3}
                                     />
                                     {/* Satellite name */}
                                     {barWidth > 5 && (
