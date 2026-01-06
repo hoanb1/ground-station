@@ -49,6 +49,10 @@ const ObservationsTimeline = () => {
     const [width, setWidth] = useState(1200);
     const containerRef = useRef(null);
 
+    // Capture "now" once at mount and keep it static
+    const staticNowRef = useRef(new Date());
+    const staticNow = staticNowRef.current;
+
     useEffect(() => {
         const updateWidth = () => {
             if (containerRef.current) {
@@ -70,7 +74,7 @@ const ObservationsTimeline = () => {
 
     // Filter observations within the time window
     const filteredObservations = useMemo(() => {
-        const now = new Date();
+        const now = staticNow;
         const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
 
         return observations.filter(obs => {
@@ -80,11 +84,11 @@ const ObservationsTimeline = () => {
             const inTimeWindow = obsEnd >= now && obsStart <= endTime;
             return inTimeWindow;
         }).sort((a, b) => new Date(a.pass.event_start) - new Date(b.pass.event_start));
-    }, [observations, durationHours]);
+    }, [observations, durationHours, staticNow]);
 
     // Layout observations to avoid overlaps
     const { layoutData, requiredRows, sunData } = useMemo(() => {
-        const now = new Date();
+        const now = staticNow;
         const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
         const totalMs = endTime - now;
         const drawableWidth = width - marginLeft - marginRight;
@@ -208,11 +212,11 @@ const ObservationsTimeline = () => {
 
         const layoutData = rows.flat();
         return { layoutData, requiredRows: Math.max(1, rows.length), sunData };
-    }, [filteredObservations, durationHours, width, marginLeft, marginRight, groundStationLocation]);
+    }, [filteredObservations, durationHours, width, marginLeft, marginRight, groundStationLocation, staticNow]);
 
     const height = Math.max(200, requiredRows * rowHeight + marginTop + marginBottom);
 
-    const now = new Date();
+    const now = staticNow;
     const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
     const hoursToShow = Math.min(durationHours, 48);
     const hourStep = hoursToShow <= 12 ? 2 : hoursToShow <= 24 ? 4 : 6;
