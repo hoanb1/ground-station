@@ -201,10 +201,12 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect }) => {
                             // Step 4: Now set the selected satellite ID (after group satellites are loaded)
                             dispatch(setSatelliteId(selectedSatellite.norad_id));
 
-                            // Step 5: Call onSatelliteSelect AFTER Redux state is updated
-                            // This ensures groupId is available when the dialog reads it
-                            if (onSatelliteSelect) {
-                                onSatelliteSelect(selectedSatellite);
+                            // Step 5: Find the satellite from the response (it has group_id)
+                            const satelliteWithGroupId = response.data.find(s => s.norad_id === selectedSatellite.norad_id);
+
+                            // Step 6: Call onSatelliteSelect with the satellite that has group_id
+                            if (onSatelliteSelect && satelliteWithGroupId) {
+                                onSatelliteSelect(satelliteWithGroupId);
                             }
                         }
                     });

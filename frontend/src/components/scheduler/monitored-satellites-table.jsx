@@ -36,6 +36,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    FormControlLabel,
+    Checkbox,
 } from '@mui/material';
 import {
     Delete as DeleteIcon,
@@ -58,6 +60,7 @@ const MonitoredSatellitesTable = () => {
     const { socket } = useSocket();
     const [selectedIds, setSelectedIds] = useState([]);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+    const [deleteObservations, setDeleteObservations] = useState(false);
     const [openRegenerateConfirm, setOpenRegenerateConfirm] = useState(false);
     const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
     const [previewData, setPreviewData] = useState(null);
@@ -74,9 +77,10 @@ const MonitoredSatellitesTable = () => {
 
     const handleDelete = () => {
         if (selectedIds.length > 0 && socket) {
-            dispatch(deleteMonitoredSatellitesAsync({ socket, ids: selectedIds }));
+            dispatch(deleteMonitoredSatellitesAsync({ socket, ids: selectedIds, deleteObservations }));
             setSelectedIds([]);
             setOpenDeleteConfirm(false);
+            setDeleteObservations(false);
         }
     };
 
@@ -356,10 +360,25 @@ const MonitoredSatellitesTable = () => {
             <Dialog open={openDeleteConfirm} onClose={() => setOpenDeleteConfirm(false)}>
                 <DialogTitle>Confirm Deletion</DialogTitle>
                 <DialogContent>
-                    Are you sure you want to delete {selectedIds.length} monitored satellite(s)? This will stop automatic observation generation for these satellites.
+                    <Typography gutterBottom>
+                        Are you sure you want to delete {selectedIds.length} monitored satellite(s)? This will stop automatic observation generation for these satellites.
+                    </Typography>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={deleteObservations}
+                                onChange={(e) => setDeleteObservations(e.target.checked)}
+                                color="error"
+                            />
+                        }
+                        label="Also delete all scheduled observations for these satellites"
+                    />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenDeleteConfirm(false)} color="error" variant="outlined">
+                    <Button onClick={() => {
+                        setOpenDeleteConfirm(false);
+                        setDeleteObservations(false);
+                    }} color="error" variant="outlined">
                         Cancel
                     </Button>
                     <Button variant="contained" onClick={handleDelete} color="error">

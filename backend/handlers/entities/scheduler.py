@@ -342,26 +342,48 @@ async def update_monitored_satellite(
 
 
 async def delete_monitored_satellites(
-    sio: Any, data: Optional[List], logger: Any, sid: str
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, Dict, str]]:
     """
     Delete one or more monitored satellites.
 
     Args:
         sio: Socket.IO server instance
-        data: List of monitored satellite IDs to delete
+        data: Dictionary with 'ids' (list) and 'deleteObservations' (bool) keys
         logger: Logger instance
         sid: Socket.IO session ID
 
     Returns:
         Dictionary with success status
     """
-    if not data or not isinstance(data, list):
-        logger.error("Invalid data - list of IDs required")
+    if not data or not isinstance(data, dict):
+        logger.error("Invalid data - dictionary with 'ids' and 'deleteObservations' required")
+        return {
+            "success": False,
+            "error": "Dictionary with 'ids' and 'deleteObservations' required",
+        }
+
+    ids = data.get("ids", [])
+    delete_observations = data.get("deleteObservations", False)
+
+    if not ids or not isinstance(ids, list):
+        logger.error("Invalid ids - list of IDs required")
         return {"success": False, "error": "List of IDs required"}
 
     async with AsyncSessionLocal() as dbsession:
-        result = await crud_satellites.delete_monitored_satellites(dbsession, data)
+        result = await crud_satellites.delete_monitored_satellites(
+            dbsession, ids, delete_observations=delete_observations
+        )
+
+        # If observations were deleted, emit event to refresh UI
+        if result["success"] and delete_observations:
+            deleted_obs_count = result.get("data", {}).get("deleted_observations", 0)
+            if deleted_obs_count > 0:
+                logger.info(
+                    f"Deleted {deleted_obs_count} observations, emitting update event to clients"
+                )
+                await emit_scheduled_observations_changed()
+
         return {
             "success": result["success"],
             "data": result.get("data"),

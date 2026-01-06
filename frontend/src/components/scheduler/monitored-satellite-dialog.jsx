@@ -286,7 +286,7 @@ export default function MonitoredSatelliteDialog() {
             satellite: {
                 norad_id: satellite.norad_id,
                 name: satellite.name,
-                group_id: selectedGroupId || '',
+                group_id: satellite.group_id || selectedGroupId || '',
             },
         }));
     };

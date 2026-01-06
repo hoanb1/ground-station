@@ -284,10 +284,10 @@ export const fetchSDRParameters = createAsyncThunk(
 // Delete monitored satellite(s)
 export const deleteMonitoredSatellitesAsync = createAsyncThunk(
     'scheduler/deleteMonitoredSatellitesAsync',
-    async ({ socket, ids }, { rejectWithValue }) => {
+    async ({ socket, ids, deleteObservations = false }, { rejectWithValue }) => {
         try {
             return await new Promise((resolve, reject) => {
-                socket.emit('data_submission', 'delete-monitored-satellites', ids, (res) => {
+                socket.emit('data_submission', 'delete-monitored-satellites', { ids, deleteObservations }, (res) => {
                     if (res.success) {
                         resolve({ ids });
                     } else {

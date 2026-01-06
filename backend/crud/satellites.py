@@ -38,6 +38,8 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: Union[s
 
         if isinstance(group_id, str):
             group_id = uuid.UUID(group_id)
+        elif not isinstance(group_id, uuid.UUID):
+            raise ValueError(f"group_id must be a string or UUID, got {type(group_id)}")
 
         # Import here to avoid circular dependency
         from crud.groups import fetch_satellite_group
@@ -52,12 +54,14 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: Union[s
         satellites = result.scalars().all()
         satellites = serialize_object(satellites)
 
-        # Fetch transmitters for each satellite
+        # Fetch transmitters for each satellite and add group_id
         for satellite in satellites:
             stmt = select(Transmitters).filter(Transmitters.norad_cat_id == satellite["norad_id"])
             result = await session.execute(stmt)
             transmitters = result.scalars().all()
             satellite["transmitters"] = serialize_object(transmitters)
+            # Add the group_id to each satellite object
+            satellite["group_id"] = str(group_id)
 
         return {"success": True, "data": satellites, "error": None}
 

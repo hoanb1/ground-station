@@ -350,9 +350,15 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
     try:
         async with AsyncSessionLocal() as dbsession:
             groups = await crud.groups.fetch_satellite_group(dbsession)
-            satellites = await crud.satellites.fetch_satellites_for_group_id(
-                dbsession, group_id=group_id
-            )
+
+            # Only fetch satellites if group_id is valid (not None, not empty string)
+            if group_id and group_id != "":
+                satellites = await crud.satellites.fetch_satellites_for_group_id(
+                    dbsession, group_id=group_id
+                )
+            else:
+                satellites = {"success": True, "data": []}
+
             tracking_state = await crud.tracking_state.get_tracking_state(
                 dbsession, name="satellite-tracking"
             )

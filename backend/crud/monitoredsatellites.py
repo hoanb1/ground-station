@@ -254,17 +254,52 @@ async def edit_monitored_satellite(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def delete_monitored_satellites(session: AsyncSession, ids: List[str]) -> dict:
+async def delete_monitored_satellites(
+    session: AsyncSession, ids: List[str], delete_observations: bool = False
+) -> dict:
     """
     Delete one or more monitored satellite records.
+
+    Args:
+        session: Database session
+        ids: List of monitored satellite IDs to delete
+        delete_observations: If True, also delete all scheduled observations
+                           associated with these monitored satellites
+
+    Returns:
+        Dictionary with success status and deletion counts
     """
     try:
+        deleted_observations_count = 0
+
+        # First, delete associated observations if requested
+        if delete_observations:
+            from db.models import ScheduledObservations
+
+            obs_stmt = delete(ScheduledObservations).where(
+                ScheduledObservations.monitored_satellite_id.in_(ids)
+            )
+            obs_result = await session.execute(obs_stmt)
+            deleted_observations_count = obs_result.rowcount
+            logger.info(
+                f"Deleted {deleted_observations_count} scheduled observations "
+                f"associated with monitored satellites: {ids}"
+            )
+
+        # Then delete the monitored satellites
         stmt = delete(MonitoredSatellites).where(MonitoredSatellites.id.in_(ids))
         result = await session.execute(stmt)
         await session.commit()
 
         deleted_count = result.rowcount
-        return {"success": True, "data": {"deleted": deleted_count}, "error": None}
+        return {
+            "success": True,
+            "data": {
+                "deleted": deleted_count,
+                "deleted_observations": deleted_observations_count,
+            },
+            "error": None,
+        }
 
     except Exception as e:
         await session.rollback()

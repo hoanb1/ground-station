@@ -129,7 +129,7 @@ async def find_any_time_conflict(
     if exclude_observation_id:
         conditions.append(ScheduledObservations.id != exclude_observation_id)
 
-    stmt = select(ScheduledObservations).filter(and_(*conditions))
+    stmt = select(ScheduledObservations).filter(and_(*conditions)).limit(1)
 
     result = await session.execute(stmt)
     return result.scalar_one_or_none()

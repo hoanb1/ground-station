@@ -257,11 +257,13 @@ class ProcessLifecycleManager:
             # Send configuration to the process
             self.processes[sdr_id]["config_queue"].put(config)
 
-            # Add this client to the room
-            await self.sio.enter_room(client_id, sdr_id)
+            # Add this client to the room (skip for internal observation sessions)
+            from vfos.state import VFOManager
 
-            # Send a message to the UI of the specific client that streaming started
-            await self.sio.emit(SocketEvents.SDR_STATUS, {"streaming": True}, room=client_id)
+            if not VFOManager.is_internal_session(client_id):
+                await self.sio.enter_room(client_id, sdr_id)
+                # Send a message to the UI of the specific client that streaming started
+                await self.sio.emit(SocketEvents.SDR_STATUS, {"streaming": True}, room=client_id)
 
             return sdr_id
 
@@ -325,20 +327,30 @@ class ProcessLifecycleManager:
                 f"Started SDR process '{process_name}' for device {sdr_id} (PID: {process.pid})"
             )
 
-            # Create and start FFT processor process
-            fft_process_name = f"Ground Station - FFT-Processor-{sdr_id}"
-            fft_named_worker = create_named_worker_process(fft_processor_process, fft_process_name)
-            fft_process = multiprocessing.Process(
-                target=fft_named_worker,
-                args=(iq_queue_fft, data_queue, stop_event, client_id),
-                name=fft_process_name,
-                daemon=True,
-            )
-            fft_process.start()
+            # Create and start FFT processor process (skip for internal observations)
+            from vfos.state import VFOManager
 
-            self.logger.info(
-                f"Started FFT processor '{fft_process_name}' for device {sdr_id} (PID: {fft_process.pid})"
-            )
+            fft_process = None
+            if not VFOManager.is_internal_session(client_id):
+                fft_process_name = f"Ground Station - FFT-Processor-{sdr_id}"
+                fft_named_worker = create_named_worker_process(
+                    fft_processor_process, fft_process_name
+                )
+                fft_process = multiprocessing.Process(
+                    target=fft_named_worker,
+                    args=(iq_queue_fft, data_queue, stop_event, client_id),
+                    name=fft_process_name,
+                    daemon=True,
+                )
+                fft_process.start()
+
+                self.logger.info(
+                    f"Started FFT processor '{fft_process_name}' for device {sdr_id} (PID: {fft_process.pid})"
+                )
+            else:
+                self.logger.info(
+                    f"Skipping FFT processor for internal observation session {client_id}"
+                )
 
             # Create and start IQ broadcaster for demodulators
             # The broadcaster reads from iq_queue_demod and distributes to multiple demodulators
@@ -368,8 +380,11 @@ class ProcessLifecycleManager:
             # Send initial configuration
             config_queue.put(config)
 
-            # Add this client to the room
-            await self.sio.enter_room(client_id, sdr_id)
+            # Add this client to the room (skip for internal observation sessions)
+            from vfos.state import VFOManager
+
+            if not VFOManager.is_internal_session(client_id):
+                await self.sio.enter_room(client_id, sdr_id)
 
             # Start async task to monitor the data queue
             asyncio.create_task(self._monitor_data_queue(sdr_id))
@@ -396,8 +411,11 @@ class ProcessLifecycleManager:
                 # Remove client from Socket.IO room
                 process_info["clients"].remove(client_id)
 
-                # Make a client leave a specific room
-                await self.sio.leave_room(client_id, sdr_id)
+                # Make a client leave a specific room (skip for internal observation sessions)
+                from vfos.state import VFOManager
+
+                if not VFOManager.is_internal_session(client_id):
+                    await self.sio.leave_room(client_id, sdr_id)
 
                 # Stop any active demodulator for this client
                 self.demodulator_manager.stop_demodulator(sdr_id, client_id)
@@ -441,8 +459,12 @@ class ProcessLifecycleManager:
         self.logger.info(f"Stopping SDR process and FFT processor for device {sdr_id}")
         process_info["stop_event"].set()
 
-        # Stop the FFT processor
-        if "fft_process" in process_info and process_info["fft_process"].is_alive():
+        # Stop the FFT processor (may be None for internal observation sessions)
+        if (
+            "fft_process" in process_info
+            and process_info["fft_process"] is not None
+            and process_info["fft_process"].is_alive()
+        ):
             self.logger.info(f"Stopping FFT processor for device {sdr_id}")
 
             # Wait briefly for the FFT process to terminate gracefully

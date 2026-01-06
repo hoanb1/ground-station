@@ -16,6 +16,41 @@ def cleanup_everything():
     """Cleanup function to stop all processes and threads."""
     logger.info("Cleaning up all processes and threads...")
 
+    # Stop all running observations first
+    try:
+        from observations.events import observation_sync
+
+        if observation_sync and observation_sync.executor:
+            logger.info("Stopping all running observations...")
+            # Get all scheduled APScheduler jobs for observations
+            jobs = observation_sync.scheduler.get_jobs()
+            observation_ids = set()
+            for job in jobs:
+                if job.id.startswith("obs_"):
+                    # Extract observation_id from job_id format: "obs_{observation_id}_{start|stop}"
+                    parts = job.id.split("_")
+                    if len(parts) >= 3:
+                        obs_id = "_".join(parts[1:-1])  # Handle observation IDs with underscores
+                        observation_ids.add(obs_id)
+
+            # Stop each observation
+            for obs_id in observation_ids:
+                try:
+                    event_loop = asyncio.get_event_loop()
+                    if event_loop.is_running():
+                        asyncio.create_task(observation_sync.executor.stop_observation(obs_id))
+                    else:
+                        event_loop.run_until_complete(
+                            observation_sync.executor.stop_observation(obs_id)
+                        )
+                    logger.info(f"Stopped observation: {obs_id}")
+                except Exception as e:
+                    logger.warning(f"Error stopping observation {obs_id}: {e}")
+
+            logger.info("All observations stopped")
+    except Exception as e:  # pragma: no cover
+        logger.warning(f"Error stopping observations: {e}")
+
     # Terminate tracker process
     try:
         from tracker.runner import tracker_process
