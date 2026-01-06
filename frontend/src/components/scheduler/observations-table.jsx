@@ -204,16 +204,19 @@ const ObservationsTable = () => {
         {
             field: 'sdr',
             headerName: 'SDR',
-            flex: 1.5,
-            minWidth: 180,
+            flex: 1.8,
+            minWidth: 220,
             renderCell: (params) => {
-                if (!params.row.sdr?.name) return '-';
-                const sampleRateMHz = params.row.sdr.sample_rate
-                    ? (params.row.sdr.sample_rate / 1000000).toFixed(1)
-                    : '?';
+                const sdr = params.row.sdr;
+                if (!sdr?.name) return '-';
+
+                const freqMHz = sdr.center_frequency ? (sdr.center_frequency / 1000000).toFixed(2) : '?';
+                const gain = (sdr.gain !== undefined && sdr.gain !== null && sdr.gain !== '') ? sdr.gain : '?';
+                const antenna = sdr.antenna_port || '?';
+
                 return (
-                    <Typography variant="body2">
-                        {params.row.sdr.name} ({sampleRateMHz} MS/s)
+                    <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                        {sdr.name} • {freqMHz}MHz • {gain}dB • {antenna}
                     </Typography>
                 );
             },

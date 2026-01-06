@@ -146,11 +146,21 @@ const MonitoredSatellitesTable = () => {
         {
             field: 'sdr',
             headerName: 'SDR',
-            flex: 1,
-            minWidth: 150,
+            flex: 1.5,
+            minWidth: 200,
             renderCell: (params) => {
-                const sampleRateMHz = (params.row.sdr.sample_rate / 1000000).toFixed(1);
-                return <Typography variant="body2">{params.row.sdr.name} ({sampleRateMHz} MS/s)</Typography>;
+                const sdr = params.row.sdr;
+                if (!sdr) return '-';
+
+                const freqMHz = sdr.center_frequency ? (sdr.center_frequency / 1000000).toFixed(2) : '?';
+                const gain = (sdr.gain !== undefined && sdr.gain !== null && sdr.gain !== '') ? sdr.gain : '?';
+                const antenna = sdr.antenna_port || '?';
+
+                return (
+                    <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                        {sdr.name} • {freqMHz}MHz • {gain}dB • {antenna}
+                    </Typography>
+                );
             },
         },
         {
