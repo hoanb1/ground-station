@@ -226,6 +226,20 @@ const FileBrowserIconWithStatus = () => {
     );
 };
 
+// Wrapper component for EventNoteIcon that reads Redux state
+const SchedulerIconWithStatus = () => {
+    const observations = useSelector((state) => state.scheduler?.observations || []);
+
+    // Check if any observation has status "running"
+    const hasActiveObservation = observations.some(obs => obs.status === 'running');
+
+    return (
+        <IconWithOverlay showOverlay={hasActiveObservation} overlayType="play">
+            <EventNoteIcon />
+        </IconWithOverlay>
+    );
+};
+
 export const getNavigation = () => [
     {
         kind: 'header',
@@ -254,7 +268,7 @@ export const getNavigation = () => [
     {
         segment: 'scheduler',
         title: 'Scheduled Observations',
-        icon: <EventNoteIcon />,
+        icon: <SchedulerIconWithStatus />,
     },
     {kind: 'divider'},
     {
