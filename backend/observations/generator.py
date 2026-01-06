@@ -98,7 +98,10 @@ async def cleanup_old_observations(session: AsyncSession) -> int:
 
 
 async def generate_observations_for_monitored_satellites(
-    session: AsyncSession, monitored_satellite_id: Optional[str] = None
+    session: AsyncSession,
+    monitored_satellite_id: Optional[str] = None,
+    dry_run: bool = False,
+    user_conflict_overrides: Optional[dict] = None,
 ) -> dict:
     """
     Generate scheduled observations for monitored satellites.
@@ -106,19 +109,24 @@ async def generate_observations_for_monitored_satellites(
     Args:
         session: Database session
         monitored_satellite_id: Optional ID to generate for specific satellite, or None for all
+        dry_run: If True, only preview conflicts without creating/modifying observations
+        user_conflict_overrides: Dict mapping conflict IDs to actions ("keep" or "replace")
 
     Returns:
-        Dict with success status, statistics, and any errors
+        Dict with success status, statistics, and any errors.
+        In dry_run mode, includes "conflicts" and "no_conflicts" arrays.
     """
     try:
+        mode = "DRY-RUN" if dry_run else "LIVE"
         logger.info(
-            f"Starting observation generation with conflict strategy: {CONFLICT_RESOLUTION_STRATEGY}"
+            f"Starting observation generation ({mode}) with conflict strategy: {CONFLICT_RESOLUTION_STRATEGY}"
         )
 
-        # Clean up old completed observations
-        deleted_count = await cleanup_old_observations(session)
-        if deleted_count > 0:
-            logger.info(f"Cleaned up {deleted_count} old completed observations")
+        # Clean up old completed observations (skip in dry-run mode)
+        if not dry_run:
+            deleted_count = await cleanup_old_observations(session)
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} old completed observations")
 
         # Fetch monitored satellites
         if monitored_satellite_id:
@@ -167,15 +175,23 @@ async def generate_observations_for_monitored_satellites(
         home_location = {"lat": float(locations[0]["lat"]), "lon": float(locations[0]["lon"])}
 
         stats = {"generated": 0, "updated": 0, "skipped": 0, "satellites_processed": 0}
+        conflicts = []
+        no_conflicts = []
 
         # Process each monitored satellite
         for mon_sat in monitored_sats:
             try:
-                result = await _generate_observations_for_satellite(session, mon_sat, home_location)
+                result = await _generate_observations_for_satellite(
+                    session, mon_sat, home_location, dry_run, user_conflict_overrides
+                )
                 stats["satellites_processed"] += 1
                 stats["generated"] += result.get("generated", 0)
                 stats["updated"] += result.get("updated", 0)
                 stats["skipped"] += result.get("skipped", 0)
+
+                if dry_run:
+                    conflicts.extend(result.get("conflicts", []))
+                    no_conflicts.extend(result.get("no_conflicts", []))
 
             except Exception as e:
                 logger.error(
@@ -184,9 +200,22 @@ async def generate_observations_for_monitored_satellites(
                 logger.error(traceback.format_exc())
                 # Continue processing other satellites
 
-        await session.commit()
+        if not dry_run:
+            await session.commit()
 
-        return {"success": True, "data": stats, "error": None}
+        result_data = {
+            "success": True,
+            "data": stats,
+            "error": None,
+            "dry_run": dry_run,
+            "current_strategy": CONFLICT_RESOLUTION_STRATEGY,
+        }
+
+        if dry_run:
+            result_data["conflicts"] = conflicts
+            result_data["no_conflicts"] = no_conflicts
+
+        return result_data
 
     except Exception as e:
         await session.rollback()
@@ -196,7 +225,11 @@ async def generate_observations_for_monitored_satellites(
 
 
 async def _generate_observations_for_satellite(
-    session: AsyncSession, monitored_sat: dict, home_location: dict
+    session: AsyncSession,
+    monitored_sat: dict,
+    home_location: dict,
+    dry_run: bool = False,
+    user_conflict_overrides: Optional[dict] = None,
 ) -> dict:
     """
     Generate observations for a single monitored satellite.
@@ -205,11 +238,18 @@ async def _generate_observations_for_satellite(
         session: Database session
         monitored_sat: Monitored satellite data
         home_location: Ground station location dict with 'lat' and 'lon'
+        dry_run: If True, only preview conflicts
+        user_conflict_overrides: User's conflict resolution choices
 
     Returns:
         Dict with statistics for this satellite
     """
     stats = {"generated": 0, "updated": 0, "skipped": 0}
+    conflicts = []
+    no_conflicts = []
+
+    if user_conflict_overrides is None:
+        user_conflict_overrides = {}
 
     # Fetch satellite TLE data
     norad_id = monitored_sat["satellite"]["norad_id"]
@@ -277,13 +317,19 @@ async def _generate_observations_for_satellite(
             if existing:
                 # Always update auto-generated observations from monitored satellites
                 # This ensures they get the latest tasks, SDR config, etc.
-                await _update_observation(session, existing, monitored_sat, pass_data)
+                if not dry_run:
+                    await _update_observation(session, existing, monitored_sat, pass_data)
                 stats["updated"] += 1
             else:
                 # Check for time conflicts with ANY other observation
                 if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_FORCE:
                     # Force: Create observation regardless of conflicts
-                    await _create_observation(session, monitored_sat, pass_data)
+                    if dry_run:
+                        no_conflicts.append(
+                            _build_pass_preview(satellite_data, pass_data, monitored_sat)
+                        )
+                    else:
+                        await _create_observation(session, monitored_sat, pass_data)
                     stats["generated"] += 1
                 else:
                     # Check for any time conflict
@@ -291,44 +337,81 @@ async def _generate_observations_for_satellite(
 
                     if conflicting_obs:
                         # Conflict detected
+                        new_elevation = pass_data["peak_altitude"]
+                        existing_elevation = conflicting_obs.pass_config.get("peak_altitude", 0)
+
+                        # Determine strategy action
                         if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_SKIP:
-                            # Skip: Don't create this observation
-                            logger.warning(
-                                f"CONFLICT SKIP: Pass for {satellite_data['name']} at "
-                                f"{event_start.strftime('%Y-%m-%d %H:%M UTC')} "
-                                f"(elevation {pass_data['peak_altitude']:.1f}°) conflicts with "
-                                f"existing observation ID {conflicting_obs.id}"
-                            )
-                            stats["skipped"] += 1
-
+                            strategy_action = "skip"
                         elif CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_PRIORITY:
-                            # Priority: Compare elevations
-                            new_elevation = pass_data["peak_altitude"]
-                            existing_elevation = conflicting_obs.pass_config.get("peak_altitude", 0)
+                            strategy_action = (
+                                "replace" if new_elevation > existing_elevation else "keep"
+                            )
+                        else:
+                            strategy_action = "keep"
 
-                            if new_elevation > existing_elevation:
-                                # New pass has higher elevation - replace existing
+                        # Check for user override
+                        conflict_id = conflicting_obs.id
+                        if conflict_id in user_conflict_overrides:
+                            action = user_conflict_overrides[conflict_id]
+                        else:
+                            action = strategy_action
+
+                        if dry_run:
+                            # Collect conflict info for preview
+                            conflict_info = {
+                                "conflict_id": conflict_id,
+                                "time_window": f"{event_start.strftime('%Y-%m-%d %H:%M')} - {event_end.strftime('%H:%M UTC')}",
+                                "existing_obs": {
+                                    "id": conflicting_obs.id,
+                                    "satellite": conflicting_obs.satellite_config.get(
+                                        "name", "Unknown"
+                                    ),
+                                    "norad_id": conflicting_obs.norad_id,
+                                    "elevation": existing_elevation,
+                                    "start": conflicting_obs.event_start.isoformat(),
+                                    "end": conflicting_obs.event_end.isoformat(),
+                                },
+                                "new_pass": {
+                                    "satellite": satellite_data["name"],
+                                    "norad_id": norad_id,
+                                    "elevation": new_elevation,
+                                    "start": pass_data["event_start"],
+                                    "end": pass_data["event_end"],
+                                    "monitored_satellite_id": monitored_sat["id"],
+                                },
+                                "strategy_action": strategy_action,
+                                "user_action": (
+                                    action if conflict_id in user_conflict_overrides else None
+                                ),
+                            }
+                            conflicts.append(conflict_info)
+                        else:
+                            # Execute the action
+                            if action == "replace":
                                 logger.info(
-                                    f"CONFLICT PRIORITY: Replacing observation ID {conflicting_obs.id} "
+                                    f"CONFLICT: Replacing observation ID {conflicting_obs.id} "
                                     f"(elevation {existing_elevation:.1f}°) with {satellite_data['name']} "
                                     f"(elevation {new_elevation:.1f}°)"
                                 )
-                                # Delete the conflicting observation
                                 await delete_scheduled_observations(session, [conflicting_obs.id])
-                                # Create new observation
                                 await _create_observation(session, monitored_sat, pass_data)
                                 stats["generated"] += 1
-                            else:
-                                # Existing pass has higher or equal elevation - skip new one
+                            else:  # "keep" or "skip"
                                 logger.info(
-                                    f"CONFLICT PRIORITY: Keeping existing observation ID {conflicting_obs.id} "
+                                    f"CONFLICT: Keeping existing observation ID {conflicting_obs.id} "
                                     f"(elevation {existing_elevation:.1f}°) over {satellite_data['name']} "
                                     f"(elevation {new_elevation:.1f}°)"
                                 )
                                 stats["skipped"] += 1
                     else:
                         # No conflict - create observation
-                        await _create_observation(session, monitored_sat, pass_data)
+                        if dry_run:
+                            no_conflicts.append(
+                                _build_pass_preview(satellite_data, pass_data, monitored_sat)
+                            )
+                        else:
+                            await _create_observation(session, monitored_sat, pass_data)
                         stats["generated"] += 1
 
         except Exception as e:
@@ -336,7 +419,28 @@ async def _generate_observations_for_satellite(
             logger.error(traceback.format_exc())
             continue
 
-    return stats
+    result: dict = stats.copy()
+    if dry_run:
+        result["conflicts"] = conflicts
+        result["no_conflicts"] = no_conflicts
+
+    return result
+
+
+def _build_pass_preview(satellite_data: dict, pass_data: dict, monitored_sat: dict) -> dict:
+    """Build a preview dict for a pass that will be created without conflict."""
+    event_start = datetime.fromisoformat(pass_data["event_start"].replace("Z", "+00:00"))
+    event_end = datetime.fromisoformat(pass_data["event_end"].replace("Z", "+00:00"))
+
+    return {
+        "satellite": satellite_data["name"],
+        "norad_id": satellite_data["norad_id"],
+        "elevation": pass_data["peak_altitude"],
+        "start": pass_data["event_start"],
+        "end": pass_data["event_end"],
+        "time_window": f"{event_start.strftime('%Y-%m-%d %H:%M')} - {event_end.strftime('%H:%M UTC')}",
+        "monitored_satellite_id": monitored_sat["id"],
+    }
 
 
 async def _create_observation(session: AsyncSession, monitored_sat: dict, pass_data: dict):

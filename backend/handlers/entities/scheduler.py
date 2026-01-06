@@ -418,26 +418,33 @@ async def regenerate_observations(
 
     Args:
         sio: Socket.IO server instance
-        data: Optional dict with monitored_satellite_id to regenerate for specific satellite
+        data: Optional dict with:
+            - monitored_satellite_id: ID to regenerate for specific satellite
+            - dry_run: If True, only preview conflicts without executing
+            - user_conflict_overrides: Dict mapping conflict IDs to actions
         logger: Logger instance
         sid: Socket.IO session ID
 
     Returns:
         Dictionary with success status and generation statistics
+        In dry_run mode, includes conflicts and no_conflicts arrays
     """
     monitored_satellite_id = data.get("monitored_satellite_id") if data else None
+    dry_run = data.get("dry_run", False) if data else False
+    user_conflict_overrides = data.get("user_conflict_overrides", {}) if data else {}
 
+    mode = "DRY-RUN preview" if dry_run else "regeneration"
     logger.info(
-        f"Regenerating observations for {'all satellites' if not monitored_satellite_id else f'satellite {monitored_satellite_id}'}"
+        f"Starting observation {mode} for {'all satellites' if not monitored_satellite_id else f'satellite {monitored_satellite_id}'}"
     )
 
     async with AsyncSessionLocal() as dbsession:
         result = await generate_observations_for_monitored_satellites(
-            dbsession, monitored_satellite_id
+            dbsession, monitored_satellite_id, dry_run, user_conflict_overrides
         )
 
-        if result["success"]:
-            # Emit event to all clients that observations have changed
+        if result["success"] and not dry_run:
+            # Emit event to all clients that observations have changed (skip in dry-run)
             await emit_scheduled_observations_changed()
 
             stats = result.get("data", {})
@@ -459,10 +466,19 @@ async def regenerate_observations(
                     logger.info(
                         f"APScheduler sync complete: {sync_stats.get('scheduled', 0)} scheduled"
                     )
+        elif result["success"] and dry_run:
+            logger.info(
+                f"Dry-run complete: {len(result.get('conflicts', []))} conflicts detected, "
+                f"{len(result.get('no_conflicts', []))} passes without conflicts"
+            )
 
         return {
             "success": bool(result.get("success", False)),
             "data": result.get("data", {}),
+            "dry_run": result.get("dry_run", False),
+            "current_strategy": result.get("current_strategy", ""),
+            "conflicts": result.get("conflicts", []),
+            "no_conflicts": result.get("no_conflicts", []),
             "error": str(result.get("error", "")),
         }
 

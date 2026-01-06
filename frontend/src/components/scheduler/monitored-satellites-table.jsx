@@ -51,6 +51,7 @@ import {
     toggleMonitoredSatelliteEnabledAsync,
     fetchMonitoredSatellites,
 } from './scheduler-slice.jsx';
+import RegenerationPreviewDialog from './regeneration-preview-dialog.jsx';
 
 const MonitoredSatellitesTable = () => {
     const dispatch = useDispatch();
@@ -58,6 +59,9 @@ const MonitoredSatellitesTable = () => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openRegenerateConfirm, setOpenRegenerateConfirm] = useState(false);
+    const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
+    const [previewData, setPreviewData] = useState(null);
+    const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
     const monitoredSatellites = useSelector((state) => state.scheduler?.monitoredSatellites || []);
     const loading = useSelector((state) => state.scheduler?.monitoredSatellitesLoading || false);
@@ -92,18 +96,46 @@ const MonitoredSatellitesTable = () => {
         }
     };
 
-    const handleRegenerateConfirm = () => {
+    const handleRegenerateClick = () => {
+        // Start dry-run preview instead of showing confirmation
         if (selectedIds.length > 0 && socket) {
-            selectedIds.forEach(id => {
-                socket.emit('data_submission', 'regenerate-observations', { monitored_satellite_id: id }, (response) => {
-                    if (response.success) {
-                        console.log(`Regeneration successful for satellite ${id}:`, response.data);
-                    } else {
-                        console.error(`Regeneration failed for satellite ${id}:`, response.error);
-                    }
-                });
+            setIsLoadingPreview(true);
+
+            // For multiple satellites, run dry-run without specific ID
+            const monitored_satellite_id = selectedIds.length === 1 ? selectedIds[0] : null;
+
+            socket.emit('data_submission', 'regenerate-observations', {
+                monitored_satellite_id,
+                dry_run: true
+            }, (response) => {
+                setIsLoadingPreview(false);
+                if (response.success && response.dry_run) {
+                    setPreviewData(response);
+                    setOpenPreviewDialog(true);
+                } else {
+                    console.error('Dry-run failed:', response.error);
+                }
             });
-            setOpenRegenerateConfirm(false);
+        }
+    };
+
+    const handlePreviewConfirm = (conflictChoices) => {
+        if (selectedIds.length > 0 && socket) {
+            const monitored_satellite_id = selectedIds.length === 1 ? selectedIds[0] : null;
+
+            socket.emit('data_submission', 'regenerate-observations', {
+                monitored_satellite_id,
+                dry_run: false,
+                user_conflict_overrides: conflictChoices
+            }, (response) => {
+                if (response.success) {
+                    console.log('Regeneration successful:', response.data);
+                    setOpenPreviewDialog(false);
+                    setPreviewData(null);
+                } else {
+                    console.error('Regeneration failed:', response.error);
+                }
+            });
         }
     };
 
@@ -304,10 +336,10 @@ const MonitoredSatellitesTable = () => {
                     variant="contained"
                     color="warning"
                     startIcon={<RefreshIcon />}
-                    onClick={() => setOpenRegenerateConfirm(true)}
-                    disabled={selectedIds.length === 0}
+                    onClick={handleRegenerateClick}
+                    disabled={selectedIds.length === 0 || isLoadingPreview}
                 >
-                    Re-Generate
+                    {isLoadingPreview ? 'Loading Preview...' : 'Re-Generate'}
                 </Button>
                 <Button
                     variant="contained"
@@ -336,21 +368,16 @@ const MonitoredSatellitesTable = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Re-Generate Confirmation Dialog */}
-            <Dialog open={openRegenerateConfirm} onClose={() => setOpenRegenerateConfirm(false)}>
-                <DialogTitle>Confirm Re-Generation</DialogTitle>
-                <DialogContent>
-                    Are you sure you want to re-generate observations for {selectedIds.length} monitored satellite(s)? This will overwrite any existing scheduled observations with new ones generated now.
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenRegenerateConfirm(false)} variant="outlined">
-                        Cancel
-                    </Button>
-                    <Button variant="contained" onClick={handleRegenerateConfirm} color="warning">
-                        Re-Generate
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {/* Regeneration Preview Dialog */}
+            <RegenerationPreviewDialog
+                open={openPreviewDialog}
+                onClose={() => {
+                    setOpenPreviewDialog(false);
+                    setPreviewData(null);
+                }}
+                previewData={previewData}
+                onConfirm={handlePreviewConfirm}
+            />
         </Paper>
     );
 };
