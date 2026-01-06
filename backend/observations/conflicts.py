@@ -92,3 +92,44 @@ def should_update_observation(existing_obs: ScheduledObservations) -> bool:
 
     # Default: don't update
     return False
+
+
+async def find_any_time_conflict(
+    session: AsyncSession,
+    event_start: datetime,
+    event_end: datetime,
+    exclude_observation_id: Optional[str] = None,
+) -> Optional[ScheduledObservations]:
+    """
+    Check if ANY observation exists that overlaps with this time window,
+    regardless of satellite or monitored satellite.
+
+    Args:
+        session: Database session
+        event_start: Start time of the pass
+        event_end: End time of the pass
+        exclude_observation_id: Optional observation ID to exclude (for updates)
+
+    Returns:
+        First conflicting observation found, or None
+    """
+    tolerance = timedelta(minutes=PASS_OVERLAP_TOLERANCE_MINUTES)
+
+    # Expand the search window by tolerance
+    search_start = event_start - tolerance
+    search_end = event_end + tolerance
+
+    conditions = [
+        ScheduledObservations.status.in_([STATUS_SCHEDULED, STATUS_RUNNING]),
+        # Check for time window overlap
+        ScheduledObservations.event_start < search_end,
+        ScheduledObservations.event_end > search_start,
+    ]
+
+    if exclude_observation_id:
+        conditions.append(ScheduledObservations.id != exclude_observation_id)
+
+    stmt = select(ScheduledObservations).filter(and_(*conditions))
+
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()

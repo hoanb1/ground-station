@@ -43,3 +43,18 @@ VALID_STATUSES = (
     STATUS_CANCELLED,
     STATUS_FAILED,
 )
+
+# Conflict resolution strategies
+CONFLICT_STRATEGY_PRIORITY = "priority"  # Keep passes with higher peak elevation
+CONFLICT_STRATEGY_SKIP = "skip"  # Skip all conflicting passes and log
+CONFLICT_STRATEGY_FORCE = "force"  # Schedule anyway, allow overlaps
+
+# Default conflict resolution strategy
+DEFAULT_CONFLICT_STRATEGY = CONFLICT_STRATEGY_PRIORITY
+
+# All valid conflict strategies
+VALID_CONFLICT_STRATEGIES = (
+    CONFLICT_STRATEGY_PRIORITY,
+    CONFLICT_STRATEGY_SKIP,
+    CONFLICT_STRATEGY_FORCE,
+)

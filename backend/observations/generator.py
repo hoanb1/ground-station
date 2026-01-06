@@ -16,9 +16,10 @@
 """Core observation generation logic."""
 
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.common import logger
@@ -29,10 +30,71 @@ from crud.monitoredsatellites import (
     mark_observation_as_generated,
 )
 from crud.satellites import fetch_satellites
-from crud.scheduledobservations import add_scheduled_observation, edit_scheduled_observation
-from observations.conflicts import find_overlapping_observation
-from observations.constants import STATUS_SCHEDULED
+from crud.scheduledobservations import (
+    add_scheduled_observation,
+    delete_scheduled_observations,
+    edit_scheduled_observation,
+)
+from db.models import ScheduledObservations
+from observations.conflicts import find_any_time_conflict, find_overlapping_observation
+from observations.constants import (
+    CONFLICT_STRATEGY_FORCE,
+    CONFLICT_STRATEGY_PRIORITY,
+    CONFLICT_STRATEGY_SKIP,
+    DEFAULT_CONFLICT_STRATEGY,
+    STATUS_COMPLETED,
+    STATUS_SCHEDULED,
+)
 from tracking.passes import calculate_next_events
+
+# CONFLICT RESOLUTION STRATEGY
+# Options: "priority", "skip", "force"
+# - priority: Keep passes with higher peak elevation
+# - skip: Skip all conflicting passes and log
+# - force: Schedule anyway, allow overlaps
+CONFLICT_RESOLUTION_STRATEGY = DEFAULT_CONFLICT_STRATEGY
+
+
+async def cleanup_old_observations(session: AsyncSession) -> int:
+    """
+    Delete completed observations that are over 24 hours old.
+
+    Args:
+        session: Database session
+
+    Returns:
+        Number of observations deleted
+    """
+    try:
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
+
+        # Find completed observations older than 24 hours
+        stmt = select(ScheduledObservations).filter(
+            and_(
+                ScheduledObservations.status == STATUS_COMPLETED,
+                ScheduledObservations.event_end < cutoff_time,
+            )
+        )
+
+        result = await session.execute(stmt)
+        old_observations = result.scalars().all()
+
+        if old_observations:
+            observation_ids = [obs.id for obs in old_observations]
+            logger.info(
+                f"Cleaning up {len(observation_ids)} completed observations older than 24 hours"
+            )
+
+            # Delete the observations
+            await delete_scheduled_observations(session, observation_ids)
+            return len(observation_ids)
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Error cleaning up old observations: {e}")
+        logger.error(traceback.format_exc())
+        return 0
 
 
 async def generate_observations_for_monitored_satellites(
@@ -49,6 +111,15 @@ async def generate_observations_for_monitored_satellites(
         Dict with success status, statistics, and any errors
     """
     try:
+        logger.info(
+            f"Starting observation generation with conflict strategy: {CONFLICT_RESOLUTION_STRATEGY}"
+        )
+
+        # Clean up old completed observations
+        deleted_count = await cleanup_old_observations(session)
+        if deleted_count > 0:
+            logger.info(f"Cleaned up {deleted_count} old completed observations")
+
         # Fetch monitored satellites
         if monitored_satellite_id:
             result = await fetch_monitored_satellites(session, monitored_satellite_id)
@@ -198,7 +269,7 @@ async def _generate_observations_for_satellite(
             event_start = datetime.fromisoformat(pass_data["event_start"].replace("Z", "+00:00"))
             event_end = datetime.fromisoformat(pass_data["event_end"].replace("Z", "+00:00"))
 
-            # Check for existing observation
+            # Check for existing observation from same monitored satellite
             existing = await find_overlapping_observation(
                 session, norad_id, event_start, event_end, monitored_sat["id"]
             )
@@ -209,9 +280,56 @@ async def _generate_observations_for_satellite(
                 await _update_observation(session, existing, monitored_sat, pass_data)
                 stats["updated"] += 1
             else:
-                # Create new observation
-                await _create_observation(session, monitored_sat, pass_data)
-                stats["generated"] += 1
+                # Check for time conflicts with ANY other observation
+                if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_FORCE:
+                    # Force: Create observation regardless of conflicts
+                    await _create_observation(session, monitored_sat, pass_data)
+                    stats["generated"] += 1
+                else:
+                    # Check for any time conflict
+                    conflicting_obs = await find_any_time_conflict(session, event_start, event_end)
+
+                    if conflicting_obs:
+                        # Conflict detected
+                        if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_SKIP:
+                            # Skip: Don't create this observation
+                            logger.warning(
+                                f"CONFLICT SKIP: Pass for {satellite_data['name']} at "
+                                f"{event_start.strftime('%Y-%m-%d %H:%M UTC')} "
+                                f"(elevation {pass_data['peak_altitude']:.1f}°) conflicts with "
+                                f"existing observation ID {conflicting_obs.id}"
+                            )
+                            stats["skipped"] += 1
+
+                        elif CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_PRIORITY:
+                            # Priority: Compare elevations
+                            new_elevation = pass_data["peak_altitude"]
+                            existing_elevation = conflicting_obs.pass_config.get("peak_altitude", 0)
+
+                            if new_elevation > existing_elevation:
+                                # New pass has higher elevation - replace existing
+                                logger.info(
+                                    f"CONFLICT PRIORITY: Replacing observation ID {conflicting_obs.id} "
+                                    f"(elevation {existing_elevation:.1f}°) with {satellite_data['name']} "
+                                    f"(elevation {new_elevation:.1f}°)"
+                                )
+                                # Delete the conflicting observation
+                                await delete_scheduled_observations(session, [conflicting_obs.id])
+                                # Create new observation
+                                await _create_observation(session, monitored_sat, pass_data)
+                                stats["generated"] += 1
+                            else:
+                                # Existing pass has higher or equal elevation - skip new one
+                                logger.info(
+                                    f"CONFLICT PRIORITY: Keeping existing observation ID {conflicting_obs.id} "
+                                    f"(elevation {existing_elevation:.1f}°) over {satellite_data['name']} "
+                                    f"(elevation {new_elevation:.1f}°)"
+                                )
+                                stats["skipped"] += 1
+                    else:
+                        # No conflict - create observation
+                        await _create_observation(session, monitored_sat, pass_data)
+                        stats["generated"] += 1
 
         except Exception as e:
             logger.error(f"Error processing pass for NORAD ID {norad_id}: {e}")
