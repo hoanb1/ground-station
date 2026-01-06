@@ -77,17 +77,34 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
     const totalPasses = conflicts.length + no_conflicts.length;
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
+        >
+            <DialogTitle sx={!hasConflicts ? {
+                bgcolor: (theme) => theme.palette.mode === 'dark'
+                    ? 'rgba(46, 125, 50, 0.08)'
+                    : 'rgba(46, 125, 50, 0.04)',
+            } : {}}>
                 Regeneration Preview
             </DialogTitle>
 
             <DialogContent>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                    <AlertTitle>Auto-generation Strategy: {current_strategy.toUpperCase()}</AlertTitle>
-                    {getStrategyDescription()}
-                    <br />
-                    <strong>Changes here apply ONLY to this regeneration.</strong>
+                <Alert severity={!hasConflicts ? "success" : "info"} sx={{ mb: 2 }}>
+                    <AlertTitle>
+                        {!hasConflicts ? "No Conflicts - Ready to Generate" : `Auto-generation Strategy: ${current_strategy.toUpperCase()}`}
+                    </AlertTitle>
+                    {!hasConflicts ? (
+                        <>All passes can be scheduled without conflicts. Click "Confirm & Generate" to proceed.</>
+                    ) : (
+                        <>
+                            {getStrategyDescription()}
+                            <br />
+                            <strong>Changes here apply ONLY to this regeneration.</strong>
+                        </>
+                    )}
                 </Alert>
 
                 {/* Summary */}
