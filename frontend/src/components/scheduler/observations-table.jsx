@@ -101,6 +101,7 @@ const ObservationsTable = () => {
     const apiRef = useGridApiRef();
     const [selectedIds, setSelectedIds] = useState([]);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+    const [openStopConfirm, setOpenStopConfirm] = useState(false);
 
     const observations = useSelector((state) => state.scheduler?.observations || []);
     const loading = useSelector((state) => state.scheduler?.loading || false);
@@ -139,6 +140,13 @@ const ObservationsTable = () => {
             dispatch(deleteScheduledObservations({ socket, ids: selectedIds }));
             setSelectedIds([]);
             setOpenDeleteConfirm(false);
+        }
+    };
+
+    const handleStop = () => {
+        if (selectedIds.length === 1 && socket) {
+            handleCancel(selectedIds[0]);
+            setOpenStopConfirm(false);
         }
     };
 
@@ -399,6 +407,13 @@ const ObservationsTable = () => {
                             opacity: 0.6,
                             textDecoration: 'line-through',
                         },
+                        [`& .${gridClasses.row}.status-cancelled`]: {
+                            backgroundColor: (theme) => theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.05)'
+                                : 'rgba(0, 0, 0, 0.04)',
+                            opacity: 0.6,
+                            textDecoration: 'line-through',
+                        },
                         '& .MuiDataGrid-overlay': {
                             fontSize: '0.875rem',
                             fontStyle: 'italic',
@@ -450,6 +465,21 @@ const ObservationsTable = () => {
                 </Button>
                 <Button
                     variant="contained"
+                    color="warning"
+                    startIcon={<StopIcon />}
+                    onClick={() => setOpenStopConfirm(true)}
+                    disabled={
+                        selectedIds.length !== 1 ||
+                        !observations.find(obs =>
+                            obs.id === selectedIds[0] &&
+                            (obs.status === 'running' || obs.status === 'scheduled')
+                        )
+                    }
+                >
+                    Stop
+                </Button>
+                <Button
+                    variant="contained"
                     color="error"
                     startIcon={<DeleteIcon />}
                     onClick={() => setOpenDeleteConfirm(true)}
@@ -471,6 +501,31 @@ const ObservationsTable = () => {
                     </Button>
                     <Button variant="contained" onClick={handleDelete} color="error">
                         Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Stop Confirmation Dialog */}
+            <Dialog open={openStopConfirm} onClose={() => setOpenStopConfirm(false)}>
+                <DialogTitle>Stop Observation</DialogTitle>
+                <DialogContent>
+                    {selectedIds.length === 1 && (() => {
+                        const obs = observations.find(o => o.id === selectedIds[0]);
+                        return obs ? (
+                            <>
+                                Are you sure you want to stop the observation <strong>{obs.satellite?.name || 'Unknown'}</strong>?
+                                <br /><br />
+                                This will immediately stop the observation and remove all scheduled jobs.
+                            </>
+                        ) : null;
+                    })()}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenStopConfirm(false)} variant="outlined">
+                        Cancel
+                    </Button>
+                    <Button variant="contained" onClick={handleStop} color="warning">
+                        Stop
                     </Button>
                 </DialogActions>
             </Dialog>

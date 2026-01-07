@@ -177,6 +177,11 @@ class ObservationExecutor:
         """
         Cancel a running or scheduled observation.
 
+        This will:
+        1. Stop the observation if it's currently running
+        2. Remove all scheduled jobs (start/stop) from APScheduler
+        3. Update status to CANCELLED
+
         Args:
             observation_id: The observation ID to cancel
 
@@ -197,11 +202,18 @@ class ObservationExecutor:
                 observation = result["data"]
                 status = observation.get("status")
 
-            # 2. If running, stop it
+            # 2. Remove scheduled jobs from APScheduler
+            from observations.events import observation_sync
+
+            if observation_sync:
+                await observation_sync.remove_observation(observation_id)
+                logger.info(f"Removed scheduled jobs for observation {observation_id}")
+
+            # 3. If running, stop it
             if status == STATUS_RUNNING:
                 await self._stop_observation_task(observation_id, observation)
 
-            # 3. Update status to CANCELLED
+            # 4. Update status to CANCELLED
             await self._update_observation_status(observation_id, STATUS_CANCELLED)
 
             logger.info(f"Observation {observation_id} cancelled successfully")

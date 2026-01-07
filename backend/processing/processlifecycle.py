@@ -327,30 +327,20 @@ class ProcessLifecycleManager:
                 f"Started SDR process '{process_name}' for device {sdr_id} (PID: {process.pid})"
             )
 
-            # Create and start FFT processor process (skip for internal observations)
-            from vfos.state import VFOManager
+            # Create and start FFT processor process
+            fft_process_name = f"Ground Station - FFT-Processor-{sdr_id}"
+            fft_named_worker = create_named_worker_process(fft_processor_process, fft_process_name)
+            fft_process = multiprocessing.Process(
+                target=fft_named_worker,
+                args=(iq_queue_fft, data_queue, stop_event, client_id),
+                name=fft_process_name,
+                daemon=True,
+            )
+            fft_process.start()
 
-            fft_process = None
-            if not VFOManager.is_internal_session(client_id):
-                fft_process_name = f"Ground Station - FFT-Processor-{sdr_id}"
-                fft_named_worker = create_named_worker_process(
-                    fft_processor_process, fft_process_name
-                )
-                fft_process = multiprocessing.Process(
-                    target=fft_named_worker,
-                    args=(iq_queue_fft, data_queue, stop_event, client_id),
-                    name=fft_process_name,
-                    daemon=True,
-                )
-                fft_process.start()
-
-                self.logger.info(
-                    f"Started FFT processor '{fft_process_name}' for device {sdr_id} (PID: {fft_process.pid})"
-                )
-            else:
-                self.logger.info(
-                    f"Skipping FFT processor for internal observation session {client_id}"
-                )
+            self.logger.info(
+                f"Started FFT processor '{fft_process_name}' for device {sdr_id} (PID: {fft_process.pid})"
+            )
 
             # Create and start IQ broadcaster for demodulators
             # The broadcaster reads from iq_queue_demod and distributes to multiple demodulators
@@ -459,7 +449,7 @@ class ProcessLifecycleManager:
         self.logger.info(f"Stopping SDR process and FFT processor for device {sdr_id}")
         process_info["stop_event"].set()
 
-        # Stop the FFT processor (may be None for internal observation sessions)
+        # Stop the FFT processor
         if (
             "fft_process" in process_info
             and process_info["fft_process"] is not None
