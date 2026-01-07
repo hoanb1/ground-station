@@ -17,7 +17,7 @@
  *
  */
 
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState, useMemo} from 'react';
 import {
     MapContainer,
     TileLayer,
@@ -104,7 +104,6 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
         showTerminatorLine,
         showTooltip,
         gridEditable,
-        selectedSatellites,
         pastOrbitLineColor,
         futureOrbitLineColor,
         satelliteCoverageColor,
@@ -119,6 +118,10 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
         selectedSatGroupId,
         loadingSatellites,
     } = useSelector((state) => state.overviewSatTrack);
+
+    // Memoize selectedSatellites to prevent reference changes when content is the same
+    const rawSelectedSatellites = useSelector((state) => state.overviewSatTrack.selectedSatellites);
+    const selectedSatellites = useMemo(() => rawSelectedSatellites, [JSON.stringify(rawSelectedSatellites.map(s => s.norad_id))]);
 
     const {
         trackingState,
@@ -250,9 +253,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 // Validate satellite position - skip if invalid
                 if (!isFinite(lat) || !isFinite(lon) || !isFinite(altitude) ||
                     lat === 0 && lon === 0 && altitude === 0 && velocity === 0) {
-                    console.warn(
-                        `Skipping satellite ${satellite['name']} (${noradId}): Invalid position data [${lat}, ${lon}, ${altitude}]`
-                    );
+                    // Skip silently - likely a satellite with extreme BSTAR that can't be propagated
                     return;
                 }
 

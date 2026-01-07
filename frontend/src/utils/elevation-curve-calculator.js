@@ -50,9 +50,8 @@ export function calculateElevationCurve(
         // Check for extreme BSTAR values that indicate rapid orbital decay
         const bstarThreshold = 0.01;
         if (satrec.bstar && Math.abs(satrec.bstar) > bstarThreshold) {
-            console.error(
-                `Satellite ${satelliteData.norad_id} skipped: Extreme BSTAR drag coefficient ${satrec.bstar.toFixed(6)}`
-            );
+            // Skip silently - don't log error to avoid console spam
+            // This satellite would cause performance issues during propagation
             return [];
         }
 

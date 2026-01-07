@@ -825,13 +825,35 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         // };
     }, [selectedSatGroupId, dispatch, socket, nextPassesHours, passes, passesRangeStart, passesRangeEnd, passesCachedGroupId]);
 
+    // Track which passes we've calculated curves for by creating a hash
+    const calculatedPassesHashRef = useRef(null);
+    const calculatingRef = useRef(false);
+
+    // Fetch satellites if we have a selected group but no satellites loaded yet
+    // This handles the case where page loads with a group already selected (from localStorage)
+    useEffect(() => {
+        if (selectedSatGroupId && (!selectedSatellites || selectedSatellites.length === 0) && !passesLoading) {
+            dispatch(fetchSatellitesByGroupId({ socket, satGroupId: selectedSatGroupId }));
+        }
+    }, [selectedSatGroupId, selectedSatellites, dispatch, socket, passesLoading]);
+
     // Calculate elevation curves when passes are received
     useEffect(() => {
+        // Create hash of pass IDs to detect if these are actually NEW passes
+        const currentPassesHash = passes?.map(p => `${p.norad_id}-${p.event_start}`).sort().join('|') || '';
+
+        // If we're calculating OR we already calculated for these exact passes, skip
+        if (calculatingRef.current || (calculatedPassesHashRef.current === currentPassesHash && currentPassesHash !== '')) {
+            return;
+        }
+
         if (passes && passes.length > 0 && location && selectedSatellites && selectedSatellites.length > 0) {
             // Check if elevation curves need to be calculated (if any pass has empty elevation_curve)
             const needsCalculation = passes.some(pass => !pass.elevation_curve || pass.elevation_curve.length === 0);
 
             if (needsCalculation) {
+                calculatingRef.current = true;
+
                 // Create satellite lookup from selectedSatellites
                 const satelliteLookup = {};
                 selectedSatellites.forEach(sat => {
@@ -842,6 +864,18 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                     };
                 });
 
+                // Verify all passes have corresponding satellites in the lookup
+                const allPassesHaveSatellites = passes.every(pass => satelliteLookup[pass.norad_id]);
+
+                if (!allPassesHaveSatellites) {
+                    // Passes belong to a different satellite group, skip calculation
+                    calculatingRef.current = false;
+                    return;
+                }
+
+                // Mark these passes as calculated BEFORE the setTimeout to prevent re-triggering
+                calculatedPassesHashRef.current = currentPassesHash;
+
                 // Calculate elevation curves in the background
                 setTimeout(() => {
                     const passesWithCurves = calculateElevationCurvesForPasses(
@@ -850,10 +884,11 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                         satelliteLookup
                     );
                     dispatch(updatePassesWithElevationCurves(passesWithCurves));
+                    calculatingRef.current = false;
                 }, 0);
             }
         }
-    }, [passes, location, selectedSatellites, dispatch]);
+    }, [passes, location, dispatch]); // CRITICAL: Do NOT add selectedSatellites - causes infinite loop!
 
     useEffect(() => {
         // Update the passes every two hours plus 5 mins to wait until the cache is invalidated

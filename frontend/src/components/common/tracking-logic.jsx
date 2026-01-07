@@ -53,11 +53,6 @@ export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
         // satellite.js propagation to hang or take extremely long time
         const bstarThreshold = 0.01;
         if (satrec.bstar && Math.abs(satrec.bstar) > bstarThreshold) {
-            console.error(
-                `Satellite ${noradId} skipped: Extreme BSTAR drag coefficient ${satrec.bstar.toFixed(6)} ` +
-                `(threshold: ${bstarThreshold}). This satellite is likely in rapid orbital decay and ` +
-                `will cause performance issues during propagation.`
-            );
             return [0, 0, 0, 0];
         }
 
@@ -267,6 +262,13 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1, noradId
         // Check if TLE parsing failed
         if (satrec.error) {
             console.error(`TLE parsing error in getSatellitePaths: error code ${satrec.error}`);
+            return { past: [], future: [] };
+        }
+
+        // Check for extreme BSTAR values that would cause propagation to hang
+        const bstarThreshold = 0.01;
+        if (satrec.bstar && Math.abs(satrec.bstar) > bstarThreshold) {
+            // Skip silently - this satellite would cause severe performance issues
             return { past: [], future: [] };
         }
 
@@ -523,10 +525,7 @@ export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date =
         // Check for extreme BSTAR values that indicate rapid orbital decay
         const bstarThreshold = 0.01;
         if (satrec.bstar && Math.abs(satrec.bstar) > bstarThreshold) {
-            console.error(
-                `Satellite skipped in AzEl calculation: Extreme BSTAR drag coefficient ${satrec.bstar.toFixed(6)} ` +
-                `(threshold: ${bstarThreshold}). This satellite is likely in rapid orbital decay.`
-            );
+            // Skip silently - don't log to avoid console spam when called repeatedly
             return null;
         }
 

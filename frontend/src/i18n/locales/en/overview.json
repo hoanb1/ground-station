@@ -73,7 +73,7 @@
     "none_defined": "None defined"
   },
   "satellite_info": {
-    "title": "Satellite Monitor",
+    "title": "Satellite Information",
     "loading": "Loading satellite data...",
     "no_satellite": "No satellite selected",
     "select_satellite": "Select a satellite from the list or map to view details",
