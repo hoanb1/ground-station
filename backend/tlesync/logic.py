@@ -246,13 +246,8 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     f"with {duplicate_detection_result['total_duplicates']} duplicate entries"
                 )
 
-                # Log specific duplicates for debugging
-                for norad_id, info in duplicate_detection_result["duplicates_info"].items():
-                    if info["is_duplicate"]:
-                        logger.warning(
-                            f"NORAD ID {norad_id} appears {info['occurrences']} times "
-                            f"with names: {', '.join(info['names'])}"
-                        )
+                # Note: Some satellites may legitimately appear multiple times in Celestrak data
+                # (e.g., MTG-S1 appears twice). This is normal and handled by deduplication.
 
             # Use deduplicated list for processing
             celestrak_list = duplicate_detection_result["deduplicated_list"]
