@@ -550,6 +550,30 @@ export default function Layout() {
         return false;
     };
 
+    // Get scheduler state for dynamic tooltip
+    const schedulerObservations = useSelector((state) => state.scheduler?.observations || []);
+    const activeObservation = schedulerObservations.find(obs => obs.status === 'running');
+
+    // Helper function to get tooltip text
+    const getTooltipText = (item, drawerExpanded) => {
+        if (!drawerExpanded) {
+            // For scheduler, show dynamic tooltip when there's an active observation
+            if (item.segment === 'scheduler' && activeObservation) {
+                const satelliteName = activeObservation.satellite?.name || 'Unknown';
+                const endTime = activeObservation.pass?.event_end
+                    ? new Date(activeObservation.pass.event_end).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      })
+                    : 'N/A';
+                return `Active: ${satelliteName} (ends ${endTime})`;
+            }
+            return item.title;
+        }
+        return '';
+    };
+
     // Drawer content component
     const drawerContent = (isExpanded) => (
         <>
@@ -583,7 +607,7 @@ export default function Layout() {
                         return (
                             <ListItem key={index} disablePadding sx={{ display: 'block' }}>
                                 <Tooltip
-                                    title={!isExpanded ? item.title : ''}
+                                    title={getTooltipText(item, isExpanded)}
                                     placement="right"
                                     disableFocusListener
                                     disableTouchListener

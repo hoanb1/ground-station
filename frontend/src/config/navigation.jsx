@@ -269,6 +269,7 @@ export const getNavigation = () => [
         segment: 'scheduler',
         title: 'Scheduled Observations',
         icon: <SchedulerIconWithStatus />,
+        dynamicTooltip: true, // Flag to indicate this item needs dynamic tooltip
     },
     {kind: 'divider'},
     {
