@@ -56,18 +56,41 @@ const ObservationsTimeline = () => {
         const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
 
         return observations.filter(obs => {
-            if (!obs.pass) return false;
-            const obsStart = new Date(obs.pass.event_start);
-            const obsEnd = new Date(obs.pass.event_end);
+            if (!obs.tasks || obs.tasks.length === 0) return false;
+
+            // Get earliest task start and latest task end
+            let earliestStart = null;
+            let latestEnd = null;
+
+            obs.tasks.forEach(task => {
+                if (task.start_time) {
+                    const taskStart = new Date(task.start_time);
+                    if (!earliestStart || taskStart < earliestStart) {
+                        earliestStart = taskStart;
+                    }
+                }
+                if (task.end_time) {
+                    const taskEnd = new Date(task.end_time);
+                    if (!latestEnd || taskEnd > latestEnd) {
+                        latestEnd = taskEnd;
+                    }
+                }
+            });
+
+            if (!earliestStart || !latestEnd) return false;
 
             // Check if observation falls within our time window
-            const inTimeWindow = obsEnd >= now && obsStart <= endTime;
+            const inTimeWindow = latestEnd >= now && earliestStart <= endTime;
 
             // Apply satellite filter if set
             const matchesFilter = !selectedSatelliteFilter || obs.satellite.norad_id === selectedSatelliteFilter;
 
             return inTimeWindow && matchesFilter;
-        }).sort((a, b) => new Date(a.pass.event_start) - new Date(b.pass.event_start));
+        }).sort((a, b) => {
+            const aStart = Math.min(...a.tasks.map(t => new Date(t.start_time)));
+            const bStart = Math.min(...b.tasks.map(t => new Date(t.start_time)));
+            return aStart - bStart;
+        });
     }, [observations, durationHours, selectedSatelliteFilter]);
 
     // Get unique satellites for filter dropdown
@@ -91,8 +114,14 @@ const ObservationsTimeline = () => {
         const rows = [];
 
         filteredObservations.forEach((obs) => {
-            const startTime = new Date(obs.pass.event_start);
-            const obsEndTime = new Date(obs.pass.event_end);
+            // Get earliest task start and latest task end
+            const taskStarts = obs.tasks.map(t => new Date(t.start_time)).filter(d => !isNaN(d));
+            const taskEnds = obs.tasks.map(t => new Date(t.end_time)).filter(d => !isNaN(d));
+
+            if (taskStarts.length === 0 || taskEnds.length === 0) return;
+
+            const startTime = new Date(Math.min(...taskStarts));
+            const obsEndTime = new Date(Math.max(...taskEnds));
 
             const startX = Math.max(0, ((startTime - now) / totalMs) * width);
             const endX = Math.min(width, ((obsEndTime - now) / totalMs) * width);
@@ -234,8 +263,14 @@ const ObservationsTimeline = () => {
         const rows = [];
 
         filteredObservations.forEach((obs) => {
-            const startTime = new Date(obs.pass.event_start);
-            const endTime = new Date(obs.pass.event_end);
+            // Get earliest task start and latest task end
+            const taskStarts = obs.tasks.map(t => new Date(t.start_time)).filter(d => !isNaN(d));
+            const taskEnds = obs.tasks.map(t => new Date(t.end_time)).filter(d => !isNaN(d));
+
+            if (taskStarts.length === 0 || taskEnds.length === 0) return;
+
+            const startTime = new Date(Math.min(...taskStarts));
+            const endTime = new Date(Math.max(...taskEnds));
 
             const startX = Math.max(0, ((startTime - now) / totalMs) * width);
             const endX = Math.min(width, ((endTime - now) / totalMs) * width);
@@ -452,10 +487,10 @@ const ObservationsTimeline = () => {
                                 {hoveredObservation.satellite.name}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                Start: {new Date(hoveredObservation.pass.event_start).toLocaleString()}
+                                Start: {new Date(Math.min(...hoveredObservation.tasks.map(t => new Date(t.start_time)))).toLocaleString()}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                End: {new Date(hoveredObservation.pass.event_end).toLocaleString()}
+                                End: {new Date(Math.max(...hoveredObservation.tasks.map(t => new Date(t.end_time)))).toLocaleString()}
                             </Typography>
                             <Typography variant="caption" display="block">
                                 Peak: {hoveredObservation.pass.peak_altitude}°

@@ -839,19 +839,25 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
 
     // Calculate elevation curves when passes are received
     useEffect(() => {
-        // Create hash of pass IDs to detect if these are actually NEW passes
-        const currentPassesHash = passes?.map(p => `${p.norad_id}-${p.event_start}`).sort().join('|') || '';
-
-        // If we're calculating OR we already calculated for these exact passes, skip
-        if (calculatingRef.current || (calculatedPassesHashRef.current === currentPassesHash && currentPassesHash !== '')) {
+        // If we're currently calculating, skip
+        if (calculatingRef.current) {
             return;
         }
 
         if (passes && passes.length > 0 && location && selectedSatellites && selectedSatellites.length > 0) {
+            // Create hash of pass IDs to detect if these are actually NEW passes
+            const currentPassesHash = passes?.map(p => `${p.norad_id}-${p.event_start}`).sort().join('|') || '';
+
             // Check if elevation curves need to be calculated (if any pass has empty elevation_curve)
             const needsCalculation = passes.some(pass => !pass.elevation_curve || pass.elevation_curve.length === 0);
 
-            if (needsCalculation) {
+            // If curves exist AND hash matches, skip (already calculated)
+            if (!needsCalculation && calculatedPassesHashRef.current === currentPassesHash && currentPassesHash !== '') {
+                return;
+            }
+
+            // If hash changed (new passes), reset and recalculate
+            if (calculatedPassesHashRef.current !== currentPassesHash || needsCalculation) {
                 calculatingRef.current = true;
 
                 // Create satellite lookup from selectedSatellites
@@ -888,7 +894,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 }, 0);
             }
         }
-    }, [passes, location, dispatch]); // CRITICAL: Do NOT add selectedSatellites - causes infinite loop!
+    }, [passes, location, dispatch, selectedSatellites]);
 
     useEffect(() => {
         // Update the passes every two hours plus 5 mins to wait until the cache is invalidated
