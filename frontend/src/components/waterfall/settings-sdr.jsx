@@ -149,11 +149,10 @@ const SdrAccordion = ({
                             <InputLabel>{t('sdr.sample_rate')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
-                                size={'small'}
+                                size="small"
                                 value={sampleRateValues.includes(localSampleRate) ? localSampleRate : "none"}
                                 onChange={(e) => onSampleRateChange(e.target.value)}
-                                label={t('sdr.sample_rate')}
-                                size="small">
+                                label={t('sdr.sample_rate')}>
                                 <MenuItem value="none">
                                     {t('sdr.no_rate_selected')}
                                 </MenuItem>
@@ -180,11 +179,10 @@ const SdrAccordion = ({
                             <InputLabel>{t('sdr.antenna')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
-                                size={'small'}
+                                size="small"
                                 value={antennasList.rx.includes(selectedAntenna) ? selectedAntenna : "none"}
                                 onChange={(e) => onAntennaChange(e.target.value)}
-                                label={t('sdr.antenna')}
-                                size="small">
+                                label={t('sdr.antenna')}>
                                 <MenuItem value="none">
                                     {t('sdr.no_antenna_selected')}
                                 </MenuItem>
