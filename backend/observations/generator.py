@@ -325,6 +325,42 @@ async def _generate_observations_for_satellite(
                     await _update_observation(session, existing, monitored_sat, pass_data)
                 stats["updated"] += 1
             else:
+                # Calculate task times for this pass to use in conflict detection
+                task_start_elevation = monitored_sat.get("task_start_elevation", 10)
+                task_start_time = None
+                task_end_time = None
+
+                if task_start_elevation > 0:
+                    import crud.locations
+                    from tracking.elcalculator import calculate_elevation_crossing_time
+
+                    satellite_tle = {"tle1": pass_data.get("tle1"), "tle2": pass_data.get("tle2")}
+                    location_result = await crud.locations.fetch_all_locations(session)
+                    if (
+                        location_result
+                        and location_result.get("success")
+                        and len(location_result.get("data", [])) > 0
+                    ):
+                        location = location_result["data"][0]
+                        home_location_dict = {
+                            "lat": location.get("lat"),
+                            "lon": location.get("lon"),
+                        }
+
+                        task_start_time, task_end_time = calculate_elevation_crossing_time(
+                            satellite_tle=satellite_tle,
+                            home_location=home_location_dict,
+                            aos_time=event_start,
+                            los_time=event_end,
+                            target_elevation=task_start_elevation,
+                        )
+
+                # Fall back to event times if calculation failed
+                if not task_start_time:
+                    task_start_time = event_start
+                if not task_end_time:
+                    task_end_time = event_end
+
                 # Check for time conflicts with ANY other observation
                 if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_FORCE:
                     # Force: Create observation regardless of conflicts
@@ -336,8 +372,14 @@ async def _generate_observations_for_satellite(
                         await _create_observation(session, monitored_sat, pass_data)
                     stats["generated"] += 1
                 else:
-                    # Check for any time conflict
-                    conflicting_obs = await find_any_time_conflict(session, event_start, event_end)
+                    # Check for any time conflict using task times for accurate conflict detection
+                    conflicting_obs = await find_any_time_conflict(
+                        session,
+                        event_start,
+                        event_end,
+                        task_start=task_start_time,
+                        task_end=task_end_time,
+                    )
 
                     if conflicting_obs:
                         # Conflict detected
