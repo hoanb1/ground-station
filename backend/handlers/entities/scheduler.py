@@ -82,6 +82,9 @@ async def create_scheduled_observation(
             if observation_sync:
                 await observation_sync.sync_observation(observation_id)
 
+            # Emit event to all clients that observations have changed
+            await emit_scheduled_observations_changed()
+
         return {
             "success": result["success"],
             "data": result.get("data"),
@@ -123,6 +126,9 @@ async def update_scheduled_observation(
             if observation_sync:
                 await observation_sync.sync_observation(observation_id)
 
+            # Emit event to all clients that observations have changed
+            await emit_scheduled_observations_changed()
+
         return {
             "success": result["success"],
             "data": result.get("data"),
@@ -159,6 +165,9 @@ async def delete_scheduled_observations(
             if observation_sync:
                 for observation_id in data:
                     await observation_sync.remove_observation(observation_id)
+
+            # Emit event to all clients that observations have changed
+            await emit_scheduled_observations_changed()
 
         return {
             "success": result["success"],
@@ -205,6 +214,9 @@ async def toggle_observation_enabled(
 
             if observation_sync:
                 await observation_sync.sync_observation(observation_id)
+
+            # Emit event to all clients that observations have changed
+            await emit_scheduled_observations_changed()
 
             return {"success": True, "data": {"id": observation_id, "enabled": enabled}}
         return {"success": result["success"], "error": result.get("error")}
