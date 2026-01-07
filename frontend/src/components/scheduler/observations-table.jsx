@@ -351,6 +351,11 @@ const ObservationsTable = () => {
                         setSelectedIds(newSelection);
                     }}
                     getRowClassName={(params) => {
+                        // If cancelled, always show as cancelled regardless of time
+                        if (params.row.status === 'cancelled') {
+                            return 'status-cancelled';
+                        }
+
                         // Check if satellite is currently visible (between AOS and LOS)
                         const now = new Date();
                         const aosTime = params.row.pass?.event_start ? new Date(params.row.pass.event_start) : null;
