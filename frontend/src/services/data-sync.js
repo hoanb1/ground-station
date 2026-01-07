@@ -29,6 +29,7 @@ import { fetchTLESources } from '../components/satellites/sources-slice.jsx';
 import { fetchSatelliteGroups } from '../components/satellites/groups-slice.jsx';
 import { getTrackingStateFromBackend, getTargetMapSettings } from '../components/target/target-slice.jsx';
 import { getOverviewMapSettings } from '../components/overview/overview-slice.jsx';
+import { fetchScheduledObservations, fetchMonitoredSatellites } from '../components/scheduler/scheduler-slice.jsx';
 
 /**
  * Initialize all application data from backend when connection is established
@@ -47,4 +48,6 @@ export function initializeAppData(socket) {
     store.dispatch(getTrackingStateFromBackend({socket}));
     store.dispatch(getOverviewMapSettings({socket}));
     store.dispatch(getTargetMapSettings({socket}));
+    store.dispatch(fetchScheduledObservations({socket}));
+    store.dispatch(fetchMonitoredSatellites({socket}));
 }
