@@ -234,7 +234,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                             value="keep"
                                             control={<Radio size="small" />}
                                             label={
-                                                <Typography variant="body2">
+                                                <Typography variant="body2" component="span">
                                                     <strong>Keep Existing:</strong> {conflict.existing_obs.satellite}
                                                     <Chip
                                                         label={`${conflict.existing_obs.elevation.toFixed(1)}°`}
@@ -259,7 +259,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                             value="replace"
                                             control={<Radio size="small" />}
                                             label={
-                                                <Typography variant="body2">
+                                                <Typography variant="body2" component="span">
                                                     <strong>Replace with New:</strong> {conflict.new_pass.satellite}
                                                     <Chip
                                                         label={`${conflict.new_pass.elevation.toFixed(1)}°`}
