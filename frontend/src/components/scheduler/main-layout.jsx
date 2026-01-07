@@ -17,49 +17,16 @@
  *
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Box } from '@mui/material';
-import { useDispatch } from 'react-redux';
-import { useSocket } from '../common/socket.jsx';
 import ObservationsTable from './observations-table.jsx';
 import MonitoredSatellitesTable from './monitored-satellites-table.jsx';
 import ObservationFormDialog from './observation-form-dialog.jsx';
 import MonitoredSatelliteDialog from './monitored-satellite-dialog.jsx';
-import { observationStatusUpdated, fetchScheduledObservations } from './scheduler-slice.jsx';
 
 export default function ScheduledObservationsLayout() {
-    const dispatch = useDispatch();
-    const { socket } = useSocket();
-
-    // Listen for real-time observation status updates
-    useEffect(() => {
-        if (!socket) return;
-
-        const handleStatusUpdate = (data) => {
-            dispatch(observationStatusUpdated(data));
-        };
-
-        socket.on('observation-status-update', handleStatusUpdate);
-
-        return () => {
-            socket.off('observation-status-update', handleStatusUpdate);
-        };
-    }, [socket, dispatch]);
-
-    // Listen for scheduled observations changes from backend
-    useEffect(() => {
-        if (!socket) return;
-
-        const handleObservationsChanged = () => {
-            dispatch(fetchScheduledObservations({ socket }));
-        };
-
-        socket.on('scheduled-observations-changed', handleObservationsChanged);
-
-        return () => {
-            socket.off('scheduled-observations-changed', handleObservationsChanged);
-        };
-    }, [socket, dispatch]);
+    // Socket listeners for scheduler updates are now in useSocketEventHandlers hook
+    // This ensures updates are received even when not on the scheduler page
 
     return (
         <Box

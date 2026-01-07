@@ -79,6 +79,7 @@ import { setSystemInfo } from '../components/settings/system-info-slice.jsx';
 import { setRuntimeSnapshot } from '../components/settings/sessions-slice.jsx';
 import { addTranscription } from '../components/waterfall/transcription-slice.jsx';
 import ImageIcon from '@mui/icons-material/Image';
+import { observationStatusUpdated, fetchScheduledObservations } from '../components/scheduler/scheduler-slice.jsx';
 
 /**
  * Custom hook to handle all socket event listeners
@@ -538,6 +539,16 @@ export const useSocketEventHandlers = (socket) => {
             );
         });
 
+        // Scheduler observation status updates
+        socket.on('observation-status-update', (data) => {
+            store.dispatch(observationStatusUpdated(data));
+        });
+
+        // Scheduler observations changed (refetch all)
+        socket.on('scheduled-observations-changed', () => {
+            store.dispatch(fetchScheduledObservations({ socket }));
+        });
+
         // Decoder data events (SSTV, AFSK, Morse, GMSK, Transcription, etc.)
         socket.on('decoder-data', (data) => {
             switch (data.type) {
@@ -636,6 +647,8 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("transcription-data");
             socket.off("transcription-error");
             socket.off("decoder-data");
+            socket.off("observation-status-update");
+            socket.off("scheduled-observations-changed");
         };
     }, [socket, dispatch, t]);
 };

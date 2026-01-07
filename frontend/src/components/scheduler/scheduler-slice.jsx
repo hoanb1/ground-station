@@ -235,7 +235,7 @@ export const createMonitoredSatellite = createAsyncThunk(
                     if (res.success) {
                         resolve(res.data);
                     } else {
-                        reject(new Error('Failed to create monitored satellite'));
+                        reject(new Error(res.error || 'Failed to create monitored satellite'));
                     }
                 });
             });
@@ -255,7 +255,7 @@ export const updateMonitoredSatelliteAsync = createAsyncThunk(
                     if (res.success) {
                         resolve(res.data);
                     } else {
-                        reject(new Error('Failed to update monitored satellite'));
+                        reject(new Error(res.error || 'Failed to update monitored satellite'));
                     }
                 });
             });
@@ -357,6 +357,7 @@ const initialState = {
     monitoredSatellitesLoading: false,
     selectedMonitoredSatellite: null,
     monitoredSatelliteDialogOpen: false,
+    monitoredSatelliteError: null,
     isSavingObservation: false,
     isSavingMonitoredSatellite: false,
     // SDR parameters (gain values, antenna ports) fetched when SDR is selected
@@ -414,6 +415,10 @@ const schedulerSlice = createSlice({
         },
         setMonitoredSatelliteDialogOpen: (state, action) => {
             state.monitoredSatelliteDialogOpen = action.payload;
+            // Clear error when dialog opens
+            if (action.payload) {
+                state.monitoredSatelliteError = null;
+            }
         },
         addMonitoredSatellite: (state, action) => {
             state.monitoredSatellites.push(action.payload);
@@ -612,18 +617,22 @@ const schedulerSlice = createSlice({
             // Create monitored satellite
             .addCase(createMonitoredSatellite.pending, (state) => {
                 state.isSavingMonitoredSatellite = true;
+                state.monitoredSatelliteError = null;
             })
             .addCase(createMonitoredSatellite.fulfilled, (state, action) => {
                 state.monitoredSatellites.push(action.payload);
                 state.monitoredSatelliteDialogOpen = false;
                 state.isSavingMonitoredSatellite = false;
+                state.monitoredSatelliteError = null;
             })
-            .addCase(createMonitoredSatellite.rejected, (state) => {
+            .addCase(createMonitoredSatellite.rejected, (state, action) => {
                 state.isSavingMonitoredSatellite = false;
+                state.monitoredSatelliteError = action.payload;
             })
             // Update monitored satellite
             .addCase(updateMonitoredSatelliteAsync.pending, (state) => {
                 state.isSavingMonitoredSatellite = true;
+                state.monitoredSatelliteError = null;
             })
             .addCase(updateMonitoredSatelliteAsync.fulfilled, (state, action) => {
                 const index = state.monitoredSatellites.findIndex(sat => sat.id === action.payload.id);
@@ -632,9 +641,11 @@ const schedulerSlice = createSlice({
                 }
                 state.monitoredSatelliteDialogOpen = false;
                 state.isSavingMonitoredSatellite = false;
+                state.monitoredSatelliteError = null;
             })
-            .addCase(updateMonitoredSatelliteAsync.rejected, (state) => {
+            .addCase(updateMonitoredSatelliteAsync.rejected, (state, action) => {
                 state.isSavingMonitoredSatellite = false;
+                state.monitoredSatelliteError = action.payload;
             })
             // Delete monitored satellites
             .addCase(deleteMonitoredSatellitesAsync.fulfilled, (state, action) => {

@@ -42,7 +42,7 @@ import {
     CircularProgress,
     Backdrop,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon, ErrorOutline as ErrorOutlineIcon } from '@mui/icons-material';
 import {
     setMonitoredSatelliteDialogOpen,
     createMonitoredSatellite,
@@ -152,6 +152,7 @@ export default function MonitoredSatelliteDialog() {
     const sdrParametersLoading = useSelector((state) => state.scheduler?.sdrParametersLoading || false);
     const sdrParametersError = useSelector((state) => state.scheduler?.sdrParametersError || {});
     const isSaving = useSelector((state) => state.scheduler?.isSavingMonitoredSatellite || false);
+    const saveError = useSelector((state) => state.scheduler?.monitoredSatelliteError);
 
     const [formData, setFormData] = useState({
         enabled: true,
@@ -638,6 +639,26 @@ export default function MonitoredSatelliteDialog() {
 
             <DialogContent dividers sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
                 <Stack spacing={3} sx={{ mt: 2 }}>
+                    {/* Error Alert */}
+                    {saveError && (
+                        <Box
+                            sx={{
+                                p: 2,
+                                borderRadius: 1,
+                                bgcolor: 'error.main',
+                                color: 'error.contrastText',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                            }}
+                        >
+                            <ErrorOutlineIcon />
+                            <Typography variant="body2">
+                                {saveError}
+                            </Typography>
+                        </Box>
+                    )}
+
                     {/* Enabled Checkbox */}
                     <Box>
                         <FormControlLabel
