@@ -711,6 +711,7 @@ export default function MonitoredSatelliteDialog() {
                                     label="Minimum Peak Elevation (degrees)"
                                     type="number"
                                     fullWidth
+                                    size="small"
                                     value={formData.min_elevation}
                                     onChange={(e) =>
                                         setFormData((prev) => ({
@@ -729,6 +730,7 @@ export default function MonitoredSatelliteDialog() {
                                     label="Task Start Elevation (degrees)"
                                     type="number"
                                     fullWidth
+                                    size="small"
                                     value={formData.task_start_elevation}
                                     onChange={(e) =>
                                         setFormData((prev) => ({
@@ -753,6 +755,7 @@ export default function MonitoredSatelliteDialog() {
                                     label="Lookahead Window (hours)"
                                     type="number"
                                     fullWidth
+                                    size="small"
                                     value={formData.lookahead_hours}
                                     onChange={(e) =>
                                         setFormData((prev) => ({
@@ -777,7 +780,7 @@ export default function MonitoredSatelliteDialog() {
                             Rotator
                         </Typography>
                         <Stack spacing={2}>
-                            <FormControl fullWidth>
+                            <FormControl fullWidth size="small">
                                 <InputLabel>Rotator</InputLabel>
                                 <Select
                                     value={formData.rotator.id || '__none__'}
@@ -802,7 +805,18 @@ export default function MonitoredSatelliteDialog() {
                                     </MenuItem>
                                     {rotators.map((rotator) => (
                                         <MenuItem key={rotator.id} value={rotator.id}>
-                                            {rotator.name}{rotator.type ? ` (${rotator.type})` : ''}
+                                            <Box>
+                                                <Typography variant="body2">
+                                                    {rotator.name}{rotator.type ? ` (${rotator.type})` : ''}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {[
+                                                        rotator.host ? `${rotator.host}:${rotator.port}` : null,
+                                                        rotator.min_azimuth != null && rotator.max_azimuth != null ? `Az: ${rotator.min_azimuth}° - ${rotator.max_azimuth}°` : null,
+                                                        rotator.min_elevation != null && rotator.max_elevation != null ? `El: ${rotator.min_elevation}° - ${rotator.max_elevation}°` : null,
+                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                </Typography>
+                                            </Box>
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -854,7 +868,7 @@ export default function MonitoredSatelliteDialog() {
                                     </Typography>
                                 </Box>
                             )}
-                            <FormControl fullWidth required error={!!sdrParametersError[formData.sdr.id]}>
+                            <FormControl fullWidth size="small" required error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>SDR</InputLabel>
                                 <Select
                                     value={formData.sdr.id}
@@ -875,13 +889,23 @@ export default function MonitoredSatelliteDialog() {
                                 >
                                     {sdrs.filter(sdr => sdr.id !== 'sigmf-playback').map((sdr) => (
                                         <MenuItem key={sdr.id} value={sdr.id}>
-                                            {sdr.name} ({sdr.type})
+                                            <Box>
+                                                <Typography variant="body2">
+                                                    {sdr.name} ({sdr.type})
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {[
+                                                        sdr.driver ? `Driver: ${sdr.driver}` : null,
+                                                        sdr.serial ? `Serial: ${sdr.serial}` : null,
+                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                </Typography>
+                                            </Box>
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
 
-                            <FormControl fullWidth required error={!bandwidthValidation.valid}>
+                            <FormControl fullWidth size="small" required error={!bandwidthValidation.valid}>
                                 <InputLabel>Sample Rate</InputLabel>
                                 <Select
                                     value={formData.sdr.sample_rate}
@@ -921,6 +945,7 @@ export default function MonitoredSatelliteDialog() {
 
                             <TextField
                                 fullWidth
+                                size="small"
                                 label="Center Frequency"
                                 value={formData.sdr.center_frequency ? `${(formData.sdr.center_frequency / 1000000).toFixed(6)} MHz` : 'N/A'}
                                 disabled
@@ -928,7 +953,7 @@ export default function MonitoredSatelliteDialog() {
                             />
 
                             <Box sx={{ display: 'flex', gap: 2 }}>
-                                <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                                <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                     <InputLabel>Gain</InputLabel>
                                     <Select
                                         value={
@@ -955,7 +980,7 @@ export default function MonitoredSatelliteDialog() {
                                     </Select>
                                 </FormControl>
 
-                                <FormControl fullWidth required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                                <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                     <InputLabel>Antenna Port</InputLabel>
                                     <Select
                                         value={
