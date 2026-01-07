@@ -17,19 +17,24 @@
 import asyncio
 import logging
 import multiprocessing
+from multiprocessing import Queue
 from typing import Optional
 
 import setproctitle
 
 from tracker.logic import SatelliteTracker
+from tracker.manager import TrackerManager
 
 logger = logging.getLogger("tracker-worker")
 
 # Some globals for the tracker process
 tracker_process = multiprocessing.Process()
-queue_to_tracker = multiprocessing.Queue()
-queue_from_tracker = multiprocessing.Queue()
+queue_to_tracker: Queue = multiprocessing.Queue()
+queue_from_tracker: Queue = multiprocessing.Queue()
 tracker_stop_event = multiprocessing.Event()
+
+# Singleton TrackerManager instance
+_tracker_manager: Optional[TrackerManager] = None
 
 
 def start_tracker_process():
@@ -81,4 +86,32 @@ def start_tracker_process():
         f"Started satellite tracker process 'SatelliteTracker' with PID {tracker_process.pid}"
     )
 
+    # Initialize the tracker manager singleton
+    global _tracker_manager
+    _tracker_manager = TrackerManager()
+    logger.info("Initialized TrackerManager singleton")
+
     return tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event
+
+
+def get_tracker_manager() -> TrackerManager:
+    """
+    Get the singleton TrackerManager instance.
+
+    This provides a clean interface for controlling the satellite tracker
+    by updating the tracking state in the database.
+
+    Returns:
+        TrackerManager: Singleton manager instance
+
+    Raises:
+        RuntimeError: If called before start_tracker_process()
+
+    Example:
+        manager = get_tracker_manager()
+        await manager.update_tracking_state(norad_id=25544, rotator_state="connected")
+    """
+    global _tracker_manager
+    if _tracker_manager is None:
+        raise RuntimeError("TrackerManager not initialized. Call start_tracker_process() first.")
+    return _tracker_manager

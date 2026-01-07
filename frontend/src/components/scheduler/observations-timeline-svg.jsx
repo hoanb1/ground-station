@@ -87,11 +87,13 @@ const ObservationsTimeline = () => {
 
         return observations.filter(obs => {
             if (!obs.pass) return false;
-            const obsStart = new Date(obs.pass.event_start);
-            const obsEnd = new Date(obs.pass.event_end);
+            // Use task_start and task_end (elevation-constrained times) instead of event times
+            if (!obs.task_start || !obs.task_end) return false;
+            const obsStart = new Date(obs.task_start);
+            const obsEnd = new Date(obs.task_end);
             const inTimeWindow = obsEnd >= now && obsStart <= endTime;
             return inTimeWindow;
-        }).sort((a, b) => new Date(a.pass.event_start) - new Date(b.pass.event_start));
+        }).sort((a, b) => new Date(a.task_start) - new Date(b.task_start));
     }, [observations, durationHours, staticNow]);
 
     // Layout observations to avoid overlaps
@@ -190,8 +192,9 @@ const ObservationsTimeline = () => {
         const rows = [];
 
         filteredObservations.forEach((obs) => {
-            const startTime = new Date(obs.pass.event_start);
-            const obsEndTime = new Date(obs.pass.event_end);
+            // Use task_start and task_end for positioning
+            const startTime = new Date(obs.task_start);
+            const obsEndTime = new Date(obs.task_end);
 
             const startX = marginLeft + Math.max(0, ((startTime - now) / totalMs) * drawableWidth);
             const endX = marginLeft + Math.min(drawableWidth, ((obsEndTime - now) / totalMs) * drawableWidth);
@@ -452,7 +455,7 @@ const ObservationsTimeline = () => {
                                             y={(marginTop + height - marginBottom) / 2}
                                             fontSize="9"
                                             fontWeight="600"
-                                            fill={barColor}
+                                            fill={theme.palette.mode === 'dark' ? '#fff' : '#000'}
                                             textAnchor="middle"
                                             dominantBaseline="middle"
                                             transform={`rotate(-90, ${startX + barWidth / 2}, ${(marginTop + height - marginBottom) / 2})`}
@@ -488,10 +491,10 @@ const ObservationsTimeline = () => {
                                 {hoveredObservation.satellite.name}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                Start: {new Date(hoveredObservation.pass.event_start).toLocaleString()}
+                                Start: {new Date(hoveredObservation.task_start).toLocaleString()}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                End: {new Date(hoveredObservation.pass.event_end).toLocaleString()}
+                                End: {new Date(hoveredObservation.task_end).toLocaleString()}
                             </Typography>
                             <Typography variant="caption" display="block">
                                 Peak: {hoveredObservation.pass.peak_altitude}°

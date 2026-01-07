@@ -372,7 +372,7 @@ class ObservationExecutor:
             # 4. Start rotator tracker if enabled
             rotator_config = observation.get("rotator", {})
             if rotator_config.get("tracking_enabled") and rotator_config.get("id"):
-                from crud.tracking_state import set_tracking_state
+                from tracker.runner import get_tracker_manager
 
                 # Extract transmitter ID from decoder tasks (if any)
                 transmitter_id = "none"
@@ -382,24 +382,19 @@ class ObservationExecutor:
                         break
 
                 # Update tracking state to target this satellite
-                tracking_update = {
-                    "name": "satellite-tracking",
-                    "value": {
-                        "norad_id": satellite.get("norad_id"),
-                        "group_id": satellite.get("group_id"),
-                        "rotator_state": "tracking",  # Start tracking satellite
-                        "rotator_id": rotator_config.get("id"),
-                        "rig_state": "disconnected",  # Observations don't use rig for now
-                        "rig_id": "none",
-                        "transmitter_id": transmitter_id,
-                        "rig_vfo": "none",
-                        "vfo1": "uplink",
-                        "vfo2": "downlink",
-                    },
-                }
-
-                async with AsyncSessionLocal() as db_session:
-                    await set_tracking_state(db_session, tracking_update)
+                tracker_manager = get_tracker_manager()
+                await tracker_manager.update_tracking_state(
+                    norad_id=satellite.get("norad_id"),
+                    group_id=satellite.get("group_id"),
+                    rotator_state="tracking",  # Start tracking satellite
+                    rotator_id=rotator_config.get("id"),
+                    rig_state="disconnected",  # Observations don't use rig for now
+                    rig_id="none",
+                    transmitter_id=transmitter_id,
+                    rig_vfo="none",
+                    vfo1="uplink",
+                    vfo2="downlink",
+                )
 
                 logger.info(
                     f"Started tracking {satellite.get('name')} (NORAD {satellite.get('norad_id')}) "
@@ -441,18 +436,11 @@ class ObservationExecutor:
             # 1. Stop tracker if it was enabled
             rotator_config = observation.get("rotator", {})
             if rotator_config.get("tracking_enabled") and rotator_config.get("id"):
-                from crud.tracking_state import set_tracking_state
+                from tracker.runner import get_tracker_manager
 
                 # Stop tracking by setting state to disconnected
-                tracking_update = {
-                    "name": "satellite-tracking",
-                    "value": {
-                        "rotator_state": "disconnected",
-                    },
-                }
-
-                async with AsyncSessionLocal() as db_session:
-                    await set_tracking_state(db_session, tracking_update)
+                tracker_manager = get_tracker_manager()
+                await tracker_manager.update_tracking_state(rotator_state="disconnected")
 
                 logger.info(f"Stopped tracking for observation {observation_id}")
 

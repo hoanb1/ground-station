@@ -20,6 +20,7 @@ from typing import Any, Dict, Optional, Union
 import crud
 from db import AsyncSessionLocal
 from tracker.data import compiled_satellite_data, get_ui_tracker_state
+from tracker.runner import get_tracker_manager
 from tracking.events import fetch_next_events_for_satellite
 
 
@@ -140,49 +141,54 @@ async def set_tracking_state(
 
     Args:
         sio: Socket.IO server instance
-        data: Tracking state updates
+        data: Tracking state updates (format: {"name": "satellite-tracking", "value": {...}})
         logger: Logger instance
         sid: Socket.IO session ID
 
     Returns:
         Dictionary with success status and updated tracking state
     """
+    logger.info(f"Updating satellite tracking state, data: {data}")
+
+    # Extract the value from the data structure
+    value = data.get("value", {}) if data else {}
+
+    # Use TrackerManager to update tracking state
+    manager = get_tracker_manager()
+    result = await manager.update_tracking_state(**value)
+
+    # Track session's rig and VFO selection
+    if value:
+        rig_id = value.get("rig_id")
+        rig_vfo = value.get("rig_vfo")
+        rig_state = value.get("rig_state")
+
+        # Import here to avoid circular dependency
+        from session.tracker import session_tracker
+
+        if rig_id and rig_id != "none":
+            session_tracker.set_session_rig(sid, rig_id)
+            logger.debug(f"Session {sid} tracking rig {rig_id}")
+
+        if rig_vfo and rig_vfo != "none":
+            session_tracker.set_session_vfo(sid, rig_vfo)
+            logger.debug(f"Session {sid} selected VFO {rig_vfo}")
+
+        # Unlock VFOs when tracking stops for this SDR
+        if rig_state == "stopped" and rig_id and rig_id != "none":
+            # Note: VFO locking state (lockedTransmitterId) is UI-only and managed by the frontend
+            # No backend action needed when tracking stops
+            logger.info(f"Tracking stopped for session {sid}")
+
+    # Emit so that any open browsers are also informed of any change
     async with AsyncSessionLocal() as dbsession:
-        logger.info(f"Updating satellite tracking state, data: {data}")
-        # Store the tracking state in the db
-        tracking_state_reply = await crud.tracking_state.set_tracking_state(dbsession, data)
-
-        # Track session's rig and VFO selection
-        if data and "value" in data:
-            value = data["value"]
-            rig_id = value.get("rig_id")
-            rig_vfo = value.get("rig_vfo")
-            rig_state = value.get("rig_state")
-
-            # Import here to avoid circular dependency
-            from session.tracker import session_tracker
-
-            if rig_id and rig_id != "none":
-                session_tracker.set_session_rig(sid, rig_id)
-                logger.debug(f"Session {sid} tracking rig {rig_id}")
-
-            if rig_vfo and rig_vfo != "none":
-                session_tracker.set_session_vfo(sid, rig_vfo)
-                logger.debug(f"Session {sid} selected VFO {rig_vfo}")
-
-            # Unlock VFOs when tracking stops for this SDR
-            if rig_state == "stopped" and rig_id and rig_id != "none":
-                # Note: VFO locking state (lockedTransmitterId) is UI-only and managed by the frontend
-                # No backend action needed when tracking stops
-                logger.info(f"Tracking stopped for session {sid}")
-
-        # Emit so that any open browsers are also informed of any change
         await emit_tracker_data(dbsession, sio, logger)
         await emit_ui_tracker_values(dbsession, sio, logger)
-        return {
-            "success": tracking_state_reply["success"],
-            "data": tracking_state_reply["data"]["value"],
-        }
+
+    return {
+        "success": result.get("success", False),
+        "data": result.get("data", {}).get("value", value),
+    }
 
 
 async def fetch_next_passes(
