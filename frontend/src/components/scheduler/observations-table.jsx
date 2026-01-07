@@ -144,8 +144,11 @@ const ObservationsTable = () => {
     };
 
     const handleStop = () => {
-        if (selectedIds.length === 1 && socket) {
-            handleCancel(selectedIds[0]);
+        if (selectedIds.length > 0 && socket) {
+            // Stop all selected observations
+            selectedIds.forEach(id => {
+                handleCancel(id);
+            });
             setOpenStopConfirm(false);
         }
     };
@@ -474,10 +477,12 @@ const ObservationsTable = () => {
                     startIcon={<StopIcon />}
                     onClick={() => setOpenStopConfirm(true)}
                     disabled={
-                        selectedIds.length !== 1 ||
-                        !observations.find(obs =>
-                            obs.id === selectedIds[0] &&
-                            (obs.status === 'running' || obs.status === 'scheduled')
+                        selectedIds.length === 0 ||
+                        !selectedIds.some(id =>
+                            observations.find(obs =>
+                                obs.id === id &&
+                                (obs.status === 'running' || obs.status === 'scheduled')
+                            )
                         )
                     }
                 >
@@ -512,18 +517,26 @@ const ObservationsTable = () => {
 
             {/* Stop Confirmation Dialog */}
             <Dialog open={openStopConfirm} onClose={() => setOpenStopConfirm(false)}>
-                <DialogTitle>Stop Observation</DialogTitle>
+                <DialogTitle>Stop Observation{selectedIds.length > 1 ? 's' : ''}</DialogTitle>
                 <DialogContent>
-                    {selectedIds.length === 1 && (() => {
-                        const obs = observations.find(o => o.id === selectedIds[0]);
-                        return obs ? (
-                            <>
-                                Are you sure you want to stop the observation <strong>{obs.satellite?.name || 'Unknown'}</strong>?
-                                <br /><br />
-                                This will immediately stop the observation and remove all scheduled jobs.
-                            </>
-                        ) : null;
-                    })()}
+                    {selectedIds.length === 1 ? (
+                        (() => {
+                            const obs = observations.find(o => o.id === selectedIds[0]);
+                            return obs ? (
+                                <>
+                                    Are you sure you want to stop the observation <strong>{obs.satellite?.name || 'Unknown'}</strong>?
+                                    <br /><br />
+                                    This will immediately stop the observation and remove all scheduled jobs.
+                                </>
+                            ) : null;
+                        })()
+                    ) : (
+                        <>
+                            Are you sure you want to stop {selectedIds.length} observation(s)?
+                            <br /><br />
+                            This will immediately stop all selected observations and remove their scheduled jobs.
+                        </>
+                    )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenStopConfirm(false)} variant="outlined">

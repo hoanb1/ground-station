@@ -750,6 +750,47 @@ export default function MonitoredSatelliteDialog() {
 
                     <Divider />
 
+                    {/* Rotator Selection */}
+                    <Box>
+                        <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                            Rotator
+                        </Typography>
+                        <Stack spacing={2}>
+                            <FormControl fullWidth>
+                                <InputLabel>Rotator</InputLabel>
+                                <Select
+                                    value={formData.rotator.id || '__none__'}
+                                    onChange={(e) => {
+                                        const value = e.target.value === '__none__' ? null : e.target.value;
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            rotator: {
+                                                id: value,
+                                                tracking_enabled: value ? true : false,
+                                            },
+                                            rig: {
+                                                ...prev.rig,
+                                                doppler_correction: value ? true : false,
+                                            },
+                                        }));
+                                    }}
+                                    label="Rotator"
+                                >
+                                    <MenuItem value="__none__">
+                                        <em>None</em>
+                                    </MenuItem>
+                                    {rotators.map((rotator) => (
+                                        <MenuItem key={rotator.id} value={rotator.id}>
+                                            {rotator.name}{rotator.type ? ` (${rotator.type})` : ''}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Stack>
+                    </Box>
+
+                    <Divider />
+
                     {/* SDR Configuration */}
                     <Box sx={{ position: 'relative' }}>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
@@ -1360,46 +1401,6 @@ export default function MonitoredSatelliteDialog() {
                         )}
                     </Box>
 
-                    <Divider />
-
-                    {/* Rotator Selection */}
-                    <Box>
-                        <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Rotator
-                        </Typography>
-                        <Stack spacing={2}>
-                            <FormControl fullWidth>
-                                <InputLabel>Rotator</InputLabel>
-                                <Select
-                                    value={formData.rotator.id || '__none__'}
-                                    onChange={(e) => {
-                                        const value = e.target.value === '__none__' ? null : e.target.value;
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            rotator: {
-                                                id: value,
-                                                tracking_enabled: value ? true : false,
-                                            },
-                                            rig: {
-                                                ...prev.rig,
-                                                doppler_correction: value ? true : false,
-                                            },
-                                        }));
-                                    }}
-                                    label="Rotator"
-                                >
-                                    <MenuItem value="__none__">
-                                        <em>None</em>
-                                    </MenuItem>
-                                    {rotators.map((rotator) => (
-                                        <MenuItem key={rotator.id} value={rotator.id}>
-                                            {rotator.name}{rotator.type ? ` (${rotator.type})` : ''}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Stack>
-                    </Box>
                 </Stack>
             </DialogContent>
 
