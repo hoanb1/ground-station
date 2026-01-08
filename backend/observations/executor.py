@@ -66,11 +66,12 @@ class ObservationExecutor:
 
         This method:
         1. Loads observation configuration from database
-        2. Creates internal VFO session
-        3. Starts SDR process
-        4. Configures VFOs based on tasks
-        5. Starts decoders, recorders, and trackers
-        6. Updates observation status to RUNNING
+        2. Checks if SDR is available (not in use)
+        3. Creates internal VFO session
+        4. Starts SDR process
+        5. Configures VFOs based on tasks
+        6. Starts decoders, recorders, and trackers
+        7. Updates observation status to RUNNING
 
         Args:
             observation_id: The observation ID to start
@@ -103,11 +104,45 @@ class ObservationExecutor:
                 )
                 return {"success": False, "error": f"Invalid status: {observation.get('status')}"}
 
-            # 3. Execute placeholder observation task
+            # 3. Check if SDR is available (not in use by other sessions)
+            sdr_config_dict = observation.get("sdr", {})
+            sdr_id = sdr_config_dict.get("id")
+
+            if not sdr_id:
+                error_msg = f"Observation {observation_id} has no SDR configured"
+                logger.error(error_msg)
+                await self._update_observation_status(observation_id, STATUS_FAILED, error_msg)
+                await self._remove_scheduled_stop_job(observation_id)
+                return {"success": False, "error": error_msg}
+
+            # Check if SDR is already in use
+            from session.tracker import session_tracker
+
+            sessions_using_sdr = session_tracker.get_sessions_for_sdr(sdr_id)
+            if sessions_using_sdr:
+                error_msg = (
+                    f"SDR '{sdr_id}' is currently in use by {len(sessions_using_sdr)} session(s). "
+                    f"Cannot start observation {observation_id} ({observation.get('name')}). "
+                    f"Aborting task and marking as failed."
+                )
+                logger.error(error_msg)
+                logger.error(f"Sessions using SDR {sdr_id}: {list(sessions_using_sdr)}")
+
+                # Mark observation as failed
+                await self._update_observation_status(observation_id, STATUS_FAILED, error_msg)
+
+                # Remove the scheduled stop job since we're not starting
+                await self._remove_scheduled_stop_job(observation_id)
+
+                return {"success": False, "error": error_msg}
+
+            logger.info(f"SDR {sdr_id} is available for observation {observation_id}")
+
+            # 4. Execute placeholder observation task
             logger.info(f"Executing observation task for {observation['name']}")
             await self._execute_observation_task(observation_id, observation)
 
-            # 4. Update observation status to RUNNING
+            # 5. Update observation status to RUNNING
             await self._update_observation_status(observation_id, STATUS_RUNNING)
 
             logger.info(f"Observation {observation_id} started successfully")
@@ -118,6 +153,8 @@ class ObservationExecutor:
             logger.error(error_msg)
             logger.error(traceback.format_exc())
             await self._update_observation_status(observation_id, STATUS_FAILED, str(e))
+            # Remove scheduled stop job on error
+            await self._remove_scheduled_stop_job(observation_id)
             return {"success": False, "error": error_msg}
 
     async def stop_observation(self, observation_id: str) -> Dict[str, Any]:
@@ -468,6 +505,31 @@ class ObservationExecutor:
     # ============================================================================
     # HELPER METHODS
     # ============================================================================
+
+    async def _remove_scheduled_stop_job(self, observation_id: str) -> None:
+        """
+        Remove the scheduled stop job for an observation.
+
+        This is called when an observation fails to start or is aborted,
+        to prevent the stop job from running in the future.
+
+        Args:
+            observation_id: The observation ID
+        """
+        try:
+            from observations.events import observation_sync
+
+            if observation_sync:
+                # Remove just the stop job
+                job_id = f"obs_{observation_id}_stop"
+                try:
+                    observation_sync.scheduler.remove_job(job_id)
+                    logger.info(f"Removed scheduled stop job for observation {observation_id}")
+                except Exception as job_error:
+                    # Job might not exist, that's okay
+                    logger.debug(f"Stop job {job_id} not found or already removed: {job_error}")
+        except Exception as e:
+            logger.warning(f"Failed to remove scheduled stop job for {observation_id}: {e}")
 
     async def _update_observation_status(
         self, observation_id: str, status: str, error_message: Optional[str] = None
