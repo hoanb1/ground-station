@@ -433,6 +433,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
         elif cmd == "save-waterfall-snapshot":
             try:
+                from handlers.entities.filebrowser import emit_file_browser_state
                 from server.snapshots import save_waterfall_snapshot
 
                 waterfall_image = data.get("waterfallImage", None)
@@ -459,9 +460,11 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
             except Exception as e:
                 logger.error(f"Error saving waterfall snapshot: {str(e)}")
                 await sio.emit(
-                    "sdr-error",
-                    {"message": f"Failed to save waterfall snapshot: {str(e)}"},
-                    room=client_id,
+                    "file_browser_error",
+                    {
+                        "error": f"Failed to save waterfall snapshot: {str(e)}",
+                        "action": "save-snapshot",
+                    },
                 )
                 reply["success"] = False
                 reply["error"] = str(e)
