@@ -848,17 +848,16 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
             // Create hash of pass IDs to detect if these are actually NEW passes
             const currentPassesHash = passes?.map(p => `${p.norad_id}-${p.event_start}`).sort().join('|') || '';
 
-            // Check if elevation curves need to be calculated (if any pass has empty elevation_curve)
-            const needsCalculation = passes.some(pass => !pass.elevation_curve || pass.elevation_curve.length === 0);
-
-            // If curves exist AND hash matches, skip (already calculated)
-            if (!needsCalculation && calculatedPassesHashRef.current === currentPassesHash && currentPassesHash !== '') {
+            // If we already attempted calculation for this hash, skip
+            // (even if some passes still have empty curves - those are likely defensive BSTAR rejections)
+            if (calculatedPassesHashRef.current === currentPassesHash && currentPassesHash !== '') {
                 return;
             }
 
-            // If hash changed (new passes), reset and recalculate
-            if (calculatedPassesHashRef.current !== currentPassesHash || needsCalculation) {
+            // If hash changed (new passes), calculate
+            if (calculatedPassesHashRef.current !== currentPassesHash) {
                 calculatingRef.current = true;
+                calculatedPassesHashRef.current = currentPassesHash;
 
                 // Create satellite lookup from selectedSatellites
                 const satelliteLookup = {};
@@ -876,11 +875,9 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 if (!allPassesHaveSatellites) {
                     // Passes belong to a different satellite group, skip calculation
                     calculatingRef.current = false;
+                    calculatedPassesHashRef.current = null;
                     return;
                 }
-
-                // Mark these passes as calculated BEFORE the setTimeout to prevent re-triggering
-                calculatedPassesHashRef.current = currentPassesHash;
 
                 // Calculate elevation curves in the background
                 setTimeout(() => {
