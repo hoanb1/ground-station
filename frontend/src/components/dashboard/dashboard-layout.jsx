@@ -552,22 +552,95 @@ export default function Layout() {
 
     // Get scheduler state for dynamic tooltip
     const schedulerObservations = useSelector((state) => state.scheduler?.observations || []);
-    const activeObservation = schedulerObservations.find(obs => obs.status === 'running');
+
+    /**
+     * Get comprehensive scheduler observation information
+     * Returns details about running observation and next upcoming observation
+     */
+    const getSchedulerObservationInfo = () => {
+        const now = new Date();
+
+        // Find running observation
+        const runningObservation = schedulerObservations.find(
+            obs => obs.status === 'running' && obs.enabled
+        );
+
+        // Find next enabled scheduled observation
+        const nextObservation = schedulerObservations
+            .filter(obs => obs.status === 'scheduled' && obs.enabled && obs.pass?.event_start)
+            .map(obs => ({
+                ...obs,
+                startTime: new Date(obs.pass.event_start),
+            }))
+            .filter(obs => obs.startTime > now)
+            .sort((a, b) => a.startTime - b.startTime)[0];
+
+        return { runningObservation, nextObservation };
+    };
+
+    const { runningObservation, nextObservation } = getSchedulerObservationInfo();
+
+    // Helper function to format time remaining/until
+    const formatTimeUntil = (targetDate) => {
+        const now = new Date();
+        const ms = targetDate - now;
+        const hours = Math.floor(ms / 3600000);
+        const minutes = Math.floor((ms % 3600000) / 60000);
+
+        if (hours > 24) {
+            const days = Math.floor(hours / 24);
+            return `${days}d ${hours % 24}h`;
+        } else if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        } else {
+            return `${minutes}m`;
+        }
+    };
 
     // Helper function to get tooltip text
     const getTooltipText = (item, drawerExpanded) => {
         if (!drawerExpanded) {
-            // For scheduler, show dynamic tooltip when there's an active observation
-            if (item.segment === 'scheduler' && activeObservation) {
-                const satelliteName = activeObservation.satellite?.name || 'Unknown';
-                const endTime = activeObservation.pass?.event_end
-                    ? new Date(activeObservation.pass.event_end).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                      })
-                    : 'N/A';
-                return `Active: ${satelliteName} (ends ${endTime})`;
+            // For scheduler, show comprehensive dynamic tooltip
+            if (item.segment === 'scheduler') {
+                const parts = [];
+
+                // Show running observation
+                if (runningObservation) {
+                    const satelliteName = runningObservation.satellite?.name || 'Unknown';
+                    const endTime = runningObservation.pass?.event_end
+                        ? new Date(runningObservation.pass.event_end).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                          })
+                        : 'N/A';
+                    const remainingTime = runningObservation.pass?.event_end
+                        ? formatTimeUntil(new Date(runningObservation.pass.event_end))
+                        : 'N/A';
+                    parts.push(`⚫ Active: ${satelliteName} (${remainingTime} left, ends ${endTime})`);
+                }
+
+                // Show next observation
+                if (nextObservation) {
+                    const satelliteName = nextObservation.satellite?.name || 'Unknown';
+                    const startTime = nextObservation.pass?.event_start
+                        ? new Date(nextObservation.pass.event_start).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                          })
+                        : 'N/A';
+                    const timeUntil = nextObservation.pass?.event_start
+                        ? formatTimeUntil(new Date(nextObservation.pass.event_start))
+                        : 'N/A';
+                    const prefix = runningObservation ? '\n⏱ Next: ' : '⏱ Next: ';
+                    parts.push(`${prefix}${satelliteName} (in ${timeUntil}, starts ${startTime})`);
+                }
+
+                // If we have info to show, return it; otherwise fall back to title
+                if (parts.length > 0) {
+                    return parts.join('');
+                }
             }
             return item.title;
         }
