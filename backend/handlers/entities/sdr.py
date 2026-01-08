@@ -17,7 +17,6 @@ from typing import Dict, Union
 
 import crud
 from db import AsyncSessionLocal
-from handlers.entities.filebrowser import emit_file_browser_state
 from processing.processmanager import process_manager
 from server.startup import audio_queue
 from session.service import session_service
@@ -266,6 +265,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
         elif cmd == "start-recording":
             try:
+                from handlers.entities.filebrowser import emit_file_browser_state
                 from server.recorder import start_recording
 
                 sdr_id = data.get("selectedSDRId", None)
@@ -297,15 +297,15 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 logger.error(f"Error starting recording: {str(e)}")
                 logger.exception(e)
                 await sio.emit(
-                    "sdr-error",
-                    {"message": f"Failed to start recording: {str(e)}"},
-                    room=client_id,
+                    "file_browser_error",
+                    {"error": f"Failed to start recording: {str(e)}", "action": "start-recording"},
                 )
                 reply["success"] = False
                 reply["error"] = str(e)
 
         elif cmd == "stop-recording":
             try:
+                from handlers.entities.filebrowser import emit_file_browser_state
                 from server.recorder import stop_recording
 
                 sdr_id = data.get("selectedSDRId", None)
@@ -336,9 +336,8 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 logger.error(f"Error stopping recording: {str(e)}")
                 logger.exception(e)
                 await sio.emit(
-                    "sdr-error",
-                    {"message": f"Failed to stop recording: {str(e)}"},
-                    room=client_id,
+                    "file_browser_error",
+                    {"error": f"Failed to stop recording: {str(e)}", "action": "stop-recording"},
                 )
                 reply["success"] = False
                 reply["error"] = str(e)
@@ -388,9 +387,11 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 logger.error(f"Error starting audio recording: {str(e)}")
                 logger.exception(e)
                 await sio.emit(
-                    "sdr-error",
-                    {"message": f"Failed to start audio recording: {str(e)}"},
-                    room=client_id,
+                    "file_browser_error",
+                    {
+                        "error": f"Failed to start audio recording: {str(e)}",
+                        "action": "start-audio-recording",
+                    },
                 )
                 reply["success"] = False
                 reply["error"] = str(e)
@@ -424,9 +425,11 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 logger.error(f"Error stopping audio recording: {str(e)}")
                 logger.exception(e)
                 await sio.emit(
-                    "sdr-error",
-                    {"message": f"Failed to stop audio recording: {str(e)}"},
-                    room=client_id,
+                    "file_browser_error",
+                    {
+                        "error": f"Failed to stop audio recording: {str(e)}",
+                        "action": "stop-audio-recording",
+                    },
                 )
                 reply["success"] = False
                 reply["error"] = str(e)
