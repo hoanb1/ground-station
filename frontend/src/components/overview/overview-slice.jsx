@@ -420,11 +420,29 @@ const overviewSlice = createSlice({
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
                 const {passes, cached, forecast_hours, pass_range_start, pass_range_end, groupId} = action.payload;
 
-                // Store passes without elevation curves initially (they'll be calculated in the background)
-                state.passes = passes.map(pass => ({
-                    ...pass,
-                    elevation_curve: pass.elevation_curve || [] // Ensure elevation_curve exists but may be empty
-                }));
+                // Create a lookup of existing passes with their elevation curves
+                const existingPassesMap = new Map();
+                if (state.passes) {
+                    state.passes.forEach(pass => {
+                        // Use a combination of norad_id and event_start as unique key
+                        const key = `${pass.norad_id}-${pass.event_start}`;
+                        if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+                            existingPassesMap.set(key, pass.elevation_curve);
+                        }
+                    });
+                }
+
+                // Store passes, preserving existing elevation curves if available
+                state.passes = passes.map(pass => {
+                    const key = `${pass.norad_id}-${pass.event_start}`;
+                    const existingCurve = existingPassesMap.get(key);
+
+                    return {
+                        ...pass,
+                        // Use existing curve if available, otherwise empty array
+                        elevation_curve: existingCurve || pass.elevation_curve || []
+                    };
+                });
                 state.passesAreCached = cached;
                 state.passesRangeStart = pass_range_start;
                 state.passesRangeEnd = pass_range_end;
