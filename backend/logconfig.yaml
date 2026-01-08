@@ -281,6 +281,12 @@ loggers:
       - default
     propagate: no
 
+  apscheduler.scheduler:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

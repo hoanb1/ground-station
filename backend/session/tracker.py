@@ -390,18 +390,47 @@ class SessionTracker:
             decoders: Dict[str, Dict[int, Optional[str]]]
             device: Optional[Dict[str, Any]]
 
+        # Get VFO manager for VFO state information
+        from vfos.state import VFOManager
+
+        vfo_manager = VFOManager()
+
         sessions: Dict[str, Dict[str, Any]] = {}
         for sid in self.get_all_sessions():
             sess_sdr_id = self.get_session_sdr(sid)
             rig_id = self.get_session_rig(sid)
             vfo_int = self.get_session_vfo_int(sid)
             metadata = self.get_session_metadata(sid)
+
+            # Get VFO states for this session (VFOs 1-4)
+            vfos_state = {}
+            for vfo_num in range(1, 5):
+                vfo_state = vfo_manager.get_vfo_state(sid, vfo_num)
+                if vfo_state:
+                    vfos_state[vfo_num] = {
+                        "center_freq": vfo_state.center_freq,
+                        "bandwidth": vfo_state.bandwidth,
+                        "modulation": vfo_state.modulation,
+                        "active": vfo_state.active,
+                        "selected": vfo_state.selected,
+                        "volume": vfo_state.volume,
+                        "squelch": vfo_state.squelch,
+                        "decoder": vfo_state.decoder,
+                        "locked_transmitter_id": vfo_state.locked_transmitter_id,
+                        "transcription_enabled": vfo_state.transcription_enabled,
+                        "transcription_provider": vfo_state.transcription_provider,
+                        "transcription_language": vfo_state.transcription_language,
+                        "transcription_translate_to": vfo_state.transcription_translate_to,
+                        "parameters_enabled": vfo_state.parameters_enabled,
+                    }
+
             sessions[sid] = {
                 "sdr_id": sess_sdr_id,
                 "rig_id": rig_id,
                 "vfo": vfo_int,  # normalized int or None
                 "metadata": metadata if metadata else {},
                 "is_internal": self.is_internal_session(sid),  # Flag for internal observations
+                "vfos": vfos_state,  # VFO state for all VFOs (1-4)
             }
 
         # Query ProcessManager for process/consumer state

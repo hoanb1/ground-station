@@ -20,7 +20,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Box, Paper, Typography, Chip, Stack } from '@mui/material';
-import { AccessTime, RadioButtonChecked, Satellite, Router } from '@mui/icons-material';
+import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility } from '@mui/icons-material';
 
 /**
  * Compact banner showing either:
@@ -37,10 +37,15 @@ export default function ObservationStatusBanner() {
 
         // Find next enabled scheduled observation
         const upcoming = observations
-            .filter((obs) => obs.status === 'scheduled' && obs.enabled && obs.pass?.event_start)
+            .filter((obs) => {
+                if (!obs.enabled || obs.status !== 'scheduled' || !obs.pass) return false;
+                // Use task_start (root level) if available, fallback to event_start (in pass)
+                return obs.task_start || obs.pass.event_start;
+            })
             .map((obs) => ({
                 ...obs,
-                startTime: new Date(obs.pass.event_start),
+                // Use task_start (root level) if available, fallback to event_start (in pass)
+                startTime: new Date(obs.task_start || obs.pass.event_start),
             }))
             .filter((obs) => obs.startTime > now)
             .sort((a, b) => a.startTime - b.startTime)[0];
@@ -51,6 +56,15 @@ export default function ObservationStatusBanner() {
     const observation = runningObservation || nextObservation;
     const isRunning = !!runningObservation;
 
+    // Check if satellite is already visible (for upcoming observations)
+    const isSatelliteVisible = useMemo(() => {
+        if (isRunning || !observation?.pass) return false;
+        const now = new Date();
+        const eventStart = new Date(observation.pass.event_start);
+        // Satellite is visible if event_start (AOS) has passed but task hasn't started yet
+        return now >= eventStart;
+    }, [isRunning, observation]);
+
     // Live countdown for scheduled observations
     useEffect(() => {
         if (!observation?.pass) return;
@@ -58,12 +72,28 @@ export default function ObservationStatusBanner() {
         const updateCountdown = () => {
             const now = new Date();
             if (isRunning) {
-                const endTime = new Date(observation.pass.event_end);
+                // Use task_end (root level) if available, fallback to event_end (in pass)
+                const endTime = new Date(observation.task_end || observation.pass.event_end);
                 const remainingMs = endTime - now;
-                const remainingMin = Math.floor(remainingMs / 60000);
-                setCountdown(remainingMin > 0 ? `${remainingMin} min remaining` : 'Ending soon');
+
+                if (remainingMs <= 0) {
+                    setCountdown('Ending soon');
+                } else {
+                    const hours = Math.floor(remainingMs / 3600000);
+                    const minutes = Math.floor((remainingMs % 3600000) / 60000);
+                    const seconds = Math.floor((remainingMs % 60000) / 1000);
+
+                    if (hours > 0) {
+                        setCountdown(`${hours}h ${minutes}m ${seconds}s remaining`);
+                    } else if (minutes > 0) {
+                        setCountdown(`${minutes}m ${seconds}s remaining`);
+                    } else {
+                        setCountdown(`${seconds}s remaining`);
+                    }
+                }
             } else {
-                const startTime = new Date(observation.pass.event_start);
+                // Use task_start (root level) if available, fallback to event_start (in pass)
+                const startTime = new Date(observation.task_start || observation.pass.event_start);
                 const untilMs = startTime - now;
                 const hours = Math.floor(untilMs / 3600000);
                 const minutes = Math.floor((untilMs % 3600000) / 60000);
@@ -101,8 +131,9 @@ export default function ObservationStatusBanner() {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    const startTime = observation.pass ? formatTime(observation.pass.event_start) : '';
-    const endTime = observation.pass ? formatTime(observation.pass.event_end) : '';
+    // Use task_start/task_end (root level) if available, fallback to event_start/event_end (in pass)
+    const startTime = formatTime(observation.task_start || observation.pass?.event_start);
+    const endTime = formatTime(observation.task_end || observation.pass?.event_end);
 
     // Get task count
     const taskCount = observation.tasks?.length || 0;
@@ -135,7 +166,6 @@ export default function ObservationStatusBanner() {
 
                 {/* Satellite name */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Satellite sx={{ fontSize: 18, color: 'text.secondary' }} />
                     <Typography variant="body1" fontWeight={600}>
                         {observation.satellite?.name || 'Unknown'}
                     </Typography>
@@ -152,6 +182,21 @@ export default function ObservationStatusBanner() {
                         sx={{
                             bgcolor: isRunning ? 'rgba(76, 175, 80, 0.2)' : 'rgba(33, 150, 243, 0.2)',
                             fontWeight: 600,
+                        }}
+                    />
+                )}
+
+                {/* Satellite visible indicator (for upcoming observations) */}
+                {isSatelliteVisible && (
+                    <Chip
+                        icon={<Visibility sx={{ fontSize: 16 }} />}
+                        label="Satellite visible"
+                        size="small"
+                        color="success"
+                        variant="outlined"
+                        sx={{
+                            fontWeight: 600,
+                            borderWidth: 2,
                         }}
                     />
                 )}

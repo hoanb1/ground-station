@@ -15,12 +15,23 @@
 
 """Observation execution service - handles lifecycle of scheduled observations."""
 
+import os
 import traceback
+from datetime import datetime
 from typing import Any, Dict, Optional
 
+from sqlalchemy import select
+
 from common.logger import logger
+from crud.preferences import fetch_all_preferences
 from crud.scheduledobservations import fetch_scheduled_observations
 from db import AsyncSessionLocal
+from db.models import Satellites, Transmitters
+from demodulators.amdemodulator import AMDemodulator
+from demodulators.audiorecorder import AudioRecorder
+from demodulators.fmdemodulator import FMDemodulator
+from demodulators.iqrecorder import IQRecorder
+from demodulators.ssbdemodulator import SSBDemodulator
 from observations.constants import (
     STATUS_CANCELLED,
     STATUS_COMPLETED,
@@ -28,6 +39,10 @@ from observations.constants import (
     STATUS_RUNNING,
     STATUS_SCHEDULED,
 )
+from processing.decoderregistry import decoder_registry
+from session.service import session_service
+from session.tracker import session_tracker
+from vfos.state import VFOManager
 
 
 class ObservationExecutor:
@@ -283,8 +298,6 @@ class ObservationExecutor:
             observation_id: The observation ID
             observation: The observation data dict
         """
-        from session.service import session_service
-        from vfos.state import VFOManager
 
         # Extract configuration
         # Note: CRUD layer flattens hardware_config to top-level keys (sdr, rotator, rig)
@@ -320,7 +333,7 @@ class ObservationExecutor:
             # Use values from observation's sdr config, which includes antenna_port and other settings
             sdr_config = {
                 "sdr_id": sdr_id,
-                "center_frequency": sdr_config_dict.get("center_frequency", 100000000),
+                "center_freq": sdr_config_dict.get("center_frequency", 100000000),
                 "sample_rate": sdr_config_dict.get("sample_rate", 2048000),
                 "gain": sdr_config_dict.get("gain", 20),
                 "ppm_error": sdr_config_dict.get("ppm_error", 0),
@@ -328,18 +341,16 @@ class ObservationExecutor:
             }
 
             # 2. Register internal observation session (creates session, starts SDR)
-            vfo_number = 1  # Default to VFO 1 for automated observations
             metadata = {
                 "observation_id": observation_id,
                 "satellite_name": satellite.get("name"),
                 "norad_id": satellite.get("norad_id"),
             }
-
             session_id = await session_service.register_internal_observation(
                 observation_id=observation_id,
                 sdr_device=sdr_device,
                 sdr_config=sdr_config,
-                vfo_number=vfo_number,
+                vfo_number=1,  # Register with VFO 1 initially
                 metadata=metadata,
             )
 
@@ -347,22 +358,99 @@ class ObservationExecutor:
 
             # 3. Configure VFOs and start tasks
             vfo_manager = VFOManager()
+            vfo_counter = 1  # Counter for assigning VFO numbers to decoders
 
             for task in tasks:
                 task_type = task.get("type")
                 task_config = task.get("config", {})
 
                 if task_type == "decoder":
+                    # Assign VFO number for this decoder (1-4)
+                    vfo_number = vfo_counter
+                    if vfo_counter >= 4:
+                        logger.warning(
+                            f"Maximum of 4 VFOs supported, skipping additional decoders in observation {observation_id}"
+                        )
+                        continue
+                    vfo_counter += 1  # Increment for next decoder
+
                     # Configure VFO for decoder
                     transmitter_id = task_config.get("transmitter_id", "none")
                     decoder_type = task_config.get("decoder_type", "none")
 
-                    # Get transmitter details to extract frequency/modulation
-                    # For now, use defaults - TODO: fetch from transmitter config
-                    center_freq = task_config.get("frequency", sdr_config["center_frequency"])
-                    modulation = task_config.get("modulation", "FM")
+                    # Get transmitter details to extract frequency/modulation/bandwidth
+                    center_freq = task_config.get("frequency", sdr_config["center_freq"])
+                    modulation = task_config.get("modulation", "none")
                     bandwidth = task_config.get("bandwidth", 40000)
 
+                    # Fetch transmitter and satellite info from database
+                    transmitter_info = None
+                    satellite_info = None
+
+                    if transmitter_id and transmitter_id != "none":
+                        try:
+                            async with AsyncSessionLocal() as db_session:
+                                # Fetch transmitter
+                                result = await db_session.execute(
+                                    select(Transmitters).where(Transmitters.id == transmitter_id)
+                                )
+                                transmitter_record = result.scalar_one_or_none()
+
+                                if transmitter_record:
+                                    center_freq = task_config.get(
+                                        "frequency", transmitter_record.downlink_low
+                                    )
+
+                                    transmitter_info = {
+                                        "id": transmitter_record.id,
+                                        "description": transmitter_record.description,
+                                        "mode": transmitter_record.mode,
+                                        "baud": transmitter_record.baud,
+                                        "downlink_low": transmitter_record.downlink_low,
+                                        "downlink_high": transmitter_record.downlink_high,
+                                        "center_frequency": center_freq,
+                                        "bandwidth": bandwidth,  # Use default/config bandwidth (40000)
+                                        "norad_cat_id": transmitter_record.norad_cat_id,
+                                    }
+                                    modulation = transmitter_record.mode or modulation
+
+                                    # Fetch satellite info
+                                    sat_result = await db_session.execute(
+                                        select(Satellites).where(
+                                            Satellites.norad_id == transmitter_record.norad_cat_id
+                                        )
+                                    )
+                                    satellite_record = sat_result.scalar_one_or_none()
+                                    if satellite_record:
+                                        satellite_info = {
+                                            "norad_id": satellite_record.norad_id,
+                                            "name": satellite_record.name,
+                                            "alternative_name": satellite_record.alternative_name,
+                                            "status": satellite_record.status,
+                                            "image": satellite_record.image,
+                                        }
+
+                                    logger.info(
+                                        f"Loaded transmitter {transmitter_record.description} "
+                                        f"for observation {observation_id}"
+                                    )
+                        except Exception as e:
+                            logger.warning(f"Failed to fetch transmitter {transmitter_id}: {e}")
+                            logger.warning(traceback.format_exc())
+
+                    # Fallback if no transmitter info available
+                    if not transmitter_info:
+                        transmitter_info = {
+                            "description": f"Observation {observation_id} Signal",
+                            "mode": decoder_type.upper(),
+                            "center_frequency": center_freq,
+                            "bandwidth": bandwidth,
+                        }
+                        logger.warning(
+                            f"No transmitter info for observation {observation_id} - using defaults"
+                        )
+
+                    # Configure VFO
                     vfo_manager.configure_internal_vfo(
                         observation_id=observation_id,
                         vfo_number=vfo_number,
@@ -377,34 +465,349 @@ class ObservationExecutor:
                         f"Configured VFO {vfo_number} for {decoder_type} decoder on {transmitter_id}"
                     )
 
-                    # TODO: Start decoder process
-                    # decoder_class = get_decoder_class(decoder_type)
-                    # self.process_manager.decoder_manager.start_decoder(
-                    #     sdr_id, session_id, decoder_class, data_queue, **task_config
-                    # )
+                    # Start decoder process
+                    decoder_class = decoder_registry.get_decoder_class(decoder_type)
+                    if decoder_class:
+                        try:
+                            process_info = self.process_manager.processes.get(sdr_id)
+                            if process_info:
+                                data_queue = process_info["data_queue"]
+
+                                decoder_kwargs = {
+                                    "sdr_id": sdr_id,
+                                    "session_id": session_id,
+                                    "decoder_class": decoder_class,
+                                    "data_queue": data_queue,
+                                    "audio_out_queue": None,  # No audio streaming for observations
+                                    "output_dir": "data/decoded",
+                                    "vfo_center_freq": center_freq,
+                                    "vfo": vfo_number,
+                                    "decoder_param_overrides": {},  # Use defaults from transmitter
+                                    "caller": "executor.py:_execute_observation_task",
+                                }
+
+                                # Add transmitter config if decoder supports it
+                                if decoder_registry.supports_transmitter_config(decoder_type):
+                                    decoder_kwargs["satellite"] = satellite_info
+                                    decoder_kwargs["transmitter"] = transmitter_info
+
+                                success = self.process_manager.start_decoder(**decoder_kwargs)
+                                if success:
+                                    logger.info(
+                                        f"Started {decoder_type} decoder for observation {observation_id}"
+                                    )
+                                else:
+                                    logger.error(
+                                        f"Failed to start {decoder_type} decoder for observation {observation_id}"
+                                    )
+                            else:
+                                logger.error(f"No SDR process found for {sdr_id}")
+                        except Exception as e:
+                            logger.error(f"Error starting decoder: {e}")
+                            logger.error(traceback.format_exc())
+                    else:
+                        logger.warning(f"Decoder class not found for type: {decoder_type}")
 
                 elif task_type == "iq_recording":
-                    # TODO: Start IQ recorder
-                    # from processing.iqrecorder import IQRecorder
-                    # self.process_manager.recorder_manager.start_recorder(
-                    #     sdr_id, session_id, IQRecorder, **task_config
-                    # )
-                    logger.info("IQ recording task configured (not yet started)")
+                    # Start IQ recorder
+                    try:
+                        # Generate timestamp for recording filename
+                        now = datetime.now()
+                        date = now.strftime("%Y%m%d")
+                        time_str = now.strftime("%H%M%S")
+                        timestamp = f"{date}_{time_str}"
+
+                        # Build recording name: satellite_name_timestamp
+                        satellite_name = satellite.get("name", "unknown").replace(" ", "_")
+                        recording_name = f"{satellite_name}_{timestamp}"
+
+                        # Build recording path (directory creation handled by IQRecorder)
+                        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                        recordings_dir = os.path.join(backend_dir, "data", "recordings")
+                        recording_path = os.path.join(recordings_dir, recording_name)
+
+                        # Start IQ recorder
+                        success = self.process_manager.start_recorder(
+                            sdr_id,
+                            session_id,
+                            IQRecorder,
+                            recording_path=recording_path,
+                            target_satellite_norad_id=str(satellite.get("norad_id", "")),
+                            target_satellite_name=satellite.get("name", ""),
+                        )
+
+                        if success:
+                            logger.info(
+                                f"Started IQ recording for observation {observation_id}: {recording_path}"
+                            )
+                        else:
+                            logger.error(
+                                f"Failed to start IQ recording for observation {observation_id}"
+                            )
+                    except Exception as e:
+                        logger.error(f"Error starting IQ recorder: {e}")
+                        logger.error(traceback.format_exc())
 
                 elif task_type == "audio_recording":
-                    # TODO: Start audio recorder
-                    # from processing.audiorecorder import AudioRecorder
-                    # self.process_manager.audio_recorder_manager.start_audio_recorder(
-                    #     sdr_id, session_id, vfo_number, AudioRecorder, **task_config
-                    # )
-                    logger.info("Audio recording task configured (not yet started)")
+                    # Start audio recorder for VFO
+                    # This requires starting both a demodulator and audio recorder
+                    # Get VFO number from task config
+                    audio_vfo_number = task_config.get("vfo_number", 1)
+                    vfo_frequency = task_config.get("frequency", sdr_config["center_freq"])
+                    demodulator_type = task_config.get("demodulator_type", "FM")
+                    bandwidth = task_config.get("bandwidth", 40000)
+
+                    try:
+                        # 1. Configure VFO for audio recording
+                        vfo_manager.configure_internal_vfo(
+                            observation_id=observation_id,
+                            vfo_number=audio_vfo_number,
+                            center_freq=vfo_frequency,
+                            bandwidth=bandwidth,
+                            modulation=demodulator_type,
+                            decoder="none",  # No decoder, just demodulator
+                            locked_transmitter_id="none",
+                        )
+
+                        logger.info(
+                            f"Configured VFO {audio_vfo_number} for audio recording at {vfo_frequency/1e6:.3f} MHz"
+                        )
+
+                        # 2. Start demodulator for this VFO
+                        # Pass None for audio_queue since observations don't stream to UI
+                        # Demodulator will create its own AudioBroadcaster for audio recorder
+                        demod_type_lower = demodulator_type.lower()
+                        demod_started = False
+
+                        if demod_type_lower == "fm":
+                            demod_started = self.process_manager.start_demodulator(
+                                sdr_id, session_id, FMDemodulator, None, vfo_number=audio_vfo_number
+                            )
+                        elif demod_type_lower in ["usb", "lsb", "cw"]:
+                            demod_started = self.process_manager.start_demodulator(
+                                sdr_id,
+                                session_id,
+                                SSBDemodulator,
+                                None,
+                                vfo_number=audio_vfo_number,
+                                mode=demod_type_lower,
+                            )
+                        elif demod_type_lower == "am":
+                            demod_started = self.process_manager.start_demodulator(
+                                sdr_id, session_id, AMDemodulator, None, vfo_number=audio_vfo_number
+                            )
+                        else:
+                            logger.error(
+                                f"Unsupported demodulator type for audio recording: {demodulator_type}"
+                            )
+
+                        if not demod_started:
+                            logger.error(
+                                f"Failed to start demodulator for audio recording VFO {audio_vfo_number}"
+                            )
+                            continue
+
+                        logger.info(
+                            f"Started {demodulator_type} demodulator for audio recording VFO {audio_vfo_number}"
+                        )
+
+                        # 3. Generate recording path (following server/audiorecorder.py pattern)
+                        now = datetime.now()
+                        timestamp = now.strftime("%Y%m%d_%H%M%S")
+
+                        # Build recording name from satellite name
+                        recording_name = satellite.get("name", "unknown_satellite")
+                        recording_name = recording_name.replace(" ", "_").replace("/", "_")
+                        recording_name_full = f"{recording_name}_vfo{audio_vfo_number}_{timestamp}"
+
+                        # Create audio recordings directory
+                        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                        audio_dir = os.path.join(backend_dir, "data", "audio")
+                        os.makedirs(audio_dir, exist_ok=True)
+
+                        recording_path = os.path.join(audio_dir, recording_name_full)
+
+                        # 4. Start audio recorder
+                        success = self.process_manager.audio_recorder_manager.start_audio_recorder(
+                            sdr_id,
+                            session_id,
+                            audio_vfo_number,
+                            AudioRecorder,
+                            recording_path=recording_path,
+                            sample_rate=44100,  # Match demodulator output rate
+                            target_satellite_norad_id=str(satellite.get("norad_id", "")),
+                            target_satellite_name=satellite.get("name", ""),
+                            center_frequency=sdr_config["center_freq"],
+                            vfo_frequency=vfo_frequency,
+                            demodulator_type=demodulator_type,
+                        )
+
+                        if success:
+                            logger.info(
+                                f"Started audio recording for observation {observation_id} VFO {audio_vfo_number}: {recording_path}"
+                            )
+                        else:
+                            logger.error(
+                                f"Failed to start audio recording for observation {observation_id}"
+                            )
+                    except Exception as e:
+                        logger.error(f"Error starting audio recorder: {e}")
+                        logger.error(traceback.format_exc())
 
                 elif task_type == "transcription":
-                    # TODO: Start transcription
-                    # self.process_manager.transcription_manager.start_transcription(
-                    #     sdr_id, session_id, vfo_number, **task_config
-                    # )
-                    logger.info("Transcription task configured (not yet started)")
+                    # Start transcription for VFO
+                    # This requires starting both a demodulator and transcription worker
+                    transcription_vfo_number = task_config.get("vfo_number", 1)
+                    vfo_frequency = task_config.get("frequency", sdr_config["center_freq"])
+                    demodulator_type = task_config.get("demodulator_type", "FM")
+                    bandwidth = task_config.get("bandwidth", 40000)
+                    provider = task_config.get("provider", "gemini")
+                    language = task_config.get("language", "auto")
+                    translate_to = task_config.get("translate_to", "none")
+
+                    try:
+                        # 1. Configure VFO for transcription
+                        vfo_manager.configure_internal_vfo(
+                            observation_id=observation_id,
+                            vfo_number=transcription_vfo_number,
+                            center_freq=vfo_frequency,
+                            bandwidth=bandwidth,
+                            modulation=demodulator_type,
+                            decoder="none",  # No decoder, just demodulator
+                            locked_transmitter_id="none",
+                        )
+
+                        logger.info(
+                            f"Configured VFO {transcription_vfo_number} for transcription at {vfo_frequency/1e6:.3f} MHz"
+                        )
+
+                        # 2. Start demodulator for this VFO
+                        # Pass None for audio_queue since observations don't stream to UI
+                        # Demodulator will create its own AudioBroadcaster for transcription worker
+                        demod_type_lower = demodulator_type.lower()
+                        demod_started = False
+
+                        if demod_type_lower == "fm":
+                            demod_started = self.process_manager.start_demodulator(
+                                sdr_id,
+                                session_id,
+                                FMDemodulator,
+                                None,
+                                vfo_number=transcription_vfo_number,
+                            )
+                        elif demod_type_lower in ["usb", "lsb", "cw"]:
+                            demod_started = self.process_manager.start_demodulator(
+                                sdr_id,
+                                session_id,
+                                SSBDemodulator,
+                                None,
+                                vfo_number=transcription_vfo_number,
+                                mode=demod_type_lower,
+                            )
+                        elif demod_type_lower == "am":
+                            demod_started = self.process_manager.start_demodulator(
+                                sdr_id,
+                                session_id,
+                                AMDemodulator,
+                                None,
+                                vfo_number=transcription_vfo_number,
+                            )
+                        else:
+                            logger.error(
+                                f"Unsupported demodulator type for transcription: {demodulator_type}"
+                            )
+
+                        if not demod_started:
+                            logger.error(
+                                f"Failed to start demodulator for transcription VFO {transcription_vfo_number}"
+                            )
+                            continue
+
+                        logger.info(
+                            f"Started {demodulator_type} demodulator for transcription VFO {transcription_vfo_number}"
+                        )
+
+                        # 3. Get transcription manager and fetch API keys
+                        transcription_manager = self.process_manager.transcription_manager
+                        if not transcription_manager:
+                            logger.error("Transcription manager not initialized")
+                            continue
+
+                        # Fetch API keys from preferences
+                        async with AsyncSessionLocal() as dbsession:
+                            prefs_result = await fetch_all_preferences(dbsession)
+                            if not prefs_result["success"]:
+                                logger.error("Failed to fetch preferences for transcription")
+                                continue
+
+                            preferences = prefs_result["data"]
+
+                            # Set appropriate API key based on provider
+                            if provider == "gemini":
+                                api_key = next(
+                                    (
+                                        p["value"]
+                                        for p in preferences
+                                        if p["name"] == "gemini_api_key"
+                                    ),
+                                    "",
+                                )
+                                if not api_key:
+                                    logger.error("Gemini API key not configured")
+                                    continue
+                                transcription_manager.set_gemini_api_key(api_key)
+                            elif provider == "deepgram":
+                                api_key = next(
+                                    (
+                                        p["value"]
+                                        for p in preferences
+                                        if p["name"] == "deepgram_api_key"
+                                    ),
+                                    "",
+                                )
+                                if not api_key:
+                                    logger.error("Deepgram API key not configured")
+                                    continue
+                                transcription_manager.set_deepgram_api_key(api_key)
+
+                                # Set Google Translate API key for Deepgram translation
+                                google_translate_key = next(
+                                    (
+                                        p["value"]
+                                        for p in preferences
+                                        if p["name"] == "google_translate_api_key"
+                                    ),
+                                    "",
+                                )
+                                transcription_manager.set_google_translate_api_key(
+                                    google_translate_key
+                                )
+                            else:
+                                logger.error(f"Unknown transcription provider: {provider}")
+                                continue
+
+                            # 4. Start transcription worker
+                            success = transcription_manager.start_transcription(
+                                sdr_id=sdr_id,
+                                session_id=session_id,
+                                vfo_number=transcription_vfo_number,
+                                language=language,
+                                translate_to=translate_to,
+                                provider=provider,
+                            )
+
+                            if success:
+                                logger.info(
+                                    f"Started transcription for observation {observation_id} VFO {transcription_vfo_number} "
+                                    f"(provider={provider}, language={language}, translate_to={translate_to})"
+                                )
+                            else:
+                                logger.error(
+                                    f"Failed to start transcription for observation {observation_id}"
+                                )
+                    except Exception as e:
+                        logger.error(f"Error starting transcription: {e}")
+                        logger.error(traceback.format_exc())
 
             # 4. Start rotator tracker if enabled
             rotator_config = observation.get("rotator", {})
@@ -460,9 +863,6 @@ class ObservationExecutor:
             observation_id: The observation ID
             observation: The observation data dict
         """
-        from session.service import session_service
-        from vfos.state import VFOManager
-
         # Note: CRUD layer flattens hardware_config to top-level keys (sdr, rotator, rig)
         satellite = observation.get("satellite", {})
 
@@ -470,31 +870,101 @@ class ObservationExecutor:
         logger.info(f"Observation ID: {observation_id}")
 
         try:
-            # 1. Stop tracker if it was enabled
-            rotator_config = observation.get("rotator", {})
-            if rotator_config.get("tracking_enabled") and rotator_config.get("id"):
-                from tracker.runner import get_tracker_manager
+            # 1. Don't stop tracker - leave rotator connected for manual control or next observation
+            # The user can manually disconnect the rotator if desired
+            logger.debug(f"Leaving rotator connected after observation {observation_id}")
 
-                # Stop tracking by setting state to disconnected
-                tracker_manager = get_tracker_manager()
-                await tracker_manager.update_tracking_state(rotator_state="disconnected")
+            # 2. Stop decoders explicitly before cleaning up session
+            # Get session ID from observation
+            session_id = VFOManager.make_internal_session_id(observation_id)
 
-                logger.info(f"Stopped tracking for observation {observation_id}")
+            # Get SDR ID from session tracker
+            sdr_id = session_tracker.get_session_sdr(session_id)
 
-            # 2. Cleanup internal observation session
+            if sdr_id:
+                # Stop all decoders and recorders for this observation
+                tasks = observation.get("tasks", [])
+                vfo_counter = 1
+                for task in tasks:
+                    task_type = task.get("type")
+                    task_config = task.get("config", {})
+
+                    if task_type == "decoder":
+                        vfo_number = vfo_counter
+                        vfo_counter += 1
+                        try:
+                            self.process_manager.stop_decoder(sdr_id, session_id, vfo_number)
+                            logger.info(
+                                f"Stopped decoder for observation {observation_id} VFO {vfo_number}"
+                            )
+                        except Exception as e:
+                            logger.warning(f"Error stopping decoder: {e}")
+
+                    elif task_type == "iq_recording":
+                        try:
+                            self.process_manager.stop_recorder(sdr_id, session_id)
+                            logger.info(f"Stopped IQ recorder for observation {observation_id}")
+                        except Exception as e:
+                            logger.warning(f"Error stopping IQ recorder: {e}")
+
+                    elif task_type == "audio_recording":
+                        audio_vfo_number = task_config.get("vfo_number", 1)
+                        try:
+                            # Stop audio recorder first
+                            self.process_manager.audio_recorder_manager.stop_audio_recorder(
+                                sdr_id, session_id, audio_vfo_number
+                            )
+                            logger.info(
+                                f"Stopped audio recorder for observation {observation_id} VFO {audio_vfo_number}"
+                            )
+
+                            # Stop demodulator for this VFO
+                            self.process_manager.stop_demodulator(
+                                sdr_id, session_id, audio_vfo_number
+                            )
+                            logger.info(
+                                f"Stopped demodulator for audio recording VFO {audio_vfo_number}"
+                            )
+                        except Exception as e:
+                            logger.warning(f"Error stopping audio recorder/demodulator: {e}")
+
+                    elif task_type == "transcription":
+                        transcription_vfo_number = task_config.get("vfo_number", 1)
+                        try:
+                            # Stop transcription worker first
+                            transcription_manager = self.process_manager.transcription_manager
+                            if transcription_manager:
+                                transcription_manager.stop_transcription(
+                                    sdr_id, session_id, transcription_vfo_number
+                                )
+                                logger.info(
+                                    f"Stopped transcription for observation {observation_id} VFO {transcription_vfo_number}"
+                                )
+
+                            # Stop demodulator for this VFO
+                            self.process_manager.stop_demodulator(
+                                sdr_id, session_id, transcription_vfo_number
+                            )
+                            logger.info(
+                                f"Stopped demodulator for transcription VFO {transcription_vfo_number}"
+                            )
+                        except Exception as e:
+                            logger.warning(f"Error stopping transcription/demodulator: {e}")
+
+            # 3. Cleanup internal observation session
             # This will:
-            # - Stop SDR process (which cascades to all consumers: decoders, recorders)
+            # - Stop SDR process (which cascades to remaining consumers: recorders)
             # - Clear SessionTracker relationships
             # - Remove configuration
             # - Unregister from internal sessions
             await session_service.cleanup_internal_observation(observation_id)
 
-            # 3. Cleanup VFO state
+            # 4. Cleanup VFO state
             vfo_manager = VFOManager()
             vfo_manager.cleanup_internal_vfos(observation_id)
 
             logger.info(
-                f"Observation task {observation_id} cleaned up (session unregistered, VFOs cleaned)"
+                f"Observation task {observation_id} cleaned up (decoders stopped, session unregistered, VFOs cleaned)"
             )
 
         except Exception as e:

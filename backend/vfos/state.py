@@ -65,7 +65,7 @@ class VFOManager:
         vfo_id: int,
         center_freq: Optional[int] = None,
         bandwidth: Optional[int] = None,
-        modulation: str = "none",
+        modulation: Optional[str] = None,
         active: Optional[bool] = None,
         selected: Optional[bool] = None,
         volume: Optional[int] = None,
@@ -74,8 +74,8 @@ class VFOManager:
         transcription_provider: Optional[str] = None,
         transcription_language: Optional[str] = None,
         transcription_translate_to: Optional[str] = None,
-        decoder: str = "none",
-        locked_transmitter_id: str = "none",
+        decoder: Optional[str] = None,
+        locked_transmitter_id: Optional[str] = None,
         parameters_enabled: Optional[bool] = None,
     ) -> None:
 
@@ -105,8 +105,8 @@ class VFOManager:
             vfo_state.bandwidth = bandwidth
 
         # update modulation
-        # Always update - modulation is a required field that defaults to "none"
-        vfo_state.modulation = modulation
+        if modulation is not None:
+            vfo_state.modulation = modulation
 
         # check if active
         if active is not None:
@@ -144,12 +144,12 @@ class VFOManager:
             vfo_state.transcription_translate_to = transcription_translate_to
 
         # check decoder setting
-        # Always update - decoder is a required field that defaults to "none"
-        vfo_state.decoder = decoder
+        if decoder is not None:
+            vfo_state.decoder = decoder
 
         # check locked transmitter ID
-        # Always update - locked_transmitter_id is a required field that defaults to "none"
-        vfo_state.locked_transmitter_id = locked_transmitter_id
+        if locked_transmitter_id is not None:
+            vfo_state.locked_transmitter_id = locked_transmitter_id
 
         # check parameters enabled
         if parameters_enabled is not None:

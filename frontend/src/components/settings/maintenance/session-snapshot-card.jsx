@@ -276,22 +276,62 @@ const SessionSnapshotCard = () => {
                                         <KeyValue label="Duration" value={durationStr} />
                                     </Box>
 
-                                    {/* SDR Device Info */}
-                                    {info?.sdr_id && sdrData?.device && (
+                                    {/* SDR Device Info - Always shown */}
+                                    <Divider sx={{ my: 1.5 }} />
+                                    <Box sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 1, mb: 1 }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600, textTransform: 'uppercase' }}>
+                                            SDR Device
+                                        </Typography>
+                                        <KeyValue label="SDR ID" value={info?.sdr_id || '—'} wrap />
+                                        <KeyValue label="Device Name" value={sdrData?.device?.name || '—'} />
+                                        <KeyValue label="Device Type" value={sdrData?.device?.type || '—'} />
+                                        <KeyValue label="Serial" value={sdrData?.device?.serial || '—'} />
+                                        <KeyValue label="Host" value={sdrData?.device?.host ? `${sdrData.device.host}:${sdrData.device.port || ''}` : '—'} />
+                                    </Box>
+
+                                    {/* VFO State Information */}
+                                    {info?.vfos && Object.keys(info.vfos).length > 0 && (
                                         <>
                                             <Divider sx={{ my: 1.5 }} />
                                             <Box sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 1, mb: 1 }}>
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600, textTransform: 'uppercase' }}>
-                                                    SDR Device
+                                                    VFO Configuration
                                                 </Typography>
-                                                <KeyValue label="Device Name" value={sdrData.device.name || '—'} />
-                                                <KeyValue label="Device Type" value={sdrData.device.type || '—'} />
-                                                {sdrData.device.serial && (
-                                                    <KeyValue label="Serial" value={sdrData.device.serial} />
-                                                )}
-                                                {sdrData.device.host && (
-                                                    <KeyValue label="Host" value={`${sdrData.device.host}:${sdrData.device.port || ''}`} />
-                                                )}
+                                                {Object.entries(info.vfos).map(([vfoNum, vfo]) => (
+                                                    <Box key={vfoNum} sx={{ mb: 1.5, pb: 1.5, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>VFO {vfoNum}</Typography>
+                                                            {vfo.active && <Chip size="small" label="Active" color="success" sx={{ height: 18, fontSize: '0.65rem' }} />}
+                                                            {vfo.selected && <Chip size="small" label="Selected" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />}
+                                                        </Stack>
+                                                        <KeyValue label="Frequency" value={`${(vfo.center_freq / 1e6).toFixed(6)} MHz`} />
+                                                        <KeyValue label="Bandwidth" value={`${(vfo.bandwidth / 1e3).toFixed(1)} kHz`} />
+                                                        <KeyValue label="Modulation" value={vfo.modulation || 'none'} />
+                                                        {vfo.decoder && vfo.decoder !== 'none' && (
+                                                            <KeyValue label="Decoder" value={vfo.decoder} />
+                                                        )}
+                                                        {vfo.locked_transmitter_id && vfo.locked_transmitter_id !== 'none' && (
+                                                            <KeyValue label="Locked TX" value={vfo.locked_transmitter_id} wrap />
+                                                        )}
+                                                        {vfo.volume !== undefined && vfo.volume !== null && (
+                                                            <KeyValue label="Volume" value={`${vfo.volume}%`} />
+                                                        )}
+                                                        {vfo.squelch !== undefined && vfo.squelch !== null && (
+                                                            <KeyValue label="Squelch" value={`${vfo.squelch}%`} />
+                                                        )}
+                                                        {vfo.transcription_enabled && (
+                                                            <>
+                                                                <KeyValue label="Transcription" value={vfo.transcription_provider || 'Enabled'} />
+                                                                {vfo.transcription_language && (
+                                                                    <KeyValue label="Language" value={vfo.transcription_language} />
+                                                                )}
+                                                                {vfo.transcription_translate_to && (
+                                                                    <KeyValue label="Translate To" value={vfo.transcription_translate_to} />
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </Box>
+                                                ))}
                                             </Box>
                                         </>
                                     )}
