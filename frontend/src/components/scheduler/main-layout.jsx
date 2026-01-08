@@ -23,6 +23,7 @@ import ObservationsTable from './observations-table.jsx';
 import MonitoredSatellitesTable from './monitored-satellites-table.jsx';
 import ObservationFormDialog from './observation-form-dialog.jsx';
 import MonitoredSatelliteDialog from './monitored-satellite-dialog.jsx';
+import ObservationStatusBanner from './observation-status-banner.jsx';
 
 export default function ScheduledObservationsLayout() {
     // Socket listeners for scheduler updates are now in useSocketEventHandlers hook
@@ -41,8 +42,11 @@ export default function ScheduledObservationsLayout() {
                 position: 'relative',
             }}
         >
+            {/* Status Banner - Shows running or next observation */}
+            <ObservationStatusBanner />
+
             {/* Monitored Satellites - Top Section */}
-            <Box sx={{ minHeight: '600px', maxHeight: '750px' }}>
+            <Box sx={{ height: '667px' }}>
                 <MonitoredSatellitesTable />
             </Box>
 
