@@ -424,7 +424,10 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
 
     // Calculate elevation curves when passes are received or satellite changes
     useEffect(() => {
-        if (satellitePasses && satellitePasses.length > 0 && location && satelliteData && satelliteData.details) {
+        // Check if location is valid (not null)
+        const isLocationValid = location && location.lat != null && location.lon != null;
+
+        if (satellitePasses && satellitePasses.length > 0 && isLocationValid && satelliteData && satelliteData.details) {
             // Check if elevation curves need to be calculated (if any pass has empty elevation_curve)
             const needsCalculation = satellitePasses.some(pass => !pass.elevation_curve || pass.elevation_curve.length === 0);
 

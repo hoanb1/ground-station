@@ -231,13 +231,14 @@ const TargetSatelliteMapContainer = ({}) => {
 
     function CenterHomeButton() {
         const { t } = useTranslation('target');
-        const targetCoordinates = [location.lat, location.lon];
         const handleClick = () => {
-            MapObject.setView(targetCoordinates, MapObject.getZoom());
+            if (location && location.lat != null && location.lon != null) {
+                MapObject.setView([location.lat, location.lon], MapObject.getZoom());
+            }
         };
 
         return (
-            <Fab size="small" color="primary" aria-label={t('map_controls.go_home')} onClick={handleClick}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.go_home')} onClick={handleClick} disabled={!location}>
                 <HomeIcon/>
             </Fab>
         );
@@ -545,7 +546,9 @@ const TargetSatelliteMapContainer = ({}) => {
 
                 {InternationalDateLinePolyline()}
 
-                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
+                {location && location.lat != null && location.lon != null && (
+                    <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
+                )}
 
                 {showPastOrbitPath ? currentPastSatellitesPaths : null}
                 {showFutureOrbitPath ? currentFutureSatellitesPaths : null}

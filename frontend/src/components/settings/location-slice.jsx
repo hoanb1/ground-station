@@ -81,7 +81,7 @@ const locationSlice = createSlice({
     initialState: {
         locationSaving: false,
         locationLoading: false,
-        location: {lat: 0, lon: 0},
+        location: null,
         altitude: 0,
         locationId: null,
         qth: '',

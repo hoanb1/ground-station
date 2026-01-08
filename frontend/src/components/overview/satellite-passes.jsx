@@ -844,7 +844,10 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
             return;
         }
 
-        if (passes && passes.length > 0 && location && selectedSatellites && selectedSatellites.length > 0) {
+        // Check if location is valid (not null)
+        const isLocationValid = location && location.lat != null && location.lon != null;
+
+        if (passes && passes.length > 0 && isLocationValid && selectedSatellites && selectedSatellites.length > 0) {
             // Create hash of pass IDs to detect if these are actually NEW passes
             const currentPassesHash = passes?.map(p => `${p.norad_id}-${p.event_start}`).sort().join('|') || '';
 
