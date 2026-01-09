@@ -119,9 +119,30 @@ export default function ObservationStatusBanner() {
         return () => clearInterval(interval);
     }, [observation, isRunning]);
 
-    // Don't show banner if nothing to display
+    // Show banner even if nothing to display
     if (!runningObservation && !nextObservation) {
-        return null;
+        return (
+            <Paper
+                elevation={2}
+                sx={{
+                    p: 2,
+                    background: 'linear-gradient(135deg, rgba(158, 158, 158, 0.15) 0%, rgba(158, 158, 158, 0.10) 100%)',
+                    borderLeft: '4px solid #9e9e9e',
+                }}
+            >
+                <Stack direction="row" alignItems="center" spacing={2}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Satellite sx={{ color: 'text.secondary', fontSize: 20 }} />
+                        <Typography variant="body2" fontWeight={600} color="text.secondary">
+                            NO SCHEDULED OBSERVATIONS
+                        </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                        No active or upcoming observations scheduled
+                    </Typography>
+                </Stack>
+            </Paper>
+        );
     }
 
     // Format start/end times

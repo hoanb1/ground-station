@@ -83,7 +83,9 @@ const ObservationsTimeline = () => {
     // Filter observations within the time window
     const filteredObservations = useMemo(() => {
         const now = staticNow;
-        const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
+        const halfDuration = durationHours / 2;
+        const startTime = new Date(now.getTime() - halfDuration * 60 * 60 * 1000);
+        const endTime = new Date(now.getTime() + halfDuration * 60 * 60 * 1000);
 
         return observations.filter(obs => {
             if (!obs.pass) return false;
@@ -91,7 +93,7 @@ const ObservationsTimeline = () => {
             if (!obs.task_start || !obs.task_end) return false;
             const obsStart = new Date(obs.task_start);
             const obsEnd = new Date(obs.task_end);
-            const inTimeWindow = obsEnd >= now && obsStart <= endTime;
+            const inTimeWindow = obsEnd >= startTime && obsStart <= endTime;
             return inTimeWindow;
         }).sort((a, b) => new Date(a.task_start) - new Date(b.task_start));
     }, [observations, durationHours, staticNow]);
@@ -99,8 +101,10 @@ const ObservationsTimeline = () => {
     // Layout observations to avoid overlaps
     const { layoutData, requiredRows, sunData } = useMemo(() => {
         const now = staticNow;
-        const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
-        const totalMs = endTime - now;
+        const halfDuration = durationHours / 2;
+        const startTime = new Date(now.getTime() - halfDuration * 60 * 60 * 1000);
+        const endTime = new Date(now.getTime() + halfDuration * 60 * 60 * 1000);
+        const totalMs = endTime - startTime;
         const drawableWidth = width - marginLeft - marginRight;
 
         // Calculate sun times for the timeline window
@@ -113,7 +117,7 @@ const ObservationsTimeline = () => {
 
             // Calculate for each day in the timeline window
             // Start from 1 day before to catch night periods that started before the window
-            const startDate = new Date(now);
+            const startDate = new Date(startTime);
             startDate.setDate(startDate.getDate() - 1);
             startDate.setHours(0, 0, 0, 0);
 
@@ -128,12 +132,12 @@ const ObservationsTimeline = () => {
                 const sunset = sunTimes.sunset;
 
                 // Check if sunrise is valid and within window
-                if (sunrise && !isNaN(sunrise.getTime()) && sunrise >= now && sunrise <= endTime) {
+                if (sunrise && !isNaN(sunrise.getTime()) && sunrise >= startTime && sunrise <= endTime) {
                     sunEvents.push({ time: sunrise.getTime(), type: 'sunrise' });
                 }
 
                 // Check if sunset is valid and within window
-                if (sunset && !isNaN(sunset.getTime()) && sunset >= now && sunset <= endTime) {
+                if (sunset && !isNaN(sunset.getTime()) && sunset >= startTime && sunset <= endTime) {
                     sunEvents.push({ time: sunset.getTime(), type: 'sunset' });
                 }
 
@@ -146,21 +150,21 @@ const ObservationsTimeline = () => {
 
             // Build night periods from events
             // Start by checking if we're in night at the start of the timeline
-            const firstDayTimes = SunCalc.getTimes(new Date(now), lat, lon);
-            const isNightAtStart = now < firstDayTimes.sunrise || now > firstDayTimes.sunset;
+            const firstDayTimes = SunCalc.getTimes(new Date(startTime), lat, lon);
+            const isNightAtStart = startTime < firstDayTimes.sunrise || startTime > firstDayTimes.sunset;
 
             if (isNightAtStart) {
                 // Find first sunrise
                 const firstSunrise = sunEvents.find(e => e.type === 'sunrise');
                 if (firstSunrise) {
                     nightPeriods.push({
-                        start: now.getTime(),
+                        start: startTime.getTime(),
                         end: firstSunrise.time
                     });
                 } else {
                     // Entire window is night
                     nightPeriods.push({
-                        start: now.getTime(),
+                        start: startTime.getTime(),
                         end: endTime.getTime()
                     });
                 }
@@ -193,11 +197,11 @@ const ObservationsTimeline = () => {
 
         filteredObservations.forEach((obs) => {
             // Use task_start and task_end for positioning
-            const startTime = new Date(obs.task_start);
+            const obsStartTime = new Date(obs.task_start);
             const obsEndTime = new Date(obs.task_end);
 
-            const startX = marginLeft + Math.max(0, ((startTime - now) / totalMs) * drawableWidth);
-            const endX = marginLeft + Math.min(drawableWidth, ((obsEndTime - now) / totalMs) * drawableWidth);
+            const startX = marginLeft + Math.max(0, ((obsStartTime - startTime) / totalMs) * drawableWidth);
+            const endX = marginLeft + Math.min(drawableWidth, ((obsEndTime - startTime) / totalMs) * drawableWidth);
             const barWidth = endX - startX;
 
             let rowIndex = 0;
@@ -228,7 +232,9 @@ const ObservationsTimeline = () => {
     const height = Math.max(200, requiredRows * rowHeight + marginTop + marginBottom);
 
     const now = staticNow;
-    const endTime = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
+    const halfDuration = durationHours / 2;
+    const startTime = new Date(now.getTime() - halfDuration * 60 * 60 * 1000);
+    const endTime = new Date(now.getTime() + halfDuration * 60 * 60 * 1000);
     const hoursToShow = Math.min(durationHours, 48);
     const hourStep = hoursToShow <= 12 ? 2 : hoursToShow <= 24 ? 4 : 6;
 
@@ -305,8 +311,8 @@ const ObservationsTimeline = () => {
 
                         {/* Night period shading */}
                         {sunData && sunData.nightPeriods.map((period, index) => {
-                            const totalDuration = endTime.getTime() - now.getTime();
-                            const leftPercent = ((period.start - now.getTime()) / totalDuration);
+                            const totalDuration = endTime.getTime() - startTime.getTime();
+                            const leftPercent = ((period.start - startTime.getTime()) / totalDuration);
                             const widthPercent = ((period.end - period.start) / totalDuration);
                             const xPos = marginLeft + leftPercent * (width - marginLeft - marginRight);
                             const rectWidth = widthPercent * (width - marginLeft - marginRight);
@@ -326,8 +332,8 @@ const ObservationsTimeline = () => {
 
                         {/* Sun event markers - sunrise/sunset lines */}
                         {sunData && sunData.sunEvents.map((event, index) => {
-                            const totalDuration = endTime.getTime() - now.getTime();
-                            const position = ((event.time - now.getTime()) / totalDuration);
+                            const totalDuration = endTime.getTime() - startTime.getTime();
+                            const position = ((event.time - startTime.getTime()) / totalDuration);
                             const xPos = marginLeft + position * (width - marginLeft - marginRight);
                             const isSunrise = event.type === 'sunrise';
                             const color = isSunrise ? '#6b5110' : '#2a5070';
@@ -366,15 +372,17 @@ const ObservationsTimeline = () => {
 
                         {/* Vertical grid lines */}
                         {Array.from({ length: Math.floor(hoursToShow / hourStep) + 1 }).map((_, i) => {
-                            const hour = i * hourStep;
-                            const x = marginLeft + (hour / durationHours) * (width - marginLeft - marginRight);
+                            const hour = i * hourStep - halfDuration; // Offset to start from negative
+                            const x = marginLeft + ((i * hourStep) / durationHours) * (width - marginLeft - marginRight);
                             const time = new Date(now.getTime() + hour * 60 * 60 * 1000);
                             const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-                            const tPlusStr = `T+${Math.floor(hour)}:${String(Math.floor((hour % 1) * 60)).padStart(2, '0')}`;
+                            const absHour = Math.abs(hour);
+                            const sign = hour >= 0 ? '+' : '-';
+                            const tPlusStr = `T${sign}${Math.floor(absHour)}:${String(Math.floor((absHour % 1) * 60)).padStart(2, '0')}`;
 
                             return (
                                 <g key={`v-grid-${i}`}>
-                                    {hour > 0 && (
+                                    {hour !== 0 && (
                                         <line
                                             x1={x}
                                             y1={marginTop}
@@ -413,14 +421,14 @@ const ObservationsTimeline = () => {
                         {/* Current time marker */}
                         <g>
                             <line
-                                x1={marginLeft}
+                                x1={marginLeft + (width - marginLeft - marginRight) / 2}
                                 y1={marginTop}
-                                x2={marginLeft}
+                                x2={marginLeft + (width - marginLeft - marginRight) / 2}
                                 y2={height - marginBottom}
                                 stroke="#f50057"
                                 strokeWidth="2"
                             />
-                            <text x={marginLeft + 5} y={marginTop + 12} fontSize="12" fill="#f50057" fontWeight="bold">
+                            <text x={marginLeft + (width - marginLeft - marginRight) / 2 + 5} y={marginTop + 12} fontSize="12" fill="#f50057" fontWeight="bold">
                                 NOW
                             </text>
                         </g>

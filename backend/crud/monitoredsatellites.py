@@ -285,6 +285,36 @@ async def edit_monitored_satellite(session: AsyncSession, data: dict) -> dict:
 
         return {"success": True, "data": updated_satellite, "error": None}
 
+    except IntegrityError as e:
+        await session.rollback()
+        logger.warning(f"Database integrity error editing monitored satellite: {e}")
+
+        # Extract the original database error message
+        error_str = str(e.orig) if hasattr(e, "orig") else str(e)
+
+        # Check for UNIQUE constraint violations
+        match = UNIQUE_CONSTRAINT_PATTERN.search(error_str)
+        if match:
+            field = match.group(1)
+            # Provide specific message for norad_id (the only unique field in this table)
+            if field == "norad_id":
+                norad_id = data.get("satellite", {}).get("norad_id")
+                sat_name = data.get("satellite", {}).get("name", "Unknown")
+                return {
+                    "success": False,
+                    "error": f"Satellite {sat_name} (NORAD ID: {norad_id}) is already being monitored.",
+                }
+            return {"success": False, "error": f"A record with this {field} already exists."}
+
+        # Check for FOREIGN KEY constraint violations
+        if FOREIGN_KEY_PATTERN.search(error_str):
+            return {
+                "success": False,
+                "error": "Invalid reference: One or more selected items (SDR, Rotator, or Rig) no longer exist.",
+            }
+
+        # Generic integrity error fallback
+        return {"success": False, "error": f"Database constraint violation: {error_str}"}
     except Exception as e:
         await session.rollback()
         logger.error(f"Error editing monitored satellite: {e}")
