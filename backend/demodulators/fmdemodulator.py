@@ -330,6 +330,10 @@ class FMDemodulator(threading.Thread):
         ingest_chunks_accum = 0
         last_stats_time = time.time()
 
+        # Debug: VFO state tracking
+        last_debug_time = time.time()
+        debug_interval = 5.0  # Print VFO values every 5 seconds
+
         while self.running:
             try:
                 # CRITICAL: Always drain iq_queue to prevent buffer buildup
@@ -386,6 +390,23 @@ class FMDemodulator(threading.Thread):
 
                     vfo_center_freq = vfo_state.center_freq
                     vfo_bandwidth = vfo_state.bandwidth
+
+                # Debug: Periodically print VFO values
+                current_time = time.time()
+                if current_time - last_debug_time >= debug_interval:
+                    logger.debug(
+                        f"VFO Debug [Session {self.session_id}, VFO {self.vfo_number}]: "
+                        f"center_freq={vfo_center_freq/1e6:.6f}MHz, "
+                        f"bandwidth={vfo_bandwidth/1e3:.1f}kHz, "
+                        f"sdr_center={sdr_center_freq/1e6:.6f}MHz, "
+                        f"sdr_rate={sdr_sample_rate/1e6:.2f}MHz, "
+                        f"internal_mode={self.internal_mode}, "
+                        f"modulation={vfo_state.modulation if vfo_state else 'N/A'}, "
+                        f"active={vfo_state.active if vfo_state else False}, "
+                        f"squelch={vfo_state.squelch if vfo_state else 'N/A'}dB, "
+                        f"volume={vfo_state.volume if vfo_state else 'N/A'}"
+                    )
+                    last_debug_time = current_time
 
                 # Check if we need to reinitialize filters
                 if (

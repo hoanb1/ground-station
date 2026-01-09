@@ -462,13 +462,18 @@ const ObservationsTable = () => {
             </Box>
 
             {/* Actions below table */}
-            <Stack direction="row" spacing={2} sx={{ marginTop: '15px', flexShrink: 0 }}>
+            <Stack direction="row" spacing={2} sx={{ marginTop: '15px', flexShrink: 0, flexWrap: 'wrap' }}>
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={handleAdd}
+                    sx={{
+                        minWidth: 'auto',
+                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
+                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                    }}
                 >
-                    Add
+                    <Box className="button-label">Add</Box>
                 </Button>
                 <Button
                     variant="contained"
@@ -480,8 +485,13 @@ const ObservationsTable = () => {
                         }
                     }}
                     disabled={selectedIds.length !== 1}
+                    sx={{
+                        minWidth: 'auto',
+                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
+                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                    }}
                 >
-                    Edit
+                    <Box className="button-label">Edit</Box>
                 </Button>
                 <Button
                     variant="contained"
@@ -494,8 +504,13 @@ const ObservationsTable = () => {
                         }
                     }}
                     disabled={selectedIds.length !== 1}
+                    sx={{
+                        minWidth: 'auto',
+                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
+                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                    }}
                 >
-                    Duplicate
+                    <Box className="button-label">Duplicate</Box>
                 </Button>
                 <Button
                     variant="contained"
@@ -508,8 +523,13 @@ const ObservationsTable = () => {
                             observations.find(obs => obs.id === id && obs.status === 'running')
                         )
                     }
+                    sx={{
+                        minWidth: 'auto',
+                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
+                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                    }}
                 >
-                    Enable
+                    <Box className="button-label">Enable</Box>
                 </Button>
                 <Button
                     variant="contained"
@@ -522,8 +542,13 @@ const ObservationsTable = () => {
                             observations.find(obs => obs.id === id && obs.status === 'running')
                         )
                     }
+                    sx={{
+                        minWidth: 'auto',
+                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
+                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                    }}
                 >
-                    Disable
+                    <Box className="button-label">Disable</Box>
                 </Button>
                 <Button
                     variant="contained"
@@ -539,8 +564,13 @@ const ObservationsTable = () => {
                             )
                         )
                     }
+                    sx={{
+                        minWidth: 'auto',
+                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
+                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                    }}
                 >
-                    Stop
+                    <Box className="button-label">Stop</Box>
                 </Button>
                 <Button
                     variant="contained"
@@ -548,8 +578,13 @@ const ObservationsTable = () => {
                     startIcon={<DeleteIcon />}
                     onClick={() => setOpenDeleteConfirm(true)}
                     disabled={selectedIds.length === 0}
+                    sx={{
+                        minWidth: 'auto',
+                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
+                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                    }}
                 >
-                    Delete
+                    <Box className="button-label">Delete</Box>
                 </Button>
             </Stack>
 
