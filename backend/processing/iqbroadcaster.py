@@ -18,7 +18,6 @@ from __future__ import annotations
 import logging
 import multiprocessing
 import queue
-import re
 import threading
 import time
 from dataclasses import asdict
@@ -171,10 +170,21 @@ class IQBroadcaster(threading.Thread):
             Session ID or empty string if not found
         """
         # Pattern to extract session_id from various subscription key formats
-        # Matches: "prefix:{session_id}" or "prefix:{session_id}:suffix"
-        match = re.match(r"[^:]+:([^:]+)", subscription_key)
-        if match:
-            return match.group(1)
+        # Subscription keys are: "type:session_id:vfo" or "type:session_id"
+        # For internal sessions: "decoder:internal:obs-123:vfo1" -> need "internal:obs-123"
+        # For regular sessions: "decoder:regular-session-id:vfo1" -> need "regular-session-id"
+        parts = subscription_key.split(":")
+        if len(parts) >= 2:
+            # Check if this is an internal session (has "internal:" prefix)
+            if len(parts) >= 4 and parts[1] == "internal":
+                # "decoder:internal:obs-123:vfo1" -> "internal:obs-123"
+                return f"{parts[1]}:{parts[2]}"
+            elif len(parts) == 3:
+                # "decoder:session_id:vfo1" -> "session_id"
+                return parts[1]
+            elif len(parts) == 2:
+                # "decoder:session_id" -> "session_id"
+                return parts[1]
         return ""
 
     def _enrich_iq_message_with_vfo_states(
