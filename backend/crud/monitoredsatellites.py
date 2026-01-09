@@ -322,6 +322,36 @@ async def edit_monitored_satellite(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
+async def toggle_monitored_satellite_enabled(
+    session: AsyncSession, satellite_id: str, enabled: bool
+) -> dict:
+    """
+    Toggle the enabled status of a monitored satellite.
+    Only updates the enabled field without modifying other fields.
+    """
+    try:
+        stmt = (
+            update(MonitoredSatellites)
+            .where(MonitoredSatellites.id == satellite_id)
+            .values(enabled=enabled, updated_at=datetime.now(timezone.utc))
+            .returning(MonitoredSatellites)
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+
+        updated_satellite = result.scalar_one_or_none()
+        if not updated_satellite:
+            return {"success": False, "error": f"Monitored satellite not found: {satellite_id}"}
+
+        return {"success": True, "data": {"id": satellite_id, "enabled": enabled}}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error toggling monitored satellite enabled status: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
 async def delete_monitored_satellites(
     session: AsyncSession, ids: List[str], delete_observations: bool = False
 ) -> dict:

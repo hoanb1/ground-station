@@ -410,9 +410,10 @@ const ObservationsTimeline = () => {
                                         y={height - 10}
                                         textAnchor="middle"
                                         fontSize="12"
-                                        fill="currentColor"
+                                        fill={hour === 0 ? "#f50057" : "currentColor"}
+                                        fontWeight={hour === 0 ? "bold" : "normal"}
                                     >
-                                        {timeStr}
+                                        {hour === 0 ? "NOW" : timeStr}
                                     </text>
                                 </g>
                             );
@@ -426,11 +427,8 @@ const ObservationsTimeline = () => {
                                 x2={marginLeft + (width - marginLeft - marginRight) / 2}
                                 y2={height - marginBottom}
                                 stroke="#f50057"
-                                strokeWidth="2"
+                                strokeWidth="0.5"
                             />
-                            <text x={marginLeft + (width - marginLeft - marginRight) / 2 + 5} y={marginTop + 12} fontSize="12" fill="#f50057" fontWeight="bold">
-                                NOW
-                            </text>
                         </g>
 
                         {/* Observation events */}

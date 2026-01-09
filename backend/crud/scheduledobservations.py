@@ -326,6 +326,36 @@ async def edit_scheduled_observation(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
+async def toggle_scheduled_observation_enabled(
+    session: AsyncSession, observation_id: str, enabled: bool
+) -> dict:
+    """
+    Toggle the enabled status of a scheduled observation.
+    Only updates the enabled field without modifying other fields.
+    """
+    try:
+        stmt = (
+            update(ScheduledObservations)
+            .where(ScheduledObservations.id == observation_id)
+            .values(enabled=enabled, updated_at=datetime.now(timezone.utc))
+            .returning(ScheduledObservations)
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+
+        updated_observation = result.scalar_one_or_none()
+        if not updated_observation:
+            return {"success": False, "error": f"Observation not found: {observation_id}"}
+
+        return {"success": True, "data": {"id": observation_id, "enabled": enabled}}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error toggling observation enabled status: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
 async def update_scheduled_observation_status(
     session: AsyncSession, observation_id: str, status: str, error_message: Optional[str] = None
 ) -> dict:

@@ -43,6 +43,8 @@ import {
     Stop as StopIcon,
     Add as AddIcon,
     ContentCopy as ContentCopyIcon,
+    CheckCircle as EnableIcon,
+    Cancel as DisableIcon,
 } from '@mui/icons-material';
 import { darken, lighten } from '@mui/material/styles';
 import { useSocket } from '../common/socket.jsx';
@@ -177,6 +179,30 @@ const ObservationsTable = () => {
     const handleToggleEnabled = (id, currentEnabled) => {
         if (socket) {
             dispatch(toggleObservationEnabled({ socket, id, enabled: !currentEnabled }));
+        }
+    };
+
+    const handleBulkEnable = () => {
+        if (selectedIds.length > 0 && socket) {
+            selectedIds.forEach(id => {
+                const observation = observations.find(obs => obs.id === id);
+                // Only enable if not running
+                if (observation && observation.status !== 'running') {
+                    dispatch(toggleObservationEnabled({ socket, id, enabled: true }));
+                }
+            });
+        }
+    };
+
+    const handleBulkDisable = () => {
+        if (selectedIds.length > 0 && socket) {
+            selectedIds.forEach(id => {
+                const observation = observations.find(obs => obs.id === id);
+                // Only disable if not running
+                if (observation && observation.status !== 'running') {
+                    dispatch(toggleObservationEnabled({ socket, id, enabled: false }));
+                }
+            });
         }
     };
 
@@ -470,6 +496,34 @@ const ObservationsTable = () => {
                     disabled={selectedIds.length !== 1}
                 >
                     Duplicate
+                </Button>
+                <Button
+                    variant="contained"
+                    color="success"
+                    startIcon={<EnableIcon />}
+                    onClick={handleBulkEnable}
+                    disabled={
+                        selectedIds.length === 0 ||
+                        selectedIds.every(id =>
+                            observations.find(obs => obs.id === id && obs.status === 'running')
+                        )
+                    }
+                >
+                    Enable
+                </Button>
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<DisableIcon />}
+                    onClick={handleBulkDisable}
+                    disabled={
+                        selectedIds.length === 0 ||
+                        selectedIds.every(id =>
+                            observations.find(obs => obs.id === id && obs.status === 'running')
+                        )
+                    }
+                >
+                    Disable
                 </Button>
                 <Button
                     variant="contained"

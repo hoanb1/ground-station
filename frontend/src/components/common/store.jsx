@@ -242,7 +242,7 @@ const transcriptionPersistConfig = {
 const schedulerPersistConfig = {
     key: 'scheduler',
     storage,
-    whitelist: ['columnVisibility']  // Persist UI preferences, not observations
+    whitelist: ['columnVisibility', 'timeline']  // Persist UI preferences, not observations
 };
 
 

@@ -44,6 +44,8 @@ import {
     Edit as EditIcon,
     Add as AddIcon,
     Refresh as RefreshIcon,
+    CheckCircle as EnableIcon,
+    Cancel as DisableIcon,
 } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
 import {
@@ -97,6 +99,22 @@ const MonitoredSatellitesTable = () => {
     const handleToggleEnabled = (id, currentEnabled) => {
         if (socket) {
             dispatch(toggleMonitoredSatelliteEnabledAsync({ socket, id, enabled: !currentEnabled }));
+        }
+    };
+
+    const handleBulkEnable = () => {
+        if (selectedIds.length > 0 && socket) {
+            selectedIds.forEach(id => {
+                dispatch(toggleMonitoredSatelliteEnabledAsync({ socket, id, enabled: true }));
+            });
+        }
+    };
+
+    const handleBulkDisable = () => {
+        if (selectedIds.length > 0 && socket) {
+            selectedIds.forEach(id => {
+                dispatch(toggleMonitoredSatelliteEnabledAsync({ socket, id, enabled: false }));
+            });
         }
     };
 
@@ -343,6 +361,24 @@ const MonitoredSatellitesTable = () => {
                     disabled={selectedIds.length !== 1}
                 >
                     Edit
+                </Button>
+                <Button
+                    variant="contained"
+                    color="success"
+                    startIcon={<EnableIcon />}
+                    onClick={handleBulkEnable}
+                    disabled={selectedIds.length === 0}
+                >
+                    Enable
+                </Button>
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<DisableIcon />}
+                    onClick={handleBulkDisable}
+                    disabled={selectedIds.length === 0}
+                >
+                    Disable
                 </Button>
                 <Button
                     variant="contained"

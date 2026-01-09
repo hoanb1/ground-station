@@ -644,48 +644,50 @@ const DecodedPacketsDrawer = () => {
             </Box>
 
             {/* Drawer content */}
-            <Box
-                sx={{
-                    height: packetsDrawerOpen ? `${packetsDrawerHeight}px` : '0px',
-                    overflow: 'hidden',
-                    backgroundColor: theme.palette.background.paper,
-                }}
-            >
-                <DataGrid
-                        rows={rows}
-                        columns={columns}
-                        density="compact"
-                        disableRowSelectionOnClick
-                        hideFooter
-                        initialState={{
-                            sorting: {
-                                sortModel: [{ field: 'timestamp', sort: 'desc' }],
-                            },
-                        }}
-                        localeText={{
-                            noRowsLabel: 'No decoded packets yet',
-                        }}
-                        sx={{
-                            height: '100%',
-                            border: 0,
-                            backgroundColor: theme.palette.background.paper,
-                            [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                                outline: 'none',
-                            },
-                            [`& .${gridClasses.columnHeader}`]: {
-                                backgroundColor: theme.palette.background.default,
-                                '&:focus, &:focus-within': {
+            {packetsDrawerOpen && (
+                <Box
+                    sx={{
+                        height: `${packetsDrawerHeight}px`,
+                        overflow: 'hidden',
+                        backgroundColor: theme.palette.background.paper,
+                    }}
+                >
+                    <DataGrid
+                            rows={rows}
+                            columns={columns}
+                            density="compact"
+                            disableRowSelectionOnClick
+                            hideFooter
+                            initialState={{
+                                sorting: {
+                                    sortModel: [{ field: 'timestamp', sort: 'desc' }],
+                                },
+                            }}
+                            localeText={{
+                                noRowsLabel: 'No decoded packets yet',
+                            }}
+                            sx={{
+                                height: '100%',
+                                border: 0,
+                                backgroundColor: theme.palette.background.paper,
+                                [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                                     outline: 'none',
                                 },
-                            },
-                            '& .MuiDataGrid-overlay': {
-                                fontSize: '0.875rem',
-                                fontStyle: 'italic',
-                                color: 'text.secondary',
-                            },
-                        }}
-                    />
-            </Box>
+                                [`& .${gridClasses.columnHeader}`]: {
+                                    backgroundColor: theme.palette.background.default,
+                                    '&:focus, &:focus-within': {
+                                        outline: 'none',
+                                    },
+                                },
+                                '& .MuiDataGrid-overlay': {
+                                    fontSize: '0.875rem',
+                                    fontStyle: 'italic',
+                                    color: 'text.secondary',
+                                },
+                            }}
+                        />
+                </Box>
+            )}
 
             {/* Telemetry Viewer Dialog */}
             <TelemetryViewerDialog

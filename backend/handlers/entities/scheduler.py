@@ -232,9 +232,9 @@ async def toggle_observation_enabled(
         return {"success": False, "error": "ID and enabled status required"}
 
     async with AsyncSessionLocal() as dbsession:
-        # Use edit_scheduled_observation to update the enabled field
-        result = await crud_observations.edit_scheduled_observation(
-            dbsession, {"id": observation_id, "enabled": enabled}
+        # Directly update only the enabled field
+        result = await crud_observations.toggle_scheduled_observation_enabled(
+            dbsession, observation_id, enabled
         )
 
         # Sync to APScheduler if successful
@@ -459,9 +459,9 @@ async def toggle_monitored_satellite_enabled(
         return {"success": False, "error": "ID and enabled status required"}
 
     async with AsyncSessionLocal() as dbsession:
-        # Use edit_monitored_satellite to update the enabled field
-        result = await crud_satellites.edit_monitored_satellite(
-            dbsession, {"id": satellite_id, "enabled": enabled}
+        # Directly update only the enabled field
+        result = await crud_satellites.toggle_monitored_satellite_enabled(
+            dbsession, satellite_id, enabled
         )
         if result["success"]:
             return {"success": True, "data": {"id": satellite_id, "enabled": enabled}}
