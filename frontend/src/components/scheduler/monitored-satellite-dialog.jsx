@@ -1176,18 +1176,32 @@ export default function MonitoredSatelliteDialog() {
                                                                                         : 'N/A';
                                                                                     return (
                                                                                         <MenuItem key={transmitter.id} value={transmitter.id}>
-                                                                                            <Box>
-                                                                                                <Typography variant="body2">
-                                                                                                    {transmitter.description || 'Unknown'} - {freqMHz} MHz
-                                                                                                </Typography>
-                                                                                                <Typography variant="caption" color="text.secondary">
-                                                                                                    {[
-                                                                                                        transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                        transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                        transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
-                                                                                                        transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
-                                                                                                </Typography>
+                                                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                                                                <Box
+                                                                                                    sx={{
+                                                                                                        width: 8,
+                                                                                                        height: 8,
+                                                                                                        borderRadius: '50%',
+                                                                                                        backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
+                                                                                                        boxShadow: transmitter.alive
+                                                                                                            ? '0 0 6px rgba(76, 175, 80, 0.6)'
+                                                                                                            : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                                                                                        flexShrink: 0,
+                                                                                                    }}
+                                                                                                />
+                                                                                                <Box sx={{ flexGrow: 1 }}>
+                                                                                                    <Typography variant="body2">
+                                                                                                        {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                                    </Typography>
+                                                                                                    <Typography variant="caption" color="text.secondary">
+                                                                                                        {[
+                                                                                                            transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                                            transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                                            transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
+                                                                                                            transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                                        ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                    </Typography>
+                                                                                                </Box>
                                                                                             </Box>
                                                                                         </MenuItem>
                                                                                     );
@@ -1261,17 +1275,31 @@ export default function MonitoredSatelliteDialog() {
                                                                                     : 'N/A';
                                                                                 return (
                                                                                     <MenuItem key={transmitter.id} value={transmitter.id}>
-                                                                                        <Box>
-                                                                                            <Typography variant="body2">
-                                                                                                {transmitter.description || 'Unknown'} - {freqMHz} MHz
-                                                                                            </Typography>
-                                                                                            <Typography variant="caption" color="text.secondary">
-                                                                                                {[
-                                                                                                    transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                    transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                    transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                ].filter(Boolean).join(' • ') || 'No additional details'}
-                                                                                            </Typography>
+                                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                                                            <Box
+                                                                                                sx={{
+                                                                                                    width: 8,
+                                                                                                    height: 8,
+                                                                                                    borderRadius: '50%',
+                                                                                                    backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
+                                                                                                    boxShadow: transmitter.alive
+                                                                                                        ? '0 0 6px rgba(76, 175, 80, 0.6)'
+                                                                                                        : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                                                                                    flexShrink: 0,
+                                                                                                }}
+                                                                                            />
+                                                                                            <Box sx={{ flexGrow: 1 }}>
+                                                                                                <Typography variant="body2">
+                                                                                                    {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                                </Typography>
+                                                                                                <Typography variant="caption" color="text.secondary">
+                                                                                                    {[
+                                                                                                        transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                                        transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                                        transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                </Typography>
+                                                                                            </Box>
                                                                                         </Box>
                                                                                     </MenuItem>
                                                                                 );
@@ -1337,17 +1365,31 @@ export default function MonitoredSatelliteDialog() {
                                                                                     : 'N/A';
                                                                                 return (
                                                                                     <MenuItem key={transmitter.id} value={transmitter.id}>
-                                                                                        <Box>
-                                                                                            <Typography variant="body2">
-                                                                                                {transmitter.description || 'Unknown'} - {freqMHz} MHz
-                                                                                            </Typography>
-                                                                                            <Typography variant="caption" color="text.secondary">
-                                                                                                {[
-                                                                                                    transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                    transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                    transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                ].filter(Boolean).join(' • ') || 'No additional details'}
-                                                                                            </Typography>
+                                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                                                            <Box
+                                                                                                sx={{
+                                                                                                    width: 8,
+                                                                                                    height: 8,
+                                                                                                    borderRadius: '50%',
+                                                                                                    backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
+                                                                                                    boxShadow: transmitter.alive
+                                                                                                        ? '0 0 6px rgba(76, 175, 80, 0.6)'
+                                                                                                        : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                                                                                    flexShrink: 0,
+                                                                                                }}
+                                                                                            />
+                                                                                            <Box sx={{ flexGrow: 1 }}>
+                                                                                                <Typography variant="body2">
+                                                                                                    {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                                </Typography>
+                                                                                                <Typography variant="caption" color="text.secondary">
+                                                                                                    {[
+                                                                                                        transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                                        transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                                        transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                </Typography>
+                                                                                            </Box>
                                                                                         </Box>
                                                                                     </MenuItem>
                                                                                 );
@@ -1413,17 +1455,31 @@ export default function MonitoredSatelliteDialog() {
                                                                                     : 'N/A';
                                                                                 return (
                                                                                     <MenuItem key={transmitter.id} value={transmitter.id}>
-                                                                                        <Box>
-                                                                                            <Typography variant="body2">
-                                                                                                {transmitter.description || 'Unknown'} - {freqMHz} MHz
-                                                                                            </Typography>
-                                                                                            <Typography variant="caption" color="text.secondary">
-                                                                                                {[
-                                                                                                    transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                    transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                    transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                ].filter(Boolean).join(' • ') || 'No additional details'}
-                                                                                            </Typography>
+                                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                                                            <Box
+                                                                                                sx={{
+                                                                                                    width: 8,
+                                                                                                    height: 8,
+                                                                                                    borderRadius: '50%',
+                                                                                                    backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
+                                                                                                    boxShadow: transmitter.alive
+                                                                                                        ? '0 0 6px rgba(76, 175, 80, 0.6)'
+                                                                                                        : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                                                                                    flexShrink: 0,
+                                                                                                }}
+                                                                                            />
+                                                                                            <Box sx={{ flexGrow: 1 }}>
+                                                                                                <Typography variant="body2">
+                                                                                                    {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                                </Typography>
+                                                                                                <Typography variant="caption" color="text.secondary">
+                                                                                                    {[
+                                                                                                        transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                                        transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                                        transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                </Typography>
+                                                                                            </Box>
                                                                                         </Box>
                                                                                     </MenuItem>
                                                                                 );
