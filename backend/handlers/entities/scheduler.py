@@ -155,13 +155,42 @@ async def delete_scheduled_observations(
         logger.error("Invalid data - list of IDs required")
         return {"success": False, "error": "List of IDs required"}
 
+    # First, check if any observations are running and cancel them
+    from observations.events import observation_sync
+
+    if observation_sync:
+        async with AsyncSessionLocal() as dbsession:
+            # Fetch observations to check their status
+            fetch_result = await crud_observations.fetch_scheduled_observations(dbsession)
+            if fetch_result["success"]:
+                observations = fetch_result.get("data", [])
+                running_observations = [
+                    obs
+                    for obs in observations
+                    if obs["id"] in data and obs.get("status") == "running"
+                ]
+
+                # Cancel running observations first
+                if running_observations:
+                    logger.info(
+                        f"Cancelling {len(running_observations)} running observation(s) before deletion"
+                    )
+                    for obs in running_observations:
+                        obs_id = obs["id"]
+                        if observation_sync.executor:
+                            cancel_result = await observation_sync.executor.cancel_observation(
+                                obs_id
+                            )
+                            if not cancel_result.get("success", False):
+                                logger.warning(
+                                    f"Failed to cancel observation {obs_id}: {cancel_result.get('error', 'Unknown error')}"
+                                )
+
     async with AsyncSessionLocal() as dbsession:
         result = await crud_observations.delete_scheduled_observations(dbsession, data)
 
         # Remove from APScheduler if successful
         if result["success"]:
-            from observations.events import observation_sync
-
             if observation_sync:
                 for observation_id in data:
                     await observation_sync.remove_observation(observation_id)
