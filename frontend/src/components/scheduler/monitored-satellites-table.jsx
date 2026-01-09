@@ -344,19 +344,20 @@ const MonitoredSatellitesTable = () => {
             <Stack direction="row" spacing={2} sx={{ marginTop: '15px', flexShrink: 0, flexWrap: 'wrap' }}>
                 <Button
                     variant="contained"
-                    startIcon={<AddIcon />}
                     onClick={handleAdd}
                     sx={{
                         minWidth: 'auto',
-                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
-                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                        px: { xs: 1, md: 2 }
                     }}
                 >
-                    <Box className="button-label">Add</Box>
+                    <AddIcon sx={{ display: { xs: 'block', md: 'none' } }} />
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                        <AddIcon sx={{ mr: 1 }} />
+                        Add
+                    </Box>
                 </Button>
                 <Button
                     variant="contained"
-                    startIcon={<EditIcon />}
                     onClick={() => {
                         if (selectedIds.length === 1) {
                             const monitoredSatellite = monitoredSatellites.find(ms => ms.id === selectedIds[0]);
@@ -366,67 +367,78 @@ const MonitoredSatellitesTable = () => {
                     disabled={selectedIds.length !== 1}
                     sx={{
                         minWidth: 'auto',
-                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
-                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                        px: { xs: 1, md: 2 }
                     }}
                 >
-                    <Box className="button-label">Edit</Box>
+                    <EditIcon sx={{ display: { xs: 'block', md: 'none' } }} />
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                        <EditIcon sx={{ mr: 1 }} />
+                        Edit
+                    </Box>
                 </Button>
                 <Button
                     variant="contained"
                     color="success"
-                    startIcon={<EnableIcon />}
                     onClick={handleBulkEnable}
                     disabled={selectedIds.length === 0}
                     sx={{
                         minWidth: 'auto',
-                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
-                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                        px: { xs: 1, md: 2 }
                     }}
                 >
-                    <Box className="button-label">Enable</Box>
+                    <EnableIcon sx={{ display: { xs: 'block', md: 'none' } }} />
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                        <EnableIcon sx={{ mr: 1 }} />
+                        Enable
+                    </Box>
                 </Button>
                 <Button
                     variant="contained"
                     color="secondary"
-                    startIcon={<DisableIcon />}
                     onClick={handleBulkDisable}
                     disabled={selectedIds.length === 0}
                     sx={{
                         minWidth: 'auto',
-                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
-                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                        px: { xs: 1, md: 2 }
                     }}
                 >
-                    <Box className="button-label">Disable</Box>
+                    <DisableIcon sx={{ display: { xs: 'block', md: 'none' } }} />
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                        <DisableIcon sx={{ mr: 1 }} />
+                        Disable
+                    </Box>
                 </Button>
                 <Button
                     variant="contained"
                     color="warning"
-                    startIcon={<RefreshIcon />}
                     onClick={handleRegenerateClick}
                     disabled={selectedIds.length === 0 || isLoadingPreview}
                     sx={{
                         minWidth: 'auto',
-                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
-                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                        px: { xs: 1, md: 2 }
                     }}
                 >
-                    <Box className="button-label">{isLoadingPreview ? 'Loading Preview...' : 'Re-Generate'}</Box>
+                    <RefreshIcon sx={{ display: { xs: 'block', md: 'none' } }} />
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                        <RefreshIcon sx={{ mr: 1 }} />
+                        {isLoadingPreview ? 'Loading Preview...' : 'Re-Generate'}
+                    </Box>
                 </Button>
                 <Button
                     variant="contained"
                     color="error"
-                    startIcon={<DeleteIcon />}
                     onClick={() => setOpenDeleteConfirm(true)}
                     disabled={selectedIds.length === 0}
                     sx={{
                         minWidth: 'auto',
-                        '& .MuiButton-startIcon': { mr: { xs: 0, md: 1 } },
-                        '& .button-label': { display: { xs: 'none', md: 'inline' } }
+                        px: { xs: 1, md: 2 }
                     }}
                 >
-                    <Box className="button-label">Delete</Box>
+                    <DeleteIcon sx={{ display: { xs: 'block', md: 'none' } }} />
+                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                        <DeleteIcon sx={{ mr: 1 }} />
+                        Delete
+                    </Box>
                 </Button>
             </Stack>
 
