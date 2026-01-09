@@ -198,7 +198,7 @@ loggers:
     propagate: no
 
   fm-demodulator:
-    level: WARN
+    level: INFO
     handlers:
       - default
     propagate: no

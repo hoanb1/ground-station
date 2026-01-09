@@ -556,6 +556,8 @@ class ObservationExecutor:
                     vfo_frequency = task_config.get("frequency", sdr_config["center_freq"])
                     demodulator_type = task_config.get("demodulator_type", "FM")
                     bandwidth = task_config.get("bandwidth", 40000)
+                    # Get transmitter ID for doppler correction (if available)
+                    audio_transmitter_id = task_config.get("transmitter_id", "none")
 
                     try:
                         # 1. Configure VFO for audio recording
@@ -566,7 +568,7 @@ class ObservationExecutor:
                             bandwidth=bandwidth,
                             modulation=demodulator_type,
                             decoder="none",  # No decoder, just demodulator
-                            locked_transmitter_id="none",
+                            locked_transmitter_id=audio_transmitter_id,
                         )
 
                         logger.info(

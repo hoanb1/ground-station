@@ -60,9 +60,10 @@ export default function ObservationStatusBanner() {
     const isSatelliteVisible = useMemo(() => {
         if (isRunning || !observation?.pass) return false;
         const now = new Date();
-        const eventStart = new Date(observation.pass.event_start);
-        // Satellite is visible if event_start (AOS) has passed but task hasn't started yet
-        return now >= eventStart;
+        const eventStart = new Date(observation.pass.event_start); // AOS time
+        const taskStart = new Date(observation.task_start || observation.pass.event_start); // Task start time
+        // Satellite is visible if AOS has passed but task hasn't started yet
+        return now >= eventStart && now < taskStart;
     }, [isRunning, observation]);
 
     // Live countdown for scheduled observations
