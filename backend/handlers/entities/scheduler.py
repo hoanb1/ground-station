@@ -22,6 +22,7 @@ import crud.scheduledobservations as crud_observations
 from db import AsyncSessionLocal
 from observations.events import emit_scheduled_observations_changed
 from observations.generator import generate_observations_for_monitored_satellites
+from observations.validation import validate_transmitter_frequencies
 
 # ============================================================================
 # SCHEDULED OBSERVATIONS
@@ -72,6 +73,12 @@ async def create_scheduled_observation(
         logger.error("No ID provided in observation data")
         return {"success": False, "error": "Observation ID is required"}
 
+    # Validate transmitter frequencies against SDR configuration
+    validation_result = validate_transmitter_frequencies(data)
+    if not validation_result["success"]:
+        logger.error(f"Frequency validation failed: {validation_result['error']}")
+        return {"success": False, "error": validation_result["error"]}
+
     async with AsyncSessionLocal() as dbsession:
         result = await crud_observations.add_scheduled_observation(dbsession, data)
 
@@ -115,6 +122,12 @@ async def update_scheduled_observation(
     if not observation_id:
         logger.error("No ID provided in observation data")
         return {"success": False, "error": "Observation ID is required"}
+
+    # Validate transmitter frequencies against SDR configuration
+    validation_result = validate_transmitter_frequencies(data)
+    if not validation_result["success"]:
+        logger.error(f"Frequency validation failed: {validation_result['error']}")
+        return {"success": False, "error": validation_result["error"]}
 
     async with AsyncSessionLocal() as dbsession:
         result = await crud_observations.edit_scheduled_observation(dbsession, data)
@@ -340,6 +353,12 @@ async def create_monitored_satellite(
         logger.error("No ID provided in monitored satellite data")
         return {"success": False, "error": "Satellite ID is required"}
 
+    # Validate transmitter frequencies against SDR configuration
+    validation_result = validate_transmitter_frequencies(data)
+    if not validation_result["success"]:
+        logger.error(f"Frequency validation failed: {validation_result['error']}")
+        return {"success": False, "error": validation_result["error"]}
+
     async with AsyncSessionLocal() as dbsession:
         result = await crud_satellites.add_monitored_satellite(dbsession, data)
         return {
@@ -372,6 +391,12 @@ async def update_monitored_satellite(
     if not satellite_id:
         logger.error("No ID provided in monitored satellite data")
         return {"success": False, "error": "Satellite ID is required"}
+
+    # Validate transmitter frequencies against SDR configuration
+    validation_result = validate_transmitter_frequencies(data)
+    if not validation_result["success"]:
+        logger.error(f"Frequency validation failed: {validation_result['error']}")
+        return {"success": False, "error": validation_result["error"]}
 
     async with AsyncSessionLocal() as dbsession:
         result = await crud_satellites.edit_monitored_satellite(dbsession, data)
