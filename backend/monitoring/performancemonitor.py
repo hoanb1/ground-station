@@ -291,22 +291,25 @@ class PerformanceMonitor(threading.Thread):
                         audio_broadcaster_metrics["broadcaster_id"] = broadcaster_id
                         broadcasters[broadcaster_id] = audio_broadcaster_metrics
 
-        # Poll Audio Broadcasters from demodulators (per-VFO broadcasters for VFOs without decoders)
+        # Poll Audio Broadcasters from demodulators (per-VFO broadcasters)
         demodulators = process_info.get("demodulators", {})
         for session_id, session_demods in demodulators.items():
             for vfo_num, demod_entry in session_demods.items():
                 audio_broadcaster = demod_entry.get("audio_broadcaster")
                 if audio_broadcaster:
-                    # Skip if this VFO has a decoder (decoder creates its own audio broadcaster)
-                    has_decoder = False
+                    # Check if this VFO has a decoder with its own audio broadcaster
+                    # If so, skip the demodulator's broadcaster (decoder's will be tracked instead)
+                    decoder_has_own_broadcaster = False
                     if session_id in decoders:
                         for decoder_entry in decoders[session_id].values():
                             if decoder_entry.get("vfo_number") == vfo_num:
-                                has_decoder = True
-                                break
+                                # Only skip if decoder has its own audio broadcaster
+                                if decoder_entry.get("audio_broadcaster") is not None:
+                                    decoder_has_own_broadcaster = True
+                                    break
 
-                    if not has_decoder:
-                        # This is a standalone demodulator (no decoder) - track its audio broadcaster
+                    if not decoder_has_own_broadcaster:
+                        # Track this demodulator's audio broadcaster
                         broadcaster_key = f"audio_{session_id}_vfo{vfo_num}"
                         audio_broadcaster_metrics = self._poll_demodulator_audio_broadcaster(
                             sdr_id, session_id, vfo_num, audio_broadcaster, process_info, time_delta
