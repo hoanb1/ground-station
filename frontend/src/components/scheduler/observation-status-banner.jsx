@@ -161,6 +161,7 @@ export default function ObservationStatusBanner() {
     const taskCount = observation.tasks?.length || 0;
     const decoderTasks = observation.tasks?.filter((t) => t.type === 'decoder').length || 0;
     const recordingTasks = observation.tasks?.filter((t) => t.type === 'iq_recording' || t.type === 'audio_recording').length || 0;
+    const transcriptionTasks = observation.tasks?.filter((t) => t.type === 'transcription').length || 0;
 
     return (
         <Paper
@@ -253,8 +254,10 @@ export default function ObservationStatusBanner() {
                 {taskCount > 0 && (
                     <Typography variant="body2" color="text.secondary">
                         {decoderTasks > 0 && `${decoderTasks} decoder${decoderTasks > 1 ? 's' : ''}`}
-                        {decoderTasks > 0 && recordingTasks > 0 && ', '}
+                        {decoderTasks > 0 && (recordingTasks > 0 || transcriptionTasks > 0) && ', '}
                         {recordingTasks > 0 && `${recordingTasks} recording${recordingTasks > 1 ? 's' : ''}`}
+                        {recordingTasks > 0 && transcriptionTasks > 0 && ', '}
+                        {transcriptionTasks > 0 && `${transcriptionTasks} transcription${transcriptionTasks > 1 ? 's' : ''}`}
                     </Typography>
                 )}
 
