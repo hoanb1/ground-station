@@ -15,10 +15,11 @@ import {
     Button,
     ButtonGroup,
     Menu,
+    ListSubheader,
 } from "@mui/material";
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
-import { humanizeFrequency } from "../common/common.jsx";
+import { humanizeFrequency, getFrequencyBand } from "../common/common.jsx";
 import FrequencyDisplay from "./frequency-dial.jsx";
 import { useTranslation } from 'react-i18next';
 
@@ -61,6 +62,31 @@ const FrequencyControlAccordion = ({
 
     // Check if we're playing back a SigMF recording
     const isPlayingback = selectedSDRId === 'sigmf-playback' && isStreaming;
+
+    // Group transmitters by band
+    const groupedTransmitters = React.useMemo(() => {
+        const groups = {};
+        availableTransmitters.forEach(tx => {
+            const band = getFrequencyBand(tx.downlink_low);
+            if (!groups[band]) {
+                groups[band] = [];
+            }
+            groups[band].push(tx);
+        });
+
+        // Sort bands by frequency (using first transmitter in each band)
+        const bandOrder = ['VHF', 'UHF', 'L-band', 'S-band', 'C-band', 'X-band', 'Ku-band', 'K-band', 'Ka-band'];
+        const sortedBands = Object.keys(groups).sort((a, b) => {
+            const aIndex = bandOrder.indexOf(a);
+            const bIndex = bandOrder.indexOf(b);
+            if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+            if (aIndex !== -1) return -1;
+            if (bIndex !== -1) return 1;
+            return a.localeCompare(b);
+        });
+
+        return sortedBands.map(band => ({ band, transmitters: groups[band] }));
+    }, [availableTransmitters]);
 
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
@@ -181,33 +207,38 @@ const FrequencyControlAccordion = ({
                                 </Box>
                             </Box>
                         </MenuItem>
-                        {availableTransmitters.map((transmitter) => (
-                            <MenuItem
-                                key={transmitter.id}
-                                onClick={() => handleMenuItemClick(transmitter.id)}
-                                sx={{ fontSize: '0.875rem' }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Box
-                                        sx={{
-                                            width: 8,
-                                            height: 8,
-                                            borderRadius: '50%',
-                                            backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
-                                            boxShadow: transmitter.alive
-                                                ? '0 0 6px rgba(76, 175, 80, 0.6)'
-                                                : '0 0 6px rgba(244, 67, 54, 0.6)',
-                                        }}
-                                    />
-                                    <Box>
-                                        <Box sx={{ fontWeight: 600 }}>{transmitter.description}</Box>
-                                        <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                            {humanizeFrequency(transmitter.downlink_low)}
+                        {groupedTransmitters.map(({ band, transmitters: groupTx }) => [
+                            <ListSubheader key={`header-${band}`} sx={{ fontSize: '0.75rem', fontWeight: 'bold', lineHeight: '32px' }}>
+                                {band}
+                            </ListSubheader>,
+                            ...groupTx.map((transmitter) => (
+                                <MenuItem
+                                    key={transmitter.id}
+                                    onClick={() => handleMenuItemClick(transmitter.id)}
+                                    sx={{ fontSize: '0.875rem', pl: 3 }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box
+                                            sx={{
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: '50%',
+                                                backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
+                                                boxShadow: transmitter.alive
+                                                    ? '0 0 6px rgba(76, 175, 80, 0.6)'
+                                                    : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                            }}
+                                        />
+                                        <Box>
+                                            <Box sx={{ fontWeight: 600 }}>{transmitter.description}</Box>
+                                            <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                                                {humanizeFrequency(transmitter.downlink_low)}
+                                            </Box>
                                         </Box>
                                     </Box>
-                                </Box>
-                            </MenuItem>
-                        ))}
+                                </MenuItem>
+                            ))
+                        ])}
                     </Menu>
                 </Box>
 

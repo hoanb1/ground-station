@@ -4,7 +4,7 @@
  * Components for locking VFO to doppler-corrected transmitters
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Box,
     FormControl,
@@ -18,12 +18,14 @@ import {
     DialogContent,
     DialogContentText,
     DialogActions,
-    Button
+    Button,
+    ListSubheader
 } from '@mui/material';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useTranslation } from 'react-i18next';
+import { getFrequencyBand } from '../../common/common.jsx';
 
 /**
  * Transmitter Lock Select Component
@@ -115,6 +117,31 @@ export const TransmitterLockSelect = ({
 
     const isLocked = lockedTransmitterId && lockedTransmitterId !== 'none';
 
+    // Group transmitters by band
+    const groupedTransmitters = useMemo(() => {
+        const groups = {};
+        transmitters.forEach(tx => {
+            const band = getFrequencyBand(tx.downlink_observed_freq);
+            if (!groups[band]) {
+                groups[band] = [];
+            }
+            groups[band].push(tx);
+        });
+
+        // Sort bands by frequency (using first transmitter in each band)
+        const bandOrder = ['VHF', 'UHF', 'L-band', 'S-band', 'C-band', 'X-band', 'Ku-band', 'K-band', 'Ka-band'];
+        const sortedBands = Object.keys(groups).sort((a, b) => {
+            const aIndex = bandOrder.indexOf(a);
+            const bIndex = bandOrder.indexOf(b);
+            if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+            if (aIndex !== -1) return -1;
+            if (bIndex !== -1) return 1;
+            return a.localeCompare(b);
+        });
+
+        return sortedBands.map(band => ({ band, transmitters: groups[band] }));
+    }, [transmitters]);
+
     return (
         <>
             <Box sx={{ mt: 2 }}>
@@ -140,30 +167,35 @@ export const TransmitterLockSelect = ({
                                 {t('vfo.none', 'None')}
                             </Box>
                         </MenuItem>
-                        {transmitters.map((tx) => (
-                            <MenuItem key={tx.id} value={tx.id} sx={{ fontSize: '0.875rem' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                                    <Box
-                                        sx={{
-                                            width: 8,
-                                            height: 8,
-                                            borderRadius: '50%',
-                                            backgroundColor: tx.alive ? 'success.main' : 'error.main',
-                                            boxShadow: (theme) => tx.alive
-                                                ? `0 0 6px ${theme.palette.success.main}99`
-                                                : `0 0 6px ${theme.palette.error.main}99`,
-                                            flexShrink: 0,
-                                        }}
-                                    />
-                                    <Box sx={{ flex: 1 }}>
-                                        <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
-                                        <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                            {(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
+                        {groupedTransmitters.map(({ band, transmitters: groupTx }) => [
+                            <ListSubheader key={`header-${band}`} sx={{ fontSize: '0.75rem', fontWeight: 'bold', lineHeight: '32px' }}>
+                                {band}
+                            </ListSubheader>,
+                            ...groupTx.map((tx) => (
+                                <MenuItem key={tx.id} value={tx.id} sx={{ fontSize: '0.875rem', pl: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                        <Box
+                                            sx={{
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: '50%',
+                                                backgroundColor: tx.alive ? 'success.main' : 'error.main',
+                                                boxShadow: (theme) => tx.alive
+                                                    ? `0 0 6px ${theme.palette.success.main}99`
+                                                    : `0 0 6px ${theme.palette.error.main}99`,
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                        <Box sx={{ flex: 1 }}>
+                                            <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
+                                            <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                                                {(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
+                                            </Box>
                                         </Box>
                                     </Box>
-                                </Box>
-                            </MenuItem>
-                        ))}
+                                </MenuItem>
+                            ))
+                        ])}
                     </Select>
                 </FormControl>
             </Box>
