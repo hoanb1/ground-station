@@ -293,16 +293,14 @@ export default function FileTableView({
                                                     </TableCell>
                                                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                                                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                                                            {(isRecording || item.type === 'decoded' || item.type === 'audio' || item.type === 'transcription') && (
-                                                                <Tooltip title={t('actions.view_details', 'View Details')}>
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={() => onShowDetails(item)}
-                                                                    >
-                                                                        <InfoIcon fontSize="small" />
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                            )}
+                                                            <Tooltip title={t('actions.view_details', 'View Details')}>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => onShowDetails(item)}
+                                                                >
+                                                                    <InfoIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
                                                             <Tooltip title={t('actions.download', 'Download')}>
                                                                 <IconButton
                                                                     size="small"

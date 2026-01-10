@@ -1512,16 +1512,14 @@ export default function FilebrowserMain() {
                                         </Typography>
                                     </CardContent>
                                     <CardActions sx={{ pt: 0 }} onClick={(e) => e.stopPropagation()}>
-                                        {(isRecording || item.type === 'audio' || item.type === 'transcription') && (
-                                            <Tooltip title={t('actions.view_details', 'View Details')}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleShowDetails(item)}
-                                                >
-                                                    <InfoIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        )}
+                                        <Tooltip title={t('actions.view_details', 'View Details')}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleShowDetails(item)}
+                                            >
+                                                <InfoIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
                                         <Tooltip title={t('actions.download', 'Download')}>
                                             <IconButton
                                                 size="small"
