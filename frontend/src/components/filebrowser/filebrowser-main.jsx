@@ -1528,17 +1528,14 @@ export default function FilebrowserMain() {
                                                 <DownloadIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
-                                        <Tooltip title={(item.recording_in_progress || item.audioRecordingInProgress) ? t('actions.cannot_delete_active', 'Cannot delete active recording') : t('actions.delete', 'Delete')}>
-                                            <span>
-                                                <IconButton
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() => handleDelete(item)}
-                                                    disabled={item.recording_in_progress || item.audioRecordingInProgress}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </span>
+                                        <Tooltip title={t('actions.delete', 'Delete')}>
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => handleDelete(item)}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
                                         </Tooltip>
                                     </CardActions>
                                 </Card>
