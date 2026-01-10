@@ -200,7 +200,7 @@ const versionInfoConfig = {
 const fileBrowserPersistConfig = {
     key: 'filebrowser',
     storage,
-    whitelist: ['sortBy', 'sortOrder', 'viewMode', 'pageSize', 'filters', 'expandedDays']
+    whitelist: ['sortBy', 'sortOrder', 'viewMode', 'pageSize', 'filters']
 };
 
 // Persist configuration for decoders slice

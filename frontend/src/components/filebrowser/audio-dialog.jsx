@@ -313,7 +313,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
 
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        const clickProgress = x / canvas.width;
+        const clickProgress = x / rect.width; // Use rect.width (displayed width) instead of canvas.width
         const newTime = clickProgress * duration;
 
         audioElement.currentTime = newTime;

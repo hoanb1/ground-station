@@ -18,16 +18,12 @@
  */
 
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import {
     Box,
     Typography,
     IconButton,
     Tooltip,
     Chip,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
     Checkbox,
     Table,
     TableBody,
@@ -37,7 +33,6 @@ import {
     TableRow,
     Paper,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
 import InfoIcon from '@mui/icons-material/Info';
@@ -47,7 +42,6 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 import SubjectIcon from '@mui/icons-material/Subject';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
-import { toggleDayExpanded } from './filebrowser-slice.jsx';
 import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
@@ -78,14 +72,7 @@ export default function FileTableView({
     onDelete,
     timezone,
 }) {
-    const dispatch = useDispatch();
     const { t } = useTranslation('filebrowser');
-    const expandedDays = useSelector((state) => state.filebrowser.expandedDays);
-
-    const formatDate = (isoDate) => {
-        const date = new Date(isoDate);
-        return date.toLocaleString('en-US', { timeZone: timezone });
-    };
 
     const formatTime = (isoDate) => {
         const date = new Date(isoDate);
@@ -109,36 +96,24 @@ export default function FileTableView({
     return (
         <Box>
             {filesByDay.map((dayGroup) => {
-                const isExpanded = expandedDays[dayGroup.dateKey] !== false; // Default to expanded
-
                 return (
-                    <Accordion
-                        key={dayGroup.dateKey}
-                        expanded={isExpanded}
-                        onChange={() => dispatch(toggleDayExpanded(dayGroup.dateKey))}
-                        sx={{ mb: 1 }}
-                    >
-                        <AccordionSummary
-                            expandIcon={<ExpandMoreIcon />}
-                            sx={{
-                                backgroundColor: 'action.hover',
-                                '&:hover': {
-                                    backgroundColor: 'action.selected',
-                                }
-                            }}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                    {dayGroup.dateKey}
-                                </Typography>
-                                <Chip
-                                    label={`${dayGroup.files.length} file${dayGroup.files.length !== 1 ? 's' : ''}`}
-                                    size="small"
-                                    sx={{ ml: 2 }}
-                                />
-                            </Box>
-                        </AccordionSummary>
-                        <AccordionDetails sx={{ p: 0 }}>
+                    <Box key={dayGroup.dateKey} sx={{ mb: 3 }}>
+                        <Box sx={{
+                            p: 2,
+                            backgroundColor: 'action.hover',
+                            borderRadius: '4px 4px 0 0',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                {dayGroup.dateKey}
+                            </Typography>
+                            <Chip
+                                label={`${dayGroup.files.length} file${dayGroup.files.length !== 1 ? 's' : ''}`}
+                                size="small"
+                                sx={{ ml: 2 }}
+                            />
+                        </Box>
                             <TableContainer component={Paper} elevation={0}>
                                 <Table size="small">
                                     <TableHead>
@@ -318,7 +293,7 @@ export default function FileTableView({
                                                     </TableCell>
                                                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                                                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                                                            {(isRecording || item.type === 'audio' || item.type === 'transcription') && (
+                                                            {(isRecording || item.type === 'decoded' || item.type === 'audio' || item.type === 'transcription') && (
                                                                 <Tooltip title={t('actions.view_details', 'View Details')}>
                                                                     <IconButton
                                                                         size="small"
@@ -356,8 +331,7 @@ export default function FileTableView({
                                     </TableBody>
                                 </Table>
                             </TableContainer>
-                        </AccordionDetails>
-                    </Accordion>
+                    </Box>
                 );
             })}
         </Box>

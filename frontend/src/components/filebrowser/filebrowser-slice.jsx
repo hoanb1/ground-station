@@ -169,8 +169,6 @@ const initialState = {
     hasNewFiles: false, // Flag indicating if new files were added since last visit
     // View mode
     viewMode: 'card', // 'card' or 'table'
-    // Expanded days for table view
-    expandedDays: {}, // Object with date strings as keys and boolean values
 };
 
 const fileBrowserSlice = createSlice({
@@ -238,16 +236,6 @@ const fileBrowserSlice = createSlice({
         // View mode actions
         setViewMode: (state, action) => {
             state.viewMode = action.payload;
-        },
-        toggleDayExpanded: (state, action) => {
-            const dayKey = action.payload;
-            state.expandedDays[dayKey] = !state.expandedDays[dayKey];
-        },
-        setAllDaysExpanded: (state, action) => {
-            const { days, expanded } = action.payload;
-            days.forEach(day => {
-                state.expandedDays[day] = expanded;
-            });
         },
     },
     extraReducers: (builder) => {
@@ -362,8 +350,6 @@ export const {
     markFileBrowserVisited,
     setHasNewFiles,
     setViewMode,
-    toggleDayExpanded,
-    setAllDaysExpanded,
 } = fileBrowserSlice.actions;
 
 export default fileBrowserSlice.reducer;

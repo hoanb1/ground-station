@@ -92,8 +92,6 @@ import {
     toggleSelectionMode,
     markFileBrowserVisited,
     setViewMode,
-    toggleDayExpanded,
-    setAllDaysExpanded,
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
@@ -220,7 +218,6 @@ export default function FilebrowserMain() {
         selectedItems,
         selectionMode,
         viewMode,
-        expandedDays,
     } = useSelector((state) => state.filebrowser);
 
     const pageSize = 10; // Hardcoded - not persisted in Redux
