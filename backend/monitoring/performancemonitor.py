@@ -132,6 +132,7 @@ class PerformanceMonitor(threading.Thread):
                 "fft_processor": self._poll_fft_processor(sdr_id, process_info, time_delta),
                 "demodulators": self._poll_demodulators(sdr_id, process_info, time_delta),
                 "recorders": self._poll_recorders(sdr_id, process_info, time_delta),
+                "audio_recorders": self._poll_audio_recorders(sdr_id, process_info, time_delta),
                 "decoders": self._poll_decoders(sdr_id, process_info, time_delta),
                 "transcription_consumers": self._poll_transcription_consumers(
                     sdr_id, process_info, time_delta
@@ -839,6 +840,100 @@ class PerformanceMonitor(threading.Thread):
             }
 
         return recorder_metrics
+
+    def _poll_audio_recorders(self, sdr_id, process_info, time_delta):
+        """
+        Extract audio recorder metrics.
+
+        Args:
+            sdr_id: SDR device identifier
+            process_info: Process information dictionary
+            time_delta: Time since last poll
+
+        Returns:
+            dict: Audio recorder metrics
+        """
+        audio_recorders_by_session = process_info.get("audio_recorders", {})
+        audio_recorder_metrics = {}
+
+        for session_id, session_recorders in audio_recorders_by_session.items():
+            for vfo_number, recorder_entry in session_recorders.items():
+                recorder_instance = recorder_entry.get("instance")
+                if not recorder_instance:
+                    continue
+
+                key = f"{session_id}_vfo{vfo_number}"
+
+                # Get stats snapshot (thread-safe)
+                if not hasattr(recorder_instance, "stats_lock"):
+                    continue
+
+                with recorder_instance.stats_lock:
+                    stats_snapshot = recorder_instance.stats.copy()
+
+                # Get queue size
+                input_queue_size = recorder_instance.audio_queue.qsize()
+                input_queue_maxsize = getattr(recorder_instance.audio_queue, "_maxsize", None)
+
+                # Calculate rates
+                prev_key = f"audio_recorder_{sdr_id}_{key}"
+                prev_snapshot = self.previous_snapshots.get(prev_key, {})
+
+                audio_chunks_in_rate = self._calculate_rate(
+                    stats_snapshot.get("audio_chunks_in", 0),
+                    prev_snapshot.get("audio_chunks_in", 0),
+                    time_delta,
+                )
+
+                audio_samples_in_rate = self._calculate_rate(
+                    stats_snapshot.get("audio_samples_in", 0),
+                    prev_snapshot.get("audio_samples_in", 0),
+                    time_delta,
+                )
+
+                samples_written_rate = self._calculate_rate(
+                    stats_snapshot.get("samples_written", 0),
+                    prev_snapshot.get("samples_written", 0),
+                    time_delta,
+                )
+
+                bytes_written_rate = self._calculate_rate(
+                    stats_snapshot.get("bytes_written", 0),
+                    prev_snapshot.get("bytes_written", 0),
+                    time_delta,
+                )
+
+                # Store current snapshot
+                self.previous_snapshots[prev_key] = stats_snapshot.copy()
+
+                # Add connection info: audio recorder receives from audio broadcaster
+                connections = [
+                    {
+                        "source_type": "audio_broadcaster",
+                        "source_id": f"audio_{session_id}_vfo{vfo_number}",
+                    }
+                ]
+
+                audio_recorder_metrics[key] = {
+                    "type": type(recorder_instance).__name__,
+                    "session_id": session_id,
+                    "vfo_number": vfo_number,
+                    "recorder_id": key,
+                    "recording_path": recorder_entry.get("recording_path", ""),
+                    "input_queue_size": input_queue_size,
+                    "input_queue_maxsize": input_queue_maxsize,
+                    "is_alive": recorder_instance.is_alive(),
+                    "stats": stats_snapshot,
+                    "rates": {
+                        "audio_chunks_in_per_sec": audio_chunks_in_rate,
+                        "audio_samples_in_per_sec": audio_samples_in_rate,
+                        "samples_written_per_sec": samples_written_rate,
+                        "bytes_written_per_sec": bytes_written_rate,
+                    },
+                    "connections": connections,
+                }
+
+        return audio_recorder_metrics
 
     def _poll_decoders(self, sdr_id, process_info, time_delta):
         """

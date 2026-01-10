@@ -327,10 +327,10 @@ export const ComponentNode = ({ data }) => {
                                     height: 8,
                                     borderRadius: '50%',
                                     backgroundColor: component.is_alive
-                                        ? (type === 'recorder' ? '#ef5350' : '#66bb6a')
+                                        ? ((type === 'recorder' || type === 'audio_recorder') ? '#ef5350' : '#66bb6a')
                                         : 'rgba(158, 158, 158, 0.5)',
                                     boxShadow: component.is_alive
-                                        ? `0 0 6px ${type === 'recorder' ? 'rgba(239, 83, 80, 0.4)' : 'rgba(102, 187, 106, 0.4)'}`
+                                        ? `0 0 6px ${(type === 'recorder' || type === 'audio_recorder') ? 'rgba(239, 83, 80, 0.4)' : 'rgba(102, 187, 106, 0.4)'}`
                                         : 'none',
                                     transition: 'all 0.3s ease',
                                 }}
@@ -644,7 +644,7 @@ export const ComponentNode = ({ data }) => {
                         </>
                     )}
 
-                    {/* Recorder metrics */}
+                    {/* Recorder metrics (IQ Recorder) */}
                     {type === 'recorder' && (
                         <>
                             {/* Left column - Input */}
@@ -684,6 +684,56 @@ export const ComponentNode = ({ data }) => {
                                         label="Rate"
                                         value={formatRate(component.rates?.samples_written_per_sec)}
                                         unit="/s"
+                                    />
+                                </Stack>
+                            </Box>
+                        </>
+                    )}
+
+                    {/* Audio Recorder metrics */}
+                    {type === 'audio_recorder' && (
+                        <>
+                            {/* Left column - Input */}
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Input
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Queue"
+                                        value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
+                                    />
+                                    <MetricRow
+                                        label="Audio"
+                                        value={formatNumber(component.stats?.audio_chunks_in)}
+                                    />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.audio_chunks_in_per_sec)}
+                                        unit="/s"
+                                    />
+                                </Stack>
+                            </Box>
+                            {/* Vertical divider */}
+                            <Divider orientation="vertical" flexItem sx={{ opacity: 0.4 }} />
+                            {/* Right column - Output */}
+                            <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Output
+                                </Typography>
+                                <Stack spacing={0.25}>
+                                    <MetricRow
+                                        label="Written"
+                                        value={formatNumber(component.stats?.samples_written)}
+                                    />
+                                    <MetricRow
+                                        label="Rate"
+                                        value={formatRate(component.rates?.samples_written_per_sec)}
+                                        unit="/s"
+                                    />
+                                    <MetricRow
+                                        label="Bytes"
+                                        value={formatNumber(component.stats?.bytes_written)}
                                     />
                                 </Stack>
                             </Box>
@@ -1003,7 +1053,7 @@ export const ComponentNode = ({ data }) => {
             </Paper>
 
             {/* Output handles */}
-            {type !== 'recorder' && type !== 'browser' && outputPositions.map((pos, idx) => (
+            {type !== 'recorder' && type !== 'audio_recorder' && type !== 'browser' && outputPositions.map((pos, idx) => (
                 <Handle
                     key={`output-${idx}`}
                     id={`output-${idx}`}

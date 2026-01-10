@@ -81,9 +81,11 @@ const hasPositiveOutputRate = (component, componentType = null) => {
            (rates.messages_received_per_sec > 0) ||
            (rates.iq_chunks_per_sec > 0) ||
            (rates.audio_chunks_out_per_sec > 0) ||
+           (rates.audio_chunks_in_per_sec > 0) ||
            (rates.fft_results_per_sec > 0) ||
            (rates.messages_emitted_per_sec > 0) ||
            (rates.data_messages_out_per_sec > 0) ||
+           (rates.samples_written_per_sec > 0) ||
            (rates.updates_per_sec > 0);
 };
 
@@ -161,8 +163,8 @@ export const applyDagreLayout = (nodes, edges) => {
         if (type === 'demodulator' || type === 'decoder' || (type === 'broadcaster' && node.data.component?.broadcaster_type === 'audio')) {
             return 2;
         }
-        // Rank 3: WebAudioStreamer and Transcription Consumer
-        if (type === 'streamer' || type === 'transcription') {
+        // Rank 3: Audio Recorders, WebAudioStreamer and Transcription Consumer
+        if (type === 'audio_recorder' || type === 'streamer' || type === 'transcription') {
             return 3;
         }
         // Rank 4: Browsers (rightmost)
@@ -547,6 +549,53 @@ export const createFlowFromMetrics = (metrics) => {
                     }
 
                     demodY += VERTICAL_SPACING;
+                });
+            }
+
+            // Audio Recorders (below audio broadcasters, consume audio from per-VFO broadcasters)
+            if (sdrData.audio_recorders) {
+                Object.entries(sdrData.audio_recorders).forEach(([audioRecKey, audioRecorder]) => {
+                    const nodeId = `node-${nodeIdCounter++}`;
+                    nodeMap.set(`${sdrId}-audio-recorder-${audioRecKey}`, nodeId);
+
+                    nodes.push({
+                        id: nodeId,
+                        type: 'componentNode',
+                        position: { x: columnX, y: audioBroadcasterY },
+                        data: {
+                            label: `${audioRecorder.type} - ${truncateSessionVfoKey(audioRecKey)}`,
+                            component: audioRecorder,
+                            type: 'audio_recorder',
+                        },
+                    });
+
+                    // Edge: Audio Broadcaster -> Audio Recorder
+                    // Find the corresponding audio broadcaster for this session/VFO
+                    const audioRecorderConnection = audioRecorder.connections?.[0];
+                    if (audioRecorderConnection && audioRecorderConnection.source_type === 'audio_broadcaster') {
+                        const audioBroadcasterKey = `${sdrId}-audio-broadcaster-${audioRecorderConnection.source_id}`;
+                        const audioBroadcasterId = nodeMap.get(audioBroadcasterKey);
+
+                        if (audioBroadcasterId) {
+                            const audioBroadcaster = sdrData.broadcasters[audioRecorderConnection.source_id];
+                            const isAnimated = hasPositiveOutputRate(audioBroadcaster);
+                            const queueUtilization = audioRecorder.input_queue_size / Math.max(audioRecorder.input_queue_maxsize || 10, 1);
+
+                            edges.push({
+                                id: `edge-${audioBroadcasterId}-${nodeId}`,
+                                source: audioBroadcasterId,
+                                target: nodeId,
+                                sourceHandle: getNextOutputHandle(audioBroadcasterId),
+                                targetHandle: getNextInputHandle(nodeId),
+                                animated: isAnimated,
+                                style: { stroke: getEdgeColor('audio', queueUtilization, isAnimated), strokeWidth: 2 },
+                                label: audioRecorder.input_queue_size ? `${audioRecorder.input_queue_size}` : undefined,
+                                type: 'smoothstep',
+                            });
+                        }
+                    }
+
+                    audioBroadcasterY += VERTICAL_SPACING;
                 });
             }
 
