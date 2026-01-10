@@ -315,6 +315,7 @@ export const {
     clearSelection,
     toggleSelectionMode,
     markFileBrowserVisited,
+    setHasNewFiles,
 } = fileBrowserSlice.actions;
 
 export default fileBrowserSlice.reducer;
