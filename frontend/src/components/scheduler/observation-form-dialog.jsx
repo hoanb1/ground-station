@@ -372,6 +372,9 @@ const ObservationFormDialog = () => {
                     config: {
                         transmitter_id: '',
                         modulation: 'fm',
+                        provider: 'gemini',
+                        language: 'auto',
+                        translate_to: 'none',
                     },
                 };
                 break;
@@ -448,8 +451,11 @@ const ObservationFormDialog = () => {
             const transmitterName = transmitter?.description || 'No transmitter';
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
             const modType = MODULATION_TYPES.find(d => d.value === task.config.modulation)?.label || task.config.modulation?.toUpperCase();
+            const provider = (task.config.provider || 'gemini').charAt(0).toUpperCase() + (task.config.provider || 'gemini').slice(1);
+            const sourceLang = task.config.language || 'auto';
+            const targetLang = task.config.translate_to && task.config.translate_to !== 'none' ? `→${task.config.translate_to}` : '';
 
-            const parts = [transmitterName, freqMHz, modType, 'Transcription'].filter(Boolean);
+            const parts = [transmitterName, freqMHz, modType, provider, sourceLang + targetLang, 'Transcription'].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'iq_recording') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
@@ -1436,6 +1442,92 @@ const ObservationFormDialog = () => {
                                                                     {type.label}
                                                                 </MenuItem>
                                                             ))}
+                                                        </Select>
+                                                    </FormControl>
+
+                                                    <FormControl fullWidth size="small">
+                                                        <InputLabel>Provider</InputLabel>
+                                                        <Select
+                                                            value={task.config.provider || 'gemini'}
+                                                            onChange={(e) =>
+                                                                handleTaskConfigChange(
+                                                                    index,
+                                                                    'provider',
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            label="Provider"
+                                                        >
+                                                            <MenuItem value="gemini">Gemini</MenuItem>
+                                                            <MenuItem value="deepgram">Deepgram</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+
+                                                    <FormControl fullWidth size="small">
+                                                        <InputLabel>Source Language</InputLabel>
+                                                        <Select
+                                                            value={task.config.language || 'auto'}
+                                                            onChange={(e) =>
+                                                                handleTaskConfigChange(
+                                                                    index,
+                                                                    'language',
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            label="Source Language"
+                                                        >
+                                                            <MenuItem value="auto">🌐 Auto-detect</MenuItem>
+                                                            <MenuItem value="en">🇬🇧 English</MenuItem>
+                                                            <MenuItem value="el">🇬🇷 Greek</MenuItem>
+                                                            <MenuItem value="es">🇪🇸 Spanish</MenuItem>
+                                                            <MenuItem value="fr">🇫🇷 French</MenuItem>
+                                                            <MenuItem value="de">🇩🇪 German</MenuItem>
+                                                            <MenuItem value="it">🇮🇹 Italian</MenuItem>
+                                                            <MenuItem value="pt">🇵🇹 Portuguese</MenuItem>
+                                                            <MenuItem value="pt-BR">🇧🇷 Portuguese (Brazil)</MenuItem>
+                                                            <MenuItem value="ru">🇷🇺 Russian</MenuItem>
+                                                            <MenuItem value="uk">🇺🇦 Ukrainian</MenuItem>
+                                                            <MenuItem value="ja">🇯🇵 Japanese</MenuItem>
+                                                            <MenuItem value="zh">🇨🇳 Chinese</MenuItem>
+                                                            <MenuItem value="ar">🇸🇦 Arabic</MenuItem>
+                                                            <MenuItem value="tl">🇵🇭 Filipino</MenuItem>
+                                                            <MenuItem value="tr">🇹🇷 Turkish</MenuItem>
+                                                            <MenuItem value="sk">🇸🇰 Slovak</MenuItem>
+                                                            <MenuItem value="hr">🇭🇷 Croatian</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+
+                                                    <FormControl fullWidth size="small">
+                                                        <InputLabel>Translate To</InputLabel>
+                                                        <Select
+                                                            value={task.config.translate_to || 'none'}
+                                                            onChange={(e) =>
+                                                                handleTaskConfigChange(
+                                                                    index,
+                                                                    'translate_to',
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            label="Translate To"
+                                                        >
+                                                            <MenuItem value="none">⭕ No Translation</MenuItem>
+                                                            <MenuItem value="en">🇬🇧 English</MenuItem>
+                                                            <MenuItem value="el">🇬🇷 Greek</MenuItem>
+                                                            <MenuItem value="es">🇪🇸 Spanish</MenuItem>
+                                                            <MenuItem value="fr">🇫🇷 French</MenuItem>
+                                                            <MenuItem value="de">🇩🇪 German</MenuItem>
+                                                            <MenuItem value="it">🇮🇹 Italian</MenuItem>
+                                                            <MenuItem value="pt">🇵🇹 Portuguese</MenuItem>
+                                                            <MenuItem value="pt-BR">🇧🇷 Portuguese (Brazil)</MenuItem>
+                                                            <MenuItem value="ru">🇷🇺 Russian</MenuItem>
+                                                            <MenuItem value="uk">🇺🇦 Ukrainian</MenuItem>
+                                                            <MenuItem value="ja">🇯🇵 Japanese</MenuItem>
+                                                            <MenuItem value="zh">🇨🇳 Chinese</MenuItem>
+                                                            <MenuItem value="ar">🇸🇦 Arabic</MenuItem>
+                                                            <MenuItem value="tl">🇵🇭 Filipino</MenuItem>
+                                                            <MenuItem value="tr">🇹🇷 Turkish</MenuItem>
+                                                            <MenuItem value="sk">🇸🇰 Slovak</MenuItem>
+                                                            <MenuItem value="hr">🇭🇷 Croatian</MenuItem>
                                                         </Select>
                                                     </FormControl>
 

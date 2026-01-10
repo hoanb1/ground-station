@@ -65,6 +65,7 @@ import SelectAllIcon from '@mui/icons-material/SelectAll';
 import DeselectIcon from '@mui/icons-material/Deselect';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AudiotrackIcon from '@mui/icons-material/Audiotrack';
+import SubjectIcon from '@mui/icons-material/Subject';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
@@ -73,6 +74,7 @@ import {
     deleteSnapshot,
     deleteDecoded,
     deleteAudio,
+    deleteTranscription,
     deleteBatch,
     setSortBy,
     toggleSortOrder,
@@ -89,6 +91,7 @@ import { useTranslation } from 'react-i18next';
 import RecordingDialog from './recording-dialog.jsx';
 import TelemetryViewerDialog from './telemetry-viewer-dialog.jsx';
 import AudioDialog from './audio-dialog.jsx';
+import TranscriptionDialog from './transcription-dialog.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -124,6 +127,23 @@ function formatDuration(startTime, endTime) {
     const seconds = totalSeconds % 60;
 
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function getLanguageFlag(langCode) {
+    // Map language codes to country flag emojis
+    const flagMap = {
+        'en': '🇬🇧', 'en-US': '🇺🇸', 'en-GB': '🇬🇧',
+        'es': '🇪🇸', 'fr': '🇫🇷', 'de': '🇩🇪', 'it': '🇮🇹',
+        'pt': '🇵🇹', 'pt-BR': '🇧🇷', 'pt-PT': '🇵🇹',
+        'ru': '🇷🇺', 'zh': '🇨🇳', 'ja': '🇯🇵', 'ko': '🇰🇷',
+        'ar': '🇸🇦', 'hi': '🇮🇳', 'nl': '🇳🇱', 'pl': '🇵🇱',
+        'sv': '🇸🇪', 'no': '🇳🇴', 'da': '🇩🇰', 'fi': '🇫🇮',
+        'tr': '🇹🇷', 'el': '🇬🇷', 'he': '🇮🇱', 'th': '🇹🇭',
+        'vi': '🇻🇳', 'id': '🇮🇩', 'ms': '🇲🇾', 'uk': '🇺🇦',
+        'cs': '🇨🇿', 'sk': '🇸🇰', 'ro': '🇷🇴', 'hu': '🇭🇺',
+        'bg': '🇧🇬', 'hr': '🇭🇷', 'sr': '🇷🇸', 'sl': '🇸🇮',
+    };
+    return flagMap[langCode] || '🌐';
 }
 
 export default function FilebrowserMain() {
@@ -204,6 +224,8 @@ export default function FilebrowserMain() {
     const [audioDialogOpen, setAudioDialogOpen] = useState(false);
     const [audioFile, setAudioFile] = useState(null);
     const [audioMetadata, setAudioMetadata] = useState(null);
+    const [transcriptionDialogOpen, setTranscriptionDialogOpen] = useState(false);
+    const [transcriptionFile, setTranscriptionFile] = useState(null);
 
     // Mark file browser as visited when component mounts
     useEffect(() => {
@@ -219,9 +241,10 @@ export default function FilebrowserMain() {
                 showSnapshots: filters.showSnapshots,
                 showDecoded: filters.showDecoded,
                 showAudio: filters.showAudio,
+                showTranscriptions: filters.showTranscriptions,
             }));
         }
-    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded, filters.showAudio]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded, filters.showAudio, filters.showTranscriptions]);
 
     // Listen for file browser state updates to trigger refetch (global handler in useSocketEventHandlers.jsx updates Redux)
     useEffect(() => {
@@ -249,6 +272,7 @@ export default function FilebrowserMain() {
                         showSnapshots: filters.showSnapshots,
                         showDecoded: filters.showDecoded,
                         showAudio: filters.showAudio,
+                        showTranscriptions: filters.showTranscriptions,
                     }));
 
                     // Show toast for batch delete
@@ -286,6 +310,7 @@ export default function FilebrowserMain() {
                 showSnapshots: filters.showSnapshots,
                 showDecoded: filters.showDecoded,
                 showAudio: filters.showAudio,
+                showTranscriptions: filters.showTranscriptions,
             }));
         };
 
@@ -372,6 +397,7 @@ export default function FilebrowserMain() {
                 showSnapshots: filters.showSnapshots,
                 showDecoded: filters.showDecoded,
                 showAudio: filters.showAudio,
+                showTranscriptions: filters.showTranscriptions,
             }));
         }
     };
@@ -386,6 +412,8 @@ export default function FilebrowserMain() {
             await handleViewTelemetry(item);
         } else if (item.type === 'audio') {
             await handleViewAudio(item);
+        } else if (item.type === 'transcription') {
+            await handleViewTranscription(item);
         } else {
             setSelectedItem(item);
             setDetailsOpen(true);
@@ -411,6 +439,9 @@ export default function FilebrowserMain() {
                     // Success toast will be shown by socket event listener
                 } else if (itemToDelete.type === 'audio') {
                     await dispatch(deleteAudio({ socket, filename: itemToDelete.filename })).unwrap();
+                    // Success toast will be shown by socket event listener
+                } else if (itemToDelete.type === 'transcription') {
+                    await dispatch(deleteTranscription({ socket, filename: itemToDelete.filename })).unwrap();
                     // Success toast will be shown by socket event listener
                 }
 
@@ -477,6 +508,14 @@ export default function FilebrowserMain() {
         setAudioFile(item);
         setAudioMetadata(item.metadata);
         setAudioDialogOpen(true);
+    };
+
+    const handleViewTranscription = async (item) => {
+        if (item.type !== 'transcription') return;
+
+        // Open the transcription dialog with the item data
+        setTranscriptionFile(item);
+        setTranscriptionDialogOpen(true);
     };
 
     const handleToggleSelection = (item) => {
@@ -583,6 +622,7 @@ export default function FilebrowserMain() {
                                     showSnapshots: t('filters.snapshots', 'Snapshots'),
                                     showDecoded: t('filters.decoded', 'Decoded'),
                                     showAudio: t('filters.audio', 'Audio'),
+                                    showTranscriptions: t('filters.transcriptions', 'Transcriptions'),
                                 };
                                 return selected.map(s => labels[s]).join(', ');
                             }}
@@ -603,6 +643,10 @@ export default function FilebrowserMain() {
                             <MenuItem value="showAudio" onClick={() => dispatch(toggleFilter('showAudio'))}>
                                 <Checkbox checked={filters.showAudio} />
                                 <ListItemText primary={t('filters.audio', 'Audio')} />
+                            </MenuItem>
+                            <MenuItem value="showTranscriptions" onClick={() => dispatch(toggleFilter('showTranscriptions'))}>
+                                <Checkbox checked={filters.showTranscriptions} />
+                                <ListItemText primary={t('filters.transcriptions', 'Transcriptions')} />
                             </MenuItem>
                         </Select>
                     </FormControl>
@@ -756,7 +800,7 @@ export default function FilebrowserMain() {
                         {t('no_files.title', 'No files found')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {!filters.showRecordings && !filters.showSnapshots && !filters.showDecoded && !filters.showAudio
+                        {!filters.showRecordings && !filters.showSnapshots && !filters.showDecoded && !filters.showAudio && !filters.showTranscriptions
                             ? t('no_files.message_filter', 'Enable at least one filter to see files')
                             : t('no_files.message_empty', 'Take snapshots or record IQ data from the waterfall view')}
                     </Typography>
@@ -867,6 +911,8 @@ export default function FilebrowserMain() {
                                                         <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
                                                     ) : item.type === 'audio' ? (
                                                         <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />
+                                                    ) : item.type === 'transcription' ? (
+                                                        <SubjectIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
                                                     ) : (
                                                         <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                                                     )}
@@ -1058,6 +1104,14 @@ export default function FilebrowserMain() {
                                                                 mb: 1,
                                                             }}
                                                         />
+                                                    ) : item.type === 'transcription' ? (
+                                                        <SubjectIcon
+                                                            sx={{
+                                                                fontSize: 80,
+                                                                color: 'secondary.main',
+                                                                mb: 1,
+                                                            }}
+                                                        />
                                                     ) : (
                                                         <CameraAltIcon
                                                             sx={{
@@ -1072,6 +1126,8 @@ export default function FilebrowserMain() {
                                                             ? (item.decoder_type ? `${item.decoder_type} file` : 'Decoded file')
                                                             : item.type === 'audio'
                                                             ? (item.demodulator_type ? `${item.demodulator_type} audio` : 'Audio recording')
+                                                            : item.type === 'transcription'
+                                                            ? (item.provider ? `${item.provider} transcription` : 'Transcription')
                                                             : 'No snapshot available'}
                                                     </Typography>
                                                 </>
@@ -1108,6 +1164,8 @@ export default function FilebrowserMain() {
                                                         <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
                                                     ) : item.type === 'audio' ? (
                                                         <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />
+                                                    ) : item.type === 'transcription' ? (
+                                                        <SubjectIcon sx={{ color: 'secondary.main', fontSize: 20 }} />
                                                     ) : (
                                                         <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                                                     )}
@@ -1225,6 +1283,12 @@ export default function FilebrowserMain() {
                                                 {item.demodulator_type ? `${item.demodulator_type} audio recording` : 'Audio recording'}
                                                 {item.vfo_number && ` - VFO ${item.vfo_number}`}
                                             </Typography>
+                                        ) : item.type === 'transcription' ? (
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                                {item.provider ? `${item.provider} transcription` : 'Transcription'}
+                                                {item.vfo_number && ` - VFO ${item.vfo_number}`}
+                                                {item.language && ` - ${item.language}`}
+                                            </Typography>
                                         ) : (
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                                 {t('snapshot.description', 'Ground Station Waterfall Snapshot')}
@@ -1319,13 +1383,47 @@ export default function FilebrowserMain() {
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
+                                            {item.type === 'transcription' && item.provider && (
+                                                <Chip
+                                                    label={item.provider}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="secondary"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                />
+                                            )}
+                                            {item.type === 'transcription' && item.vfo_number && (
+                                                <Chip
+                                                    label={`VFO ${item.vfo_number}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                />
+                                            )}
+                                            {item.type === 'transcription' && item.language && (
+                                                <Chip
+                                                    label={`${getLanguageFlag(item.language)} ${item.language.toUpperCase()}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                />
+                                            )}
+                                            {item.type === 'transcription' && item.translate_to && (
+                                                <Chip
+                                                    label={`${getLanguageFlag(item.translate_to)} ${item.translate_to.toUpperCase()}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="info"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                />
+                                            )}
                                         </Box>
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
                                             {formatDate(item.modified)}
                                         </Typography>
                                     </CardContent>
                                     <CardActions sx={{ pt: 0 }} onClick={(e) => e.stopPropagation()}>
-                                        {(isRecording || item.type === 'audio') && (
+                                        {(isRecording || item.type === 'audio' || item.type === 'transcription') && (
                                             <Tooltip title={t('actions.view_details', 'View Details')}>
                                                 <IconButton
                                                     size="small"
@@ -1547,6 +1645,8 @@ export default function FilebrowserMain() {
                         ? t('delete_dialog.title_decoded', 'Delete Decoded File')
                         : itemToDelete?.type === 'audio'
                         ? t('delete_dialog.title_audio', 'Delete Audio Recording')
+                        : itemToDelete?.type === 'transcription'
+                        ? t('delete_dialog.title_transcription', 'Delete Transcription')
                         : t('delete_dialog.title_snapshot', 'Delete Snapshot')}
                 </DialogTitle>
                 <DialogContent>
@@ -1609,6 +1709,13 @@ export default function FilebrowserMain() {
                 onClose={() => setAudioDialogOpen(false)}
                 audio={audioFile}
                 metadata={audioMetadata}
+            />
+
+            {/* Transcription Dialog */}
+            <TranscriptionDialog
+                open={transcriptionDialogOpen}
+                onClose={() => setTranscriptionDialogOpen(false)}
+                transcription={transcriptionFile}
             />
         </Box>
     );

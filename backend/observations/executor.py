@@ -554,7 +554,10 @@ class ObservationExecutor:
                     # Get VFO number from task config
                     audio_vfo_number = task_config.get("vfo_number", 1)
                     vfo_frequency = task_config.get("frequency", sdr_config["center_freq"])
-                    demodulator_type = task_config.get("demodulator_type", "FM")
+                    # Map frontend 'demodulator' field to backend 'demodulator_type'
+                    demodulator_type = task_config.get(
+                        "demodulator", task_config.get("demodulator_type", "FM")
+                    )
                     bandwidth = task_config.get("bandwidth", 40000)
                     # Get transmitter ID for doppler correction (if available)
                     audio_transmitter_id = task_config.get("transmitter_id", "none")
@@ -661,11 +664,38 @@ class ObservationExecutor:
                     # This requires starting both a demodulator and transcription worker
                     transcription_vfo_number = task_config.get("vfo_number", 1)
                     vfo_frequency = task_config.get("frequency", sdr_config["center_freq"])
-                    demodulator_type = task_config.get("demodulator_type", "FM")
+                    # Map frontend 'modulation' field to backend 'demodulator_type'
+                    demodulator_type = task_config.get(
+                        "modulation", task_config.get("demodulator_type", "FM")
+                    )
                     bandwidth = task_config.get("bandwidth", 40000)
                     provider = task_config.get("provider", "gemini")
                     language = task_config.get("language", "auto")
                     translate_to = task_config.get("translate_to", "none")
+                    transcription_transmitter_id = task_config.get("transmitter_id", "none")
+
+                    # Fetch transmitter info to get frequency if transmitter is specified
+                    if transcription_transmitter_id and transcription_transmitter_id != "none":
+                        try:
+                            async with AsyncSessionLocal() as db_session:
+                                result = await db_session.execute(
+                                    select(Transmitters).where(
+                                        Transmitters.id == transcription_transmitter_id
+                                    )
+                                )
+                                transmitter_record = result.scalar_one_or_none()
+                                if transmitter_record:
+                                    vfo_frequency = task_config.get(
+                                        "frequency", transmitter_record.downlink_low
+                                    )
+                                    logger.info(
+                                        f"Loaded transmitter {transmitter_record.description} "
+                                        f"at {vfo_frequency/1e6:.3f} MHz for transcription"
+                                    )
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to fetch transmitter {transcription_transmitter_id}: {e}"
+                            )
 
                     try:
                         # 1. Configure VFO for transcription
@@ -676,7 +706,7 @@ class ObservationExecutor:
                             bandwidth=bandwidth,
                             modulation=demodulator_type,
                             decoder="none",  # No decoder, just demodulator
-                            locked_transmitter_id="none",
+                            locked_transmitter_id=transcription_transmitter_id,
                         )
 
                         logger.info(

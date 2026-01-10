@@ -107,6 +107,42 @@ def get_image_dimensions(image_path: str) -> Tuple[Any, ...]:
         return (None, None)
 
 
+def parse_transcription_metadata(transcription_file_path: str) -> Dict[str, Any]:
+    """
+    Parse metadata from a transcription file header.
+
+    Args:
+        transcription_file_path: Path to the transcription .txt file
+
+    Returns:
+        Dictionary containing parsed metadata or empty dict if parsing fails
+    """
+    try:
+        metadata: Dict[str, Any] = {}
+        with open(transcription_file_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line.startswith("#"):
+                    break  # End of header
+                if line.startswith("# Provider:"):
+                    metadata["provider"] = line.split(":", 1)[1].strip()
+                elif line.startswith("# Session:"):
+                    metadata["session_id"] = line.split(":", 1)[1].strip()
+                elif line.startswith("# VFO:"):
+                    metadata["vfo_number"] = int(line.split(":", 1)[1].strip())
+                elif line.startswith("# Language:"):
+                    metadata["language"] = line.split(":", 1)[1].strip()
+                elif line.startswith("# Translate To:"):
+                    metadata["translate_to"] = line.split(":", 1)[1].strip()
+                elif line.startswith("# Started:"):
+                    metadata["started"] = line.split(":", 1)[1].strip()
+                elif line.startswith("# Ended:"):
+                    metadata["ended"] = line.split(":", 1)[1].strip()
+        return metadata
+    except Exception as e:
+        return {"error": f"Failed to parse metadata: {str(e)}"}
+
+
 async def emit_file_browser_state(sio, state_data, logger):
     """
     Emit file browser state to all connected clients.
@@ -254,6 +290,30 @@ def delete_audio_file(audio_dir: Path, audio_filename: str, logger) -> bool:
     return True
 
 
+def delete_transcription_file(
+    transcriptions_dir: Path, transcription_filename: str, logger
+) -> bool:
+    """
+    Delete a transcription file.
+
+    Args:
+        transcriptions_dir: Path to transcriptions directory
+        transcription_filename: Name of the transcription file
+        logger: Logger instance
+
+    Returns:
+        True if file was deleted, False if file did not exist
+    """
+    transcription_file = transcriptions_dir / transcription_filename
+
+    if not transcription_file.exists():
+        return False
+
+    transcription_file.unlink()
+    logger.info(f"Deleted transcription file: {transcription_filename}")
+    return True
+
+
 def validate_filename(filename: str) -> bool:
     """
     Validate that a filename is safe (no directory traversal attempts).
@@ -289,6 +349,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
     snapshots_dir = backend_dir / "data" / "snapshots"
     decoded_dir = backend_dir / "data" / "decoded"
     audio_dir = backend_dir / "data" / "audio"
+    transcriptions_dir = backend_dir / "data" / "transcriptions"
 
     try:
         if cmd == "list-files":
@@ -297,9 +358,10 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             show_snapshots = data.get("showSnapshots", True) if data else True
             show_decoded = data.get("showDecoded", True) if data else True
             show_audio = data.get("showAudio", True) if data else True
+            show_transcriptions = data.get("showTranscriptions", True) if data else True
 
             logger.info(
-                f"Listing all files (recordings: {show_recordings}, snapshots: {show_snapshots}, decoded: {show_decoded}, audio: {show_audio})"
+                f"Listing all files (recordings: {show_recordings}, snapshots: {show_snapshots}, decoded: {show_decoded}, audio: {show_audio}, transcriptions: {show_transcriptions})"
             )
 
             processed_items = []
@@ -505,6 +567,51 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "duration_seconds": duration_seconds,
                             "sample_rate": sample_rate,
                             "status": status,
+                            "metadata": metadata,
+                        }
+                    )
+
+            # Gather and process transcription files if filter enabled
+            if show_transcriptions and transcriptions_dir.exists():
+                # Find all transcription text files
+                transcription_files = list(transcriptions_dir.glob("*.txt"))
+
+                for transcription_file in transcription_files:
+                    file_stat = transcription_file.stat()
+
+                    # Parse metadata from file header
+                    metadata = parse_transcription_metadata(str(transcription_file))
+
+                    # Extract key metadata
+                    provider = metadata.get("provider")
+                    session_id = metadata.get("session_id")
+                    vfo_number = metadata.get("vfo_number")
+                    language = metadata.get("language")
+                    translate_to = metadata.get("translate_to")
+                    started = metadata.get("started")
+                    ended = metadata.get("ended")
+
+                    processed_items.append(
+                        {
+                            "type": "transcription",
+                            "name": transcription_file.stem,
+                            "filename": transcription_file.name,
+                            "size": file_stat.st_size,
+                            "created": datetime.fromtimestamp(
+                                file_stat.st_ctime, timezone.utc
+                            ).isoformat(),
+                            "modified": datetime.fromtimestamp(
+                                file_stat.st_mtime, timezone.utc
+                            ).isoformat(),
+                            "url": f"/transcriptions/{transcription_file.name}",
+                            "file_type": ".txt",
+                            "provider": provider,
+                            "session_id": session_id,
+                            "vfo_number": vfo_number,
+                            "language": language,
+                            "translate_to": translate_to,
+                            "started": started,
+                            "ended": ended,
                             "metadata": metadata,
                         }
                     )
@@ -824,6 +931,42 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 logger,
             )
 
+        elif cmd == "delete-transcription":
+            logger.info(f"Deleting transcription file: {data}")
+            transcription_filename = data.get("filename")
+
+            if not transcription_filename:
+                await emit_file_browser_error(
+                    sio, "Transcription filename not provided", "delete-transcription", logger
+                )
+                return
+
+            # Validate filename (security check)
+            if not validate_filename(transcription_filename):
+                await emit_file_browser_error(
+                    sio, "Invalid transcription filename", "delete-transcription", logger
+                )
+                return
+
+            deleted = delete_transcription_file(transcriptions_dir, transcription_filename, logger)
+
+            if not deleted:
+                await emit_file_browser_error(
+                    sio, "Transcription file not found", "delete-transcription", logger
+                )
+                return
+
+            # Emit state update with delete action
+            await emit_file_browser_state(
+                sio,
+                {
+                    "action": "delete-transcription",
+                    "filename": transcription_filename,
+                    "message": f"Deleted transcription file: {transcription_filename}",
+                },
+                logger,
+            )
+
         elif cmd == "delete-batch":
             logger.info(f"Batch delete: {data}")
             items = data.get("items", [])
@@ -838,6 +981,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             deleted_snapshots = []
             deleted_decoded = []
             deleted_audio = []
+            deleted_transcriptions = []
             failed_items = []
             total_files_deleted = []
 
@@ -974,6 +1118,39 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                                 "error": "Not found",
                             }
                         )
+
+                elif item_type == "transcription":
+                    transcription_filename = item.get("filename")
+                    if not transcription_filename:
+                        failed_items.append({"type": "transcription", "error": "Missing filename"})
+                        continue
+
+                    # Validate filename
+                    if not validate_filename(transcription_filename):
+                        failed_items.append(
+                            {
+                                "type": "transcription",
+                                "filename": transcription_filename,
+                                "error": "Invalid filename",
+                            }
+                        )
+                        continue
+
+                    # Delete transcription file
+                    deleted = delete_transcription_file(
+                        transcriptions_dir, transcription_filename, logger
+                    )
+                    if deleted:
+                        deleted_transcriptions.append(transcription_filename)
+                        total_files_deleted.append(transcription_filename)
+                    else:
+                        failed_items.append(
+                            {
+                                "type": "transcription",
+                                "filename": transcription_filename,
+                                "error": "Not found",
+                            }
+                        )
                 else:
                     failed_items.append({"type": item_type, "error": "Unknown type"})
 
@@ -983,6 +1160,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 + len(deleted_snapshots)
                 + len(deleted_decoded)
                 + len(deleted_audio)
+                + len(deleted_transcriptions)
             )
             message_parts = []
             if deleted_recordings:
@@ -993,6 +1171,8 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 message_parts.append(f"{len(deleted_decoded)} decoded file(s)")
             if deleted_audio:
                 message_parts.append(f"{len(deleted_audio)} audio file(s)")
+            if deleted_transcriptions:
+                message_parts.append(f"{len(deleted_transcriptions)} transcription(s)")
 
             message = f"Deleted {', '.join(message_parts)}" if message_parts else "No items deleted"
 
@@ -1010,6 +1190,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "deleted_snapshots": deleted_snapshots,
                     "deleted_decoded": deleted_decoded,
                     "deleted_audio": deleted_audio,
+                    "deleted_transcriptions": deleted_transcriptions,
                     "deleted_files": total_files_deleted,
                     "failed_items": failed_items,
                     "success_count": success_count,

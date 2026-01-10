@@ -212,8 +212,9 @@ app.mount("/recordings", StaticFiles(directory=recordings_dir, html=True), name=
 app.mount("/snapshots", StaticFiles(directory=snapshots_dir, html=True), name="snapshots")
 app.mount("/decoded", StaticFiles(directory=decoded_dir, html=True), name="decoded")
 app.mount("/audio", StaticFiles(directory=audio_dir, html=True), name="audio")
+# Note: html=False for transcriptions to ensure .txt files are served with correct content-type
 app.mount(
-    "/transcriptions", StaticFiles(directory=transcriptions_dir, html=True), name="transcriptions"
+    "/transcriptions", StaticFiles(directory=transcriptions_dir, html=False), name="transcriptions"
 )
 
 
