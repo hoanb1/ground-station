@@ -16,7 +16,7 @@
 """Conflict detection helpers for observation generation."""
 
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Sequence
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -101,9 +101,9 @@ async def find_any_time_conflict(
     exclude_observation_id: Optional[str] = None,
     task_start: Optional[datetime] = None,
     task_end: Optional[datetime] = None,
-) -> Optional[ScheduledObservations]:
+) -> Sequence[ScheduledObservations]:
     """
-    Check if ANY observation exists that overlaps with this time window,
+    Check if ANY observations exist that overlap with this time window,
     regardless of satellite or monitored satellite.
 
     If task_start/task_end are provided, uses those times (actual execution window).
@@ -118,7 +118,7 @@ async def find_any_time_conflict(
         task_end: Optional actual task end time (when satellite drops below elevation threshold)
 
     Returns:
-        First conflicting observation found, or None
+        Sequence of all conflicting observations found, or empty sequence
     """
     tolerance = timedelta(minutes=PASS_OVERLAP_TOLERANCE_MINUTES)
 
@@ -145,7 +145,8 @@ async def find_any_time_conflict(
     if exclude_observation_id:
         conditions.append(ScheduledObservations.id != exclude_observation_id)
 
-    stmt = select(ScheduledObservations).filter(and_(*conditions)).limit(1)
+    stmt = select(ScheduledObservations).filter(and_(*conditions))
 
     result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    observations: Sequence[ScheduledObservations] = result.scalars().all()
+    return observations

@@ -192,6 +192,9 @@ async def generate_observations_for_monitored_satellites(
                 if dry_run:
                     conflicts.extend(result.get("conflicts", []))
                     no_conflicts.extend(result.get("no_conflicts", []))
+                else:
+                    # Flush changes so subsequent satellites can see these observations in conflict detection
+                    await session.flush()
 
             except Exception as e:
                 logger.error(
@@ -373,7 +376,7 @@ async def _generate_observations_for_satellite(
                     stats["generated"] += 1
                 else:
                     # Check for any time conflict using task times for accurate conflict detection
-                    conflicting_obs = await find_any_time_conflict(
+                    conflicting_obs_list = await find_any_time_conflict(
                         session,
                         event_start,
                         event_end,
@@ -381,75 +384,141 @@ async def _generate_observations_for_satellite(
                         task_end=task_end_time,
                     )
 
-                    if conflicting_obs:
-                        # Conflict detected
+                    if conflicting_obs_list:
+                        # Conflicts detected - need to check all of them
                         new_elevation = pass_data["peak_altitude"]
-                        existing_elevation = conflicting_obs.pass_config.get("peak_altitude", 0)
 
-                        # Determine strategy action
+                        # Determine action based on strategy
                         if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_SKIP:
-                            strategy_action = "skip"
+                            # Skip: Don't create this pass at all
+                            if not dry_run:
+                                logger.info(
+                                    f"CONFLICT: Skipping {satellite_data['name']} "
+                                    f"(elevation {new_elevation:.1f}°) - conflicts with {len(conflicting_obs_list)} observation(s)"
+                                )
+                            stats["skipped"] += 1
+
+                            if dry_run:
+                                for conflicting_obs in conflicting_obs_list:
+                                    existing_elevation = conflicting_obs.pass_config.get(
+                                        "peak_altitude", 0
+                                    )
+                                    conflict_info = {
+                                        "conflict_id": conflicting_obs.id,
+                                        "time_window": f"{event_start.strftime('%Y-%m-%d %H:%M')} - {event_end.strftime('%H:%M UTC')}",
+                                        "existing_obs": {
+                                            "id": conflicting_obs.id,
+                                            "satellite": conflicting_obs.satellite_config.get(
+                                                "name", "Unknown"
+                                            ),
+                                            "norad_id": conflicting_obs.norad_id,
+                                            "elevation": existing_elevation,
+                                            "start": conflicting_obs.event_start.isoformat(),
+                                            "end": conflicting_obs.event_end.isoformat(),
+                                        },
+                                        "new_pass": {
+                                            "satellite": satellite_data["name"],
+                                            "norad_id": norad_id,
+                                            "elevation": new_elevation,
+                                            "start": pass_data["event_start"],
+                                            "end": pass_data["event_end"],
+                                            "monitored_satellite_id": monitored_sat["id"],
+                                        },
+                                        "strategy_action": "skip",
+                                        "user_action": None,
+                                    }
+                                    conflicts.append(conflict_info)
+
                         elif CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_PRIORITY:
-                            strategy_action = (
-                                "replace" if new_elevation > existing_elevation else "keep"
+                            # Priority: Check if new pass has higher elevation than ALL conflicting passes
+                            max_existing_elevation = max(
+                                obs.pass_config.get("peak_altitude", 0)
+                                for obs in conflicting_obs_list
                             )
-                        else:
-                            strategy_action = "keep"
 
-                        # Check for user override
-                        conflict_id = conflicting_obs.id
-                        if conflict_id in user_conflict_overrides:
-                            action = user_conflict_overrides[conflict_id]
-                        else:
-                            action = strategy_action
-
-                        if dry_run:
-                            # Collect conflict info for preview
-                            conflict_info = {
-                                "conflict_id": conflict_id,
-                                "time_window": f"{event_start.strftime('%Y-%m-%d %H:%M')} - {event_end.strftime('%H:%M UTC')}",
-                                "existing_obs": {
-                                    "id": conflicting_obs.id,
-                                    "satellite": conflicting_obs.satellite_config.get(
-                                        "name", "Unknown"
-                                    ),
-                                    "norad_id": conflicting_obs.norad_id,
-                                    "elevation": existing_elevation,
-                                    "start": conflicting_obs.event_start.isoformat(),
-                                    "end": conflicting_obs.event_end.isoformat(),
-                                },
-                                "new_pass": {
-                                    "satellite": satellite_data["name"],
-                                    "norad_id": norad_id,
-                                    "elevation": new_elevation,
-                                    "start": pass_data["event_start"],
-                                    "end": pass_data["event_end"],
-                                    "monitored_satellite_id": monitored_sat["id"],
-                                },
-                                "strategy_action": strategy_action,
-                                "user_action": (
-                                    action if conflict_id in user_conflict_overrides else None
-                                ),
-                            }
-                            conflicts.append(conflict_info)
-                        else:
-                            # Execute the action
-                            if action == "replace":
-                                logger.info(
-                                    f"CONFLICT: Replacing observation ID {conflicting_obs.id} "
-                                    f"(elevation {existing_elevation:.1f}°) with {satellite_data['name']} "
-                                    f"(elevation {new_elevation:.1f}°)"
-                                )
-                                await delete_scheduled_observations(session, [conflicting_obs.id])
-                                await _create_observation(session, monitored_sat, pass_data)
+                            if new_elevation > max_existing_elevation:
+                                # New pass wins - delete all conflicting observations and create new one
+                                if not dry_run:
+                                    conflicting_ids = [obs.id for obs in conflicting_obs_list]
+                                    logger.info(
+                                        f"CONFLICT: Replacing {len(conflicting_ids)} observation(s) "
+                                        f"(max elevation {max_existing_elevation:.1f}°) with {satellite_data['name']} "
+                                        f"(elevation {new_elevation:.1f}°)"
+                                    )
+                                    await delete_scheduled_observations(session, conflicting_ids)
+                                    await _create_observation(session, monitored_sat, pass_data)
                                 stats["generated"] += 1
-                            else:  # "keep" or "skip"
-                                logger.info(
-                                    f"CONFLICT: Keeping existing observation ID {conflicting_obs.id} "
-                                    f"(elevation {existing_elevation:.1f}°) over {satellite_data['name']} "
-                                    f"(elevation {new_elevation:.1f}°)"
-                                )
+
+                                if dry_run:
+                                    for conflicting_obs in conflicting_obs_list:
+                                        existing_elevation = conflicting_obs.pass_config.get(
+                                            "peak_altitude", 0
+                                        )
+                                        conflict_info = {
+                                            "conflict_id": conflicting_obs.id,
+                                            "time_window": f"{event_start.strftime('%Y-%m-%d %H:%M')} - {event_end.strftime('%H:%M UTC')}",
+                                            "existing_obs": {
+                                                "id": conflicting_obs.id,
+                                                "satellite": conflicting_obs.satellite_config.get(
+                                                    "name", "Unknown"
+                                                ),
+                                                "norad_id": conflicting_obs.norad_id,
+                                                "elevation": existing_elevation,
+                                                "start": conflicting_obs.event_start.isoformat(),
+                                                "end": conflicting_obs.event_end.isoformat(),
+                                            },
+                                            "new_pass": {
+                                                "satellite": satellite_data["name"],
+                                                "norad_id": norad_id,
+                                                "elevation": new_elevation,
+                                                "start": pass_data["event_start"],
+                                                "end": pass_data["event_end"],
+                                                "monitored_satellite_id": monitored_sat["id"],
+                                            },
+                                            "strategy_action": "replace",
+                                            "user_action": None,
+                                        }
+                                        conflicts.append(conflict_info)
+                            else:
+                                # Existing pass(es) win - keep them
+                                if not dry_run:
+                                    logger.info(
+                                        f"CONFLICT: Keeping existing observation(s) "
+                                        f"(max elevation {max_existing_elevation:.1f}°) over {satellite_data['name']} "
+                                        f"(elevation {new_elevation:.1f}°)"
+                                    )
                                 stats["skipped"] += 1
+
+                                if dry_run:
+                                    for conflicting_obs in conflicting_obs_list:
+                                        existing_elevation = conflicting_obs.pass_config.get(
+                                            "peak_altitude", 0
+                                        )
+                                        conflict_info = {
+                                            "conflict_id": conflicting_obs.id,
+                                            "time_window": f"{event_start.strftime('%Y-%m-%d %H:%M')} - {event_end.strftime('%H:%M UTC')}",
+                                            "existing_obs": {
+                                                "id": conflicting_obs.id,
+                                                "satellite": conflicting_obs.satellite_config.get(
+                                                    "name", "Unknown"
+                                                ),
+                                                "norad_id": conflicting_obs.norad_id,
+                                                "elevation": existing_elevation,
+                                                "start": conflicting_obs.event_start.isoformat(),
+                                                "end": conflicting_obs.event_end.isoformat(),
+                                            },
+                                            "new_pass": {
+                                                "satellite": satellite_data["name"],
+                                                "norad_id": norad_id,
+                                                "elevation": new_elevation,
+                                                "start": pass_data["event_start"],
+                                                "end": pass_data["event_end"],
+                                                "monitored_satellite_id": monitored_sat["id"],
+                                            },
+                                            "strategy_action": "keep",
+                                            "user_action": None,
+                                        }
+                                        conflicts.append(conflict_info)
                     else:
                         # No conflict - create observation
                         if dry_run:
