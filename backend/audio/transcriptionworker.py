@@ -28,12 +28,14 @@
 
 import asyncio
 import logging
+import os
 import queue
 import threading
 import time
 from abc import ABC, abstractmethod
 from asyncio import Task
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional, TextIO
 
 import numpy as np
 from scipy import signal
@@ -127,6 +129,168 @@ class TranscriptionWorker(ABC, threading.Thread):
             "audio_type": "unknown",
         }
         self.stats_lock = threading.Lock()
+
+        # File output for transcriptions
+        self.transcription_file: Optional[TextIO] = None
+        self.transcription_file_path: Optional[str] = None
+        self._setup_transcription_file()
+
+        # Word-level tracking for line building (matches UI logic)
+        self.word_buffer: List[Dict[str, Any]] = []  # List of {word: str, timestamp: float}
+        self.word_buffer_lock = threading.Lock()
+
+        # Track last written text to avoid duplicates from partial/final updates
+        self.last_written_text = ""
+
+    def _setup_transcription_file(self):
+        """Create transcription output file with timestamp-based naming."""
+        try:
+            # Get the backend directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            backend_dir = os.path.dirname(current_dir)
+            transcriptions_dir = os.path.join(backend_dir, "data", "transcriptions")
+
+            # Ensure directory exists
+            os.makedirs(transcriptions_dir, exist_ok=True)
+
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"transcription_{self.session_id[:8]}_vfo{self.vfo_number}_{self.provider_name}_{timestamp}.txt"
+            self.transcription_file_path = os.path.join(transcriptions_dir, filename)
+
+            # Open file for writing
+            self.transcription_file = open(
+                self.transcription_file_path, "w", encoding="utf-8", buffering=1
+            )
+
+            # Write header
+            header = (
+                f"# Ground Station Transcription\n"
+                f"# Provider: {self.provider_name}\n"
+                f"# Session: {self.session_id}\n"
+                f"# VFO: {self.vfo_number}\n"
+                f"# Language: {self.language}\n"
+                f"# Translate To: {self.translate_to}\n"
+                f"# Started: {datetime.now().isoformat()}\n"
+                f"#\n"
+                f"# Format: [HH:MM:SS] transcribed text (up to 20 words per line)\n"
+                f"#\n\n"
+            )
+            self.transcription_file.write(header)
+            self.transcription_file.flush()
+
+            logger.info(f"Transcription file created: {self.transcription_file_path}")
+
+        except Exception as e:
+            logger.error(f"Failed to create transcription file: {e}", exc_info=True)
+            self.transcription_file = None
+            self.transcription_file_path = None
+
+    def _write_to_file(self, text: str, timestamp: Optional[float] = None, is_final: bool = True):
+        """
+        Write transcription to file using UI-matching line building logic.
+
+        Matches the algorithm from transcription-subtitles.jsx:
+        - Splits text into words with timestamps
+        - Builds lines with max 20 words
+        - Starts new line if 1+ minute gap between words
+        - Uses first word's timestamp for each line
+
+        Args:
+            text: Transcribed text to write
+            timestamp: Unix timestamp (defaults to current time)
+            is_final: Whether this is a final transcription (for potential deduplication)
+        """
+        if not self.transcription_file:
+            return
+
+        try:
+            if timestamp is None:
+                timestamp = time.time()
+
+            # Deduplicate: if this text is a prefix of last written (partial update), skip
+            # Only write if text is completely new or extends beyond previous
+            if self.last_written_text and text.strip().startswith(self.last_written_text.strip()):
+                # Extract only the new part
+                new_part = text[len(self.last_written_text) :].strip()
+                if not new_part:
+                    return  # No new content, skip
+                text = new_part
+
+            # Update last written tracker
+            if is_final:
+                self.last_written_text = text.strip()
+
+            # Split text into words (matches UI: split(/\s+/))
+            words = text.split()
+            if not words:
+                return
+
+            with self.word_buffer_lock:
+                # Add words to buffer with timestamp
+                for word in words:
+                    self.word_buffer.append({"word": word, "timestamp": timestamp})
+
+                # Build lines from word buffer (matches UI logic)
+                lines_to_write: List[Dict[str, Any]] = []
+                current_line_words: List[str] = []
+                current_line_timestamp: Optional[float] = None
+                last_timestamp = None
+
+                max_words_per_line = 20
+                one_minute_ms = 60.0  # 60 seconds in timestamp (float seconds)
+
+                for word_obj in self.word_buffer:
+                    word = word_obj["word"]
+                    word_timestamp = word_obj["timestamp"]
+
+                    # Check if we need to start a new line (matches UI conditions)
+                    should_start_new_line = len(current_line_words) >= max_words_per_line or (
+                        last_timestamp is not None
+                        and (word_timestamp - last_timestamp) >= one_minute_ms
+                    )
+
+                    if should_start_new_line and current_line_words:
+                        # Write completed line
+                        lines_to_write.append(
+                            {
+                                "timestamp": current_line_timestamp,
+                                "text": " ".join(current_line_words),
+                            }
+                        )
+                        # Start new line
+                        current_line_words = [word]
+                        current_line_timestamp = word_timestamp
+                    else:
+                        # Add to current line
+                        current_line_words.append(word)
+                        if current_line_timestamp is None:
+                            current_line_timestamp = word_timestamp
+
+                    last_timestamp = word_timestamp
+
+                # Write completed lines to file
+                if self.transcription_file:
+                    for line_obj in lines_to_write:
+                        line_timestamp = line_obj["timestamp"]
+                        if isinstance(line_timestamp, (int, float)):
+                            dt = datetime.fromtimestamp(line_timestamp)
+                            time_str = dt.strftime("%H:%M:%S")
+                            line_text = line_obj.get("text", "")
+                            if line_text:
+                                self.transcription_file.write(f"[{time_str}] {line_text}\n")
+
+                    # Remove written words from buffer, keep incomplete line
+                    if lines_to_write:
+                        words_written = sum(
+                            len(str(line.get("text", "")).split()) for line in lines_to_write
+                        )
+                        self.word_buffer = self.word_buffer[words_written:]
+
+                    self.transcription_file.flush()
+
+        except Exception as e:
+            logger.error(f"Failed to write to transcription file: {e}", exc_info=True)
 
     def run(self):
         """Main processing loop"""
@@ -434,6 +598,10 @@ class TranscriptionWorker(ABC, threading.Thread):
 
         await self.sio.emit("transcription-data", transcription_data, room=self.session_id)
 
+        # Write all transcriptions to file (both partial and final)
+        # This ensures we don't lose any text even if only partials are received
+        self._write_to_file(text, is_final=is_final)
+
         # Update stats
         with self.stats_lock:
             self.stats["transcriptions_received"] += 1
@@ -442,6 +610,33 @@ class TranscriptionWorker(ABC, threading.Thread):
         """Stop the transcription worker"""
         logger.info(f"Stopping {self.provider_name} transcription worker...")
         self.running = False
+
+        # Close transcription file
+        if self.transcription_file:
+            try:
+                # Flush any remaining words in buffer
+                with self.word_buffer_lock:
+                    if self.word_buffer:
+                        # Write incomplete line with remaining words
+                        if self.word_buffer:
+                            first_timestamp = self.word_buffer[0]["timestamp"]
+                            remaining_words = [w["word"] for w in self.word_buffer]
+                            dt = datetime.fromtimestamp(first_timestamp)
+                            time_str = dt.strftime("%H:%M:%S")
+                            self.transcription_file.write(
+                                f"[{time_str}] {' '.join(remaining_words)}\n"
+                            )
+                        self.word_buffer = []
+
+                # Write footer with end time
+                footer = f"\n# Ended: {datetime.now().isoformat()}\n"
+                self.transcription_file.write(footer)
+                self.transcription_file.close()
+                logger.info(f"Transcription file closed: {self.transcription_file_path}")
+            except Exception as e:
+                logger.error(f"Error closing transcription file: {e}")
+            finally:
+                self.transcription_file = None
 
         # Send final status to UI
         self._send_status_to_ui("closed")

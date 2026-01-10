@@ -32,11 +32,11 @@ const WaterfallStatusBar = ({isStreaming, eventMetrics, centerFrequency, sampleR
     return (
         <WaterfallStatusBarPaper>
             {isStreaming ? (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 0.5, fontSize: '0.75rem', fontFamily: 'monospace', color: 'text.secondary' }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, fontSize: '0.75rem', fontFamily: 'monospace', color: 'text.secondary', width: '100%' }}>
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Box component="span">FPS: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '2ch', textAlign: 'right' }}>{eventMetrics.current.renderWaterfallPerSecond}</Box></Box>
+                        <Box component="span">FPS: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{eventMetrics.current.renderWaterfallPerSecond}</Box></Box>
                         <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                        <Box component="span">FFTs/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '2ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.fftUpdatesPerSecond)}</Box></Box>
+                        <Box component="span">FFTs/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.fftUpdatesPerSecond)}</Box></Box>
                         <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
                         <Box component="span">bins/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.binsPerSecond)}</Box></Box>
                         <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
@@ -47,16 +47,13 @@ const WaterfallStatusBar = ({isStreaming, eventMetrics, centerFrequency, sampleR
                         <Box component="span">g: <Box component="span" sx={{ fontWeight: 500 }}>{gain} dB</Box></Box>
                     </Box>
                     {transformData && (
-                        <>
-                            <Box component="span" sx={{ opacity: 0.6, display: { xs: 'none', lg: 'inline' } }}>•</Box>
-                            <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 0.5 }}>
-                                <Box component="span">zoom: <Box component="span" sx={{ fontWeight: 500 }}>{transformData.scale.toFixed(1)}x</Box></Box>
-                                <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                                <Box component="span">view: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(transformData.startFreq)} - {humanizeFrequency(transformData.endFreq)}</Box></Box>
-                                <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                                <Box component="span">bw: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(transformData.visibleBandwidth)}</Box></Box>
-                            </Box>
-                        </>
+                        <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 0.5, marginLeft: 'auto' }}>
+                            <Box component="span">zoom: <Box component="span" sx={{ fontWeight: 500 }}>{transformData.scale.toFixed(1)}x</Box></Box>
+                            <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                            <Box component="span">view: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(transformData.startFreq)} - {humanizeFrequency(transformData.endFreq)}</Box></Box>
+                            <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                            <Box component="span">bw: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(transformData.visibleBandwidth)}</Box></Box>
+                        </Box>
                     )}
                 </Box>
             ) : (

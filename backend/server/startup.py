@@ -198,18 +198,23 @@ recordings_dir = os.path.join(backend_dir, "..", "data", "recordings")
 snapshots_dir = os.path.join(backend_dir, "..", "data", "snapshots")
 decoded_dir = os.path.join(backend_dir, "..", "data", "decoded")
 audio_dir = os.path.join(backend_dir, "..", "data", "audio")
+transcriptions_dir = os.path.join(backend_dir, "..", "data", "transcriptions")
 
 # Create directories if they don't exist
 os.makedirs(recordings_dir, exist_ok=True)
 os.makedirs(snapshots_dir, exist_ok=True)
 os.makedirs(decoded_dir, exist_ok=True)
 os.makedirs(audio_dir, exist_ok=True)
+os.makedirs(transcriptions_dir, exist_ok=True)
 
 # Use html=True to enable directory browsing
 app.mount("/recordings", StaticFiles(directory=recordings_dir, html=True), name="recordings")
 app.mount("/snapshots", StaticFiles(directory=snapshots_dir, html=True), name="snapshots")
 app.mount("/decoded", StaticFiles(directory=decoded_dir, html=True), name="decoded")
 app.mount("/audio", StaticFiles(directory=audio_dir, html=True), name="audio")
+app.mount(
+    "/transcriptions", StaticFiles(directory=transcriptions_dir, html=True), name="transcriptions"
+)
 
 
 # Add the version API endpoint BEFORE the catch-all route
@@ -255,6 +260,7 @@ async def init_db():
         os.path.join(backend_dir, "data", "configs"),  # For satellite decoder configurations
         os.path.join(backend_dir, "data", "uhd_images"),  # For UHD FPGA images
         os.path.join(backend_dir, "data", "uhd_config"),  # For UHD configuration files
+        os.path.join(backend_dir, "data", "transcriptions"),  # For transcription text files
     ]
     for directory in data_dirs:
         os.makedirs(directory, exist_ok=True)
