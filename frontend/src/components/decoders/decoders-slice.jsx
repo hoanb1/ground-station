@@ -303,26 +303,47 @@ export const decodersSlice = createSlice({
         },
 
         // Set current session ID and clean up stale decoders
+        // Keep internal sessions (automated observations) when session changes
         setCurrentSessionId: (state, action) => {
             const newSessionId = action.payload;
 
             // If session ID changed, clear all active decoders from old session
+            // but preserve internal sessions (automated observations)
             if (state.currentSessionId && state.currentSessionId !== newSessionId) {
                 console.log(`Session ID changed from ${state.currentSessionId} to ${newSessionId}, clearing stale decoders`);
-                state.active = {};
+                const internalDecoders = Object.entries(state.active)
+                    .filter(([_, decoder]) => decoder.session_id && decoder.session_id.startsWith('internal:'))
+                    .reduce((acc, [key, decoder]) => {
+                        acc[key] = decoder;
+                        return acc;
+                    }, {});
+                state.active = internalDecoders;
             }
 
             state.currentSessionId = newSessionId;
         },
 
         // Clean up stale decoders from old sessions (periodic cleanup)
+        // Keep internal sessions (automated observations) - only remove old user sessions
         cleanupStaleDecoders: (state) => {
             if (!state.currentSessionId) {
                 return;
             }
 
             const staleDecoderKeys = Object.keys(state.active).filter(
-                key => state.active[key].session_id !== state.currentSessionId
+                key => {
+                    const decoder = state.active[key];
+                    // Keep decoders from current session
+                    if (decoder.session_id === state.currentSessionId) {
+                        return false;
+                    }
+                    // Keep internal sessions (automated observations)
+                    if (decoder.session_id && decoder.session_id.startsWith('internal:')) {
+                        return false;
+                    }
+                    // Remove all other old sessions
+                    return true;
+                }
             );
 
             if (staleDecoderKeys.length > 0) {

@@ -927,10 +927,19 @@ class ProcessLifecycleManager:
                                                     if "stats_timestamp" in entry:
                                                         del entry["stats_timestamp"]
 
-                                # Send to specific session only
-                                await self.sio.emit(
-                                    SocketEvents.DECODER_DATA, data, room=session_id
-                                )
+                                # Check if this is an internal session (automated observation)
+                                from vfos.state import VFOManager
+
+                                is_internal = VFOManager.is_internal_session(session_id)
+
+                                if is_internal:
+                                    # Broadcast internal session decoder events to all clients
+                                    await self.sio.emit(SocketEvents.DECODER_DATA, data)
+                                else:
+                                    # Send to specific session only (user sessions)
+                                    await self.sio.emit(
+                                        SocketEvents.DECODER_DATA, data, room=session_id
+                                    )
 
                                 # If decoder output was saved, emit file browser state update
                                 if data_type == "decoder-output" and "output" in data:

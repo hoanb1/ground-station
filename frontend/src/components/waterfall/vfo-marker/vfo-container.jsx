@@ -140,6 +140,14 @@ const VFOMarkersContainer = ({
         return null;
     }, [activeDecoders, currentSessionId]);
 
+    // Helper function to get all internal/background decoders (session_id starts with "internal:")
+    const getInternalDecoders = useCallback(() => {
+        return Object.values(activeDecoders).filter(
+            decoder => decoder.session_id?.startsWith('internal:') &&
+                      decoder.status !== 'closed'
+        );
+    }, [activeDecoders]);
+
     // Helper function to get morse decoder output text for a VFO
     const getMorseOutputForVFO = useCallback((vfoNumber) => {
         // Find decoder info first (already filtered by current session)
@@ -454,6 +462,87 @@ const VFOMarkersContainer = ({
             const isMuted = vfoMuted[parseInt(markerIdx)] || false;
 
             canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText, isStreaming, packetOutputs, isMuted);
+        });
+
+        // Draw internal/background decoder markers (read-only, greyed-out)
+        const internalDecoders = getInternalDecoders();
+        internalDecoders.forEach(decoder => {
+            // Get transmitter info to determine frequency
+            const transmitterFreq = decoder.info?.transmitter_downlink_mhz;
+            if (!transmitterFreq) {
+                return; // Can't draw without frequency
+            }
+
+            const frequency = transmitterFreq * 1e6; // Convert MHz to Hz
+
+            // Skip if outside visible range
+            if (frequency < startFreq || frequency > endFreq) {
+                return;
+            }
+
+            // Calculate center position
+            const centerX = ((frequency - startFreq) / freqRange) * actualWidth;
+
+            // Determine bandwidth based on decoder type
+            let bandwidth = 100000; // Default 100kHz
+            if (decoder.info?.baudrate) {
+                // For data decoders, estimate bandwidth from baudrate
+                bandwidth = decoder.info.baudrate * 2; // Rough approximation
+                if (decoder.info?.deviation_hz) {
+                    bandwidth = decoder.info.deviation_hz * 2 + decoder.info.baudrate;
+                }
+            }
+
+            // Calculate edge positions
+            const leftFreq = frequency - bandwidth / 2;
+            const rightFreq = frequency + bandwidth / 2;
+            const leftEdgeX = ((leftFreq - startFreq) / freqRange) * actualWidth;
+            const rightEdgeX = ((rightFreq - startFreq) / freqRange) * actualWidth;
+
+            // Use grey color for internal decoders
+            const internalColor = '#A0A0A0';
+            const internalAreaOpacity = '20'; // More visible
+            const internalLineOpacity = 'CC'; // Much brighter
+
+            // Draw area, center line, and edges using same style as regular VFOs
+            canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, internalColor, internalAreaOpacity);
+            canvasDrawingUtils.drawVFOLine(ctx, centerX, height, internalColor, internalLineOpacity, 1.5);
+            canvasDrawingUtils.drawVFOEdges(ctx, 'usb', leftEdgeX, rightEdgeX, height, internalColor, internalLineOpacity, 1, null);
+
+            // Create a fake marker object for label rendering
+            const fakeMarker = {
+                frequency: frequency,
+                bandwidth: bandwidth,
+                mode: 'usb',
+                color: internalColor
+            };
+
+            // Generate label text using the same utility as regular VFOs
+            const transmitterName = decoder.info?.transmitter || 'Internal Decoder';
+            const labelText = `${transmitterName} ${formatFrequency(frequency)}`;
+
+            // Create a fake decoder info object for the secondary label
+            const fakeDecoderInfo = {
+                decoder_type: decoder.decoder_type,
+                status: decoder.status || 'processing',
+                info: decoder.info
+            };
+
+            // Use the same drawing utility as regular VFOs but with grey color
+            canvasDrawingUtils.drawVFOLabel(
+                ctx,
+                centerX,
+                labelText,
+                internalColor,
+                internalLineOpacity,
+                false, // not selected
+                false, // not locked
+                fakeDecoderInfo,
+                null, // no morse text
+                false, // not streaming
+                null, // no packet outputs
+                false // not muted
+            );
         });
     };
 
