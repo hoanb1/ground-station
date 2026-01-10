@@ -39,6 +39,7 @@ import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import { useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 
 // Helper component to wrap icons with overlay indicators
 const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner', showLeftOverlay = false, leftOverlayType = null }) => {
@@ -218,9 +219,14 @@ const TleIconWithStatus = () => {
 // Wrapper component for FolderIcon that reads Redux state
 const FileBrowserIconWithStatus = () => {
     const hasNewFiles = useSelector((state) => state.filebrowser?.hasNewFiles);
+    const location = useLocation();
+
+    // Only show notification if NOT currently on the file browser page
+    const isOnFileBrowserPage = location.pathname === '/filebrowser';
+    const showNotification = hasNewFiles && !isOnFileBrowserPage;
 
     return (
-        <IconWithOverlay showOverlay={hasNewFiles} overlayType="new">
+        <IconWithOverlay showOverlay={showNotification} overlayType="new">
             <FolderIcon />
         </IconWithOverlay>
     );
