@@ -47,6 +47,8 @@ import {
     Pagination,
     LinearProgress,
     Stack,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -66,6 +68,10 @@ import DeselectIcon from '@mui/icons-material/Deselect';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 import SubjectIcon from '@mui/icons-material/Subject';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
@@ -85,6 +91,9 @@ import {
     clearSelection,
     toggleSelectionMode,
     markFileBrowserVisited,
+    setViewMode,
+    toggleDayExpanded,
+    setAllDaysExpanded,
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
@@ -92,6 +101,7 @@ import RecordingDialog from './recording-dialog.jsx';
 import TelemetryViewerDialog from './telemetry-viewer-dialog.jsx';
 import AudioDialog from './audio-dialog.jsx';
 import TranscriptionDialog from './transcription-dialog.jsx';
+import FileTableView from './file-table-view.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -209,6 +219,8 @@ export default function FilebrowserMain() {
         diskUsage,
         selectedItems,
         selectionMode,
+        viewMode,
+        expandedDays,
     } = useSelector((state) => state.filebrowser);
 
     const pageSize = 10; // Hardcoded - not persisted in Redux
@@ -384,6 +396,40 @@ export default function FilebrowserMain() {
         const endIdx = startIdx + pageSize;
         return processedFiles.slice(startIdx, endIdx);
     }, [files, sortBy, sortOrder, page, pageSize]);
+
+    // Group files by day for table view
+    const filesByDay = useMemo(() => {
+        if (viewMode !== 'table') return {};
+
+        const grouped = {};
+        const dateField = (sortBy === 'created' || sortBy === 'modified') ? sortBy : 'created';
+
+        displayItems.forEach(item => {
+            const date = new Date(item[dateField]);
+            const dayKey = date.toLocaleDateString('en-US', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            if (!grouped[dayKey]) {
+                grouped[dayKey] = {
+                    date: date,
+                    dateKey: dayKey,
+                    files: []
+                };
+            }
+            grouped[dayKey].files.push(item);
+        });
+
+        // Sort day groups by date
+        const sortedDays = Object.values(grouped).sort((a, b) => {
+            return sortOrder === 'desc' ? b.date - a.date : a.date - b.date;
+        });
+
+        return sortedDays;
+    }, [displayItems, viewMode, sortBy, sortOrder, timezone]);
 
     const handleSortChange = (event) => {
         dispatch(setSortBy(event.target.value));
@@ -658,6 +704,41 @@ export default function FilebrowserMain() {
                     flexDirection: { xs: 'row', sm: 'row' },
                     justifyContent: { xs: 'space-between', sm: 'flex-end' }
                 }}>
+                    <Box sx={{ display: 'flex', gap: 0 }}>
+                        <IconButton
+                            size="small"
+                            onClick={() => dispatch(setViewMode('card'))}
+                            sx={{
+                                border: 1,
+                                borderColor: viewMode === 'card' ? 'primary.main' : 'divider',
+                                borderRadius: '4px 0 0 4px',
+                                backgroundColor: viewMode === 'card' ? 'primary.main' : 'transparent',
+                                color: viewMode === 'card' ? 'primary.contrastText' : 'text.secondary',
+                                '&:hover': {
+                                    backgroundColor: viewMode === 'card' ? 'primary.dark' : 'action.hover',
+                                }
+                            }}
+                        >
+                            <ViewModuleIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                            size="small"
+                            onClick={() => dispatch(setViewMode('table'))}
+                            sx={{
+                                border: 1,
+                                borderColor: viewMode === 'table' ? 'primary.main' : 'divider',
+                                borderRadius: '0 4px 4px 0',
+                                borderLeft: 0,
+                                backgroundColor: viewMode === 'table' ? 'primary.main' : 'transparent',
+                                color: viewMode === 'table' ? 'primary.contrastText' : 'text.secondary',
+                                '&:hover': {
+                                    backgroundColor: viewMode === 'table' ? 'primary.dark' : 'action.hover',
+                                }
+                            }}
+                        >
+                            <ViewListIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
                     <Button
                         variant="outlined"
                         size="small"
@@ -812,6 +893,17 @@ export default function FilebrowserMain() {
                         {t('refresh', 'Refresh')}
                     </Button>
                 </Box>
+            ) : viewMode === 'table' ? (
+                <FileTableView
+                    filesByDay={filesByDay}
+                    selectionMode={selectionMode}
+                    selectedItems={selectedItems}
+                    onToggleSelection={handleToggleSelection}
+                    onShowDetails={handleShowDetails}
+                    onDownload={handleDownload}
+                    onDelete={handleDelete}
+                    timezone={timezone}
+                />
             ) : (
             <Box sx={{
                 display: 'grid',
