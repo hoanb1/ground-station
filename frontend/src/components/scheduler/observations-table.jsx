@@ -59,6 +59,7 @@ import {
     setSelectedObservation,
     setDialogOpen,
     toggleStatusFilter,
+    setSelectedObservationIds,
 } from './scheduler-slice.jsx';
 import { TitleBar, getTimeFromISO, humanizeFutureDateInMinutes } from '../common/common.jsx';
 import Button from '@mui/material/Button';
@@ -104,7 +105,6 @@ const ObservationsTable = () => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const apiRef = useGridApiRef();
-    const [selectedIds, setSelectedIds] = useState([]);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openStopConfirm, setOpenStopConfirm] = useState(false);
 
@@ -112,6 +112,7 @@ const ObservationsTable = () => {
     const loading = useSelector((state) => state.scheduler?.loading || false);
     const columnVisibility = useSelector((state) => state.scheduler?.columnVisibility || {});
     const statusFilters = useSelector((state) => state.scheduler?.statusFilters || {});
+    const selectedIds = useSelector((state) => state.scheduler?.selectedObservationIds || []);
 
     // Filter observations based on status filters
     const observations = allObservations.filter(obs => statusFilters[obs.status]);
@@ -147,7 +148,7 @@ const ObservationsTable = () => {
     const handleDelete = () => {
         if (selectedIds.length > 0 && socket) {
             dispatch(deleteScheduledObservations({ socket, ids: selectedIds }));
-            setSelectedIds([]);
+            dispatch(setSelectedObservationIds([]));
             setOpenDeleteConfirm(false);
         }
     };
@@ -402,8 +403,9 @@ const ObservationsTable = () => {
                     loading={loading}
                     checkboxSelection
                     disableSelectionOnClick
+                    rowSelectionModel={selectedIds}
                     onRowSelectionModelChange={(newSelection) => {
-                        setSelectedIds(newSelection);
+                        dispatch(setSelectedObservationIds(newSelection));
                     }}
                     getRowClassName={(params) => {
                         // If cancelled, always show as cancelled regardless of time

@@ -402,6 +402,8 @@ const initialState = {
         failed: true,
         cancelled: true,
     },
+    // Selected observation IDs in the table
+    selectedObservationIds: [],
 };
 
 const schedulerSlice = createSlice({
@@ -514,6 +516,9 @@ const schedulerSlice = createSlice({
         toggleStatusFilter: (state, action) => {
             const status = action.payload;
             state.statusFilters[status] = !state.statusFilters[status];
+        },
+        setSelectedObservationIds: (state, action) => {
+            state.selectedObservationIds = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -702,6 +707,7 @@ export const {
     setTimelineSatelliteFilter,
     setTimelineExpanded,
     toggleStatusFilter,
+    setSelectedObservationIds,
 } = schedulerSlice.actions;
 
 export default schedulerSlice.reducer;
