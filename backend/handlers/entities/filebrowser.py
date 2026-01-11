@@ -68,6 +68,12 @@ def parse_sigmf_metadata(meta_file_path: str) -> dict:
             metadata = json.load(f)
 
         global_meta = metadata.get("global", {})
+        captures = metadata.get("captures", [])
+
+        # Extract frequency from first capture if available
+        center_frequency = None
+        if captures and len(captures) > 0:
+            center_frequency = captures[0].get("core:frequency")
 
         return {
             "datatype": global_meta.get("core:datatype"),
@@ -80,7 +86,8 @@ def parse_sigmf_metadata(meta_file_path: str) -> dict:
             "finalized_time": global_meta.get("gs:finalized_time"),
             "target_satellite_norad_id": global_meta.get("gs:target_satellite_norad_id"),
             "target_satellite_name": global_meta.get("gs:target_satellite_name"),
-            "captures": metadata.get("captures", []),
+            "center_frequency": center_frequency,
+            "captures": captures,
             "annotations": metadata.get("annotations", []),
         }
     except Exception as e:
@@ -460,9 +467,16 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     if decoded_file.suffix.lower() in [".png", ".jpg", ".jpeg"]:
                         width, height = get_image_dimensions(str(decoded_file))
 
-                    # Determine decoder type and satellite name from metadata
+                    # Determine decoder type, satellite name, transmitter info, and frequency from metadata
                     decoder_type = None
                     satellite_name = None
+                    satellite_norad_id = None
+                    transmitter_description = None
+                    transmitter_mode = None
+                    frequency_hz = None
+                    frequency_mhz = None
+                    decoder_mode = None  # For SSTV mode, BPSK baudrate, etc.
+                    baudrate = None
 
                     # Check if there's a corresponding .json metadata file
                     metadata_file = decoded_dir / f"{decoded_file.stem}.json"
@@ -473,10 +487,23 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                                 # Extract decoder type
                                 decoder_info = metadata.get("decoder", {})
                                 decoder_type = decoder_info.get("type", "").upper()
+                                decoder_mode = decoder_info.get("mode")  # SSTV mode like "Robot 36"
+                                baudrate = decoder_info.get("baudrate")  # For FSK/BPSK
 
-                                # Extract satellite name from satellite metadata (preferred)
+                                # Extract satellite info from satellite metadata (preferred)
                                 satellite_info = metadata.get("satellite", {})
                                 satellite_name = satellite_info.get("name")
+                                satellite_norad_id = satellite_info.get("norad_id")
+
+                                # Extract transmitter info
+                                transmitter_info = metadata.get("transmitter", {})
+                                transmitter_description = transmitter_info.get("description")
+                                transmitter_mode = transmitter_info.get("mode")
+
+                                # Extract frequency from signal metadata
+                                signal_info = metadata.get("signal", {})
+                                frequency_hz = signal_info.get("frequency_hz")
+                                frequency_mhz = signal_info.get("frequency_mhz")
 
                                 # Fallback: Extract satellite name from AX.25 source callsign if not in metadata
                                 if not satellite_name:
@@ -515,7 +542,14 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "url": f"/decoded/{decoded_file.name}",
                             "file_type": decoded_file.suffix.lower(),
                             "decoder_type": decoder_type,
+                            "decoder_mode": decoder_mode,
+                            "baudrate": baudrate,
                             "satellite_name": satellite_name,
+                            "satellite_norad_id": satellite_norad_id,
+                            "transmitter_description": transmitter_description,
+                            "transmitter_mode": transmitter_mode,
+                            "frequency_hz": frequency_hz,
+                            "frequency_mhz": frequency_mhz,
                         }
                     )
 
@@ -543,9 +577,12 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     vfo_number = metadata.get("vfo_number")
                     demodulator_type = metadata.get("demodulator_type", "")
                     satellite_name = metadata.get("target_satellite_name")
+                    satellite_norad_id = metadata.get("target_satellite_norad_id")
                     duration_seconds = metadata.get("duration_seconds")
                     sample_rate = metadata.get("sample_rate")
                     status = metadata.get("status", "unknown")
+                    center_frequency = metadata.get("center_frequency")
+                    vfo_frequency = metadata.get("vfo_frequency")
 
                     processed_items.append(
                         {
@@ -564,9 +601,12 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "vfo_number": vfo_number,
                             "demodulator_type": demodulator_type,
                             "satellite_name": satellite_name,
+                            "satellite_norad_id": satellite_norad_id,
                             "duration_seconds": duration_seconds,
                             "sample_rate": sample_rate,
                             "status": status,
+                            "center_frequency": center_frequency,
+                            "vfo_frequency": vfo_frequency,
                             "metadata": metadata,
                         }
                     )

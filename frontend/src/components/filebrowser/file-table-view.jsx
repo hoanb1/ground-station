@@ -42,6 +42,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 import SubjectIcon from '@mui/icons-material/Subject';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
+import ImageIcon from '@mui/icons-material/Image';
 import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
@@ -62,6 +63,437 @@ function getLanguageFlag(langCode) {
     return flagMap[langCode] || '🌐';
 }
 
+function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onShowDetails, onDownload, onDelete, timezone, t }) {
+    const isRecording = item.type === 'recording';
+
+    const formatTime = (isoDate) => {
+        const date = new Date(isoDate);
+        return date.toLocaleTimeString('en-US', { timeZone: timezone });
+    };
+
+    const getFileType = () => {
+        if (item.type === 'recording') {
+            return 'IQ Recording';
+        } else if (item.type === 'decoded') {
+            if (item.decoder_type === 'SSTV') {
+                return 'SSTV Image';
+            } else if (item.decoder_type === 'BPSK' || item.decoder_type === 'FSK' || item.decoder_type === 'GFSK') {
+                return 'Telemetry';
+            } else if (item.decoder_type) {
+                return item.decoder_type;
+            }
+            return 'Decoded';
+        } else if (item.type === 'audio') {
+            return 'Audio';
+        } else if (item.type === 'transcription') {
+            return 'Transcription';
+        } else if (item.type === 'snapshot') {
+            return 'Waterfall';
+        }
+        return item.type;
+    };
+
+    const getTypeIcon = () => {
+        if (item.type === 'recording') {
+            return <FiberManualRecordIcon sx={{ color: item.recording_in_progress ? 'error.main' : 'error.main', fontSize: 20 }} />;
+        } else if (item.type === 'decoded') {
+            // Use image icon for SSTV files
+            if (item.decoder_type === 'SSTV') {
+                return <ImageIcon sx={{ color: 'success.main', fontSize: 20 }} />;
+            }
+            return <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />;
+        } else if (item.type === 'audio') {
+            return <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />;
+        } else if (item.type === 'transcription') {
+            return <SubjectIcon sx={{ color: 'secondary.main', fontSize: 20 }} />;
+        } else {
+            return <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />;
+        }
+    };
+
+    const getSatelliteName = () => {
+        if (isRecording && item.metadata?.target_satellite_name) {
+            return item.metadata.target_satellite_name;
+        }
+        if (item.type === 'decoded' && item.satellite_name) {
+            return item.satellite_name;
+        }
+        if (item.type === 'audio' && item.satellite_name) {
+            return item.satellite_name;
+        }
+        return null;
+    };
+
+    const renderDetailChips = () => {
+        const chips = [];
+
+        // Recording chips
+        if (isRecording) {
+            if (item.metadata?.sample_rate) {
+                chips.push(
+                    <Chip
+                        key="sample-rate"
+                        label={`🎚️ ${(item.metadata.sample_rate / 1e6).toFixed(2)} MHz`}
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.duration) {
+                chips.push(
+                    <Chip
+                        key="duration"
+                        label={`⏱️ ${item.duration}`}
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        sx={{ height: '20px', fontSize: '0.65rem', fontFamily: 'monospace' }}
+                    />
+                );
+            }
+            if (item.metadata?.center_frequency) {
+                chips.push(
+                    <Chip
+                        key="frequency"
+                        label={`📡 ${(item.metadata.center_frequency / 1e6).toFixed(2)} MHz`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.metadata?.description) {
+                chips.push(
+                    <Chip
+                        key="description"
+                        label={`📝 ${item.metadata.description}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.recording_in_progress) {
+                chips.push(
+                    <Chip
+                        key="recording"
+                        label="🔴 Recording"
+                        size="small"
+                        color="error"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+        }
+
+        // Decoded chips
+        if (item.type === 'decoded') {
+            if (item.decoder_type) {
+                chips.push(
+                    <Chip
+                        key="decoder"
+                        label={`🔧 ${item.decoder_type}`}
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.decoder_mode) {
+                chips.push(
+                    <Chip
+                        key="mode"
+                        label={`📡 ${item.decoder_mode}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.baudrate) {
+                chips.push(
+                    <Chip
+                        key="baudrate"
+                        label={`⚡ ${item.baudrate} bd`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.width && item.height) {
+                chips.push(
+                    <Chip
+                        key="dimensions"
+                        label={`📐 ${item.width}×${item.height}`}
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.frequency_mhz) {
+                chips.push(
+                    <Chip
+                        key="frequency"
+                        label={`📻 ${item.frequency_mhz.toFixed(2)} MHz`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.transmitter_description) {
+                chips.push(
+                    <Chip
+                        key="transmitter"
+                        label={`🛰️ ${item.transmitter_description}`}
+                        size="small"
+                        variant="outlined"
+                        color="secondary"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+        }
+
+        // Audio chips
+        if (item.type === 'audio') {
+            if (item.vfo_number) {
+                chips.push(
+                    <Chip
+                        key="vfo"
+                        label={`📻 VFO ${item.vfo_number}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.demodulator_type) {
+                chips.push(
+                    <Chip
+                        key="demod"
+                        label={`🎚️ ${item.demodulator_type.toUpperCase()}`}
+                        size="small"
+                        variant="outlined"
+                        color="info"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.center_frequency) {
+                chips.push(
+                    <Chip
+                        key="frequency"
+                        label={`📡 ${(item.center_frequency / 1e6).toFixed(2)} MHz`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.duration_seconds) {
+                const mins = Math.floor(item.duration_seconds / 60);
+                const secs = Math.floor(item.duration_seconds % 60);
+                chips.push(
+                    <Chip
+                        key="duration"
+                        label={`⏱️ ${mins}:${String(secs).padStart(2, '0')}`}
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        sx={{ height: '20px', fontSize: '0.65rem', fontFamily: 'monospace' }}
+                    />
+                );
+            }
+        }
+
+        // Snapshot chips
+        if (item.type === 'snapshot') {
+            if (item.width && item.height) {
+                chips.push(
+                    <Chip
+                        key="dimensions"
+                        label={`📐 ${item.width}×${item.height}`}
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+        }
+
+        // Transcription chips
+        if (item.type === 'transcription') {
+            if (item.vfo_number) {
+                chips.push(
+                    <Chip
+                        key="vfo"
+                        label={`📻 VFO ${item.vfo_number}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.provider) {
+                chips.push(
+                    <Chip
+                        key="provider"
+                        label={`🤖 ${item.provider}`}
+                        size="small"
+                        variant="outlined"
+                        color="secondary"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.language) {
+                chips.push(
+                    <Chip
+                        key="language"
+                        label={`${getLanguageFlag(item.language)} ${item.language.toUpperCase()}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+            if (item.translate_to) {
+                chips.push(
+                    <Chip
+                        key="translate"
+                        label={`→ ${getLanguageFlag(item.translate_to)} ${item.translate_to.toUpperCase()}`}
+                        size="small"
+                        variant="outlined"
+                        color="info"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+        }
+
+        return chips;
+    };
+
+    const satelliteName = getSatelliteName();
+    const detailChips = renderDetailChips();
+
+    return (
+        <TableRow
+            hover
+            selected={isSelected}
+            onClick={() => selectionMode ? onToggleSelection(item) : null}
+            sx={{
+                cursor: selectionMode ? 'pointer' : 'default',
+                '&:hover': selectionMode ? {} : {
+                    backgroundColor: 'action.hover',
+                },
+                '& > td': {
+                    borderBottom: 'none',  // Remove separator line
+                }
+            }}
+        >
+            {selectionMode && (
+                <TableCell padding="checkbox" sx={{ verticalAlign: 'top', pt: 2 }}>
+                    <Checkbox
+                        checked={isSelected}
+                        onChange={() => onToggleSelection(item)}
+                    />
+                </TableCell>
+            )}
+            <TableCell sx={{ width: 50, verticalAlign: 'top', pt: 2 }}>
+                <Tooltip title={item.type}>
+                    {getTypeIcon()}
+                </Tooltip>
+            </TableCell>
+            <TableCell sx={{ verticalAlign: 'top', pt: 2 }}>
+                <Box>
+                    <Tooltip title={item.displayName}>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                fontFamily: 'monospace',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                maxWidth: 300,
+                            }}
+                        >
+                            {item.displayName}
+                        </Typography>
+                    </Tooltip>
+                    {detailChips.length > 0 && (
+                        <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                            {detailChips}
+                        </Box>
+                    )}
+                </Box>
+            </TableCell>
+            <TableCell align="right" sx={{ verticalAlign: 'top', pt: 2 }}>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                    {formatBytes(item.data_size || item.size)}
+                </Typography>
+            </TableCell>
+            <TableCell sx={{ verticalAlign: 'top', pt: 2 }}>
+                <Typography variant="body2">
+                    {getFileType()}
+                </Typography>
+            </TableCell>
+            <TableCell sx={{ verticalAlign: 'top', pt: 2 }}>
+                {satelliteName ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <SatelliteAltIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                        <Typography variant="body2">{satelliteName}</Typography>
+                    </Box>
+                ) : (
+                    <Typography variant="body2" color="text.disabled">—</Typography>
+                )}
+            </TableCell>
+            <TableCell sx={{ verticalAlign: 'top', pt: 2 }}>
+                <Typography variant="body2">
+                    {formatTime(item.created)}
+                </Typography>
+            </TableCell>
+            <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ verticalAlign: 'top', pt: 2 }}>
+                <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <Tooltip title={t('actions.view_details', 'View Details')}>
+                        <IconButton
+                            size="small"
+                            onClick={() => onShowDetails(item)}
+                        >
+                            <InfoIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title={t('actions.download', 'Download')}>
+                        <IconButton
+                            size="small"
+                            onClick={() => onDownload(item)}
+                        >
+                            <DownloadIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title={t('actions.delete', 'Delete')}>
+                        <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => onDelete(item)}
+                        >
+                            <DeleteIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+            </TableCell>
+        </TableRow>
+    );
+}
+
 export default function FileTableView({
     filesByDay,
     selectionMode,
@@ -73,25 +505,6 @@ export default function FileTableView({
     timezone,
 }) {
     const { t } = useTranslation('filebrowser');
-
-    const formatTime = (isoDate) => {
-        const date = new Date(isoDate);
-        return date.toLocaleTimeString('en-US', { timeZone: timezone });
-    };
-
-    const getTypeIcon = (item) => {
-        if (item.type === 'recording') {
-            return <FiberManualRecordIcon sx={{ color: item.recording_in_progress ? 'error.main' : 'error.main', fontSize: 20 }} />;
-        } else if (item.type === 'decoded') {
-            return <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />;
-        } else if (item.type === 'audio') {
-            return <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />;
-        } else if (item.type === 'transcription') {
-            return <SubjectIcon sx={{ color: 'secondary.main', fontSize: 20 }} />;
-        } else {
-            return <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />;
-        }
-    };
 
     return (
         <Box>
@@ -114,218 +527,44 @@ export default function FileTableView({
                                 sx={{ ml: 2 }}
                             />
                         </Box>
-                            <TableContainer component={Paper} elevation={0}>
-                                <Table size="small">
-                                    <TableHead>
-                                        <TableRow>
-                                            {selectionMode && <TableCell padding="checkbox" sx={{ width: 50 }}></TableCell>}
-                                            <TableCell sx={{ width: 50 }}></TableCell>
-                                            <TableCell>Name</TableCell>
-                                            <TableCell align="right">Size</TableCell>
-                                            <TableCell align="right">Sample Rate</TableCell>
-                                            <TableCell align="right">Duration</TableCell>
-                                            <TableCell>Satellite/Type</TableCell>
-                                            <TableCell>Time</TableCell>
-                                            <TableCell align="right">Actions</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {dayGroup.files.map((item) => {
-                                            const isRecording = item.type === 'recording';
-                                            const key = isRecording ? item.name : item.filename;
-                                            const isSelected = selectedItems.includes(key);
+                        <TableContainer component={Paper} elevation={0}>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        {selectionMode && <TableCell padding="checkbox" sx={{ width: 50 }}></TableCell>}
+                                        <TableCell sx={{ width: 50 }}></TableCell>
+                                        <TableCell>Name</TableCell>
+                                        <TableCell align="right">Size</TableCell>
+                                        <TableCell>Type</TableCell>
+                                        <TableCell>🛰️ Satellite</TableCell>
+                                        <TableCell>Time</TableCell>
+                                        <TableCell align="right">Actions</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {dayGroup.files.map((item) => {
+                                        const isRecording = item.type === 'recording';
+                                        const key = isRecording ? item.name : item.filename;
+                                        const isSelected = selectedItems.includes(key);
 
-                                            return (
-                                                <TableRow
-                                                    key={key}
-                                                    hover
-                                                    selected={isSelected}
-                                                    onClick={() => selectionMode ? onToggleSelection(item) : null}
-                                                    sx={{
-                                                        cursor: selectionMode ? 'pointer' : 'default',
-                                                        height: 70, // Allow for two rows of content
-                                                        '&:hover': selectionMode ? {} : {
-                                                            backgroundColor: 'action.hover',
-                                                        }
-                                                    }}
-                                                >
-                                                    {selectionMode && (
-                                                        <TableCell padding="checkbox">
-                                                            <Checkbox
-                                                                checked={isSelected}
-                                                                onChange={() => onToggleSelection(item)}
-                                                            />
-                                                        </TableCell>
-                                                    )}
-                                                    <TableCell>
-                                                        <Tooltip title={item.type}>
-                                                            {getTypeIcon(item)}
-                                                        </Tooltip>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Box>
-                                                            <Tooltip title={item.displayName}>
-                                                                <Typography
-                                                                    variant="body2"
-                                                                    sx={{
-                                                                        fontFamily: 'monospace',
-                                                                        overflow: 'hidden',
-                                                                        textOverflow: 'ellipsis',
-                                                                        whiteSpace: 'nowrap',
-                                                                        maxWidth: 300,
-                                                                    }}
-                                                                >
-                                                                    {item.displayName}
-                                                                </Typography>
-                                                            </Tooltip>
-                                                            <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                                                                {isRecording && item.metadata?.description && (
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        {item.metadata.description}
-                                                                    </Typography>
-                                                                )}
-                                                                {item.type === 'decoded' && item.decoder_type && (
-                                                                    <Chip
-                                                                        label={item.decoder_type}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        color="success"
-                                                                        sx={{ height: '18px', fontSize: '0.65rem' }}
-                                                                    />
-                                                                )}
-                                                                {item.type === 'audio' && item.demodulator_type && (
-                                                                    <Chip
-                                                                        label={item.demodulator_type}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        color="info"
-                                                                        sx={{ height: '18px', fontSize: '0.65rem' }}
-                                                                    />
-                                                                )}
-                                                                {item.type === 'audio' && item.vfo_number && (
-                                                                    <Chip
-                                                                        label={`VFO ${item.vfo_number}`}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        sx={{ height: '18px', fontSize: '0.65rem' }}
-                                                                    />
-                                                                )}
-                                                                {item.type === 'transcription' && item.provider && (
-                                                                    <Chip
-                                                                        label={item.provider}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        color="secondary"
-                                                                        sx={{ height: '18px', fontSize: '0.65rem' }}
-                                                                    />
-                                                                )}
-                                                                {item.type === 'transcription' && item.language && (
-                                                                    <Chip
-                                                                        label={`${getLanguageFlag(item.language)} ${item.language.toUpperCase()}`}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        sx={{ height: '18px', fontSize: '0.65rem' }}
-                                                                    />
-                                                                )}
-                                                                {item.type === 'transcription' && item.vfo_number && (
-                                                                    <Chip
-                                                                        label={`VFO ${item.vfo_number}`}
-                                                                        size="small"
-                                                                        variant="outlined"
-                                                                        sx={{ height: '18px', fontSize: '0.65rem' }}
-                                                                    />
-                                                                )}
-                                                            </Box>
-                                                        </Box>
-                                                    </TableCell>
-                                                    <TableCell align="right">
-                                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                            {formatBytes(item.data_size || item.size)}
-                                                        </Typography>
-                                                    </TableCell>
-                                                    <TableCell align="right">
-                                                        {isRecording && item.metadata?.sample_rate ? (
-                                                            <Typography variant="body2">
-                                                                {(item.metadata.sample_rate / 1e6).toFixed(2)} MHz
-                                                            </Typography>
-                                                        ) : (
-                                                            <Typography variant="body2" color="text.disabled">—</Typography>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell align="right">
-                                                        {item.duration ? (
-                                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                                {item.duration}
-                                                            </Typography>
-                                                        ) : item.type === 'audio' && item.duration_seconds ? (
-                                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                                {Math.floor(item.duration_seconds / 60)}:{String(Math.floor(item.duration_seconds % 60)).padStart(2, '0')}
-                                                            </Typography>
-                                                        ) : (
-                                                            <Typography variant="body2" color="text.disabled">—</Typography>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {(isRecording && item.metadata?.target_satellite_name) ? (
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                                <SatelliteAltIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                                <Typography variant="body2">{item.metadata.target_satellite_name}</Typography>
-                                                            </Box>
-                                                        ) : (item.type === 'decoded' && item.satellite_name) ? (
-                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                                <SatelliteAltIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                                <Typography variant="body2">{item.satellite_name}</Typography>
-                                                            </Box>
-                                                        ) : item.type === 'decoded' && item.decoder_type ? (
-                                                            <Typography variant="body2">{item.decoder_type}</Typography>
-                                                        ) : item.type === 'audio' && item.demodulator_type ? (
-                                                            <Typography variant="body2">{item.demodulator_type}</Typography>
-                                                        ) : item.type === 'transcription' && item.provider ? (
-                                                            <Typography variant="body2">{item.provider}</Typography>
-                                                        ) : (
-                                                            <Typography variant="body2" color="text.disabled">—</Typography>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Typography variant="body2">
-                                                            {formatTime(item.created)}
-                                                        </Typography>
-                                                    </TableCell>
-                                                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                                                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                                                            <Tooltip title={t('actions.view_details', 'View Details')}>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => onShowDetails(item)}
-                                                                >
-                                                                    <InfoIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                            <Tooltip title={t('actions.download', 'Download')}>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => onDownload(item)}
-                                                                >
-                                                                    <DownloadIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                            <Tooltip title={t('actions.delete', 'Delete')}>
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => onDelete(item)}
-                                                                >
-                                                                    <DeleteIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                        </Box>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
+                                        return (
+                                            <FileTableRow
+                                                key={key}
+                                                item={item}
+                                                selectionMode={selectionMode}
+                                                isSelected={isSelected}
+                                                onToggleSelection={onToggleSelection}
+                                                onShowDetails={onShowDetails}
+                                                onDownload={onDownload}
+                                                onDelete={onDelete}
+                                                timezone={timezone}
+                                                t={t}
+                                            />
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
                     </Box>
                 );
             })}
