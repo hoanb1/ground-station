@@ -461,7 +461,7 @@ const ObservationsTimeline = () => {
                                             y={(marginTop + height - marginBottom) / 2}
                                             fontSize="9"
                                             fontWeight="600"
-                                            fill={theme.palette.mode === 'dark' ? '#fff' : '#000'}
+                                            fill={!obs.enabled ? '#666' : (theme.palette.mode === 'dark' ? '#fff' : '#000')}
                                             textAnchor="middle"
                                             dominantBaseline="middle"
                                             transform={`rotate(-90, ${startX + barWidth / 2}, ${(marginTop + height - marginBottom) / 2})`}
