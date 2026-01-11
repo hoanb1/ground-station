@@ -38,50 +38,84 @@ export const ToastContainerWithStyles = () => {
                 }
 
                 .Toastify__toast-container--top-left,
-                .Toastify__toast-container--top-center,
                 .Toastify__toast-container--top-right {
                     top: 75px !important;
                 }
 
+                .Toastify__toast-container--top-center {
+                    top: 10px !important;
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
+                    width: auto !important;
+                    min-width: 500px !important;
+                    max-width: 90vw !important;
+                }
+
+                .Toastify__toast-container--top-center .Toastify__toast {
+                    width: 100% !important;
+                    min-width: 500px !important;
+                }
+
+                .Toastify__toast-container--bottom-center {
+                    bottom: 20px !important;
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
+                    width: auto !important;
+                    min-width: 500px !important;
+                    max-width: 90vw !important;
+                }
+
+                .Toastify__toast-container--bottom-center .Toastify__toast {
+                    width: 100% !important;
+                    min-width: 500px !important;
+                }
 
                 .Toastify__toast-container,
                 .Toastify__toast,
                 .Toastify__toast-body,
                 .Toastify__toast-body > div {
                     font-family: 'Roboto', sans-serif !important;
-                    font-size: 14px !important;
+                    font-size: 13px !important;
                 }
 
                 .Toastify__toast {
                     border-radius: 8px !important;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
-                    padding: 10px !important;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+                    padding: 12px !important;
                     min-height: 64px !important;
                     backdrop-filter: blur(10px);
                 }
 
                 .Toastify__toast--success {
-                    background: ${theme.palette.success.main} !important;
+                    background: ${theme.palette.mode === 'dark'
+                        ? 'rgba(27, 94, 32, 0.9)'
+                        : 'rgba(46, 125, 50, 0.95)'} !important;
                     border-left: 4px solid ${theme.palette.success.main} !important;
-                    color: ${theme.palette.success.contrastText} !important;
+                    color: #ffffff !important;
                 }
 
                 .Toastify__toast--error {
-                    background: ${theme.palette.error.main} !important;
+                    background: ${theme.palette.mode === 'dark'
+                        ? 'rgba(183, 28, 28, 0.9)'
+                        : 'rgba(198, 40, 40, 0.95)'} !important;
                     border-left: 4px solid ${theme.palette.error.main} !important;
-                    color: ${theme.palette.error.contrastText} !important;
+                    color: #ffffff !important;
                 }
 
                 .Toastify__toast--warning {
-                    background: ${theme.palette.warning.main} !important;
+                    background: ${theme.palette.mode === 'dark'
+                        ? 'rgba(230, 81, 0, 0.9)'
+                        : 'rgba(237, 108, 2, 0.95)'} !important;
                     border-left: 4px solid ${theme.palette.warning.main} !important;
-                    color: ${theme.palette.warning.contrastText} !important;
+                    color: #ffffff !important;
                 }
 
                 .Toastify__toast--info {
-                    background: ${theme.palette.info.main} !important;
+                    background: ${theme.palette.mode === 'dark'
+                        ? 'rgba(13, 71, 161, 0.9)'
+                        : 'rgba(21, 101, 192, 0.95)'} !important;
                     border-left: 4px solid ${theme.palette.info.main} !important;
-                    color: ${theme.palette.info.contrastText} !important;
+                    color: #ffffff !important;
                 }
 
                 .Toastify__progress-bar--success {
@@ -101,8 +135,8 @@ export const ToastContainerWithStyles = () => {
                 }
 
                 .Toastify__progress-bar {
-                    height: 4px !important;
-                    opacity: 0.8 !important;
+                    height: 3px !important;
+                    opacity: 0.6 !important;
                 }
 
                 .Toastify__close-button {

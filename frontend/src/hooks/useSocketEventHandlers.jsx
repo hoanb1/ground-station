@@ -17,7 +17,7 @@
  *
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { toast } from '../utils/toast-with-timestamp.jsx';
 import CableIcon from '@mui/icons-material/Cable';
@@ -80,6 +80,10 @@ import { setSystemInfo } from '../components/settings/system-info-slice.jsx';
 import { setRuntimeSnapshot } from '../components/settings/sessions-slice.jsx';
 import { addTranscription } from '../components/waterfall/transcription-slice.jsx';
 import ImageIcon from '@mui/icons-material/Image';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { observationStatusUpdated, fetchScheduledObservations } from '../components/scheduler/scheduler-slice.jsx';
 
 /**
@@ -89,6 +93,10 @@ import { observationStatusUpdated, fetchScheduledObservations } from '../compone
 export const useSocketEventHandlers = (socket) => {
     const { t } = useTranslation('common');
     const dispatch = useDispatch();
+
+    // Track which observations have been notified to prevent duplicate notifications
+    const notifiedVisibility = useRef(new Set());
+    const notifiedStarts = useRef(new Set());
 
     useEffect(() => {
         if (!socket) return;
@@ -535,12 +543,170 @@ export const useSocketEventHandlers = (socket) => {
         // Scheduler observation status updates
         socket.on('observation-status-update', (data) => {
             store.dispatch(observationStatusUpdated(data));
+
+            // Show toast notification for observation status changes
+            const state = store.getState();
+            const observation = state.scheduler.observations.find(obs => obs.id === data.id);
+
+            if (observation && observation.enabled) {
+                const satName = observation.satellite?.name || 'Unknown';
+                const obsName = observation.name || satName;
+
+                if (data.status === 'running') {
+                    // Observation started
+                    const tasks = observation.tasks || [];
+                    const decoders = tasks.filter(t => t.type === 'decoder').length;
+                    const recordings = tasks.filter(t => t.type === 'iq_recording' || t.type === 'audio_recording').length;
+                    const transcriptions = tasks.filter(t => t.type === 'transcription').length;
+
+                    const taskSummary = [];
+                    if (decoders > 0) taskSummary.push(`${decoders} decoder${decoders > 1 ? 's' : ''}`);
+                    if (recordings > 0) taskSummary.push(`${recordings} recording${recordings > 1 ? 's' : ''}`);
+                    if (transcriptions > 0) taskSummary.push(`${transcriptions} transcription${transcriptions > 1 ? 's' : ''}`);
+
+                    const details = [
+                        `Satellite: ${satName} (${observation.satellite?.norad_id || 'N/A'})`,
+                        observation.sdr?.name ? `SDR: ${observation.sdr.name}` : null,
+                        observation.transmitter?.frequency ? `Frequency: ${(observation.transmitter.frequency / 1e6).toFixed(3)} MHz` : null,
+                        taskSummary.length > 0 ? `Tasks: ${taskSummary.join(', ')}` : null,
+                    ].filter(Boolean).join('\n');
+
+                    toast.success(
+                        <ToastMessage
+                            title={`Observation Started: ${obsName}`}
+                            body={details}
+                        />,
+                        {
+                            icon: () => <RadioButtonCheckedIcon />,
+                            autoClose: 8000,
+                            position: 'top-center',
+                        }
+                    );
+                } else if (data.status === 'completed') {
+                    // Observation completed successfully
+                    const startTime = observation.task_start || observation.pass?.event_start;
+                    const endTime = observation.task_end || observation.pass?.event_end;
+                    let duration = '';
+                    if (startTime && endTime) {
+                        const durationMs = new Date(endTime) - new Date(startTime);
+                        const minutes = Math.floor(durationMs / 60000);
+                        const seconds = Math.floor((durationMs % 60000) / 1000);
+                        duration = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+                    }
+
+                    const details = [
+                        `Satellite: ${satName}`,
+                        duration ? `Duration: ${duration}` : null,
+                        observation.tasks?.length > 0 ? `Completed ${observation.tasks.length} task${observation.tasks.length > 1 ? 's' : ''}` : null,
+                    ].filter(Boolean).join('\n');
+
+                    toast.success(
+                        <ToastMessage
+                            title={`Observation Completed: ${obsName}`}
+                            body={details}
+                        />,
+                        {
+                            icon: () => <CheckCircleIcon />,
+                            autoClose: 8000,
+                            position: 'top-center',
+                        }
+                    );
+                } else if (data.status === 'failed') {
+                    // Observation failed
+                    toast.error(
+                        <ToastMessage
+                            title={`Observation Failed: ${obsName}`}
+                            body={`Satellite: ${satName}`}
+                        />,
+                        {
+                            icon: () => <ErrorOutlineIcon />,
+                            autoClose: 10000,
+                            position: 'top-center',
+                        }
+                    );
+                } else if (data.status === 'cancelled') {
+                    // Observation cancelled
+                    toast.warning(
+                        <ToastMessage
+                            title={`Observation Cancelled: ${obsName}`}
+                            body={`Satellite: ${satName}`}
+                        />,
+                        {
+                            icon: () => <CancelIcon />,
+                            autoClose: 6000,
+                            position: 'top-center',
+                        }
+                    );
+                }
+            }
         });
 
         // Scheduler observations changed (refetch all)
         socket.on('scheduled-observations-changed', () => {
             store.dispatch(fetchScheduledObservations({ socket }));
         });
+
+        // Monitor observation timing events (satellite visibility and observation starts)
+        const checkObservationTiming = () => {
+            const state = store.getState();
+            const observations = state.scheduler?.observations || [];
+            const now = new Date();
+
+            observations.forEach(obs => {
+                if (!obs.enabled || obs.status !== 'scheduled' || !obs.pass) return;
+
+                const satName = obs.satellite?.name || 'Unknown';
+                const obsName = obs.name || satName;
+                const eventStart = new Date(obs.pass.event_start); // AOS
+                const taskStart = new Date(obs.task_start || obs.pass.event_start);
+
+                // Check if event_start and task_start are the same (within 1 second tolerance)
+                const eventAndTaskSame = Math.abs(eventStart - taskStart) < 1000;
+
+                // Check for satellite visibility (AOS reached but task not started)
+                const timeUntilAOS = eventStart - now;
+                const timeUntilStart = taskStart - now;
+
+                // Only notify about satellite visibility if event_start and task_start are different
+                // If they're the same, the observation-status-update will handle the notification
+                if (!eventAndTaskSame && timeUntilAOS > -30000 && timeUntilAOS <= 0 && !notifiedVisibility.current.has(obs.id)) {
+                    notifiedVisibility.current.add(obs.id);
+
+                    const minutesUntilStart = Math.ceil(timeUntilStart / 60000);
+                    const peakElevation = obs.pass.peak_altitude ? `${obs.pass.peak_altitude.toFixed(0)}°` : 'N/A';
+
+                    const details = [
+                        `Peak elevation: ${peakElevation}`,
+                        minutesUntilStart > 0 ? `Observation starts in ${minutesUntilStart} minute${minutesUntilStart !== 1 ? 's' : ''}` : 'Observation starting now',
+                        obs.sdr?.name ? `SDR: ${obs.sdr.name}` : null,
+                    ].filter(Boolean).join('\n');
+
+                    toast.info(
+                        <ToastMessage
+                            title={`Satellite Visible: ${satName}`}
+                            body={details}
+                        />,
+                        {
+                            icon: () => <VisibilityIcon />,
+                            autoClose: 8000,
+                            position: 'top-center',
+                        }
+                    );
+
+                    // Clean up notification tracking after observation would have ended
+                    const endTime = new Date(obs.task_end || obs.pass.event_end);
+                    const cleanupDelay = endTime - now + 60000; // 1 minute after end
+                    setTimeout(() => {
+                        notifiedVisibility.current.delete(obs.id);
+                    }, Math.max(0, cleanupDelay));
+                }
+            });
+        };
+
+        // Check observation timing every 5 seconds
+        const timingInterval = setInterval(checkObservationTiming, 5000);
+        // Run immediately on mount
+        checkObservationTiming();
 
         // Decoder data events (SSTV, AFSK, Morse, GMSK, Transcription, etc.)
         socket.on('decoder-data', (data) => {
@@ -618,6 +784,7 @@ export const useSocketEventHandlers = (socket) => {
 
         // Cleanup function
         return () => {
+            clearInterval(timingInterval);
             socket.off('connect');
             socket.off('reconnect_attempt');
             socket.off('error');
