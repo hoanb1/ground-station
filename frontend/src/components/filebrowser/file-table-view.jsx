@@ -59,6 +59,8 @@ function getLanguageFlag(langCode) {
         'es': '🇪🇸', 'fr': '🇫🇷', 'de': '🇩🇪', 'it': '🇮🇹',
         'pt': '🇵🇹', 'pt-BR': '🇧🇷', 'pt-PT': '🇵🇹',
         'ru': '🇷🇺', 'zh': '🇨🇳', 'ja': '🇯🇵', 'ko': '🇰🇷',
+        'el': '🇬🇷', 'uk': '🇺🇦', 'ar': '🇸🇦', 'tl': '🇵🇭',
+        'tr': '🇹🇷', 'sk': '🇸🇰', 'hr': '🇭🇷',
     };
     return flagMap[langCode] || '🌐';
 }
@@ -95,19 +97,19 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
 
     const getTypeIcon = () => {
         if (item.type === 'recording') {
-            return <FiberManualRecordIcon sx={{ color: item.recording_in_progress ? 'error.main' : 'error.main', fontSize: 20 }} />;
+            return <FiberManualRecordIcon sx={{ color: item.recording_in_progress ? 'error.main' : 'error.main', fontSize: 32 }} />;
         } else if (item.type === 'decoded') {
             // Use image icon for SSTV files
             if (item.decoder_type === 'SSTV') {
-                return <ImageIcon sx={{ color: 'success.main', fontSize: 20 }} />;
+                return <ImageIcon sx={{ color: 'success.main', fontSize: 32 }} />;
             }
-            return <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />;
+            return <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 32 }} />;
         } else if (item.type === 'audio') {
-            return <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />;
+            return <AudiotrackIcon sx={{ color: 'info.main', fontSize: 32 }} />;
         } else if (item.type === 'transcription') {
-            return <SubjectIcon sx={{ color: 'secondary.main', fontSize: 20 }} />;
+            return <SubjectIcon sx={{ color: 'secondary.main', fontSize: 32 }} />;
         } else {
-            return <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />;
+            return <CameraAltIcon sx={{ color: 'primary.main', fontSize: 32 }} />;
         }
     };
 
@@ -396,7 +398,11 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                     backgroundColor: 'action.hover',
                 },
                 '& > td': {
-                    borderBottom: 'none',  // Remove separator line
+                    borderBottom: '1px solid',
+                    borderBottomColor: 'divider',
+                },
+                '&:last-child > td': {
+                    borderBottom: 'none',
                 }
             }}
         >
@@ -408,7 +414,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                     />
                 </TableCell>
             )}
-            <TableCell sx={{ width: 50, verticalAlign: 'top', pt: 2 }}>
+            <TableCell sx={{ width: 50, verticalAlign: 'middle' }}>
                 <Tooltip title={item.type}>
                     {getTypeIcon()}
                 </Tooltip>
