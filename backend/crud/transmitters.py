@@ -28,9 +28,12 @@ from db.models import Transmitters
 async def fetch_transmitters_for_satellite(session: AsyncSession, norad_id: int) -> dict:
     """
     Fetch all transmitter records associated with the given satellite NORAD id.
+    Matches by either norad_cat_id or norad_follow_id.
     """
     try:
-        stmt = select(Transmitters).filter(Transmitters.norad_cat_id == norad_id)
+        stmt = select(Transmitters).filter(
+            (Transmitters.norad_cat_id == norad_id) | (Transmitters.norad_follow_id == norad_id)
+        )
         result = await session.execute(stmt)
         transmitters = result.scalars().all()
         transmitters = serialize_object(transmitters)

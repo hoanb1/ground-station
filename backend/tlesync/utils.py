@@ -644,8 +644,11 @@ def get_transmitter_info_by_norad_id(norad_id: int, transmitters: list) -> list:
     trxs = []
 
     for transmitter in transmitters:
-        norad_id_from_list = transmitter["norad_cat_id"]
-        if norad_id_from_list == norad_id:
+        norad_cat_id = transmitter["norad_cat_id"]
+        norad_follow_id = transmitter.get("norad_follow_id")
+
+        # Match by either the catalog ID or the followed ID
+        if norad_cat_id == norad_id or (norad_follow_id and norad_follow_id == norad_id):
             trxs.append(transmitter)
     return trxs
 
