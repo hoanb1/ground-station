@@ -144,7 +144,7 @@ const BookmarkCanvas = ({
             .filter(transmitter => transmitter.downlink_observed_freq > 0)
             .map(transmitter => ({
                 frequency: transmitter.downlink_observed_freq,
-                label: `${satelliteData['details']['name']} - ${transmitter.description || 'Unknown'} - Corrected: ${humanizeFrequency(transmitter.downlink_observed_freq)}`,
+                label: `${satelliteData['details']['name']} - ${transmitter.description || 'Unknown'} - Corrected: ${preciseHumanizeFrequency(transmitter.downlink_observed_freq)}`,
                 color: theme.palette.warning.main,
                 metadata: {
                     type: 'doppler_shift',

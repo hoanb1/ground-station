@@ -71,7 +71,7 @@ const WaterfallRightSidebar = ({ workerRef, dimensions, isFullscreen = false }) 
             <Stack spacing={0}>
                 <Button
                     startIcon={<AutoScaleOnceIcon/>}
-                    variant="outlined"
+                    variant="filled"
                     disabled={!isStreaming}
                     color={autoDBRange? "success": "info"}
                     onClick={() => {
