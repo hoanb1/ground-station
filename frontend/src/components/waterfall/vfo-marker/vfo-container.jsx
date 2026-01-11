@@ -78,6 +78,9 @@ const VFOMarkersContainer = ({
         currentSessionId
     } = useSelector(state => state.decoders);
 
+    // Get runtime snapshot for internal VFO data
+    const runtimeSnapshot = useSelector(state => state.sessions?.runtimeSnapshot?.data);
+
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
     // Canvas context caching for performance
@@ -140,13 +143,47 @@ const VFOMarkersContainer = ({
         return null;
     }, [activeDecoders, currentSessionId]);
 
-    // Helper function to get all internal/background decoders (session_id starts with "internal:")
-    const getInternalDecoders = useCallback(() => {
-        return Object.values(activeDecoders).filter(
-            decoder => decoder.session_id?.startsWith('internal:') &&
-                      decoder.status !== 'closed'
-        );
-    }, [activeDecoders]);
+    // Helper function to get all internal VFO sessions with their live VFO data
+    const getInternalVFOSessions = useCallback(() => {
+        if (!runtimeSnapshot?.sessions) {
+            return [];
+        }
+
+        const internalSessions = [];
+
+        // Iterate through all sessions in runtime snapshot
+        Object.entries(runtimeSnapshot.sessions).forEach(([sessionId, sessionData]) => {
+            // Only process internal sessions
+            if (!sessionData.is_internal || !sessionId.startsWith('internal:')) {
+                return;
+            }
+
+            // Get active VFOs for this internal session
+            if (sessionData.vfos) {
+                Object.entries(sessionData.vfos).forEach(([vfoNumber, vfoData]) => {
+                    // Only process active VFOs with valid frequency
+                    if (vfoData.active && vfoData.center_freq > 0) {
+                        // Find decoder info for this internal session and VFO
+                        const decoderInfo = Object.values(activeDecoders).find(
+                            decoder => decoder.session_id === sessionId &&
+                                      decoder.vfo === parseInt(vfoNumber) &&
+                                      decoder.status !== 'closed'
+                        );
+
+                        internalSessions.push({
+                            sessionId,
+                            vfoNumber: parseInt(vfoNumber),
+                            vfoData,
+                            sessionMetadata: sessionData.metadata,
+                            decoderInfo // Include decoder status info
+                        });
+                    }
+                });
+            }
+        });
+
+        return internalSessions;
+    }, [runtimeSnapshot, activeDecoders]);
 
     // Helper function to get morse decoder output text for a VFO
     const getMorseOutputForVFO = useCallback((vfoNumber) => {
@@ -362,7 +399,7 @@ const VFOMarkersContainer = ({
     useEffect(() => {
         renderVFOMarkersDirect();
     }, [vfoActive, vfoMarkers, actualWidth, height,
-        centerFrequency, sampleRate, selectedVFO, streamingVFOs, vfoMuted, containerWidth, currentPositionX, activeDecoders, decoderOutputs]);
+        centerFrequency, sampleRate, selectedVFO, streamingVFOs, vfoMuted, containerWidth, currentPositionX, activeDecoders, decoderOutputs, runtimeSnapshot]);
 
     // Rendering function with cached context
     const renderVFOMarkersDirect = () => {
@@ -464,16 +501,11 @@ const VFOMarkersContainer = ({
             canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText, isStreaming, packetOutputs, isMuted);
         });
 
-        // Draw internal/background decoder markers (read-only, greyed-out)
-        const internalDecoders = getInternalDecoders();
-        internalDecoders.forEach(decoder => {
-            // Get transmitter info to determine frequency
-            const transmitterFreq = decoder.info?.transmitter_downlink_mhz;
-            if (!transmitterFreq) {
-                return; // Can't draw without frequency
-            }
-
-            const frequency = transmitterFreq * 1e6; // Convert MHz to Hz
+        // Draw internal VFO markers (read-only, greyed-out) using live session data
+        const internalVFOSessions = getInternalVFOSessions();
+        internalVFOSessions.forEach(({ sessionId, vfoNumber, vfoData, sessionMetadata, decoderInfo }) => {
+            // Use actual VFO frequency from session data
+            const frequency = vfoData.center_freq;
 
             // Skip if outside visible range
             if (frequency < startFreq || frequency > endFreq) {
@@ -483,15 +515,8 @@ const VFOMarkersContainer = ({
             // Calculate center position
             const centerX = ((frequency - startFreq) / freqRange) * actualWidth;
 
-            // Determine bandwidth based on decoder type
-            let bandwidth = 100000; // Default 100kHz
-            if (decoder.info?.baudrate) {
-                // For data decoders, estimate bandwidth from baudrate
-                bandwidth = decoder.info.baudrate * 2; // Rough approximation
-                if (decoder.info?.deviation_hz) {
-                    bandwidth = decoder.info.deviation_hz * 2 + decoder.info.baudrate;
-                }
-            }
+            // Use actual bandwidth from VFO data
+            const bandwidth = vfoData.bandwidth;
 
             // Calculate edge positions
             const leftFreq = frequency - bandwidth / 2;
@@ -499,7 +524,7 @@ const VFOMarkersContainer = ({
             const leftEdgeX = ((leftFreq - startFreq) / freqRange) * actualWidth;
             const rightEdgeX = ((rightFreq - startFreq) / freqRange) * actualWidth;
 
-            // Use grey color for internal decoders
+            // Use grey color for internal VFOs
             const internalColor = '#A0A0A0';
             const internalAreaOpacity = '20'; // More visible
             const internalLineOpacity = 'CC'; // Much brighter
@@ -507,26 +532,24 @@ const VFOMarkersContainer = ({
             // Draw area, center line, and edges using same style as regular VFOs
             canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, internalColor, internalAreaOpacity);
             canvasDrawingUtils.drawVFOLine(ctx, centerX, height, internalColor, internalLineOpacity, 1.5);
-            canvasDrawingUtils.drawVFOEdges(ctx, 'usb', leftEdgeX, rightEdgeX, height, internalColor, internalLineOpacity, 1, null);
 
-            // Create a fake marker object for label rendering
-            const fakeMarker = {
-                frequency: frequency,
-                bandwidth: bandwidth,
-                mode: 'usb',
-                color: internalColor
-            };
+            // Use the actual modulation mode from VFO data
+            const modulation = vfoData.modulation?.toLowerCase() || 'usb';
+            canvasDrawingUtils.drawVFOEdges(ctx, modulation, leftEdgeX, rightEdgeX, height, internalColor, internalLineOpacity, 1, vfoData.decoder);
 
-            // Generate label text using the same utility as regular VFOs
-            const transmitterName = decoder.info?.transmitter || 'Internal Decoder';
-            const labelText = `${transmitterName} ${formatFrequency(frequency)}`;
+            // Generate label text using session metadata
+            const satelliteName = sessionMetadata?.satellite_name || 'Internal';
+            const labelText = `${satelliteName} ${formatFrequency(frequency)}`;
 
-            // Create a fake decoder info object for the secondary label
-            const fakeDecoderInfo = {
-                decoder_type: decoder.decoder_type,
-                status: decoder.status || 'processing',
-                info: decoder.info
-            };
+            // Use decoder info from activeDecoders for status
+            const decoderInfoForLabel = decoderInfo ? {
+                decoder_type: decoderInfo.decoder_type,
+                status: decoderInfo.status || 'processing',
+                info: decoderInfo.info
+            } : null;
+
+            // Check if this internal VFO is locked to a transmitter
+            const isLocked = vfoData.locked_transmitter_id && vfoData.locked_transmitter_id !== 'none';
 
             // Use the same drawing utility as regular VFOs but with grey color
             canvasDrawingUtils.drawVFOLabel(
@@ -536,8 +559,8 @@ const VFOMarkersContainer = ({
                 internalColor,
                 internalLineOpacity,
                 false, // not selected
-                false, // not locked
-                fakeDecoderInfo,
+                isLocked, // use actual lock state
+                decoderInfoForLabel,
                 null, // no morse text
                 false, // not streaming
                 null, // no packet outputs
