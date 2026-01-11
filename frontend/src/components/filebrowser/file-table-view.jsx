@@ -97,7 +97,17 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
 
     const getTypeIcon = () => {
         if (item.type === 'recording') {
-            return <FiberManualRecordIcon sx={{ color: item.recording_in_progress ? 'error.main' : 'error.main', fontSize: 32 }} />;
+            return <FiberManualRecordIcon sx={{
+                color: 'error.main',
+                fontSize: 32,
+                ...(item.recording_in_progress && {
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    '@keyframes pulse': {
+                        '0%, 100%': { opacity: 1 },
+                        '50%': { opacity: 0.4 }
+                    }
+                })
+            }} />;
         } else if (item.type === 'decoded') {
             // Use image icon for SSTV files
             if (item.decoder_type === 'SSTV') {
@@ -394,8 +404,11 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
             onClick={() => selectionMode ? onToggleSelection(item) : null}
             sx={{
                 cursor: selectionMode ? 'pointer' : 'default',
+                ...(item.recording_in_progress && {
+                    backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                }),
                 '&:hover': selectionMode ? {} : {
-                    backgroundColor: 'action.hover',
+                    backgroundColor: item.recording_in_progress ? 'rgba(211, 47, 47, 0.12)' : 'action.hover',
                 },
                 '& > td': {
                     borderBottom: '1px solid',
