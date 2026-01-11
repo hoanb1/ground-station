@@ -609,7 +609,7 @@ const ObservationsTable = () => {
                     <StopIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <StopIcon sx={{ mr: 1 }} />
-                        Stop
+                        Cancel
                     </Box>
                 </Button>
                 <Button
@@ -646,35 +646,35 @@ const ObservationsTable = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Stop Confirmation Dialog */}
+            {/* Cancel Confirmation Dialog */}
             <Dialog open={openStopConfirm} onClose={() => setOpenStopConfirm(false)}>
-                <DialogTitle>Stop Observation{selectedIds.length > 1 ? 's' : ''}</DialogTitle>
+                <DialogTitle>Cancel Observation{selectedIds.length > 1 ? 's' : ''}</DialogTitle>
                 <DialogContent>
                     {selectedIds.length === 1 ? (
                         (() => {
                             const obs = allObservations.find(o => o.id === selectedIds[0]);
                             return obs ? (
                                 <>
-                                    Are you sure you want to stop the observation <strong>{obs.satellite?.name || 'Unknown'}</strong>?
+                                    Are you sure you want to cancel the observation <strong>{obs.satellite?.name || 'Unknown'}</strong>?
                                     <br /><br />
-                                    This will immediately stop the observation and remove all scheduled jobs.
+                                    This will immediately cancel the observation and remove all scheduled jobs.
                                 </>
                             ) : null;
                         })()
                     ) : (
                         <>
-                            Are you sure you want to stop {selectedIds.length} observation(s)?
+                            Are you sure you want to cancel {selectedIds.length} observation(s)?
                             <br /><br />
-                            This will immediately stop all selected observations and remove their scheduled jobs.
+                            This will immediately cancel all selected observations and remove their scheduled jobs.
                         </>
                     )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenStopConfirm(false)} variant="outlined">
-                        Cancel
+                        Close
                     </Button>
                     <Button variant="contained" onClick={handleStop} color="warning">
-                        Stop
+                        Cancel
                     </Button>
                 </DialogActions>
             </Dialog>

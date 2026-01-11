@@ -43,7 +43,14 @@ import {
     CircularProgress,
     Backdrop,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
+import {
+    Add as AddIcon,
+    Delete as DeleteIcon,
+    ExpandMore as ExpandMoreIcon,
+    Stop as StopIcon,
+    CheckCircle as EnableIcon,
+    Cancel as DisableIcon,
+} from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
 import {
     addObservation,
@@ -57,6 +64,9 @@ import {
     setSelectedFromSearch,
     setSelectedPassId,
     fetchSDRParameters,
+    deleteScheduledObservations,
+    toggleObservationEnabled,
+    cancelRunningObservation,
 } from './scheduler-slice.jsx';
 import { fetchSDRs } from '../hardware/sdr-slice.jsx';
 import { fetchSatellite } from '../satellites/satellite-slice.jsx';
@@ -184,6 +194,8 @@ const ObservationFormDialog = () => {
     const [satelliteOptions, setSatelliteOptions] = useState([]);
     const [passOptions, setPassOptions] = useState([]);
     const [expandedTasks, setExpandedTasks] = useState({});
+    const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+    const [openCancelConfirm, setOpenCancelConfirm] = useState(false);
 
     // Sync selectedGroupId from Redux into formData.satellite.group_id
     useEffect(() => {
@@ -303,6 +315,56 @@ const ObservationFormDialog = () => {
 
     const handleClose = () => {
         dispatch(setDialogOpen(false));
+    };
+
+    const handleDeleteClick = () => {
+        setOpenDeleteConfirm(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (selectedObservation?.id && socket) {
+            dispatch(deleteScheduledObservations({ socket, ids: [selectedObservation.id] }));
+            setOpenDeleteConfirm(false);
+            dispatch(setDialogOpen(false));
+        }
+    };
+
+    const handleCancelClick = () => {
+        setOpenCancelConfirm(true);
+    };
+
+    const handleCancelConfirm = () => {
+        if (selectedObservation?.id && socket) {
+            dispatch(cancelRunningObservation({ socket, id: selectedObservation.id }));
+            // Update local formData to reflect the change immediately
+            setFormData((prev) => ({
+                ...prev,
+                status: 'cancelled',
+            }));
+            setOpenCancelConfirm(false);
+        }
+    };
+
+    const handleEnable = () => {
+        if (selectedObservation?.id && socket) {
+            dispatch(toggleObservationEnabled({ socket, id: selectedObservation.id, enabled: true }));
+            // Update local formData to reflect the change immediately
+            setFormData((prev) => ({
+                ...prev,
+                enabled: true,
+            }));
+        }
+    };
+
+    const handleDisable = () => {
+        if (selectedObservation?.id && socket) {
+            dispatch(toggleObservationEnabled({ socket, id: selectedObservation.id, enabled: false }));
+            // Update local formData to reflect the change immediately
+            setFormData((prev) => ({
+                ...prev,
+                enabled: false,
+            }));
+        }
     };
 
     const handleSave = () => {
@@ -1608,36 +1670,124 @@ const ObservationFormDialog = () => {
                     px: 3,
                     py: 2.5,
                     gap: 2,
+                    display: 'flex',
+                    justifyContent: 'space-between',
                 }}
             >
-                <Button
-                    onClick={handleClose}
-                    variant="outlined"
-                    sx={{
-                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
-                        '&:hover': {
-                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
-                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
-                        },
-                    }}
-                >
-                    Cancel
-                </Button>
-                <Button
-                    onClick={handleSave}
-                    variant="contained"
-                    disabled={!isFormValid() || isSaving}
-                    startIcon={isSaving && <CircularProgress size={20} color="inherit" />}
-                    sx={{
-                        '&.Mui-disabled': {
-                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',
-                            color: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.600',
-                        },
-                    }}
-                >
-                    {isSaving ? 'Saving...' : (selectedObservation ? 'Update' : 'Create')}
-                </Button>
+                {/* Left side - action buttons (only shown when editing) */}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    {selectedObservation?.id && (
+                        <>
+                            <Button
+                                onClick={handleDeleteClick}
+                                variant="contained"
+                                color="error"
+                                startIcon={<DeleteIcon />}
+                                size="small"
+                            >
+                                Delete
+                            </Button>
+                            <Button
+                                onClick={handleCancelClick}
+                                variant="contained"
+                                color="warning"
+                                startIcon={<StopIcon />}
+                                size="small"
+                                disabled={formData.status !== 'running' && formData.status !== 'scheduled'}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleEnable}
+                                variant="contained"
+                                color="success"
+                                startIcon={<EnableIcon />}
+                                size="small"
+                                disabled={formData.status === 'running' || formData.enabled}
+                            >
+                                Enable
+                            </Button>
+                            <Button
+                                onClick={handleDisable}
+                                variant="contained"
+                                color="secondary"
+                                startIcon={<DisableIcon />}
+                                size="small"
+                                disabled={formData.status === 'running' || !formData.enabled}
+                            >
+                                Disable
+                            </Button>
+                        </>
+                    )}
+                </Box>
+
+                {/* Right side - save/cancel buttons */}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="outlined"
+                        sx={{
+                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                            '&:hover': {
+                                borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                            },
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        variant="contained"
+                        disabled={!isFormValid() || isSaving}
+                        startIcon={isSaving && <CircularProgress size={20} color="inherit" />}
+                        sx={{
+                            '&.Mui-disabled': {
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',
+                                color: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.600',
+                            },
+                        }}
+                    >
+                        {isSaving ? 'Saving...' : (selectedObservation ? 'Update' : 'Create')}
+                    </Button>
+                </Box>
             </DialogActions>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={openDeleteConfirm} onClose={() => setOpenDeleteConfirm(false)}>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                    Are you sure you want to delete the observation <strong>{selectedObservation?.satellite?.name || 'Unknown'}</strong>?
+                    <br /><br />
+                    This action cannot be undone.
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenDeleteConfirm(false)} variant="outlined">
+                        Cancel
+                    </Button>
+                    <Button onClick={handleDeleteConfirm} variant="contained" color="error">
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Cancel Confirmation Dialog */}
+            <Dialog open={openCancelConfirm} onClose={() => setOpenCancelConfirm(false)}>
+                <DialogTitle>Cancel Observation</DialogTitle>
+                <DialogContent>
+                    Are you sure you want to cancel the observation <strong>{selectedObservation?.satellite?.name || 'Unknown'}</strong>?
+                    <br /><br />
+                    This will immediately cancel the observation and remove all scheduled jobs.
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenCancelConfirm(false)} variant="outlined">
+                        Close
+                    </Button>
+                    <Button onClick={handleCancelConfirm} variant="contained" color="warning">
+                        Cancel Observation
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Dialog>
     );
 };
