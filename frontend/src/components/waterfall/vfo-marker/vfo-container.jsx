@@ -534,12 +534,22 @@ const VFOMarkersContainer = ({
             canvasDrawingUtils.drawVFOLine(ctx, centerX, height, internalColor, internalLineOpacity, 1.5);
 
             // Use the actual modulation mode from VFO data
-            const modulation = vfoData.modulation?.toLowerCase() || 'usb';
-            canvasDrawingUtils.drawVFOEdges(ctx, modulation, leftEdgeX, rightEdgeX, height, internalColor, internalLineOpacity, 1, vfoData.decoder);
+            const modulationMode = vfoData.modulation?.toLowerCase() || 'usb';
+            canvasDrawingUtils.drawVFOEdges(ctx, modulationMode, leftEdgeX, rightEdgeX, height, internalColor, internalLineOpacity, 1, vfoData.decoder);
 
-            // Generate label text using session metadata
+            // Generate label text using session metadata and VFO data
+            // For internal VFOs, use "OBS" prefix to distinguish from regular VFOs
             const satelliteName = sessionMetadata?.satellite_name || 'Internal';
-            const labelText = `${satelliteName} ${formatFrequency(frequency)}`;
+
+            // Create a marker-like object to use with generateVFOLabelText
+            // Use a name like "OBS 1" to match the VFO naming pattern
+            const internalMarker = {
+                name: `OBS ${vfoNumber}`,
+                frequency: frequency,
+                decoder: vfoData.decoder
+            };
+
+            const labelText = generateVFOLabelText(internalMarker, modulationMode, bandwidth, formatFrequency);
 
             // Use decoder info from activeDecoders for status
             const decoderInfoForLabel = decoderInfo ? {

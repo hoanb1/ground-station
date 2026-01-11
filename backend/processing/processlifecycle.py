@@ -251,11 +251,32 @@ class ProcessLifecycleManager:
                 "rtl_agc",
                 "soapy_agc",
             ]:
-                if param in sdr_device:
+                if param in sdr_config:
                     config[param] = sdr_config[param]
 
             # Send configuration to the process
             self.processes[sdr_id]["config_queue"].put(config)
+
+            # Notify all other clients about the configuration change
+            other_clients = [c for c in self.processes[sdr_id]["clients"] if c != client_id]
+            if other_clients:
+                # Build the full config dict to send to clients
+                notification_config = {
+                    "center_freq": config.get("center_freq", sdr_config.get("center_freq")),
+                    "sample_rate": config.get("sample_rate", sdr_config.get("sample_rate")),
+                    "gain": config.get("gain", sdr_config.get("gain")),
+                    "fft_size": config.get("fft_size", sdr_config.get("fft_size")),
+                    "fft_window": config.get("fft_window", sdr_config.get("fft_window")),
+                    "bias_t": config.get("bias_t", sdr_config.get("bias_t", False)),
+                    "tuner_agc": config.get("tuner_agc", sdr_config.get("tuner_agc", False)),
+                    "rtl_agc": config.get("rtl_agc", sdr_config.get("rtl_agc", False)),
+                    "fft_averaging": sdr_config.get("fft_averaging", 1),
+                }
+                for other_client in other_clients:
+                    await self.sio.emit("sdr-config", notification_config, room=other_client)
+                self.logger.info(
+                    f"Notified {len(other_clients)} client(s) about SDR config change for {sdr_id}"
+                )
 
             # Add this client to the room (skip for internal observation sessions)
             from vfos.state import VFOManager

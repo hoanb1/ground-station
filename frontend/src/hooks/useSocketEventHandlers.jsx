@@ -58,6 +58,7 @@ import {
     setTunerAgc,
     setRtlAgc,
     setFFTAveraging,
+    updateSDRConfig,
     setIsStreaming,
     setErrorMessage,
     setErrorDialogOpen,
@@ -339,15 +340,7 @@ export const useSocketEventHandlers = (socket) => {
 
         // SDR configuration updates
         socket.on('sdr-config', (data) => {
-            store.dispatch(setCenterFrequency(data['center_freq']));
-            store.dispatch(setSampleRate(data['sample_rate']));
-            store.dispatch(setGain(data['gain']));
-            store.dispatch(setFFTSize(data['fft_size']));
-            store.dispatch(setFFTWindow(data['fft_window']));
-            store.dispatch(setBiasT(data['bias_t']));
-            store.dispatch(setTunerAgc(data['tuner_agc']));
-            store.dispatch(setRtlAgc(data['rtl_agc']));
-            store.dispatch(setFFTAveraging(data['fft_averaging']));
+            store.dispatch(updateSDRConfig(data));
         });
 
         // SDR streaming status

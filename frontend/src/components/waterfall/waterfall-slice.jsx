@@ -318,6 +318,19 @@ export const waterfallSlice = createSlice({
         setFFTAveraging: (state, action) => {
             state.fftAveraging = action.payload;
         },
+        updateSDRConfig: (state, action) => {
+            // Update all SDR configuration parameters at once
+            const config = action.payload;
+            if (config.center_freq !== undefined) state.centerFrequency = config.center_freq;
+            if (config.sample_rate !== undefined) state.sampleRate = config.sample_rate;
+            if (config.gain !== undefined) state.gain = config.gain;
+            if (config.fft_size !== undefined) state.fftSize = config.fft_size;
+            if (config.fft_window !== undefined) state.fftWindow = config.fft_window;
+            if (config.bias_t !== undefined) state.biasT = config.bias_t;
+            if (config.tuner_agc !== undefined) state.tunerAgc = config.tuner_agc;
+            if (config.rtl_agc !== undefined) state.rtlAgc = config.rtl_agc;
+            if (config.fft_averaging !== undefined) state.fftAveraging = config.fft_averaging;
+        },
         setShowRotatorDottedLines: (state, action) => {
             state.showRotatorDottedLines = action.payload;
         },
@@ -433,6 +446,7 @@ export const {
     setFFTSize,
     setFFTSizeOptions,
     setFFTAveraging,
+    updateSDRConfig,
     setGain,
     setSampleRate,
     setCenterFrequency,
