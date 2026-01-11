@@ -195,18 +195,12 @@ class SSTVDecoderV2(BaseDecoderProcess):
         iq_queue,
         data_queue,
         session_id,
-        config=None,
+        config,  # Pre-resolved DecoderConfig from DecoderConfigService (contains all params + metadata)
         vfo=None,
         sample_rate=44100,
         output_dir="data/decoded",
         **kwargs,
     ):
-        # Minimal config for BaseDecoderProcess
-        from processing.decoderconfigservice import DecoderConfig
-
-        if config is None:
-            config = DecoderConfig()
-
         super().__init__(
             iq_queue=iq_queue,
             data_queue=data_queue,
@@ -219,6 +213,10 @@ class SSTVDecoderV2(BaseDecoderProcess):
         self.audio_sample_rate = sample_rate
         self.audio_buffer = np.array([], dtype=np.float32)
         self.mode = None
+
+        # Extract satellite and transmitter metadata from config (same pattern as FSKDecoder)
+        self.satellite = config.satellite or {}
+        self.transmitter = config.transmitter or {}
 
         # FM demodulator state
         self.last_sample = 0 + 0j
@@ -237,6 +235,17 @@ class SSTVDecoderV2(BaseDecoderProcess):
 
         os.makedirs(self.output_dir, exist_ok=True)
         logger.info(f"SSTV decoder v2 initialized for session {session_id}, VFO {vfo}")
+
+        # Log satellite and transmitter details for testing/debugging
+        if self.satellite:
+            logger.info(f"Satellite details: {self.satellite}")
+        else:
+            logger.info("No satellite details provided")
+
+        if self.transmitter:
+            logger.info(f"Transmitter details: {self.transmitter}")
+        else:
+            logger.info("No transmitter details provided")
 
     def _get_decoder_type_for_init(self) -> str:
         return "SSTV"
@@ -876,6 +885,8 @@ class SSTVDecoderV2(BaseDecoderProcess):
                 ),
                 "active": self.cached_vfo_state.get("active") if self.cached_vfo_state else None,
             },
+            "satellite": self.satellite if self.satellite else None,
+            "transmitter": self.transmitter if self.transmitter else None,
         }
 
         metadata_filename = filename.replace(".png", ".json")

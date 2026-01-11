@@ -95,7 +95,7 @@ class DecoderRegistry:
                 required_demodulator=None,  # Has integrated FM demodulator
                 demodulator_mode=None,
                 default_bandwidth=12500,  # 12.5 kHz for SSTV
-                supports_transmitter_config=False,
+                supports_transmitter_config=True,  # SSTV now accepts satellite/transmitter metadata
                 restart_on_params=[],
                 description="Slow-scan television image decoder (process-based with integrated FM demod)",
             ),

@@ -68,6 +68,7 @@ import DeselectIcon from '@mui/icons-material/Deselect';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 import SubjectIcon from '@mui/icons-material/Subject';
+import ImageIcon from '@mui/icons-material/Image';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -997,7 +998,11 @@ export default function FilebrowserMain() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded' ? (
-                                                        <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                        item.url?.endsWith('.png') ? (
+                                                            <ImageIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                        ) : (
+                                                            <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                        )
                                                     ) : item.type === 'audio' ? (
                                                         <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />
                                                     ) : item.type === 'transcription' ? (
@@ -1178,13 +1183,23 @@ export default function FilebrowserMain() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded' ? (
-                                                        <InsertDriveFileIcon
-                                                            sx={{
-                                                                fontSize: 80,
-                                                                color: 'success.main',
-                                                                mb: 1,
-                                                            }}
-                                                        />
+                                                        item.url?.endsWith('.png') ? (
+                                                            <ImageIcon
+                                                                sx={{
+                                                                    fontSize: 80,
+                                                                    color: 'success.main',
+                                                                    mb: 1,
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <InsertDriveFileIcon
+                                                                sx={{
+                                                                    fontSize: 80,
+                                                                    color: 'success.main',
+                                                                    mb: 1,
+                                                                }}
+                                                            />
+                                                        )
                                                     ) : item.type === 'audio' ? (
                                                         <AudiotrackIcon
                                                             sx={{
@@ -1250,7 +1265,11 @@ export default function FilebrowserMain() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded' ? (
-                                                        <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                        item.url?.endsWith('.png') ? (
+                                                            <ImageIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                        ) : (
+                                                            <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                        )
                                                     ) : item.type === 'audio' ? (
                                                         <AudiotrackIcon sx={{ color: 'info.main', fontSize: 20 }} />
                                                     ) : item.type === 'transcription' ? (
