@@ -346,6 +346,25 @@ export const fetchNextPassesForScheduler = createAsyncThunk(
     }
 );
 
+// Load status filters from localStorage or use defaults
+const loadStatusFilters = () => {
+    try {
+        const saved = localStorage.getItem('scheduler_statusFilters');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Failed to load status filters from localStorage:', e);
+    }
+    return {
+        scheduled: true,
+        running: true,
+        completed: true,
+        failed: true,
+        cancelled: true,
+    };
+};
+
 const initialState = {
     observations: [],
     loading: false,
@@ -395,13 +414,7 @@ const initialState = {
         isExpanded: true,  // Whether timeline is visible
     },
     // Status filters for observations table
-    statusFilters: {
-        scheduled: true,
-        running: true,
-        completed: true,
-        failed: true,
-        cancelled: true,
-    },
+    statusFilters: loadStatusFilters(),
     // Selected observation IDs in the table
     selectedObservationIds: [],
 };
@@ -516,6 +529,12 @@ const schedulerSlice = createSlice({
         toggleStatusFilter: (state, action) => {
             const status = action.payload;
             state.statusFilters[status] = !state.statusFilters[status];
+            // Persist to localStorage
+            try {
+                localStorage.setItem('scheduler_statusFilters', JSON.stringify(state.statusFilters));
+            } catch (e) {
+                console.error('Failed to save status filters to localStorage:', e);
+            }
         },
         setSelectedObservationIds: (state, action) => {
             state.selectedObservationIds = action.payload;
