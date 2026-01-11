@@ -19,8 +19,8 @@
 
 
 import * as React from 'react';
-import {Alert, AlertTitle, Box, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
-import {useEffect} from "react";
+import {Alert, AlertTitle, Box, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select, TextField, InputAdornment, IconButton} from "@mui/material";
+import {useEffect, useState, useCallback} from "react";
 import {useDispatch, useSelector} from "react-redux";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {
@@ -41,12 +41,16 @@ import {
 import {
     fetchSatelliteGroups,
     fetchSatellites,
+    searchSatellites,
     setSatGroupId,
+    setSearchKeyword,
     setClickedSatellite,
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 function Pagination({page, onPageChange, className}) {
     const apiRef = useGridApiContext();
@@ -78,8 +82,11 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         satellites,
         satellitesGroups,
         satGroupId,
+        searchKeyword,
         loading,
     } = useSelector((state) => state.satellites);
+
+    const [localSearchValue, setLocalSearchValue] = useState('');
 
     // Get timezone preference
     const timezone = useSelector((state) => {
@@ -230,9 +237,32 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         dispatch(fetchSatelliteGroups({socket}));
     }, [dispatch]);
 
+    // Debounced search effect
+    useEffect(() => {
+        if (localSearchValue.length >= 3) {
+            const timeoutId = setTimeout(() => {
+                // Only search if the keyword actually changed
+                if (localSearchValue !== searchKeyword) {
+                    dispatch(setSearchKeyword(localSearchValue));
+                    dispatch(searchSatellites({socket, keyword: localSearchValue}));
+                }
+            }, 500); // 500ms debounce delay
+
+            return () => clearTimeout(timeoutId);
+        } else if (localSearchValue.length === 0 && searchKeyword !== '') {
+            // Clear search when input is empty
+            dispatch(setSearchKeyword(''));
+            dispatch(setSatGroupId(''));
+        }
+    }, [localSearchValue, dispatch, socket, searchKeyword, t]);
+
     const handleOnGroupChange = (event) => {
         const groupId = event.target.value;
         dispatch(setSatGroupId(groupId));
+        // Clear search when selecting a group
+        setLocalSearchValue('');
+        dispatch(setSearchKeyword(''));
+
         if (groupId !== null) {
             dispatch(fetchSatellites({socket, satGroupId: groupId}))
                 .unwrap()
@@ -243,6 +273,16 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     toast.error(t('satellite_database.failed_load') + ": " + err.message)
                 });
         }
+    };
+
+    const handleSearchChange = (event) => {
+        setLocalSearchValue(event.target.value);
+    };
+
+    const handleClearSearch = () => {
+        setLocalSearchValue('');
+        dispatch(setSearchKeyword(''));
+        dispatch(setSatGroupId(''));
     };
 
     const handleRowClick = (params) => {
@@ -258,36 +298,73 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                 <AlertTitle>{t('satellite_database.title')}</AlertTitle>
                 {t('satellite_database.subtitle')}
             </Alert>
-            <FormControl sx={{minWidth: 200, marginTop: 2, marginBottom: 1}} fullWidth variant={"filled"}>
-                <InputLabel htmlFor="grouped-select">{t('satellite_database.select_group')}</InputLabel>
-                <Select disabled={loading} value={satGroupId} id="grouped-select" label="Grouping" variant={"filled"}
-                        onChange={handleOnGroupChange}>
-                    <ListSubheader>{t('satellite_database.user_groups')}</ListSubheader>
-                    {satellitesGroups.filter(group => group.type === "user").length === 0 ? (
-                        <MenuItem disabled value="">
-                            {t('satellite_database.none_defined')}
-                        </MenuItem>
-                    ) : (
-                        satellitesGroups.map((group, index) => {
-                            if (group.type === "user") {
-                                return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                            }
-                        })
-                    )}
-                    <ListSubheader>{t('satellite_database.builtin_groups')}</ListSubheader>
-                    {satellitesGroups.filter(group => group.type === "system").length === 0 ? (
-                        <MenuItem disabled value="">
-                            {t('satellite_database.none_defined')}
-                        </MenuItem>
-                    ) : (
-                        satellitesGroups.map((group, index) => {
-                            if (group.type === "system") {
-                                return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                            }
-                        })
-                    )}
-                </Select>
-            </FormControl>
+            <Box sx={{ display: 'flex', gap: 2, marginTop: 2, marginBottom: 1 }}>
+                <FormControl sx={{minWidth: 200, flex: 1}} variant={"filled"}>
+                    <InputLabel htmlFor="grouped-select">{t('satellite_database.select_group')}</InputLabel>
+                    <Select
+                        disabled={loading || searchKeyword !== ''}
+                        value={satGroupId}
+                        id="grouped-select"
+                        label="Grouping"
+                        variant={"filled"}
+                        onChange={handleOnGroupChange}
+                    >
+                        <ListSubheader>{t('satellite_database.user_groups')}</ListSubheader>
+                        {satellitesGroups.filter(group => group.type === "user").length === 0 ? (
+                            <MenuItem disabled value="">
+                                {t('satellite_database.none_defined')}
+                            </MenuItem>
+                        ) : (
+                            satellitesGroups.map((group, index) => {
+                                if (group.type === "user") {
+                                    return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                }
+                            })
+                        )}
+                        <ListSubheader>{t('satellite_database.builtin_groups')}</ListSubheader>
+                        {satellitesGroups.filter(group => group.type === "system").length === 0 ? (
+                            <MenuItem disabled value="">
+                                {t('satellite_database.none_defined')}
+                            </MenuItem>
+                        ) : (
+                            satellitesGroups.map((group, index) => {
+                                if (group.type === "system") {
+                                    return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                }
+                            })
+                        )}
+                    </Select>
+                </FormControl>
+                <TextField
+                    sx={{ minWidth: 200, flex: 1 }}
+                    variant="filled"
+                    label={t('satellite_database.search_satellites')}
+                    value={localSearchValue}
+                    onChange={handleSearchChange}
+                    disabled={loading || satGroupId !== ''}
+                    placeholder={t('satellite_database.search_placeholder')}
+                    helperText={localSearchValue.length > 0 && localSearchValue.length < 3 ? t('satellite_database.search_min_chars') : ''}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon />
+                            </InputAdornment>
+                        ),
+                        endAdornment: localSearchValue && (
+                            <InputAdornment position="end">
+                                <IconButton
+                                    aria-label="clear search"
+                                    onClick={handleClearSearch}
+                                    edge="end"
+                                    size="small"
+                                >
+                                    <ClearIcon />
+                                </IconButton>
+                            </InputAdornment>
+                        ),
+                    }}
+                />
+            </Box>
             <div>
                 <DataGrid
                     onRowClick={handleRowClick}

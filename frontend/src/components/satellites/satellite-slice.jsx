@@ -169,12 +169,32 @@ export const fetchSatelliteGroups = createAsyncThunk(
     }
 );
 
+export const searchSatellites = createAsyncThunk(
+    'satellites/search',
+    async ({ socket, keyword }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-satellite-search', keyword, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to search satellites'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 const satellitesSlice = createSlice({
     name: 'satellites',
     initialState: {
         satellites: [],
         satellitesGroups: [],
         satGroupId: "",
+        searchKeyword: "",
         status: 'idle', // or 'loading', 'succeeded', 'failed'
         error: null,
         selected: [],
@@ -220,6 +240,9 @@ const satellitesSlice = createSlice({
         },
         setSatGroupId: (state, action) => {
             state.satGroupId = action.payload;
+        },
+        setSearchKeyword: (state, action) => {
+            state.searchKeyword = action.payload;
         },
         setClickedSatellite: (state, action) => {
             state.clickedSatellite = action.payload;
@@ -316,6 +339,21 @@ const satellitesSlice = createSlice({
                 state.status = 'failed';
                 state.loading = false;
                 state.error = action.error?.message;
+            })
+            .addCase(searchSatellites.pending, (state) => {
+                state.status = 'loading';
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(searchSatellites.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.loading = false;
+                state.satellites = action.payload;
+            })
+            .addCase(searchSatellites.rejected, (state, action) => {
+                state.status = 'failed';
+                state.loading = false;
+                state.error = action.error?.message;
             });
     },
 });
@@ -324,6 +362,7 @@ export const {
     setSatellites,
     setLoading,
     setSatGroupId,
+    setSearchKeyword,
     setPageSize,
     setOpenDeleteConfirm,
     setOpenSatelliteInfoDialog,

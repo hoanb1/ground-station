@@ -105,7 +105,7 @@ async def search_satellites(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, list]]:
     """
-    Search satellites by keyword.
+    Search satellites by keyword with their transmitters.
 
     Args:
         sio: Socket.IO server instance
@@ -119,6 +119,17 @@ async def search_satellites(
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Searching satellites, data: {data}")
         satellites = await crud.satellites.search_satellites(dbsession, keyword=data)
+
+        # Get transmitters for each satellite (same as get_satellites_for_group_id)
+        if satellites:
+            for satellite in satellites.get("data", []):
+                transmitters = await crud.transmitters.fetch_transmitters_for_satellite(
+                    dbsession, satellite["norad_id"]
+                )
+                satellite["transmitters"] = transmitters["data"]
+        else:
+            logger.debug(f"No satellites found for search keyword: {data}")
+
         return {"success": satellites["success"], "data": satellites.get("data", [])}
 
 
