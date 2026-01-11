@@ -394,6 +394,14 @@ const initialState = {
         selectedSatelliteFilter: null,  // null = show all, or norad_id to filter
         isExpanded: true,  // Whether timeline is visible
     },
+    // Status filters for observations table
+    statusFilters: {
+        scheduled: true,
+        running: true,
+        completed: true,
+        failed: true,
+        cancelled: true,
+    },
 };
 
 const schedulerSlice = createSlice({
@@ -502,6 +510,10 @@ const schedulerSlice = createSlice({
         },
         setTimelineExpanded: (state, action) => {
             state.timeline.isExpanded = action.payload;
+        },
+        toggleStatusFilter: (state, action) => {
+            const status = action.payload;
+            state.statusFilters[status] = !state.statusFilters[status];
         },
     },
     extraReducers: (builder) => {
@@ -689,6 +701,7 @@ export const {
     setTimelineDuration,
     setTimelineSatelliteFilter,
     setTimelineExpanded,
+    toggleStatusFilter,
 } = schedulerSlice.actions;
 
 export default schedulerSlice.reducer;

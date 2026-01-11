@@ -35,6 +35,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 import {
     Delete as DeleteIcon,
@@ -56,6 +58,7 @@ import {
     cancelRunningObservation,
     setSelectedObservation,
     setDialogOpen,
+    toggleStatusFilter,
 } from './scheduler-slice.jsx';
 import { TitleBar, getTimeFromISO, humanizeFutureDateInMinutes } from '../common/common.jsx';
 import Button from '@mui/material/Button';
@@ -105,9 +108,13 @@ const ObservationsTable = () => {
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openStopConfirm, setOpenStopConfirm] = useState(false);
 
-    const observations = useSelector((state) => state.scheduler?.observations || []);
+    const allObservations = useSelector((state) => state.scheduler?.observations || []);
     const loading = useSelector((state) => state.scheduler?.loading || false);
     const columnVisibility = useSelector((state) => state.scheduler?.columnVisibility || {});
+    const statusFilters = useSelector((state) => state.scheduler?.statusFilters || {});
+
+    // Filter observations based on status filters
+    const observations = allObservations.filter(obs => statusFilters[obs.status]);
 
     useEffect(() => {
         if (socket) {
@@ -185,7 +192,7 @@ const ObservationsTable = () => {
     const handleBulkEnable = () => {
         if (selectedIds.length > 0 && socket) {
             selectedIds.forEach(id => {
-                const observation = observations.find(obs => obs.id === id);
+                const observation = allObservations.find(obs => obs.id === id);
                 // Only enable if not running
                 if (observation && observation.status !== 'running') {
                     dispatch(toggleObservationEnabled({ socket, id, enabled: true }));
@@ -197,7 +204,7 @@ const ObservationsTable = () => {
     const handleBulkDisable = () => {
         if (selectedIds.length > 0 && socket) {
             selectedIds.forEach(id => {
-                const observation = observations.find(obs => obs.id === id);
+                const observation = allObservations.find(obs => obs.id === id);
                 // Only disable if not running
                 if (observation && observation.status !== 'running') {
                     dispatch(toggleObservationEnabled({ socket, id, enabled: false }));
@@ -364,9 +371,28 @@ const ObservationsTable = () => {
                 <ObservationsTimeline />
             </Box>
 
-            <Typography variant="subtitle1" gutterBottom sx={{ mt: 2, fontWeight: 600, color: 'text.primary' }}>
-                Scheduled Observations
-            </Typography>
+            {/* Title and Status Filters */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2, mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                    Scheduled Observations
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                    {Object.entries(statusFilters).map(([status, enabled]) => (
+                        <Chip
+                            key={status}
+                            label={status.charAt(0).toUpperCase() + status.slice(1)}
+                            color={enabled ? getStatusColor(status) : 'default'}
+                            variant={enabled ? 'filled' : 'outlined'}
+                            onClick={() => dispatch(toggleStatusFilter(status))}
+                            size="small"
+                            sx={{
+                                cursor: 'pointer',
+                                opacity: enabled ? 1 : 0.5,
+                            }}
+                        />
+                    ))}
+                </Stack>
+            </Stack>
 
             <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0 }}>
                 <DataGrid
@@ -481,7 +507,7 @@ const ObservationsTable = () => {
                     variant="contained"
                     onClick={() => {
                         if (selectedIds.length === 1) {
-                            const observation = observations.find(obs => obs.id === selectedIds[0]);
+                            const observation = allObservations.find(obs => obs.id === selectedIds[0]);
                             if (observation) handleEdit(observation);
                         }
                     }}
@@ -502,7 +528,7 @@ const ObservationsTable = () => {
                     color="secondary"
                     onClick={() => {
                         if (selectedIds.length === 1) {
-                            const observation = observations.find(obs => obs.id === selectedIds[0]);
+                            const observation = allObservations.find(obs => obs.id === selectedIds[0]);
                             if (observation) handleClone(observation);
                         }
                     }}
@@ -525,7 +551,7 @@ const ObservationsTable = () => {
                     disabled={
                         selectedIds.length === 0 ||
                         selectedIds.every(id =>
-                            observations.find(obs => obs.id === id && obs.status === 'running')
+                            allObservations.find(obs => obs.id === id && obs.status === 'running')
                         )
                     }
                     sx={{
@@ -546,7 +572,7 @@ const ObservationsTable = () => {
                     disabled={
                         selectedIds.length === 0 ||
                         selectedIds.every(id =>
-                            observations.find(obs => obs.id === id && obs.status === 'running')
+                            allObservations.find(obs => obs.id === id && obs.status === 'running')
                         )
                     }
                     sx={{
@@ -567,7 +593,7 @@ const ObservationsTable = () => {
                     disabled={
                         selectedIds.length === 0 ||
                         !selectedIds.some(id =>
-                            observations.find(obs =>
+                            allObservations.find(obs =>
                                 obs.id === id &&
                                 (obs.status === 'running' || obs.status === 'scheduled')
                             )
@@ -624,7 +650,7 @@ const ObservationsTable = () => {
                 <DialogContent>
                     {selectedIds.length === 1 ? (
                         (() => {
-                            const obs = observations.find(o => o.id === selectedIds[0]);
+                            const obs = allObservations.find(o => o.id === selectedIds[0]);
                             return obs ? (
                                 <>
                                     Are you sure you want to stop the observation <strong>{obs.satellite?.name || 'Unknown'}</strong>?
