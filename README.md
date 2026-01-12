@@ -63,9 +63,30 @@ live radio signals from satellites.
 *   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
 *   **IQ Recording & Playback:** Record raw IQ data in SigMF format with complete metadata (center frequency, sample rate, satellite info) and play back recordings through a virtual SDR device for analysis and debugging.
 *   **Data Decoding:** Decode SSTV images in real-time with live audio monitoring (additional decoders in development)
-*   **AI-Powered Transcription:** Optional real-time audio transcription using Google Gemini API for voice communications (requires user-provided API key). See [Privacy Notice](TRANSCRIPTION_PRIVACY.md).
+*   **AI-Powered Transcription:** Optional real-time speech-to-text transcription of demodulated audio with support for multiple providers:
+    *   **Google Gemini Live API:** Real-time transcription with built-in language detection and translation capabilities. Optimized for conversational speech with low latency. See [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing).
+    *   **Deepgram Streaming API:** Specialized for noisy RF audio environments with excellent performance on radio communications. See [Deepgram pricing](https://deepgram.com/pricing).
+    *   **Per-VFO Configuration:** Each VFO can have independent transcription settings (provider, source language, translation target).
+    *   **Live Subtitles:** Transcriptions appear as real-time subtitles overlaid on the waterfall display with automatic line wrapping and word-level timing.
+    *   **File Output:** All transcriptions are automatically saved to timestamped text files in the `backend/data/transcriptions/` directory.
+    *   **Optional Translation:** Deepgram transcriptions can be translated to any language using Google Cloud Translation API.
+    *   **Privacy-Conscious:** Requires user-provided API keys. Audio is streamed to external services only when explicitly enabled. All costs and data handling are the user's responsibility.
 *   **Performance Monitoring:** Real-time visualization of the signal processing pipeline showing data flow between components (SDR → FFT → Demodulator → Decoder → Browser), queue health monitoring, throughput rates, and component statistics to diagnose bottlenecks and optimize performance.
 *   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.
+
+## Scheduled Observations & Automated Pass Recording
+
+Ground Station includes a comprehensive automated observation system that can schedule and execute satellite passes without user intervention:
+
+*   **Monitored Satellites:** Define satellite monitoring templates with hardware configurations, signal parameters, and task definitions. The system automatically generates scheduled observations for all qualifying passes.
+*   **Automated Pass Scheduling:** Automatically calculate and schedule upcoming satellite passes based on configurable criteria (minimum elevation, lookahead window). The scheduler uses APScheduler to trigger observations at AOS (Acquisition of Signal) and stop at LOS (Loss of Signal).
+*   **Flexible Task Composition:** Each observation can include multiple concurrent tasks: IQ recording (SigMF format), audio recording (WAV/MP3/FLAC), protocol decoding (AFSK, GMSK, SSTV, APRS, Morse), and optional AI transcription.
+*   **Hardware Orchestration:** Automatically controls SDR devices, antenna rotators (with satellite tracking), and rigs (with Doppler correction) during scheduled observations.
+*   **Live Observation Capability:** Users can observe any automated pass in real-time through the web interface - view the spectrum waterfall, listen to demodulated audio, and watch live decoder output. When using the same SDR as an automated observation, users can monitor without interference, but be aware that changing the SDR's center frequency or bandwidth will affect the ongoing observation.
+*   **Conflict Detection & Resolution:** Smart scheduling system detects overlapping satellite passes and supports multiple resolution strategies (priority-based on elevation, skip conflicting passes, or force scheduling). Dry-run mode allows preview of conflicts before committing.
+*   **Status Management:** Real-time observation status tracking (scheduled, running, completed, failed, cancelled, missed) with automatic cleanup of old completed observations.
+*   **Session Management:** Automated observations run in isolated internal VFO sessions (namespace: "internal:<observation_id>"). When using different SDRs, user sessions and automated observations operate completely independently without any interference.
+*   **Multi-Signal Support:** Within a single SDR observation bandwidth, you can decode multiple signals using VFO markers - for example, simultaneously record IQ on the main frequency, decode APRS from VFO #1, and monitor another signal on VFO #2.
 
 ## Planned Features & Roadmap
 
@@ -74,11 +95,10 @@ The following features are planned or in development:
 *   **Additional Decoders:**
     *   Morse/CW decoder (in development)
     *   AFSK packet decoder (in development)
-    *   LoRa/GMSK decoders (in development)
+    *   LoRa decoders (in development)
     *   NOAA APT weather satellite images
     *   METEOR LRPT weather satellite images
     *   Additional telemetry formats
-*   **Pass Scheduler:** Automated scheduling and recording of satellite passes
 
 ## Architecture
 <a id="arch-v1"></a>
