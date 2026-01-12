@@ -427,12 +427,14 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                     />
                 </TableCell>
             )}
-            <TableCell sx={{ width: 50, verticalAlign: 'middle' }}>
-                <Tooltip title={item.type}>
-                    {getTypeIcon()}
-                </Tooltip>
+            <TableCell sx={{ width: 50 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Tooltip title={item.type}>
+                        {getTypeIcon()}
+                    </Tooltip>
+                </Box>
             </TableCell>
-            <TableCell sx={{ verticalAlign: 'top', pt: 2 }}>
+            <TableCell sx={{ verticalAlign: 'middle' }}>
                 <Box>
                     <Tooltip title={item.displayName}>
                         <Typography
@@ -455,17 +457,17 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                     )}
                 </Box>
             </TableCell>
-            <TableCell align="right" sx={{ verticalAlign: 'top', pt: 2 }}>
+            <TableCell align="right" sx={{ verticalAlign: 'middle' }}>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                     {formatBytes(item.data_size || item.size)}
                 </Typography>
             </TableCell>
-            <TableCell sx={{ verticalAlign: 'top', pt: 2 }}>
+            <TableCell sx={{ verticalAlign: 'middle' }}>
                 <Typography variant="body2">
                     {getFileType()}
                 </Typography>
             </TableCell>
-            <TableCell sx={{ verticalAlign: 'top', pt: 2 }}>
+            <TableCell sx={{ verticalAlign: 'middle' }}>
                 {satelliteName ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <SatelliteAltIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
@@ -475,12 +477,12 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                     <Typography variant="body2" color="text.disabled">—</Typography>
                 )}
             </TableCell>
-            <TableCell sx={{ verticalAlign: 'top', pt: 2 }}>
+            <TableCell sx={{ verticalAlign: 'middle' }}>
                 <Typography variant="body2">
                     {formatTime(item.created)}
                 </Typography>
             </TableCell>
-            <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ verticalAlign: 'top', pt: 2 }}>
+            <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ verticalAlign: 'middle' }}>
                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
                     <Tooltip title={t('actions.view_details', 'View Details')}>
                         <IconButton

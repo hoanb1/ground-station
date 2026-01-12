@@ -221,7 +221,7 @@ export default function FilebrowserMain() {
         viewMode,
     } = useSelector((state) => state.filebrowser);
 
-    const pageSize = 10; // Hardcoded - not persisted in Redux
+    const pageSize = 12; // Hardcoded - not persisted in Redux
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
