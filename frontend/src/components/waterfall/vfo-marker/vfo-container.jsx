@@ -422,86 +422,8 @@ const VFOMarkersContainer = ({
         // Clear the canvas
         ctx.clearRect(0, 0, canvas.width, height);
 
-        // Get active VFO keys and sort them so selected VFO is last (drawn on top)
-        const vfoKeys = Object.keys(vfoActive).filter(key => vfoActive[key]);
-
-        // Sort keys to put selected VFO at the end (drawn last)
-        const sortedVfoKeys = vfoKeys.sort((a, b) => {
-            // If a is selected, it should come after b (drawn on top)
-            if (parseInt(a) === selectedVFO) return 1;
-            // If b is selected, it should come after a
-            if (parseInt(b) === selectedVFO) return -1;
-            // Otherwise maintain original order
-            return parseInt(a) - parseInt(b);
-        });
-
-        // Draw each marker in sorted order (selected one drawn last)
-        sortedVfoKeys.forEach(markerIdx => {
-            const marker = vfoMarkers[markerIdx];
-            const isSelected = parseInt(markerIdx) === selectedVFO;
-
-            // Get decoder info for this VFO
-            const decoderInfo = getDecoderInfoForVFO(parseInt(markerIdx));
-            
-            // Use the VFO's configured mode directly
-            const bounds = calculateVFOFrequencyBounds(marker, startFreq, freqRange, actualWidth);
-
-            // Skip if the marker is outside the visible range
-            if (bounds.markerHighFreq < startFreq || bounds.markerLowFreq > endFreq) {
-                return;
-            }
-
-            const { leftEdgeX, rightEdgeX, centerX, mode, bandwidth } = bounds;
-            const areaOpacity = isSelected ? '33' : '15';
-            const lineOpacity = isSelected ? 'FF' : '99';
-
-            // Check if this is a center-only mode (no sidebands) using config
-            const centerOnly = isCenterLineOnly(mode, marker.decoder);
-
-            // Use drawing utilities
-            if (!centerOnly) {
-                canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, marker.color, areaOpacity);
-            }
-            canvasDrawingUtils.drawVFOLine(ctx, centerX, height, marker.color, lineOpacity, isSelected ? 2 : 1.5);
-            if (!centerOnly) {
-                canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1, marker.decoder);
-            }
-
-            // Draw edge handles based on mode configuration and bandwidth lock state (skip for center-only mode)
-            const bandwidthLocked = isLockedBandwidth(mode, marker.decoder);
-            if (!centerOnly && !bandwidthLocked) {
-                const edgeHandleYPosition = edgeHandleYOffset;
-                const edgeHandleWidth = isSelected ? 14 : 6;
-
-                if (canDragRightEdge(mode, marker.decoder)) {
-                    canvasDrawingUtils.drawVFOHandle(ctx, rightEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
-                }
-
-                if (canDragLeftEdge(mode, marker.decoder)) {
-                    canvasDrawingUtils.drawVFOHandle(ctx, leftEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
-                }
-            }
-
-            // Draw frequency label
-            const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);
-            const isLocked = marker.lockedTransmitterId && marker.lockedTransmitterId !== 'none';
-
-            // Get morse output text if this VFO has a morse decoder
-            const morseText = getMorseOutputForVFO(parseInt(markerIdx));
-
-            // Get packet decoder outputs info if this VFO has a packet decoder (BPSK/FSK/GMSK/GFSK/AFSK)
-            const packetOutputs = getPacketDecoderOutputsForVFO(parseInt(markerIdx));
-
-            // Check if this VFO is currently streaming audio
-            const isStreaming = streamingVFOs.includes(parseInt(markerIdx));
-
-            // Check if this VFO is muted
-            const isMuted = vfoMuted[parseInt(markerIdx)] || false;
-
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText, isStreaming, packetOutputs, isMuted);
-        });
-
-        // Draw internal VFO markers (read-only, greyed-out) using live session data
+        // Draw internal VFO markers FIRST (read-only, greyed-out) using live session data
+        // This ensures user VFOs always paint over internal observation VFOs
         const internalVFOSessions = getInternalVFOSessions();
         internalVFOSessions.forEach(({ sessionId, vfoNumber, vfoData, sessionMetadata, decoderInfo }) => {
             // Use actual VFO frequency from session data
@@ -576,6 +498,86 @@ const VFOMarkersContainer = ({
                 null, // no packet outputs
                 false // not muted
             );
+        });
+
+        // Draw user VFO markers AFTER internal VFOs (so they paint on top)
+        // Get active VFO keys and sort them so selected VFO is last (drawn on top)
+        const vfoKeys = Object.keys(vfoActive).filter(key => vfoActive[key]);
+
+        // Sort keys to put selected VFO at the end (drawn last)
+        const sortedVfoKeys = vfoKeys.sort((a, b) => {
+            // If a is selected, it should come after b (drawn on top)
+            if (parseInt(a) === selectedVFO) return 1;
+            // If b is selected, it should come after a
+            if (parseInt(b) === selectedVFO) return -1;
+            // Otherwise maintain original order
+            return parseInt(a) - parseInt(b);
+        });
+
+        // Draw each marker in sorted order (selected one drawn last)
+        sortedVfoKeys.forEach(markerIdx => {
+            const marker = vfoMarkers[markerIdx];
+            const isSelected = parseInt(markerIdx) === selectedVFO;
+
+            // Get decoder info for this VFO
+            const decoderInfo = getDecoderInfoForVFO(parseInt(markerIdx));
+
+            // Use the VFO's configured mode directly
+            const bounds = calculateVFOFrequencyBounds(marker, startFreq, freqRange, actualWidth);
+
+            // Skip if the marker is outside the visible range
+            if (bounds.markerHighFreq < startFreq || bounds.markerLowFreq > endFreq) {
+                return;
+            }
+
+            const { leftEdgeX, rightEdgeX, centerX, mode, bandwidth } = bounds;
+            const areaOpacity = isSelected ? '33' : '15';
+            const lineOpacity = isSelected ? 'FF' : '99';
+
+            // Check if this is a center-only mode (no sidebands) using config
+            const centerOnly = isCenterLineOnly(mode, marker.decoder);
+
+            // Use drawing utilities
+            if (!centerOnly) {
+                canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, marker.color, areaOpacity);
+            }
+            canvasDrawingUtils.drawVFOLine(ctx, centerX, height, marker.color, lineOpacity, isSelected ? 2 : 1.5);
+            if (!centerOnly) {
+                canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1, marker.decoder);
+            }
+
+            // Draw edge handles based on mode configuration and bandwidth lock state (skip for center-only mode)
+            const bandwidthLocked = isLockedBandwidth(mode, marker.decoder);
+            if (!centerOnly && !bandwidthLocked) {
+                const edgeHandleYPosition = edgeHandleYOffset;
+                const edgeHandleWidth = isSelected ? 14 : 6;
+
+                if (canDragRightEdge(mode, marker.decoder)) {
+                    canvasDrawingUtils.drawVFOHandle(ctx, rightEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
+                }
+
+                if (canDragLeftEdge(mode, marker.decoder)) {
+                    canvasDrawingUtils.drawVFOHandle(ctx, leftEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
+                }
+            }
+
+            // Draw frequency label
+            const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);
+            const isLocked = marker.lockedTransmitterId && marker.lockedTransmitterId !== 'none';
+
+            // Get morse output text if this VFO has a morse decoder
+            const morseText = getMorseOutputForVFO(parseInt(markerIdx));
+
+            // Get packet decoder outputs info if this VFO has a packet decoder (BPSK/FSK/GMSK/GFSK/AFSK)
+            const packetOutputs = getPacketDecoderOutputsForVFO(parseInt(markerIdx));
+
+            // Check if this VFO is currently streaming audio
+            const isStreaming = streamingVFOs.includes(parseInt(markerIdx));
+
+            // Check if this VFO is muted
+            const isMuted = vfoMuted[parseInt(markerIdx)] || false;
+
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText, isStreaming, packetOutputs, isMuted);
         });
     };
 
