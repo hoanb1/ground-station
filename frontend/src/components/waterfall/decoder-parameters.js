@@ -125,11 +125,21 @@ export const FSK_PARAMETERS = {
         type: 'select',
         default: 9600,
         options: [
+            { value: 50, label: '50 baud', tooltip: 'RTTY' },
+            { value: 75, label: '75 baud', tooltip: 'RTTY' },
+            { value: 110, label: '110 baud', tooltip: 'Old RTTY standard' },
+            { value: 150, label: '150 baud', tooltip: 'RTTY' },
+            { value: 200, label: '200 baud', tooltip: 'Legacy satellites' },
+            { value: 300, label: '300 baud', tooltip: 'Low-speed satellite links' },
+            { value: 600, label: '600 baud', tooltip: 'Low-speed satellite links' },
             { value: 1200, label: '1200 baud' },
             { value: 2400, label: '2400 baud' },
             { value: 4800, label: '4800 baud' },
             { value: 9600, label: '9600 baud' },
-            { value: 19200, label: '19200 baud' }
+            { value: 19200, label: '19200 baud' },
+            { value: 38400, label: '38400 baud', tooltip: 'High-speed UHF links' },
+            { value: 57600, label: '57600 baud', tooltip: 'Very high-speed links' },
+            { value: 115200, label: '115200 baud', tooltip: 'Extremely high-speed links' }
         ]
     },
     fsk_framing: {
@@ -258,10 +268,21 @@ export const BPSK_PARAMETERS = {
         type: 'select',
         default: 9600,
         options: [
+            { value: 50, label: '50 baud', tooltip: 'RTTY' },
+            { value: 75, label: '75 baud', tooltip: 'RTTY' },
+            { value: 110, label: '110 baud', tooltip: 'Old RTTY standard' },
+            { value: 150, label: '150 baud', tooltip: 'RTTY' },
+            { value: 200, label: '200 baud', tooltip: 'Legacy satellites' },
+            { value: 300, label: '300 baud', tooltip: 'Low-speed satellite links' },
+            { value: 600, label: '600 baud', tooltip: 'Low-speed satellite links' },
             { value: 1200, label: '1200 baud' },
             { value: 2400, label: '2400 baud' },
             { value: 4800, label: '4800 baud' },
-            { value: 9600, label: '9600 baud' }
+            { value: 9600, label: '9600 baud' },
+            { value: 19200, label: '19200 baud' },
+            { value: 38400, label: '38400 baud', tooltip: 'High-speed UHF links' },
+            { value: 57600, label: '57600 baud', tooltip: 'Very high-speed links' },
+            { value: 115200, label: '115200 baud', tooltip: 'Extremely high-speed links' }
         ]
     },
     bpsk_framing: {
