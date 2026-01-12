@@ -444,7 +444,6 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
-                                maxWidth: 300,
                             }}
                         >
                             {item.displayName}
