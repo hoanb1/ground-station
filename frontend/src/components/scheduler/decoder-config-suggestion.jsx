@@ -91,6 +91,11 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
         return null;
     }
 
+    // Don't render if there's an error (e.g., invalid decoder type)
+    if (error) {
+        return null;
+    }
+
     // Loading state
     if (loading) {
         return (
@@ -111,15 +116,6 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                     Loading decoder configuration...
                 </Typography>
             </Box>
-        );
-    }
-
-    // Error state
-    if (error) {
-        return (
-            <Alert severity="warning" sx={{ mt: 1 }}>
-                {error}
-            </Alert>
         );
     }
 
