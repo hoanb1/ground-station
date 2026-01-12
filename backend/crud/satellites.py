@@ -46,6 +46,10 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: Union[s
 
         group = await fetch_satellite_group(session, group_id)
 
+        if not group or not group.get("data"):
+            logger.warning(f"Group with ID {group_id} not found or has no data")
+            return {"success": True, "data": [], "error": None}
+
         satellite_ids = group["data"]["satellite_ids"]
 
         # Fetch satellites

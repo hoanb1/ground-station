@@ -7,6 +7,7 @@ from common.logger import logger
 
 # Import all entity modules to register their handlers
 from handlers.entities import (
+    decoderconfig,
     groups,
     hardware,
     locations,
@@ -50,6 +51,7 @@ def _register_all_handlers():
     systeminfo.register_handlers(handler_registry)
     sessions.register_handlers(handler_registry)
     scheduler.register_handlers(handler_registry)
+    decoderconfig.register_handlers(handler_registry)
 
 
 # Register all handlers at module load time

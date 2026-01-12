@@ -29,6 +29,7 @@ Legacy handlers (deprecated):
 
 from .base import run_async_in_thread
 from .entities import (
+    decoderconfig,
     filebrowser,
     groups,
     hardware,
@@ -62,6 +63,7 @@ __all__ = [
     "tracking",
     "filebrowser",
     "sdr",
+    "decoderconfig",
     # Special routing functions (for backwards compatibility)
     "filebrowser_request_routing",
     "sdr_data_request_routing",

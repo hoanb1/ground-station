@@ -56,6 +56,7 @@ import {
 import { useSocket } from '../common/socket.jsx';
 import { SatelliteSelector } from './satellite-selector.jsx';
 import { getDecoderParameters, getDecoderDefaultParameters } from '../waterfall/decoder-parameters.js';
+import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 
 const DECODER_TYPES = [
     { value: 'none', label: 'None' },
@@ -1237,6 +1238,70 @@ export default function MonitoredSatelliteDialog() {
                                                                         ))}
                                                                     </Select>
                                                                 </FormControl>
+
+                                                                {/* Decoder Configuration Suggestion */}
+                                                                <DecoderConfigSuggestion
+                                                                    decoderType={decoderType}
+                                                                    satellite={formData.satellite.norad_id ? formData.satellite : null}
+                                                                    transmitter={
+                                                                        task.config.transmitter_id
+                                                                            ? availableTransmitters.find(t => t.id === task.config.transmitter_id)
+                                                                            : null
+                                                                    }
+                                                                    show={!!task.config.transmitter_id && decoderType !== 'none'}
+                                                                    onApply={(config) => {
+                                                                        // Apply the configuration to the decoder parameters
+                                                                        const newParams = { ...currentParams };
+                                                                        const prefix = decoderType;
+
+                                                                        // Map config fields to parameter keys based on decoder type
+                                                                        if (['gmsk', 'gfsk', 'fsk'].includes(decoderType)) {
+                                                                            if (config.baudrate) newParams[`${prefix}_baudrate`] = config.baudrate;
+                                                                            if (config.framing) newParams[`${prefix}_framing`] = config.framing;
+                                                                            if (config.deviation !== null && config.deviation !== undefined) {
+                                                                                newParams[`${prefix}_deviation`] = config.deviation;
+                                                                            }
+                                                                            // Apply framing-specific parameters (e.g., GEOSCAN frame_size)
+                                                                            if (config.framing === 'geoscan' && config.framing_params?.frame_size) {
+                                                                                newParams[`${prefix}_geoscan_frame_size`] = config.framing_params.frame_size;
+                                                                            }
+                                                                        } else if (decoderType === 'bpsk') {
+                                                                            if (config.baudrate) newParams.bpsk_baudrate = config.baudrate;
+                                                                            if (config.framing) newParams.bpsk_framing = config.framing;
+                                                                            if (config.differential !== null && config.differential !== undefined) {
+                                                                                newParams.bpsk_differential = config.differential;
+                                                                            }
+                                                                            // Apply framing-specific parameters (e.g., GEOSCAN frame_size)
+                                                                            if (config.framing === 'geoscan' && config.framing_params?.frame_size) {
+                                                                                newParams.bpsk_geoscan_frame_size = config.framing_params.frame_size;
+                                                                            }
+                                                                        } else if (decoderType === 'afsk') {
+                                                                            if (config.baudrate) newParams.afsk_baudrate = config.baudrate;
+                                                                            if (config.framing) newParams.afsk_framing = config.framing;
+                                                                            if (config.deviation !== null && config.deviation !== undefined) {
+                                                                                newParams.afsk_deviation = config.deviation;
+                                                                            }
+                                                                            if (config.af_carrier) newParams.afsk_af_carrier = config.af_carrier;
+                                                                        } else if (decoderType === 'lora') {
+                                                                            if (config.sf) newParams.lora_sf = config.sf;
+                                                                            if (config.bw) newParams.lora_bw = config.bw;
+                                                                            if (config.cr) newParams.lora_cr = config.cr;
+                                                                        }
+
+                                                                        // Update the task parameters
+                                                                        setFormData((prev) => {
+                                                                            const newTasks = [...prev.tasks];
+                                                                            newTasks[index] = {
+                                                                                ...newTasks[index],
+                                                                                config: {
+                                                                                    ...newTasks[index].config,
+                                                                                    parameters: newParams,
+                                                                                },
+                                                                            };
+                                                                            return { ...prev, tasks: newTasks };
+                                                                        });
+                                                                    }}
+                                                                />
 
                                                                 {Object.keys(decoderParams).length > 0 && (
                                                                     <>
