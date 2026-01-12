@@ -15,8 +15,9 @@
 
 """Observation execution service - handles lifecycle of scheduled observations."""
 
+import asyncio
 import traceback
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from common.logger import logger
 from crud.scheduledobservations import fetch_scheduled_observations
@@ -64,6 +65,10 @@ class ObservationExecutor:
         self.transcription_handler = TranscriptionHandler(process_manager)
         self.tracker_handler = TrackerHandler()
 
+        # Track actively executing observations to prevent concurrent starts
+        self._running_observations: set[str] = set()
+        self._observations_lock: Optional[asyncio.Lock] = None  # Will be initialized lazily
+
     @property
     def vfo_manager(self):
         """Lazy-load VFOManager to avoid circular import issues."""
@@ -72,6 +77,12 @@ class ObservationExecutor:
 
             self._vfo_manager = VFOManager()
         return self._vfo_manager
+
+    def _get_observations_lock(self) -> asyncio.Lock:
+        """Lazy-load asyncio.Lock to avoid event loop issues during initialization."""
+        if self._observations_lock is None:
+            self._observations_lock = asyncio.Lock()
+        return self._observations_lock
 
     async def start_observation(self, observation_id: str) -> Dict[str, Any]:
         """
@@ -94,6 +105,18 @@ class ObservationExecutor:
         """
         try:
             logger.info(f"Starting observation: {observation_id}")
+
+            # Check if this observation is already running (prevent duplicate execution)
+            lock = self._get_observations_lock()
+            async with lock:
+                if observation_id in self._running_observations:
+                    error_msg = f"Observation {observation_id} is already executing"
+                    logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
+
+                # Mark as running immediately to prevent race condition
+                self._running_observations.add(observation_id)
+                logger.debug(f"Marked observation {observation_id} as executing")
 
             # 1. Load observation from database
             async with AsyncSessionLocal() as session:
@@ -154,6 +177,10 @@ class ObservationExecutor:
             error_msg = f"Error starting observation {observation_id}: {e}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
+
+            # Clean up running observation tracking
+            self._running_observations.discard(observation_id)
+
             await update_observation_status(self.sio, observation_id, STATUS_FAILED, str(e))
             # Remove scheduled stop job on error
             await remove_scheduled_stop_job(observation_id)
@@ -194,6 +221,9 @@ class ObservationExecutor:
             # 3. Update observation status to COMPLETED
             await update_observation_status(self.sio, observation_id, STATUS_COMPLETED)
 
+            # 4. Remove from running observations tracking
+            self._running_observations.discard(observation_id)
+
             logger.info(
                 f"Observation {observation['name']} ({observation_id}) stopped successfully"
             )
@@ -203,6 +233,9 @@ class ObservationExecutor:
             error_msg = f"Error stopping observation {observation_id}: {e}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
+
+            # Clean up running observation tracking even on error
+            self._running_observations.discard(observation_id)
 
             # Mark observation as failed since stop encountered an error
             try:
@@ -254,6 +287,9 @@ class ObservationExecutor:
 
             # 4. Update status to CANCELLED
             await update_observation_status(self.sio, observation_id, STATUS_CANCELLED)
+
+            # 5. Remove from running observations tracking
+            self._running_observations.discard(observation_id)
 
             logger.info(f"Observation {observation_id} cancelled successfully")
             return {"success": True}
