@@ -36,7 +36,7 @@ class AX25Parser:
     # Callsign adapter to decode shifted ASCII
     class CallsignAdapter(Adapter):
         def _decode(self, obj, context, path=None):
-            return str(bytes([x >> 1 for x in obj]), encoding="ascii").strip()
+            return str(bytes([x >> 1 for x in obj]), encoding="ascii").replace("\x00", " ").strip()
 
     Callsign = CallsignAdapter(Bytes(6))
 
