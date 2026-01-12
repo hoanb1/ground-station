@@ -316,6 +316,7 @@ export const AFSK_PARAMETERS = {
         default: 1200,
         options: [
             { value: 300, label: '300 baud', tooltip: 'Low-speed HF packet radio' },
+            { value: 1143, label: '1143 baud', tooltip: 'Some satellites' },
             { value: 1200, label: '1200 baud', tooltip: 'Bell 202 (APRS, VHF packet radio)' },
             { value: 2400, label: '2400 baud', tooltip: 'Medium-speed packet radio' },
             { value: 4800, label: '4800 baud', tooltip: 'High-speed VHF packet radio' },
@@ -340,6 +341,7 @@ export const AFSK_PARAMETERS = {
         default: 500,
         options: [
             { value: 500, label: '500 Hz', tooltip: 'Standard for 1200 baud (Bell 202)' },
+            { value: 565, label: '565 Hz', tooltip: 'Some satellites' },
             { value: 1000, label: '1000 Hz', tooltip: 'Wide deviation for 1200 baud' },
             { value: 2400, label: '2400 Hz', tooltip: 'Standard for 9600 baud' },
             { value: 3000, label: '3000 Hz', tooltip: 'Wide deviation for 9600 baud' }
