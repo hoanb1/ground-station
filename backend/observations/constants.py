@@ -34,6 +34,7 @@ STATUS_RUNNING = "running"
 STATUS_COMPLETED = "completed"
 STATUS_CANCELLED = "cancelled"
 STATUS_FAILED = "failed"
+STATUS_MISSED = "missed"
 
 # All valid observation statuses
 VALID_STATUSES = (
@@ -42,6 +43,7 @@ VALID_STATUSES = (
     STATUS_COMPLETED,
     STATUS_CANCELLED,
     STATUS_FAILED,
+    STATUS_MISSED,
 )
 
 # Conflict resolution strategies

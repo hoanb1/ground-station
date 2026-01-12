@@ -25,8 +25,9 @@ from apscheduler.triggers.date import DateTrigger
 from common.logger import logger
 from crud.scheduledobservations import fetch_scheduled_observations
 from db import AsyncSessionLocal
-from observations.constants import STATUS_SCHEDULED
+from observations.constants import STATUS_MISSED, STATUS_SCHEDULED
 from observations.executor import ObservationExecutor
+from observations.helpers import update_observation_status
 
 
 class ObservationSchedulerSync:
@@ -48,6 +49,7 @@ class ObservationSchedulerSync:
         self.scheduler = scheduler
         self.executor = executor
         self._job_prefix = "obs"  # Prefix for all observation jobs
+        self.sio = executor.sio  # Socket.IO instance for event emission
 
     def _make_job_id(self, observation_id: str, event_type: str) -> str:
         """
@@ -231,13 +233,37 @@ class ObservationSchedulerSync:
 
             logger.info(f"Found {len(observations)} observations in database")
 
-            # 3. Sync each observation
+            # 3. Check for missed observations and mark them
+            now = datetime.now(timezone.utc)
+            missed_count = 0
+            for observation in observations:
+                obs_id = observation.get("id")
+                status = observation.get("status", "").lower()
+
+                # Only check scheduled observations
+                if status == STATUS_SCHEDULED:
+                    # Get task_end time
+                    task_end_str = observation.get("task_end")
+                    if task_end_str:
+                        task_end_time = datetime.fromisoformat(task_end_str.replace("Z", "+00:00"))
+
+                        # If task_end is in the past, mark as missed
+                        if task_end_time < now:
+                            logger.info(
+                                f"Marking observation {obs_id} ({observation.get('name')}) as missed "
+                                f"(task_end {task_end_time.isoformat()} is in the past)"
+                            )
+                            await update_observation_status(self.sio, obs_id, STATUS_MISSED)
+                            missed_count += 1
+
+            # 4. Sync each observation
             stats = {
                 "total": len(observations),
                 "scheduled": 0,
                 "skipped_disabled": 0,
                 "skipped_status": 0,
                 "skipped_past": 0,
+                "missed": missed_count,
                 "errors": 0,
             }
             errors = []
@@ -259,7 +285,8 @@ class ObservationSchedulerSync:
             logger.info(
                 f"Full synchronization complete: {stats['scheduled']} scheduled, "
                 f"{stats['skipped_disabled']} disabled, {stats['skipped_status']} wrong status, "
-                f"{stats['skipped_past']} past, {stats['errors']} errors"
+                f"{stats['skipped_past']} past, {stats.get('missed', 0)} marked as missed, "
+                f"{stats['errors']} errors"
             )
 
             return {"success": True, "stats": stats, "errors": errors}

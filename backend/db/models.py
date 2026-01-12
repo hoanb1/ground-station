@@ -340,6 +340,7 @@ class ObservationStatus(str, PyEnum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
     FAILED = "failed"
+    MISSED = "missed"
 
 
 class MonitoredSatellites(Base):
