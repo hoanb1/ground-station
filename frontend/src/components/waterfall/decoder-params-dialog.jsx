@@ -33,7 +33,9 @@ import {
     FormControlLabel,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { useSelector } from 'react-redux';
 import { getDecoderParameters } from './vfo-marker/vfo-config.js';
+import { DecoderConfigSuggestion } from '../scheduler/decoder-config-suggestion.jsx';
 
 const DecoderParamsDialog = ({
     open,
@@ -43,6 +45,10 @@ const DecoderParamsDialog = ({
     vfoActive,
     onVFOPropertyChange,
 }) => {
+    // Get satellite and transmitter data from Redux
+    const satellite = useSelector(state => state.targetSatTrack.satelliteData);
+    const transmitters = useSelector(state => state.targetSatTrack.satelliteData?.transmitters || []);
+
     if (!vfoIndex || !vfoMarkers[vfoIndex]) {
         return null;
     }
@@ -56,6 +62,13 @@ const DecoderParamsDialog = ({
 
     const decoderParams = getDecoderParameters(decoder);
     const parametersEnabled = vfo.parametersEnabled ?? false; // Default to disabled
+
+    // Get locked transmitter if available
+    const lockedTransmitterId = vfo.lockedTransmitterId;
+    const isLocked = lockedTransmitterId && lockedTransmitterId !== 'none';
+    const lockedTransmitter = isLocked
+        ? transmitters.find(tx => tx.id === lockedTransmitterId)
+        : null;
 
     return (
         <Dialog
@@ -81,8 +94,17 @@ const DecoderParamsDialog = ({
             </DialogTitle>
             <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.elevated' }}>
                 <Box>
+                    {/* Decoder Configuration Suggestion */}
+                    <DecoderConfigSuggestion
+                        decoderType={decoder}
+                        satellite={satellite?.norad_id ? satellite : null}
+                        transmitter={lockedTransmitter}
+                        show={isLocked && !!lockedTransmitter}
+                        onApply={null}
+                    />
+
                     {/* Master Enable/Disable Checkbox */}
-                    <Box sx={{ mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Box sx={{ mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider', mt: isLocked && lockedTransmitter ? 0 : 0 }}>
                         <FormControlLabel
                             control={
                                 <Switch

@@ -203,8 +203,8 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
     return (
         <Box
             sx={{
-                mt: 2,
                 p: 2,
+                mb: 2,
                 bgcolor: (theme) =>
                     config.config_source === 'satellite_config'
                         ? theme.palette.mode === 'dark'
@@ -253,7 +253,8 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                             color: 'text.primary',
                         }}
                     >
-                        Suggested Configuration
+                        Suggested configuration for this satellite
+                        {config.transmitter?.mode && ` (${config.transmitter.mode})`}
                     </Typography>
                     <Typography
                         variant="body2"
