@@ -420,7 +420,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
             }}
         >
             {selectionMode && (
-                <TableCell padding="checkbox" sx={{ verticalAlign: 'middle' }}>
+                <TableCell padding="checkbox" sx={{ verticalAlign: 'middle' }} onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                         checked={isSelected}
                         onChange={() => onToggleSelection(item)}
