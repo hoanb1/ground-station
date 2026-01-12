@@ -780,7 +780,7 @@ const ObservationFormDialog = () => {
                     py: 2.5,
                 }}
             >
-                {selectedObservation?.id ? 'Edit Observation' : 'New Observation'}
+                {selectedObservation?.id ? `Edit Observation: ${formData.name || 'Unnamed'}` : 'New Observation'}
             </DialogTitle>
 
             <DialogContent dividers sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
