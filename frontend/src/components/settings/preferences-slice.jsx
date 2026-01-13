@@ -86,7 +86,7 @@ const preferencesSlice = createSlice({
             {
                 id: null,
                 name: 'toast_position',
-                value: 'top-right',
+                value: 'bottom-center',
             },
             {
                 id: null,
