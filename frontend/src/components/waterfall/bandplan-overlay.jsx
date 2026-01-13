@@ -276,8 +276,6 @@ const FrequencyBandOverlay = ({
                     ctx.shadowBlur = 0;
                     ctx.shadowOffsetX = 0;
                     ctx.shadowOffsetY = 0;
-                } else {
-                    console.info(`Skipping label "${name}" - no visible portion of band`);
                 }
             }
         });
