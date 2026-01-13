@@ -384,16 +384,21 @@ const initialState = {
     sdrParametersLoading: false,
     sdrParametersError: {},
     columnVisibility: {
-        name: true,
+        enabled: true,
         satellite: true,
+        peak_elevation: true,
         pass_start: true,
+        task_start: false,
+        task_end: false,
         pass_end: true,
         sdr: true,
-        transmitter: true,
         tasks: true,
         status: true,
-        enabled: true,
+        actions: true,
     },
+    openObservationsTableSettingsDialog: false,
+    openObservationDataDialog: false,
+    selectedObservationForData: null,
     // Satellite selection state for the dialog
     satelliteSelection: {
         satGroups: [],
@@ -538,6 +543,18 @@ const schedulerSlice = createSlice({
         },
         setSelectedObservationIds: (state, action) => {
             state.selectedObservationIds = action.payload;
+        },
+        setOpenObservationsTableSettingsDialog: (state, action) => {
+            state.openObservationsTableSettingsDialog = action.payload;
+        },
+        setObservationsTableColumnVisibility: (state, action) => {
+            state.columnVisibility = action.payload;
+        },
+        setOpenObservationDataDialog: (state, action) => {
+            state.openObservationDataDialog = action.payload;
+        },
+        setSelectedObservationForData: (state, action) => {
+            state.selectedObservationForData = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -727,6 +744,10 @@ export const {
     setTimelineExpanded,
     toggleStatusFilter,
     setSelectedObservationIds,
+    setOpenObservationsTableSettingsDialog,
+    setObservationsTableColumnVisibility,
+    setOpenObservationDataDialog,
+    setSelectedObservationForData,
 } = schedulerSlice.actions;
 
 export default schedulerSlice.reducer;

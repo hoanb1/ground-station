@@ -47,6 +47,8 @@ import {
     ContentCopy as ContentCopyIcon,
     CheckCircle as EnableIcon,
     Cancel as DisableIcon,
+    Settings as SettingsIcon,
+    Folder as FolderIcon,
 } from '@mui/icons-material';
 import { darken, lighten } from '@mui/material/styles';
 import { useSocket } from '../common/socket.jsx';
@@ -60,10 +62,16 @@ import {
     setDialogOpen,
     toggleStatusFilter,
     setSelectedObservationIds,
+    setOpenObservationsTableSettingsDialog,
+    setObservationsTableColumnVisibility,
+    setOpenObservationDataDialog,
+    setSelectedObservationForData,
 } from './scheduler-slice.jsx';
 import { TitleBar, getTimeFromISO, humanizeFutureDateInMinutes } from '../common/common.jsx';
 import Button from '@mui/material/Button';
 import ObservationsTimeline from './observations-timeline-svg.jsx';
+import ObservationsTableSettingsDialog from './observations-table-settings-dialog.jsx';
+import ObservationDataDialog from './observation-data-dialog.jsx';
 
 const getStatusColor = (status) => {
     switch (status) {
@@ -113,6 +121,9 @@ const ObservationsTable = () => {
     const columnVisibility = useSelector((state) => state.scheduler?.columnVisibility || {});
     const statusFilters = useSelector((state) => state.scheduler?.statusFilters || {});
     const selectedIds = useSelector((state) => state.scheduler?.selectedObservationIds || []);
+    const openSettingsDialog = useSelector((state) => state.scheduler?.openObservationsTableSettingsDialog || false);
+    const openDataDialog = useSelector((state) => state.scheduler?.openObservationDataDialog || false);
+    const selectedObservationForData = useSelector((state) => state.scheduler?.selectedObservationForData || null);
 
     // Filter observations based on status filters
     const observations = allObservations.filter(obs => statusFilters[obs.status]);
@@ -122,6 +133,30 @@ const ObservationsTable = () => {
             dispatch(fetchScheduledObservations({ socket }));
         }
     }, [socket, dispatch]);
+
+    // Load column visibility from localStorage on mount
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('observations-table-column-visibility');
+            if (stored) {
+                const parsedVisibility = JSON.parse(stored);
+                dispatch(setObservationsTableColumnVisibility(parsedVisibility));
+            }
+        } catch (e) {
+            console.error('Failed to load observations table column visibility:', e);
+        }
+    }, [dispatch]);
+
+    // Persist column visibility to localStorage whenever it changes
+    useEffect(() => {
+        if (columnVisibility) {
+            try {
+                localStorage.setItem('observations-table-column-visibility', JSON.stringify(columnVisibility));
+            } catch (e) {
+                console.error('Failed to save observations table column visibility:', e);
+            }
+        }
+    }, [columnVisibility]);
 
     // Force row className re-evaluation every second to update colors in real-time
     useEffect(() => {
@@ -220,6 +255,24 @@ const ObservationsTable = () => {
         }
     };
 
+    const handleOpenSettings = () => {
+        dispatch(setOpenObservationsTableSettingsDialog(true));
+    };
+
+    const handleCloseSettings = () => {
+        dispatch(setOpenObservationsTableSettingsDialog(false));
+    };
+
+    const handleViewData = (observation) => {
+        dispatch(setSelectedObservationForData(observation));
+        dispatch(setOpenObservationDataDialog(true));
+    };
+
+    const handleCloseDataDialog = () => {
+        dispatch(setOpenObservationDataDialog(false));
+        dispatch(setSelectedObservationForData(null));
+    };
+
     const columns = [
         {
             field: 'enabled',
@@ -240,6 +293,18 @@ const ObservationsTable = () => {
             flex: 1.1,
             minWidth: 150,
             valueGetter: (value, row) => row.satellite?.name || '-',
+        },
+        {
+            field: 'peak_elevation',
+            headerName: 'Peak Elevation',
+            width: 120,
+            align: 'center',
+            headerAlign: 'center',
+            valueGetter: (value, row) => row.pass?.peak_altitude || '-',
+            valueFormatter: (value) => {
+                if (value === '-') return '-';
+                return `${parseFloat(value).toFixed(2)}°`;
+            },
         },
         {
             field: 'pass_start',
@@ -363,6 +428,41 @@ const ObservationsTable = () => {
                 />
             ),
         },
+        {
+            field: 'actions',
+            headerName: 'Actions',
+            width: 120,
+            align: 'right',
+            headerAlign: 'right',
+            sortable: false,
+            filterable: false,
+            renderCell: (params) => (
+                <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                    <Tooltip title="Edit">
+                        <IconButton
+                            size="small"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(params.row);
+                            }}
+                        >
+                            <EditIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="View Downloaded Data">
+                        <IconButton
+                            size="small"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewData(params.row);
+                            }}
+                        >
+                            <FolderIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </Stack>
+            ),
+        },
     ];
 
     return (
@@ -378,6 +478,15 @@ const ObservationsTable = () => {
                     Scheduled Observations
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+                    <Tooltip title="Table Settings">
+                        <IconButton
+                            size="small"
+                            onClick={handleOpenSettings}
+                            sx={{ padding: '4px' }}
+                        >
+                            <SettingsIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                     {Object.entries(statusFilters).map(([status, enabled]) => (
                         <Chip
                             key={status}
@@ -678,6 +787,19 @@ const ObservationsTable = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Table Settings Dialog */}
+            <ObservationsTableSettingsDialog
+                open={openSettingsDialog}
+                onClose={handleCloseSettings}
+            />
+
+            {/* Observation Data Dialog */}
+            <ObservationDataDialog
+                open={openDataDialog}
+                onClose={handleCloseDataDialog}
+                observation={selectedObservationForData}
+            />
 
         </Paper>
     );
