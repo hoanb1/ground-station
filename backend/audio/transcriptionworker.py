@@ -130,10 +130,10 @@ class TranscriptionWorker(ABC, threading.Thread):
         }
         self.stats_lock = threading.Lock()
 
-        # File output for transcriptions
+        # File output for transcriptions (created on first transcription)
         self.transcription_file: Optional[TextIO] = None
         self.transcription_file_path: Optional[str] = None
-        self._setup_transcription_file()
+        self.transcription_file_created: bool = False
 
         # Word-level tracking for line building (matches UI logic)
         self.word_buffer: List[Dict[str, Any]] = []  # List of {word: str, timestamp: float}
@@ -143,7 +143,10 @@ class TranscriptionWorker(ABC, threading.Thread):
         self.last_written_text = ""
 
     def _setup_transcription_file(self):
-        """Create transcription output file with timestamp-based naming."""
+        """Create transcription output file with timestamp-based naming (lazy initialization)."""
+        if self.transcription_file_created:
+            return
+
         try:
             # Get the backend directory
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -179,6 +182,7 @@ class TranscriptionWorker(ABC, threading.Thread):
             self.transcription_file.write(header)
             self.transcription_file.flush()
 
+            self.transcription_file_created = True
             logger.info(f"Transcription file created: {self.transcription_file_path}")
 
         except Exception as e:
@@ -201,6 +205,10 @@ class TranscriptionWorker(ABC, threading.Thread):
             timestamp: Unix timestamp (defaults to current time)
             is_final: Whether this is a final transcription (for potential deduplication)
         """
+        # Create file on first transcription (lazy initialization)
+        if not self.transcription_file_created:
+            self._setup_transcription_file()
+
         if not self.transcription_file:
             return
 
