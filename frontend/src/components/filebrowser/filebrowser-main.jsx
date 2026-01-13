@@ -166,10 +166,17 @@ export default function FilebrowserMain() {
         return tzPref?.value || 'UTC';
     });
 
-    // Timezone-aware date formatting functions
+    const locale = useSelector((state) => {
+        const localePref = state.preferences?.preferences?.find(p => p.name === 'locale');
+        const value = localePref?.value;
+        // Return undefined for 'browser' to use browser default, otherwise return the specific locale
+        return (value === 'browser' || !value) ? undefined : value;
+    });
+
+    // Timezone and locale-aware date formatting functions
     const formatDate = (isoDate) => {
         const date = new Date(isoDate);
-        return date.toLocaleString('en-US', { timeZone: timezone });
+        return date.toLocaleString(locale, { timeZone: timezone });
     };
 
     const formatRelativeTime = (isoDate) => {

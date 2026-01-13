@@ -169,6 +169,7 @@ class IQRecorder(threading.Thread):
             "core:recorder": "ground-station",
             "gs:recording_in_progress": True,
             "gs:start_time": self.start_time_iso,
+            "gs:session_id": self.session_id,
         }
 
         # Add target satellite NORAD ID if provided
@@ -222,6 +223,7 @@ class IQRecorder(threading.Thread):
             .replace(microsecond=0, tzinfo=None)
             .isoformat()
             + "Z",
+            "gs:session_id": self.session_id,
         }
 
         # Add target satellite NORAD ID if provided

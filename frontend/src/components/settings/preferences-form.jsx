@@ -204,6 +204,38 @@ const PreferencesForm = () => {
                         </FormControl>
                     </Grid>
 
+                    {/* Locale */}
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>Locale (Formatting)</Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant="outlined"
+                            disabled={isLoading}
+                            size="small"
+                        >
+                            <InputLabel>Locale</InputLabel>
+                            <Select
+                                value={getPreferenceValue('locale') || 'browser'}
+                                onChange={handleChange('locale')}
+                                label="Locale"
+                                size="small">
+                                <MenuItem value="browser">Browser Default ({navigator.language})</MenuItem>
+                                <MenuItem value="en-US">English (United States)</MenuItem>
+                                <MenuItem value="en-GB">English (United Kingdom)</MenuItem>
+                                <MenuItem value="el-GR">Ελληνικά (Greek)</MenuItem>
+                                <MenuItem value="de-DE">Deutsch (German)</MenuItem>
+                                <MenuItem value="fr-FR">Français (French)</MenuItem>
+                                <MenuItem value="es-ES">Español (Spanish)</MenuItem>
+                                <MenuItem value="it-IT">Italiano (Italian)</MenuItem>
+                                <MenuItem value="nl-NL">Nederlands (Dutch)</MenuItem>
+                                <MenuItem value="pt-PT">Português (Portuguese)</MenuItem>
+                                <MenuItem value="ru-RU">Русский (Russian)</MenuItem>
+                                <MenuItem value="ja-JP">日本語 (Japanese)</MenuItem>
+                                <MenuItem value="zh-CN">中文 (Chinese Simplified)</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
                     {/* Language */}
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
                         <Typography>{t('preferences.language')}</Typography>

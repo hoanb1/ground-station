@@ -54,6 +54,7 @@ async def fetch_all_preferences(session: AsyncSession) -> dict:
 
     defaults = {
         "timezone": "Europe/Athens",
+        "locale": "browser",  # Locale for date/time/number formatting (e.g., en-US, en-GB, el-GR)
         "language": "en_US",
         "theme": "auto",
         "stadia_maps_api_key": "",

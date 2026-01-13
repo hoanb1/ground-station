@@ -86,6 +86,7 @@ def parse_sigmf_metadata(meta_file_path: str) -> dict:
             "recording_in_progress": global_meta.get("gs:recording_in_progress", False),
             "start_time": global_meta.get("gs:start_time"),
             "finalized_time": global_meta.get("gs:finalized_time"),
+            "session_id": global_meta.get("gs:session_id"),
             "target_satellite_norad_id": global_meta.get("gs:target_satellite_norad_id"),
             "target_satellite_name": global_meta.get("gs:target_satellite_name"),
             "center_frequency": center_frequency,
@@ -424,6 +425,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                                 data_stat.st_mtime, timezone.utc
                             ).isoformat(),
                             "metadata": metadata,
+                            "session_id": metadata.get("session_id"),
                             "snapshot": snapshot_info,
                             "recording_in_progress": is_recording_in_progress,
                             "download_urls": {
@@ -484,6 +486,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     frequency_mhz = None
                     decoder_mode = None  # For SSTV mode, BPSK baudrate, etc.
                     baudrate = None
+                    session_id = None
 
                     # Check if there's a corresponding .json metadata file
                     metadata_file = decoded_dir / f"{decoded_file.stem}.json"
@@ -491,11 +494,14 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                         try:
                             with open(metadata_file, "r") as f:
                                 metadata = json.load(f)
-                                # Extract decoder type
+                                # Extract decoder type and session_id
                                 decoder_info = metadata.get("decoder", {})
                                 decoder_type = decoder_info.get("type", "").upper()
                                 decoder_mode = decoder_info.get("mode")  # SSTV mode like "Robot 36"
                                 baudrate = decoder_info.get("baudrate")  # For FSK/BPSK
+                                session_id = decoder_info.get(
+                                    "session_id"
+                                )  # Session ID for linking to observations
 
                                 # Extract satellite info from satellite metadata (preferred)
                                 satellite_info = metadata.get("satellite", {})
@@ -557,6 +563,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "transmitter_mode": transmitter_mode,
                             "frequency_hz": frequency_hz,
                             "frequency_mhz": frequency_mhz,
+                            "session_id": session_id,
                         }
                     )
 
@@ -590,6 +597,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     status = metadata.get("status", "unknown")
                     center_frequency = metadata.get("center_frequency")
                     vfo_frequency = metadata.get("vfo_frequency")
+                    session_id = metadata.get("session_id")
 
                     processed_items.append(
                         {
@@ -614,6 +622,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "status": status,
                             "center_frequency": center_frequency,
                             "vfo_frequency": vfo_frequency,
+                            "session_id": session_id,
                             "metadata": metadata,
                         }
                     )

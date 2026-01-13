@@ -33,6 +33,7 @@ import {
     Divider,
     CircularProgress,
     Chip,
+    ListItemButton,
 } from '@mui/material';
 import {
     InsertDriveFile as FileIcon,
@@ -42,11 +43,33 @@ import {
     Description as TextIcon,
 } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
+import { useSelector } from 'react-redux';
+import RecordingDialog from '../filebrowser/recording-dialog.jsx';
+import AudioDialog from '../filebrowser/audio-dialog.jsx';
+import TranscriptionDialog from '../filebrowser/transcription-dialog.jsx';
+import TelemetryViewerDialog from '../filebrowser/telemetry-viewer-dialog.jsx';
 
 const ObservationDataDialog = ({ open, onClose, observation }) => {
     const { socket } = useSocket();
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [fileDetailsOpen, setFileDetailsOpen] = useState(false);
+    const [telemetryMetadata, setTelemetryMetadata] = useState(null);
+    const [telemetryViewerOpen, setTelemetryViewerOpen] = useState(false);
+
+    // Get timezone and locale preferences
+    const timezone = useSelector((state) => {
+        const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
+        return tzPref?.value || 'UTC';
+    });
+
+    const locale = useSelector((state) => {
+        const localePref = state.preferences?.preferences?.find(p => p.name === 'locale');
+        const value = localePref?.value;
+        // Return undefined for 'browser' to use browser default, otherwise return the specific locale
+        return (value === 'browser' || !value) ? undefined : value;
+    });
 
     // Fetch files when dialog opens
     useEffect(() => {
@@ -60,9 +83,29 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
         // Listen for file browser response
         const handleFileBrowserState = (state) => {
             if (state.action === 'list-files') {
-                // Filter files by session_id matching "internal:obs-{observation.id}"
+                console.log('Observation ID:', observation.id);
+                console.log('Total files received:', state.items?.length || 0);
+
+                // Try to match files by observation ID
                 const sessionId = `internal:${observation.id}`;
-                const matchingFiles = state.items.filter(file => file.session_id === sessionId);
+
+                const matchingFiles = state.items.filter(file => {
+                    // Check if session_id matches (backend should set this for scheduled observations)
+                    if (file.session_id === sessionId) return true;
+
+                    // Check if observation_id field exists and matches
+                    if (file.observation_id === observation.id) return true;
+
+                    // Check if metadata has observation_id
+                    if (file.metadata?.observation_id === observation.id) return true;
+
+                    // Check if filename contains observation ID
+                    const filename = file.name || file.filename || '';
+                    if (filename.includes(observation.id)) return true;
+
+                    return false;
+                });
+
                 setFiles(matchingFiles);
                 setLoading(false);
             }
@@ -150,28 +193,91 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                     </Box>
                 ) : files.length === 0 ? (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 2 }}>
                             No data files found for this observation.
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            Files will appear here when:
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            • The observation has completed successfully
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            • Tasks (IQ recording, audio, decoding) generated output files
                         </Typography>
                     </Box>
                 ) : (
                     <List>
-                        {files.map((file, index) => (
-                            <ListItem key={index} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-                                <ListItemIcon>
-                                    {getFileIcon(file.type)}
-                                </ListItemIcon>
-                                <ListItemText
-                                    primary={
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Typography variant="body1">{file.name || file.filename}</Typography>
-                                            <Chip label={getFileTypeLabel(file.type)} size="small" />
-                                        </Box>
+                        {files.map((file, index) => {
+                            // Handle different file structures
+                            const fileSize = file.size || file.data_size;
+                            const fileName = file.name || file.filename;
+
+                            // Parse creation date - handle both timestamp and ISO string
+                            let createdDate = 'N/A';
+                            try {
+                                if (file.created) {
+                                    const date = typeof file.created === 'number'
+                                        ? new Date(file.created * 1000)  // Unix timestamp in seconds
+                                        : new Date(file.created);  // ISO string
+
+                                    // Check if date is valid
+                                    if (!isNaN(date.getTime())) {
+                                        // Format with timezone and locale preferences
+                                        // locale is undefined if 'browser' is selected, which uses browser's locale
+                                        createdDate = date.toLocaleString(locale, { timeZone: timezone });
+                                    } else {
+                                        console.warn('Invalid date:', file.created);
                                     }
-                                    secondary={`${formatFileSize(file.size)} • Created: ${new Date(file.created * 1000).toLocaleString()}`}
-                                />
-                            </ListItem>
-                        ))}
+                                }
+                            } catch (e) {
+                                console.error('Error parsing date:', e, file.created);
+                            }
+
+                            const handleFileClick = async () => {
+                                // For decoded telemetry files (.bin), fetch metadata and open telemetry viewer
+                                if (file.type === 'decoded' && file.url && file.url.endsWith('.bin')) {
+                                    try {
+                                        const metadataUrl = file.url.replace('.bin', '.json');
+                                        const response = await fetch(metadataUrl);
+                                        const metadata = await response.json();
+                                        setSelectedFile(file);
+                                        setTelemetryMetadata(metadata);
+                                        setTelemetryViewerOpen(true);
+                                    } catch (error) {
+                                        console.error('Failed to fetch telemetry metadata:', error);
+                                        // Fallback to simple dialog
+                                        setSelectedFile(file);
+                                        setFileDetailsOpen(true);
+                                    }
+                                } else {
+                                    // For other file types, use standard dialogs
+                                    setSelectedFile(file);
+                                    setFileDetailsOpen(true);
+                                }
+                            };
+
+                            return (
+                                <ListItemButton
+                                    key={index}
+                                    sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                                    onClick={handleFileClick}
+                                >
+                                    <ListItemIcon>
+                                        {getFileIcon(file.type)}
+                                    </ListItemIcon>
+                                    <ListItemText
+                                        primary={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Typography variant="body1">{fileName}</Typography>
+                                                <Chip label={getFileTypeLabel(file.type)} size="small" />
+                                            </Box>
+                                        }
+                                        secondary={`${formatFileSize(fileSize)} • Created: ${createdDate}`}
+                                    />
+                                </ListItemButton>
+                            );
+                        })}
                     </List>
                 )}
             </DialogContent>
@@ -180,6 +286,79 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                     Close
                 </Button>
             </DialogActions>
+
+            {/* File Detail Dialogs */}
+            {selectedFile?.type === 'recording' && (
+                <RecordingDialog
+                    open={fileDetailsOpen}
+                    onClose={() => setFileDetailsOpen(false)}
+                    recording={selectedFile}
+                />
+            )}
+
+            {selectedFile?.type === 'audio' && (
+                <AudioDialog
+                    open={fileDetailsOpen}
+                    onClose={() => setFileDetailsOpen(false)}
+                    audioFile={selectedFile}
+                />
+            )}
+
+            {selectedFile?.type === 'transcription' && (
+                <TranscriptionDialog
+                    open={fileDetailsOpen}
+                    onClose={() => setFileDetailsOpen(false)}
+                    transcriptionFile={selectedFile}
+                />
+            )}
+
+            {/* Telemetry Viewer for decoded .bin files */}
+            <TelemetryViewerDialog
+                open={telemetryViewerOpen}
+                onClose={() => {
+                    setTelemetryViewerOpen(false);
+                    setTelemetryMetadata(null);
+                }}
+                file={selectedFile}
+                metadata={telemetryMetadata}
+            />
+
+            {/* Simple preview for decoded image files and snapshots */}
+            {(selectedFile?.type === 'decoded' || selectedFile?.type === 'snapshot') && !telemetryViewerOpen && (
+                <Dialog
+                    open={fileDetailsOpen}
+                    onClose={() => setFileDetailsOpen(false)}
+                    maxWidth="lg"
+                    fullWidth
+                >
+                    <DialogTitle>
+                        {selectedFile?.name || selectedFile?.filename}
+                    </DialogTitle>
+                    <DialogContent>
+                        {selectedFile?.url && (selectedFile.url.endsWith('.png') || selectedFile.url.endsWith('.jpg') || selectedFile.url.endsWith('.jpeg')) ? (
+                            <Box sx={{ textAlign: 'center' }}>
+                                <img
+                                    src={selectedFile.url}
+                                    alt={selectedFile.name || selectedFile.filename}
+                                    style={{ maxWidth: '100%', height: 'auto' }}
+                                />
+                            </Box>
+                        ) : (
+                            <Typography variant="body2" color="text.secondary">
+                                Preview not available for this file type.
+                            </Typography>
+                        )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => window.open(selectedFile.url, '_blank')}>
+                            Download
+                        </Button>
+                        <Button onClick={() => setFileDetailsOpen(false)} variant="contained">
+                            Close
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
         </Dialog>
     );
 };
