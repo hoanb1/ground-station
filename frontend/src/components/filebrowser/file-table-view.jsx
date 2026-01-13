@@ -133,6 +133,9 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
         if (item.type === 'audio' && item.satellite_name) {
             return item.satellite_name;
         }
+        if (item.type === 'transcription' && item.satellite_name) {
+            return item.satellite_name;
+        }
         return null;
     };
 

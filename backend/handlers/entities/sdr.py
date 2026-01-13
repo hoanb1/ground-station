@@ -614,6 +614,18 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
                 language = vfo_state.transcription_language or "auto"
                 translate_to = vfo_state.transcription_translate_to or "none"
 
+                # Fetch transmitter and satellite info
+                satellite_dict = None
+                transmitter_dict = None
+
+                if vfo_state.locked_transmitter_id and vfo_state.locked_transmitter_id != "none":
+                    # Import helper from vfo.py
+                    from handlers.entities.vfo import _fetch_transmitter_and_satellite
+
+                    transmitter_dict, satellite_dict = await _fetch_transmitter_and_satellite(
+                        vfo_state.locked_transmitter_id
+                    )
+
                 # Start transcription worker
                 success = transcription_manager.start_transcription(
                     sdr_id=sdr_id,
@@ -622,6 +634,8 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
                     language=language,
                     translate_to=translate_to,
                     provider=provider,
+                    satellite=satellite_dict,
+                    transmitter=transmitter_dict,
                 )
 
                 if success:

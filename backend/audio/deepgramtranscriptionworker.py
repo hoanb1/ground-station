@@ -22,7 +22,7 @@
 import asyncio
 import json
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import aiohttp
 import numpy as np
@@ -64,6 +64,8 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
         language: str = "auto",
         translate_to: str = "none",
         google_translate_api_key: Optional[str] = None,
+        satellite: Optional[Dict[str, Any]] = None,
+        transmitter: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             transcription_queue=transcription_queue,
@@ -75,6 +77,8 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
             language=language,
             translate_to=translate_to,
             provider_name="deepgram",
+            satellite=satellite,
+            transmitter=transmitter,
         )
 
         # Google Translate API key for translating Deepgram transcriptions

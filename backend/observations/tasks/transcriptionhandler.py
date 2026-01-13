@@ -16,7 +16,7 @@
 """Transcription task handler - manages transcription worker lifecycle."""
 
 import traceback
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from sqlalchemy import select
 
@@ -82,10 +82,13 @@ class TranscriptionHandler:
             transcription_transmitter_id = task_config.get("transmitter_id", "none")
 
             # Fetch transmitter info to get frequency if transmitter is specified
+            transmitter_dict = None
             if transcription_transmitter_id and transcription_transmitter_id != "none":
                 vfo_frequency = await self._fetch_transmitter_frequency(
                     transcription_transmitter_id, vfo_frequency, task_config
                 )
+                # Also fetch transmitter dict for metadata
+                transmitter_dict = await self._fetch_transmitter_dict(transcription_transmitter_id)
 
             # 1. Configure VFO for transcription
             vfo_manager = VFOManager()
@@ -175,6 +178,8 @@ class TranscriptionHandler:
                     language=language,
                     translate_to=translate_to,
                     provider=provider,
+                    satellite=satellite,
+                    transmitter=transmitter_dict,
                 )
 
                 if success:
@@ -292,3 +297,35 @@ class TranscriptionHandler:
             logger.warning(f"Failed to fetch transmitter {transmitter_id}: {e}")
 
         return default_frequency
+
+    async def _fetch_transmitter_dict(self, transmitter_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch transmitter dict from database.
+
+        Args:
+            transmitter_id: Transmitter ID
+
+        Returns:
+            Transmitter information dict or None if not found
+        """
+        try:
+            async with AsyncSessionLocal() as db_session:
+                result = await db_session.execute(
+                    select(Transmitters).where(Transmitters.id == transmitter_id)
+                )
+                transmitter_record = result.scalar_one_or_none()
+                if not transmitter_record:
+                    return None
+
+                return {
+                    "id": transmitter_record.id,
+                    "description": transmitter_record.description,
+                    "mode": transmitter_record.mode,
+                    "baud": transmitter_record.baud,
+                    "downlink_low": transmitter_record.downlink_low,
+                    "downlink_high": transmitter_record.downlink_high,
+                    "norad_cat_id": transmitter_record.norad_cat_id,
+                }
+        except Exception as e:
+            logger.error(f"Failed to fetch transmitter: {e}")
+            return None

@@ -16,7 +16,7 @@
 import logging
 import threading
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 
 
 class TranscriptionManager:
@@ -93,6 +93,8 @@ class TranscriptionManager:
         language: str = "auto",
         translate_to: str = "none",
         provider: str = "gemini",
+        satellite: Optional[Dict[str, Any]] = None,
+        transmitter: Optional[Dict[str, Any]] = None,
     ):
         """
         Start a transcription worker for a specific VFO.
@@ -104,6 +106,8 @@ class TranscriptionManager:
             language: Source language code (e.g., "en", "es", "auto")
             translate_to: Target language code for translation (e.g., "en", "none")
             provider: Transcription provider ("gemini", "deepgram")
+            satellite: Satellite information dict (optional)
+            transmitter: Transmitter information dict (optional)
 
         Returns:
             bool: True if started successfully, False otherwise
@@ -239,6 +243,8 @@ class TranscriptionManager:
                             vfo_number=vfo_number,
                             language=language,
                             translate_to=translate_to,
+                            satellite=satellite,
+                            transmitter=transmitter,
                         )
                     elif provider == "deepgram":
                         from audio.deepgramtranscriptionworker import DeepgramTranscriptionWorker
@@ -253,6 +259,8 @@ class TranscriptionManager:
                             language=language,
                             translate_to=translate_to,
                             google_translate_api_key=self.google_translate_api_key,
+                            satellite=satellite,
+                            transmitter=transmitter,
                         )
                     else:
                         raise ValueError(f"Unknown provider: {provider}")
@@ -267,6 +275,8 @@ class TranscriptionManager:
                         "language": language,
                         "translate_to": translate_to,
                         "provider": provider,
+                        "satellite": satellite,
+                        "transmitter": transmitter,
                     }
 
                     self.logger.info(

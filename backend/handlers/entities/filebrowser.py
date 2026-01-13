@@ -138,6 +138,41 @@ def parse_transcription_metadata(transcription_file_path: str) -> Dict[str, Any]
                     metadata["session_id"] = line.split(":", 1)[1].strip()
                 elif line.startswith("# VFO:"):
                     metadata["vfo_number"] = int(line.split(":", 1)[1].strip())
+                elif line.startswith("# Satellite:"):
+                    # Parse "Satellite Name (NORAD: 12345)" format
+                    sat_line = line.split(":", 1)[1].strip()
+                    if sat_line != "Unknown (NORAD: N/A)":
+                        # Extract name and NORAD ID
+                        if "(NORAD:" in sat_line:
+                            name_part = sat_line.split("(NORAD:")[0].strip()
+                            norad_part = sat_line.split("(NORAD:")[1].strip().rstrip(")")
+                            metadata["satellite_name"] = name_part
+                            metadata["satellite_norad"] = norad_part
+                        else:
+                            metadata["satellite_name"] = sat_line
+                    else:
+                        metadata["satellite_name"] = None
+                        metadata["satellite_norad"] = None
+                elif line.startswith("# Transmitter:"):
+                    transmitter_desc = line.split(":", 1)[1].strip()
+                    metadata["transmitter_description"] = (
+                        transmitter_desc if transmitter_desc != "Unknown" else None
+                    )
+                elif line.startswith("# Transmitter Mode:"):
+                    transmitter_mode = line.split(":", 1)[1].strip()
+                    metadata["transmitter_mode"] = (
+                        transmitter_mode if transmitter_mode != "N/A" else None
+                    )
+                elif line.startswith("# Transmitter Frequency:"):
+                    freq_str = line.split(":", 1)[1].strip()
+                    if freq_str != "N/A Hz":
+                        try:
+                            # Remove " Hz" suffix and convert to int
+                            metadata["transmitter_frequency"] = int(freq_str.replace(" Hz", ""))
+                        except ValueError:
+                            metadata["transmitter_frequency"] = None
+                    else:
+                        metadata["transmitter_frequency"] = None
                 elif line.startswith("# Language:"):
                     metadata["language"] = line.split(":", 1)[1].strip()
                 elif line.startswith("# Translate To:"):
@@ -642,6 +677,11 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     provider = metadata.get("provider")
                     session_id = metadata.get("session_id")
                     vfo_number = metadata.get("vfo_number")
+                    satellite_name = metadata.get("satellite_name")
+                    satellite_norad = metadata.get("satellite_norad")
+                    transmitter_description = metadata.get("transmitter_description")
+                    transmitter_mode = metadata.get("transmitter_mode")
+                    transmitter_frequency = metadata.get("transmitter_frequency")
                     language = metadata.get("language")
                     translate_to = metadata.get("translate_to")
                     started = metadata.get("started")
@@ -664,6 +704,11 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "provider": provider,
                             "session_id": session_id,
                             "vfo_number": vfo_number,
+                            "satellite_name": satellite_name,
+                            "satellite_norad": satellite_norad,
+                            "transmitter_description": transmitter_description,
+                            "transmitter_mode": transmitter_mode,
+                            "transmitter_frequency": transmitter_frequency,
                             "language": language,
                             "translate_to": translate_to,
                             "started": started,

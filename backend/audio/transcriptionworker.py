@@ -63,6 +63,8 @@ class TranscriptionWorker(ABC, threading.Thread):
         language: str = "auto",
         translate_to: str = "none",
         provider_name: str = "unknown",
+        satellite: Optional[Dict[str, Any]] = None,
+        transmitter: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize the transcription worker.
@@ -77,6 +79,8 @@ class TranscriptionWorker(ABC, threading.Thread):
             language: Source language code (e.g., "en", "es", "auto")
             translate_to: Target language code for translation (e.g., "en", "none")
             provider_name: Name of the provider (e.g., "gemini", "deepgram")
+            satellite: Satellite information dict (optional)
+            transmitter: Transmitter information dict (optional)
         """
         super().__init__(
             daemon=True,
@@ -94,6 +98,10 @@ class TranscriptionWorker(ABC, threading.Thread):
         self.vfo_number = vfo_number
         self.language = language
         self.translate_to = translate_to
+
+        # Satellite and transmitter metadata
+        self.satellite = satellite
+        self.transmitter = transmitter
 
         # Audio buffer for this VFO (stores dicts with audio data and type)
         self.audio_buffer: List[Dict[str, Any]] = []
@@ -167,11 +175,26 @@ class TranscriptionWorker(ABC, threading.Thread):
             )
 
             # Write header
+            # Extract satellite and transmitter metadata
+            satellite_name = self.satellite.get("name", "Unknown") if self.satellite else "Unknown"
+            satellite_norad = self.satellite.get("norad_id", "N/A") if self.satellite else "N/A"
+            transmitter_desc = (
+                self.transmitter.get("description", "Unknown") if self.transmitter else "Unknown"
+            )
+            transmitter_mode = self.transmitter.get("mode", "N/A") if self.transmitter else "N/A"
+            transmitter_freq = (
+                self.transmitter.get("downlink_low", "N/A") if self.transmitter else "N/A"
+            )
+
             header = (
                 f"# Ground Station Transcription\n"
                 f"# Provider: {self.provider_name}\n"
                 f"# Session: {self.session_id}\n"
                 f"# VFO: {self.vfo_number}\n"
+                f"# Satellite: {satellite_name} (NORAD: {satellite_norad})\n"
+                f"# Transmitter: {transmitter_desc}\n"
+                f"# Transmitter Mode: {transmitter_mode}\n"
+                f"# Transmitter Frequency: {transmitter_freq} Hz\n"
                 f"# Language: {self.language}\n"
                 f"# Translate To: {self.translate_to}\n"
                 f"# Started: {datetime.now().isoformat()}\n"

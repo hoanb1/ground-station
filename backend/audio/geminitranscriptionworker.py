@@ -21,6 +21,7 @@ import asyncio
 import base64
 import logging
 import time
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -67,6 +68,8 @@ class GeminiTranscriptionWorker(TranscriptionWorker):
         vfo_number: int,
         language: str = "auto",
         translate_to: str = "none",
+        satellite: Optional[Dict[str, Any]] = None,
+        transmitter: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             transcription_queue=transcription_queue,
@@ -78,6 +81,8 @@ class GeminiTranscriptionWorker(TranscriptionWorker):
             language=language,
             translate_to=translate_to,
             provider_name="gemini",
+            satellite=satellite,
+            transmitter=transmitter,
         )
 
         # Gemini-specific settings

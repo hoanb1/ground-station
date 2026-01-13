@@ -38,6 +38,60 @@ from vfos.state import VFOManager
 _decoder_param_overrides_cache: Dict[str, Dict[str, Any]] = {}
 
 
+async def _fetch_transmitter_and_satellite(transmitter_id: str) -> tuple:
+    """
+    Fetch transmitter and satellite dicts from database.
+
+    Args:
+        transmitter_id: Transmitter ID to fetch
+
+    Returns:
+        Tuple of (transmitter_dict, satellite_dict) or (None, None) if not found
+    """
+    try:
+        async with AsyncSessionLocal() as db_session:
+            result = await db_session.execute(
+                select(Transmitters).where(Transmitters.id == transmitter_id)
+            )
+            transmitter_record = result.scalar_one_or_none()
+            if not transmitter_record:
+                return None, None
+
+            transmitter_dict = {
+                "id": transmitter_record.id,
+                "description": transmitter_record.description,
+                "mode": transmitter_record.mode,
+                "baud": transmitter_record.baud,
+                "downlink_low": transmitter_record.downlink_low,
+                "downlink_high": transmitter_record.downlink_high,
+                "norad_cat_id": transmitter_record.norad_cat_id,
+            }
+
+            # Fetch satellite
+            sat_result = await db_session.execute(
+                select(Satellites).where(Satellites.norad_id == transmitter_record.norad_cat_id)
+            )
+            satellite_record = sat_result.scalar_one_or_none()
+            satellite_dict = None
+            if satellite_record:
+                satellite_dict = {
+                    "norad_id": satellite_record.norad_id,
+                    "name": satellite_record.name,
+                    "alternative_name": satellite_record.alternative_name,
+                    "status": satellite_record.status,
+                    "image": satellite_record.image,
+                }
+
+            return transmitter_dict, satellite_dict
+    except Exception as e:
+        # Use logging directly since logger might not be available at module level
+        import logging
+
+        logger = logging.getLogger("vfo-handler")
+        logger.error(f"Failed to fetch transmitter info: {e}", exc_info=True)
+        return None, None
+
+
 async def update_vfo_parameters(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, dict, str]]:
@@ -363,6 +417,21 @@ async def toggle_transcription(
                             api_key = None
 
                         if api_key:
+                            # Fetch transmitter and satellite info
+                            satellite_dict = None
+                            transmitter_dict = None
+
+                            if (
+                                vfo_state
+                                and vfo_state.locked_transmitter_id
+                                and vfo_state.locked_transmitter_id != "none"
+                            ):
+                                transmitter_dict, satellite_dict = (
+                                    await _fetch_transmitter_and_satellite(
+                                        vfo_state.locked_transmitter_id
+                                    )
+                                )
+
                             # Start per-VFO transcription worker
                             success = transcription_manager.start_transcription(
                                 sdr_id=sdr_id,
@@ -371,6 +440,8 @@ async def toggle_transcription(
                                 language=language,
                                 translate_to=translate_to,
                                 provider=provider,
+                                satellite=satellite_dict,
+                                transmitter=transmitter_dict,
                             )
 
                             if not success:
