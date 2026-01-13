@@ -300,7 +300,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                 <AudioDialog
                     open={fileDetailsOpen}
                     onClose={() => setFileDetailsOpen(false)}
-                    audioFile={selectedFile}
+                    audio={selectedFile}
                 />
             )}
 
@@ -308,7 +308,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                 <TranscriptionDialog
                     open={fileDetailsOpen}
                     onClose={() => setFileDetailsOpen(false)}
-                    transcriptionFile={selectedFile}
+                    transcription={selectedFile}
                 />
             )}
 
@@ -318,6 +318,8 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                 onClose={() => {
                     setTelemetryViewerOpen(false);
                     setTelemetryMetadata(null);
+                    setFileDetailsOpen(false);
+                    setSelectedFile(null);
                 }}
                 file={selectedFile}
                 metadata={telemetryMetadata}
