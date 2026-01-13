@@ -117,20 +117,36 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                         logger.info("FFT averager reset due to sample rate change")
                         continue  # Skip processing this empty message
 
-                    if "fft_size" in config and config["fft_size"] != fft_size:
+                    if (
+                        "fft_size" in config
+                        and config["fft_size"] is not None
+                        and config["fft_size"] != fft_size
+                    ):
                         fft_size = config["fft_size"]
                         logger.info(f"Updated FFT size: {fft_size}")
 
-                    if "fft_window" in config and config["fft_window"] != fft_window:
+                    if (
+                        "fft_window" in config
+                        and config["fft_window"] is not None
+                        and config["fft_window"] != fft_window
+                    ):
                         fft_window = config["fft_window"]
                         logger.info(f"Updated FFT window: {fft_window}")
 
-                    if "fft_averaging" in config and config["fft_averaging"] != fft_averaging:
+                    if (
+                        "fft_averaging" in config
+                        and config["fft_averaging"] is not None
+                        and config["fft_averaging"] != fft_averaging
+                    ):
                         fft_averaging = config["fft_averaging"]
                         fft_averager.update_averaging_factor(fft_averaging)
                         logger.info(f"Updated FFT averaging: {fft_averaging}")
 
-                    if "fft_overlap" in config and config["fft_overlap"] != fft_overlap:
+                    if (
+                        "fft_overlap" in config
+                        and config["fft_overlap"] is not None
+                        and config["fft_overlap"] != fft_overlap
+                    ):
                         fft_overlap = config["fft_overlap"]
                         logger.info(f"Updated FFT overlap: {fft_overlap}")
 
