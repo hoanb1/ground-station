@@ -61,6 +61,9 @@ async def run_discover_soapy():
         await asyncio.sleep(120)
 
 
+# test comment
+
+
 @asynccontextmanager
 async def lifespan(fastapiapp: FastAPI):
     """Custom lifespan for FastAPI."""
