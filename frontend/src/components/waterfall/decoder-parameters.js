@@ -193,7 +193,8 @@ export const FSK_PARAMETERS = {
             { value: 5400, label: '5.4 kHz' },
             { value: 7500, label: '7.5 kHz' },
             { value: 10000, label: '10 kHz' },
-            { value: 15000, label: '15 kHz' }
+            { value: 15000, label: '15 kHz' },
+            { value: 19200, label: '19.2 kHz' }
         ]
     },
     // GEOSCAN-specific parameters (conditionally shown)
