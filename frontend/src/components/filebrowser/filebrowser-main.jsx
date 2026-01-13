@@ -600,7 +600,7 @@ export default function FilebrowserMain() {
                     .map(f => ({
                         type: f.type,
                         name: f.type === 'recording' ? f.name : undefined,
-                        filename: (f.type === 'snapshot' || f.type === 'decoded' || f.type === 'audio') ? f.filename : undefined,
+                        filename: (f.type === 'snapshot' || f.type === 'decoded' || f.type === 'audio' || f.type === 'transcription') ? f.filename : undefined,
                     }));
 
                 await dispatch(deleteBatch({ socket, items: itemsToDelete })).unwrap();

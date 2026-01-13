@@ -309,16 +309,23 @@ def delete_transcription_file(
         logger: Logger instance
 
     Returns:
-        True if file was deleted, False if file did not exist
+        True if file was deleted, False if file did not exist or could not be deleted
     """
     transcription_file = transcriptions_dir / transcription_filename
 
     if not transcription_file.exists():
         return False
 
-    transcription_file.unlink()
-    logger.info(f"Deleted transcription file: {transcription_filename}")
-    return True
+    try:
+        transcription_file.unlink()
+        logger.info(f"Deleted transcription file: {transcription_filename}")
+        return True
+    except PermissionError:
+        logger.error(f"Cannot delete transcription file (file is open): {transcription_filename}")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to delete transcription file {transcription_filename}: {e}")
+        return False
 
 
 def validate_filename(filename: str) -> bool:
