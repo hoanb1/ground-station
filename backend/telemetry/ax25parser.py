@@ -7,6 +7,8 @@ Generic parser for AX.25 frames used by amateur radio satellites.
 Based on gr-satellites implementation by Daniel Estevez.
 """
 
+import re
+
 from construct import (
     Adapter,
     BitsInteger,
@@ -80,8 +82,6 @@ class AX25Parser:
 
             # Validate callsigns: AX.25 callsigns must be alphanumeric ASCII + space/dash
             # Valid examples: "W1AW  ", "ISS   ", "FOSSAT", "CQ    "
-            import re
-
             if not re.match(r"^[A-Z0-9 -]{1,6}$", dest_call.strip()):
                 return {
                     "success": False,

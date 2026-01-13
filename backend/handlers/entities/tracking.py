@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional, Union
 
 import crud
 from db import AsyncSessionLocal
+from session.tracker import session_tracker
 from tracker.data import compiled_satellite_data, get_ui_tracker_state
 from tracker.runner import get_tracker_manager
 from tracking.events import fetch_next_events_for_satellite
@@ -162,9 +163,6 @@ async def set_tracking_state(
         rig_id = value.get("rig_id")
         rig_vfo = value.get("rig_vfo")
         rig_state = value.get("rig_state")
-
-        # Import here to avoid circular dependency
-        from session.tracker import session_tracker
 
         if rig_id and rig_id != "none":
             session_tracker.set_session_rig(sid, rig_id)

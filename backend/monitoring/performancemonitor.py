@@ -19,6 +19,9 @@ import queue
 import threading
 import time
 
+from tracker.messages import tracker_stats
+from tracker.runner import tracker_process
+
 logger = logging.getLogger("performance-monitor")
 
 
@@ -1310,9 +1313,6 @@ class PerformanceMonitor(threading.Thread):
         trackers = {}
 
         try:
-            from tracker.messages import tracker_stats
-            from tracker.runner import tracker_process
-
             for tracker_id, stats_data in tracker_stats.items():
                 if not stats_data:
                     continue
@@ -1349,9 +1349,9 @@ class PerformanceMonitor(threading.Thread):
                 self.previous_snapshots[prev_key] = stats_data.copy()
 
                 # Connections: Tracker outputs to all browser sessions
-                connections = []
                 from handlers.socket import SESSIONS
 
+                connections = []
                 for sid in SESSIONS.keys():
                     connections.append({"target_type": "browser", "target_id": sid})
 

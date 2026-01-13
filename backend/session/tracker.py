@@ -23,6 +23,8 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Set, TypedDict, cast
 
+from vfos.state import VFOManager
+
 logger = logging.getLogger("session-tracker")
 
 
@@ -324,8 +326,6 @@ class SessionTracker:
         Returns:
             SDR configuration dict or None if session not found
         """
-        from typing import cast
-
         from processing.utils import get_sdr_session
 
         return cast(Dict[str, Any] | None, get_sdr_session(session_id))
@@ -391,8 +391,6 @@ class SessionTracker:
             device: Optional[Dict[str, Any]]
 
         # Get VFO manager for VFO state information
-        from vfos.state import VFOManager
-
         vfo_manager = VFOManager()
 
         sessions: Dict[str, Dict[str, Any]] = {}

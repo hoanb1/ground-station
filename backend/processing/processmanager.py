@@ -27,6 +27,7 @@ from processing.demodulatormanager import DemodulatorManager
 from processing.processlifecycle import ProcessLifecycleManager
 from processing.recordermanager import RecorderManager
 from processing.transcriptionmanager import TranscriptionManager
+from server import shutdown
 
 
 class ProcessManager:
@@ -118,8 +119,6 @@ class ProcessManager:
     def get_audio_consumer(self):
         """Get the global audio consumer from shutdown module."""
         try:
-            from server import shutdown
-
             return getattr(shutdown, "audio_consumer", None)
         except Exception:
             return None

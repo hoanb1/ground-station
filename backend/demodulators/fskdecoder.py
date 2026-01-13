@@ -63,7 +63,9 @@ import multiprocessing
 import os
 import queue
 import time
+import traceback
 from enum import Enum
+from types import SimpleNamespace
 from typing import Any, Dict
 
 import numpy as np
@@ -165,8 +167,6 @@ class FSKMessageHandler(gr.basic_block):
 
         except Exception as e:
             self.logger.error(f"Error handling message: {e}")
-            import traceback
-
             traceback.print_exc()
 
 
@@ -399,8 +399,6 @@ class FSKFlowgraph(gr.top_block):
 
         except Exception as e:
             self.logger.error(f"Error processing buffer: {e}")
-            import traceback
-
             traceback.print_exc()
             # Clear buffer on error to avoid repeated failures
             with self.sample_lock:
@@ -433,14 +431,14 @@ class FSKFlowgraph(gr.top_block):
                 # Delete the top_block to release resources
                 del tb
 
-            # Force garbage collection to clean up GNU Radio objects
-            # and release shared memory segments
-            gc.collect()
+                # Force garbage collection to clean up GNU Radio objects
+                # and release shared memory segments
+                gc.collect()
 
-            # Short delay to allow system to clean up shared memory
-            # GNU Radio 3.10+ has issues with rapid flowgraph creation/destruction
-            # Reduced from 0.1s to 0.02s for better throughput
-            time.sleep(0.02)
+                # Short delay to allow system to clean up shared memory
+                # GNU Radio 3.10+ has issues with rapid flowgraph creation/destruction
+                # Reduced from 0.1s to 0.02s for better throughput
+                time.sleep(0.02)
 
     def flush_buffer(self):
         """Process any remaining samples in the buffer"""
@@ -631,8 +629,6 @@ class FSKDecoder(BaseDecoderProcess):
         """Get cached VFO state for metadata purposes."""
         # Create a simple namespace object from cached dict for backward compatibility
         if self.cached_vfo_state:
-            from types import SimpleNamespace
-
             return SimpleNamespace(**self.cached_vfo_state)
         return None
 

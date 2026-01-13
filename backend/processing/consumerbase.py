@@ -15,6 +15,9 @@
 
 
 import logging
+import queue as queue_module
+
+from audio.audiobroadcaster import AudioBroadcaster
 
 
 class ConsumerManager:
@@ -175,10 +178,6 @@ class ConsumerManager:
             # This allows multiple consumers (transcription, UI, etc.) to receive audio independently
             audio_broadcaster_instance = None
             if storage_key == "demodulators":
-                import queue as queue_module
-
-                from audio.audiobroadcaster import AudioBroadcaster
-
                 # Create input queue for the audio broadcaster
                 broadcaster_input_queue: queue_module.Queue = queue_module.Queue(maxsize=10)
 

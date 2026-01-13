@@ -60,12 +60,16 @@
 #    - Extracts and reports AX.25 callsigns to UI
 #    - Automatic framing detection from satellite configuration
 
+import argparse
+import gc
 import logging
 import multiprocessing
 import os
 import queue
 import time
+import traceback
 from enum import Enum
+from types import SimpleNamespace
 from typing import Any, Dict
 
 import numpy as np
@@ -185,8 +189,6 @@ class BPSKMessageHandler(gr.basic_block):
 
         except Exception as e:
             self.logger.error(f"Error handling message: {e}")
-            import traceback
-
             traceback.print_exc()
 
 
@@ -330,7 +332,6 @@ class BPSKFlowgraph(gr.top_block):
         try:
             # Create a NEW flowgraph for each batch to avoid connection conflicts
             # This is necessary because hierarchical blocks can't be easily disconnected
-            import argparse
 
             # Create a temporary top_block
             tb = gr.top_block("BPSK Batch Processor")
@@ -416,8 +417,6 @@ class BPSKFlowgraph(gr.top_block):
 
         except Exception as e:
             logger.error(f"Error processing buffer: {e}")
-            import traceback
-
             traceback.print_exc()
             # Clear buffer on error to avoid repeated failures
             with self.sample_lock:
@@ -450,15 +449,13 @@ class BPSKFlowgraph(gr.top_block):
                 # Delete the top_block to release resources
                 del tb
 
-            # Force garbage collection to clean up GNU Radio objects
-            # and release shared memory segments
-            import gc
+                # Force garbage collection to clean up GNU Radio objects
+                # and release shared memory segments
+                gc.collect()
 
-            gc.collect()
-
-            # Longer delay to allow system to clean up shared memory
-            # GNU Radio 3.10+ has issues with rapid flowgraph creation/destruction
-            time.sleep(0.1)
+                # Longer delay to allow system to clean up shared memory
+                # GNU Radio 3.10+ has issues with rapid flowgraph creation/destruction
+                time.sleep(0.1)
 
     def flush_buffer(self):
         """Process any remaining samples in the buffer"""
@@ -634,8 +631,6 @@ class BPSKDecoder(BaseDecoderProcess):
         """Get cached VFO state for metadata purposes."""
         # Create a simple namespace object from cached dict for backward compatibility
         if self.cached_vfo_state:
-            from types import SimpleNamespace
-
             return SimpleNamespace(**self.cached_vfo_state)
         return None
 

@@ -13,7 +13,9 @@ from typing import Any, Dict, List, Optional, cast
 from processing.utils import active_sdr_clients, add_sdr_session
 from processing.utils import cleanup_sdr_session as utils_cleanup_sdr_session
 from processing.utils import get_process_manager, get_sdr_session
+from server import shutdown
 from session.tracker import session_tracker
+from vfos.state import VFOManager
 
 
 class SessionService:
@@ -89,8 +91,6 @@ class SessionService:
         """
         # Clean up WebAudioStreamer session stats
         try:
-            from server import shutdown
-
             if shutdown.audio_consumer:
                 shutdown.audio_consumer.cleanup_session(session_id)
         except Exception as e:
@@ -133,8 +133,6 @@ class SessionService:
         Returns:
             Internal session ID (e.g., "internal:obs-abc-123")
         """
-        from vfos.state import VFOManager
-
         session_id = VFOManager.make_internal_session_id(observation_id)
 
         # Register in tracker
@@ -159,8 +157,6 @@ class SessionService:
         Args:
             observation_id: Unique observation identifier
         """
-        from vfos.state import VFOManager
-
         session_id = VFOManager.make_internal_session_id(observation_id)
 
         # Full cleanup (stops SDR, clears tracker, removes config)

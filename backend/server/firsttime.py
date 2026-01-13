@@ -22,6 +22,7 @@ import string
 from common.logger import logger
 from db import AsyncSessionLocal
 from db.models import Locations, TLESources
+from tlesync.logic import synchronize_satellite_data
 
 
 async def first_time_initialization():
@@ -75,9 +76,6 @@ async def first_time_initialization():
 
 async def run_initial_sync(sio):
     """Run the initial satellite data synchronization after delay."""
-    from db import AsyncSessionLocal
-    from tlesync.logic import synchronize_satellite_data
-
     try:
         logger.info("Waiting 5 seconds before starting initial synchronization...")
         await asyncio.sleep(5)

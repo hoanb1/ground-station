@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from skyfield.api import EarthSatellite, load
 
-from tracking.passes import analyze_satellite_orbit, calculate_azimuth_path
+from tracking.passes import analyze_satellite_orbit, calculate_azimuth_path, calculate_next_events
 
 
 # Test fixtures with real TLE data
@@ -327,8 +327,6 @@ class TestCalculateNextEventsIntegration:
     @pytest.mark.integration
     def test_calculate_next_events_single_satellite_dict(self, iss_tle):
         """Test calculating passes for a single satellite (dict format)."""
-        from tracking.passes import calculate_next_events
-
         home_location = {"lat": 37.7749, "lon": -122.4194}  # San Francisco
 
         result = calculate_next_events(
@@ -344,8 +342,6 @@ class TestCalculateNextEventsIntegration:
     @pytest.mark.integration
     def test_calculate_next_events_multiple_satellites(self, iss_tle, molniya_tle):
         """Test calculating passes for multiple satellites."""
-        from tracking.passes import calculate_next_events
-
         satellite_list = [iss_tle, molniya_tle]
         home_location = {"lat": 37.7749, "lon": -122.4194}
 
@@ -360,8 +356,6 @@ class TestCalculateNextEventsIntegration:
     @pytest.mark.integration
     def test_calculate_next_events_invalid_location(self, iss_tle):
         """Test with invalid location data."""
-        from tracking.passes import calculate_next_events
-
         invalid_location = {"invalid": "data"}
 
         result = calculate_next_events(
@@ -374,8 +368,6 @@ class TestCalculateNextEventsIntegration:
     @pytest.mark.integration
     def test_calculate_next_events_invalid_satellite_data(self):
         """Test with invalid satellite data."""
-        from tracking.passes import calculate_next_events
-
         home_location = {"lat": 37.7749, "lon": -122.4194}
 
         result = calculate_next_events(
@@ -388,8 +380,6 @@ class TestCalculateNextEventsIntegration:
     @pytest.mark.integration
     def test_calculate_next_events_high_elevation_threshold(self, iss_tle):
         """Test with high elevation threshold (30 degrees)."""
-        from tracking.passes import calculate_next_events
-
         home_location = {"lat": 37.7749, "lon": -122.4194}
 
         result = calculate_next_events(
@@ -405,8 +395,6 @@ class TestCalculateNextEventsIntegration:
     @pytest.mark.integration
     def test_calculate_next_events_pass_structure(self, iss_tle):
         """Test that pass events have correct structure."""
-        from tracking.passes import calculate_next_events
-
         home_location = {"lat": 37.7749, "lon": -122.4194}
 
         result = calculate_next_events(

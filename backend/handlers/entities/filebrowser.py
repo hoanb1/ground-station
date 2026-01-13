@@ -26,6 +26,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
+from PIL import Image
+
 
 def get_disk_usage(path: Path) -> Dict[str, Union[int, str]]:
     """
@@ -105,8 +107,6 @@ def get_image_dimensions(image_path: str) -> Tuple[Any, ...]:
         Tuple of (width, height) or (None, None) if unable to determine
     """
     try:
-        from PIL import Image
-
         with Image.open(image_path) as img:
             size: Tuple[Any, ...] = img.size
             return size

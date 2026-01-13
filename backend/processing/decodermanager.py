@@ -774,8 +774,6 @@ class DecoderManager:
                 )
                 return False
 
-            from processing.decoderregistry import decoder_registry
-
             decoder_class = None
             for name in decoder_registry.list_decoders():
                 cls = decoder_registry.get_decoder_class(name)

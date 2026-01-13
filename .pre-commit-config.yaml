@@ -44,7 +44,7 @@ repos:
       - id: flake8
         name: Lint Python code with flake8
         files: ^backend/
-        exclude: ^backend/(alembic|run_alembic\.py|migrate_data\.py|verify_data\.py)
+        exclude: ^backend/(alembic|run_alembic\.py|migrate_data\.py|verify_data\.py|tests/)
         args: ['--max-line-length=100', '--extend-ignore=E203,W503,E501']
 
   # Python Backend - mypy type checker

@@ -372,8 +372,6 @@ async def delete_monitored_satellites(
 
         # First, delete associated observations if requested
         if delete_observations:
-            from db.models import ScheduledObservations
-
             obs_stmt = delete(ScheduledObservations).where(
                 ScheduledObservations.monitored_satellite_id.in_(ids)
             )

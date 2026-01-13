@@ -21,6 +21,7 @@ from typing import Any, Optional
 from common.logger import logger
 from crud.scheduledobservations import update_scheduled_observation_status
 from db import AsyncSessionLocal
+from observations.events import observation_sync
 
 
 async def update_observation_status(
@@ -69,8 +70,6 @@ async def remove_scheduled_stop_job(observation_id: str) -> None:
         observation_id: The observation ID
     """
     try:
-        from observations.events import observation_sync
-
         if observation_sync:
             # Remove just the stop job
             job_id = f"obs_{observation_id}_stop"

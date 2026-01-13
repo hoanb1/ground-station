@@ -15,7 +15,7 @@
 """Calculate elevation crossing times for satellite passes."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import numpy as np
@@ -80,8 +80,6 @@ def calculate_elevation_crossing_time(
         t_los = ts.from_datetime(los_time)
 
         # Sample points during the pass (every 10 seconds for precision)
-        from datetime import timedelta
-
         pass_duration_seconds = (los_time - aos_time).total_seconds()
         num_samples = int(pass_duration_seconds / 10) + 1  # 10 second intervals
 

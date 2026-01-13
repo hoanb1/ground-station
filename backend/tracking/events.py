@@ -4,7 +4,7 @@ import json
 import logging
 import multiprocessing
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Union
 
 import numpy as np
@@ -349,10 +349,7 @@ async def fetch_next_events_for_group(
             # If no cache hit, spawn worker to calculate
             if result is None:
                 # Calculate the time window for pass calculations (do this BEFORE worker calculation)
-                from datetime import timedelta
-                from datetime import timezone as dt_timezone
-
-                calculation_start = datetime.now(dt_timezone.utc)
+                calculation_start = datetime.now(timezone.utc)
                 calculation_end = calculation_start + timedelta(hours=hours)
 
                 logger.info("Cache miss - submitting calculation to worker pool")

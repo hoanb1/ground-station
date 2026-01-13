@@ -1,4 +1,6 @@
 import asyncio
+import concurrent.futures
+import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -8,6 +10,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+from db.models import AwareDateTime, Base, JsonField
 
 # Add the backend directory to the Python path
 backend_dir = Path(__file__).parent.parent
@@ -15,12 +18,9 @@ sys.path.insert(0, str(backend_dir))
 
 # Import the database models and configuration
 # We need to handle arguments differently for alembic
-import os
 
 # Get the database path from environment or use default
 db_path = os.environ.get("GS_DB", "data/db/gs.db")
-
-from db.models import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -43,8 +43,6 @@ target_metadata = Base.metadata
 
 def render_item(type_, obj, autogen_context):
     """Custom rendering for types that alembic doesn't understand."""
-    from db.models import AwareDateTime, JsonField
-
     if type_ == "type" and isinstance(obj, type(AwareDateTime())):
         # Render AwareDateTime as DateTime
         autogen_context.imports.add("from sqlalchemy import DateTime")
@@ -129,8 +127,6 @@ def run_migrations_online() -> None:
         asyncio.get_running_loop()
         # We're in an async context, so we need to run this differently
         # Use a new thread to avoid event loop conflicts
-        import concurrent.futures
-
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future = executor.submit(asyncio.run, run_async_migrations())
             future.result()

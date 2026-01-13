@@ -31,6 +31,7 @@ import multiprocessing
 import queue
 import threading
 import time
+import traceback
 from copy import deepcopy
 from typing import Any, Dict, Optional, Union
 
@@ -239,8 +240,6 @@ class AudioBroadcaster(threading.Thread):
             context += f", VFO {self.vfo_number}"
 
         # Get caller info for debugging
-        import traceback
-
         caller_info = traceback.extract_stack()[-2]
         caller = f"{caller_info.filename.split('/')[-1]}:{caller_info.lineno} in {caller_info.name}"
 

@@ -6,6 +6,7 @@ import sys
 import threading
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import uvicorn  # noqa: E402
 
 from common.arguments import arguments  # noqa: E402
@@ -15,6 +16,13 @@ from server.shmmonitor import start_cleanup_thread  # noqa: E402
 from server.shutdown import cleanup_everything, signal_handler  # noqa: E402
 from server.startup import app, init_db, sio, socket_app  # noqa: E402
 from video.webrtc import register_webrtc_routes  # noqa: E402
+
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
 
 
 def print_banner():
@@ -42,12 +50,8 @@ def print_banner():
 
 # Set process and thread names
 def configure_process_names():
-    try:
-        import setproctitle
-
+    if HAS_SETPROCTITLE:
         setproctitle.setproctitle("Ground Station - Main Thread")
-    except ImportError:  # pragma: no cover - optional dependency
-        pass
     multiprocessing.current_process().name = "Ground Station - Main"
     threading.current_thread().name = "Ground Station - Main Thread"
 

@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import os
 import queue
 from contextlib import asynccontextmanager
@@ -17,7 +18,13 @@ from common.arguments import arguments
 from common.logger import logger
 from db import *  # noqa: F401,F403
 from db import engine  # Explicit import for type checker
+from db.migrations import run_migrations
 from hardware.soapysdrbrowser import discover_soapy_servers
+from observations import events as obs_events
+from observations.events import emit_scheduled_observations_changed as _emit
+from observations.events import set_socketio_instance
+from observations.executor import ObservationExecutor
+from observations.sync import ObservationSchedulerSync
 from processing.processmanager import process_manager
 from server import shutdown
 from server.firsttime import first_time_initialization, run_initial_sync
@@ -63,8 +70,6 @@ async def lifespan(fastapiapp: FastAPI):
     event_loop = asyncio.get_running_loop()
 
     # Set socketio instance for observations events
-    from observations.events import set_socketio_instance
-
     set_socketio_instance(sio)
 
     # Start audio broadcaster
@@ -94,15 +99,10 @@ async def lifespan(fastapiapp: FastAPI):
     scheduler = start_scheduler(sio, process_manager)
 
     # Initialize observation executor and scheduler sync
-    from observations.executor import ObservationExecutor
-    from observations.sync import ObservationSchedulerSync
-
     observation_executor = ObservationExecutor(process_manager, sio)
     observation_sync = ObservationSchedulerSync(scheduler, observation_executor)
 
     # Store observation_sync globally for use in handlers
-    from observations import events as obs_events
-
     obs_events.observation_sync = observation_sync
 
     # Run initial observation generation
@@ -162,8 +162,6 @@ sio = socketio.AsyncServer(
 
 async def emit_scheduled_observations_changed():
     """Emit event to all clients that scheduled observations have changed."""
-    from observations.events import emit_scheduled_observations_changed as _emit
-
     await _emit()
 
 
@@ -282,10 +280,6 @@ async def init_db():
 
     # Run Alembic migrations to ensure schema is up to date
     try:
-        import concurrent.futures
-
-        from db.migrations import run_migrations
-
         # Run migrations in a thread pool to avoid event loop conflicts
         # Use the currently running loop (compatible with Python 3.12+)
         loop = asyncio.get_running_loop()

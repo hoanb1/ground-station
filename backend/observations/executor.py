@@ -20,6 +20,7 @@ import traceback
 from typing import Any, Dict, Optional
 
 from common.logger import logger
+from crud.hardware import fetch_sdr
 from crud.scheduledobservations import fetch_scheduled_observations
 from db import AsyncSessionLocal
 from observations.constants import (
@@ -29,6 +30,7 @@ from observations.constants import (
     STATUS_RUNNING,
     STATUS_SCHEDULED,
 )
+from observations.events import observation_sync
 from observations.helpers import remove_scheduled_stop_job, update_observation_status
 from observations.tasks.decoderhandler import DecoderHandler
 from observations.tasks.recorderhandler import RecorderHandler
@@ -152,8 +154,6 @@ class ObservationExecutor:
                 return {"success": False, "error": error_msg}
 
             # Check if SDR is already in use - if so, we'll hijack it and reconfigure
-            from session.tracker import session_tracker
-
             sessions_using_sdr = session_tracker.get_sessions_for_sdr(sdr_id)
             if sessions_using_sdr:
                 logger.info(
@@ -275,8 +275,6 @@ class ObservationExecutor:
                 status = observation.get("status")
 
             # 2. Remove scheduled jobs from APScheduler
-            from observations.events import observation_sync
-
             if observation_sync:
                 await observation_sync.remove_observation(observation_id)
                 logger.info(f"Removed scheduled jobs for observation {observation_id}")
@@ -341,8 +339,6 @@ class ObservationExecutor:
                 raise ValueError("SDR ID missing from configuration")
 
             # Fetch SDR device details from database to get correct type
-            from crud.hardware import fetch_sdr
-
             async with AsyncSessionLocal() as db_session:
                 sdr_result = await fetch_sdr(db_session, sdr_id)
                 if not sdr_result or not sdr_result.get("success"):

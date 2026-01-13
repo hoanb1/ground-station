@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional, Union
 import crud.monitoredsatellites as crud_satellites
 import crud.scheduledobservations as crud_observations
 from db import AsyncSessionLocal
-from observations.events import emit_scheduled_observations_changed
+from observations.events import emit_scheduled_observations_changed, observation_sync
 from observations.generator import generate_observations_for_monitored_satellites
 from observations.validation import validate_transmitter_frequencies
 
@@ -84,8 +84,6 @@ async def create_scheduled_observation(
 
         # Sync to APScheduler if successful
         if result["success"]:
-            from observations.events import observation_sync
-
             if observation_sync:
                 await observation_sync.sync_observation(observation_id)
 
@@ -134,8 +132,6 @@ async def update_scheduled_observation(
 
         # Sync to APScheduler if successful
         if result["success"]:
-            from observations.events import observation_sync
-
             if observation_sync:
                 await observation_sync.sync_observation(observation_id)
 
@@ -169,8 +165,6 @@ async def delete_scheduled_observations(
         return {"success": False, "error": "List of IDs required"}
 
     # First, check if any observations are running and cancel them
-    from observations.events import observation_sync
-
     if observation_sync:
         async with AsyncSessionLocal() as dbsession:
             # Fetch observations to check their status
@@ -252,8 +246,6 @@ async def toggle_observation_enabled(
 
         # Sync to APScheduler if successful
         if result["success"]:
-            from observations.events import observation_sync
-
             if observation_sync:
                 await observation_sync.sync_observation(observation_id)
 
@@ -286,8 +278,6 @@ async def cancel_observation(
     observation_id = data
 
     # Cancel via executor (handles running observations properly)
-    from observations.events import observation_sync
-
     if observation_sync and observation_sync.executor:
         cancel_result = await observation_sync.executor.cancel_observation(observation_id)
         if not cancel_result.get("success", False):
@@ -545,8 +535,6 @@ async def regenerate_observations(
             )
 
             # Sync all observations to APScheduler
-            from observations.events import observation_sync
-
             if observation_sync:
                 sync_result = await observation_sync.sync_all_observations()
                 if sync_result["success"]:

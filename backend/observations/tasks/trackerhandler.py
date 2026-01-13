@@ -19,6 +19,7 @@ import traceback
 from typing import Any, Dict, List
 
 from common.logger import logger
+from tracker.runner import get_tracker_manager
 
 
 class TrackerHandler:
@@ -47,8 +48,6 @@ class TrackerHandler:
             if not rotator_config.get("tracking_enabled") or not rotator_config.get("id"):
                 logger.debug(f"Rotator tracking not enabled for observation {observation_id}")
                 return False
-
-            from tracker.runner import get_tracker_manager
 
             # Extract transmitter ID from decoder tasks (if any)
             transmitter_id = "none"

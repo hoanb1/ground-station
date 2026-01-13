@@ -17,6 +17,8 @@
 Unit tests for TLE sources CRUD operations.
 """
 
+import uuid
+
 import pytest
 
 from crud.groups import add_satellite_group
@@ -121,8 +123,6 @@ class TestTLESourcesCRUD:
 
     async def test_edit_tle_source_not_found(self, db_session):
         """Test editing non-existent TLE source."""
-        import uuid
-
         fake_id = str(uuid.uuid4())
 
         result = await edit_satellite_tle_source(db_session, fake_id, {"name": "New Name"})
@@ -244,8 +244,6 @@ class TestTLESourcesCRUD:
 
     async def test_delete_tle_sources_not_found(self, db_session):
         """Test deleting non-existent TLE sources."""
-        import uuid
-
         fake_id = str(uuid.uuid4())
 
         result = await delete_satellite_tle_sources(db_session, [fake_id])
@@ -255,8 +253,6 @@ class TestTLESourcesCRUD:
 
     async def test_delete_tle_sources_partial_not_found(self, db_session):
         """Test deleting mix of existing and non-existent sources."""
-        import uuid
-
         # Add one real source
         real_source = await add_satellite_tle_source(
             db_session, {"name": "Real Source", "url": "https://example.com/real.txt"}

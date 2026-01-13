@@ -10,6 +10,9 @@ import asyncio
 from typing import Set
 
 from common.logger import logger
+from processing.processmanager import process_manager
+from session.service import session_service
+from session.tracker import session_tracker
 
 
 def start_session_runtime_emitter(sio, background_tasks: Set[asyncio.Task]) -> asyncio.Task:
@@ -27,16 +30,11 @@ def start_session_runtime_emitter(sio, background_tasks: Set[asyncio.Task]) -> a
                 # Build snapshot using SessionService if available, else fallback to tracker
                 snapshot = None
                 try:
-                    from session.service import session_service
-
                     snapshot = session_service.get_runtime_snapshot()
                 except Exception as e:
                     logger.debug(f"SessionService unavailable, using tracker fallback: {e}")
                     # Fallback to tracker
                     try:
-                        from processing.processmanager import process_manager
-                        from session.tracker import session_tracker
-
                         snapshot = session_tracker.get_runtime_snapshot(process_manager)
                     except Exception as e2:
                         logger.debug(f"Tracker fallback also failed: {e2}")

@@ -26,6 +26,7 @@ from fft.processor import fft_processor_process
 from handlers.entities.filebrowser import emit_file_browser_state
 from processing.iqbroadcaster import IQBroadcaster
 from processing.utils import create_named_worker_process
+from vfos.state import VFOManager
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.sigmfplaybackworker import sigmf_playback_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
@@ -279,8 +280,6 @@ class ProcessLifecycleManager:
                 )
 
             # Add this client to the room (skip for internal observation sessions)
-            from vfos.state import VFOManager
-
             if not VFOManager.is_internal_session(client_id):
                 await self.sio.enter_room(client_id, sdr_id)
                 # Send a message to the UI of the specific client that streaming started
@@ -392,8 +391,6 @@ class ProcessLifecycleManager:
             config_queue.put(config)
 
             # Add this client to the room (skip for internal observation sessions)
-            from vfos.state import VFOManager
-
             if not VFOManager.is_internal_session(client_id):
                 await self.sio.enter_room(client_id, sdr_id)
 
@@ -423,8 +420,6 @@ class ProcessLifecycleManager:
                 process_info["clients"].remove(client_id)
 
                 # Make a client leave a specific room (skip for internal observation sessions)
-                from vfos.state import VFOManager
-
                 if not VFOManager.is_internal_session(client_id):
                     await self.sio.leave_room(client_id, sdr_id)
 
@@ -949,8 +944,6 @@ class ProcessLifecycleManager:
                                                         del entry["stats_timestamp"]
 
                                 # Check if this is an internal session (automated observation)
-                                from vfos.state import VFOManager
-
                                 is_internal = VFOManager.is_internal_session(session_id)
 
                                 if is_internal:

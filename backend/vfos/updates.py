@@ -17,6 +17,8 @@
 
 import logging
 
+from vfos.state import VFOManager
+
 logger = logging.getLogger("vfo-state")
 
 
@@ -36,8 +38,6 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
         tracking_data: Dictionary containing rig_data with transmitters doppler data
                       Format: {"rig_data": {"transmitters": [...]}, ...}
     """
-    from vfos.state import VFOManager
-
     # Extract transmitter doppler data
     rig_data = tracking_data.get("rig_data", {})
     transmitters = rig_data.get("transmitters", [])

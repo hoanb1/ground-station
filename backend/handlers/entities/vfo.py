@@ -23,8 +23,10 @@ from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
 from db.models import Satellites, Transmitters
 from handlers.entities.sdr import handle_vfo_demodulator_state
+from processing.decoderconfigservice import decoder_config_service
 from processing.decoderregistry import decoder_registry
 from processing.processmanager import process_manager
+from processing.utils import get_process_manager, get_sdr_session
 from server.startup import audio_queue
 from session.service import session_service
 from session.tracker import session_tracker
@@ -291,8 +293,6 @@ async def toggle_transcription(
     vfo_state = vfomanager.get_vfo_state(sid, vfo_number)
 
     # Get SDR ID from session config (not from VFO state which may not have it)
-    from processing.utils import get_sdr_session
-
     sdr_session = get_sdr_session(sid)
     sdr_id = sdr_session.get("sdr_id") if sdr_session else None
 
@@ -304,8 +304,6 @@ async def toggle_transcription(
         )
 
         # Get process manager and transcription manager
-        from processing.utils import get_process_manager
-
         process_manager = get_process_manager()
         transcription_manager = process_manager.transcription_manager
 
@@ -391,8 +389,6 @@ async def toggle_transcription(
     elif not enabled and sdr_id:
         # Disabling transcription - stop worker if it exists
         logger.info(f"Stopping transcription for VFO {vfo_number}")
-
-        from processing.utils import get_process_manager
 
         process_manager = get_process_manager()
         transcription_manager = process_manager.transcription_manager
@@ -536,8 +532,6 @@ async def check_decoder_params_changed(sdr_id, session_id, vfo_state, logger):
         }
 
     # Generate new config using DecoderConfigService
-    from processing.decoderconfigservice import decoder_config_service
-
     # Get decoder parameter overrides from cache (if any)
     override_key = f"{session_id}_{vfo_state.vfo_number}"
     decoder_param_overrides = _decoder_param_overrides_cache.get(override_key, {})

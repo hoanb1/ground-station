@@ -21,6 +21,7 @@ from typing import Any, Dict
 from sqlalchemy import select
 
 from common.logger import logger
+from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
 from db.models import Transmitters
 from demodulators.amdemodulator import AMDemodulator
@@ -125,8 +126,6 @@ class TranscriptionHandler:
 
             # Fetch API keys from preferences
             async with AsyncSessionLocal() as dbsession:
-                from crud.preferences import fetch_all_preferences
-
                 prefs_result = await fetch_all_preferences(dbsession)
                 if not prefs_result["success"]:
                     logger.error("Failed to fetch preferences for transcription")

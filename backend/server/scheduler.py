@@ -9,7 +9,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from common.logger import logger
 from db import AsyncSessionLocal
 from observations.constants import DEFAULT_AUTO_GENERATE_INTERVAL_HOURS
-from observations.events import emit_scheduled_observations_changed
+from observations.events import emit_scheduled_observations_changed, observation_sync
 from observations.generator import generate_observations_for_monitored_satellites
 from tlesync.logic import synchronize_satellite_data
 
@@ -65,8 +65,6 @@ async def generate_observations_job():
                     await emit_scheduled_observations_changed()
 
                     # Sync all observations to APScheduler
-                    from observations.events import observation_sync
-
                     if observation_sync:
                         sync_result = await observation_sync.sync_all_observations()
                         if sync_result["success"]:

@@ -29,6 +29,7 @@ from handlers.entities.databasebackup import (
 from handlers.entities.filebrowser import filebrowser_request_routing
 from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry
+from processing.processmanager import process_manager
 from server.shutdown import cleanup_everything
 from session.service import session_service
 from session.tracker import session_tracker
@@ -81,8 +82,6 @@ def register_socketio_handlers(sio):
 
         # Persist client metadata into SessionTracker so snapshots can include it
         try:
-            import time
-
             session_tracker.set_session_metadata(
                 sid,
                 ip_address=client_ip,
@@ -157,16 +156,12 @@ def register_socketio_handlers(sio):
     async def handle_start_monitoring(sid):
         """Start performance monitoring when client requests it."""
         logger.info(f"Performance monitoring start requested by client {sid}")
-        from processing.processmanager import process_manager
-
         process_manager.performance_monitor.enable_monitoring()
 
     @sio.on("stop-monitoring")
     async def handle_stop_monitoring(sid):
         """Stop performance monitoring when client closes dialog."""
         logger.info(f"Performance monitoring stop requested by client {sid}")
-        from processing.processmanager import process_manager
-
         process_manager.performance_monitor.disable_monitoring()
 
     @sio.on("database_backup")

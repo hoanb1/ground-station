@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional, Union
 
 import crud
 from db import AsyncSessionLocal
+from handlers.entities.tracking import emit_tracker_data, emit_ui_tracker_values
 
 
 async def fetch_preferences(
@@ -107,8 +108,6 @@ async def set_map_settings(
         map_settings_reply = await crud.preferences.set_map_settings(dbsession, data)
 
         # Emit tracker data so all browsers are informed of the change
-        from handlers.entities.tracking import emit_tracker_data, emit_ui_tracker_values
-
         await emit_tracker_data(dbsession, sio, logger)
         await emit_ui_tracker_values(dbsession, sio, logger)
 

@@ -14,8 +14,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+import base64
 import logging
 import os
+import re
 from datetime import datetime
 from typing import Optional
 
@@ -124,9 +126,6 @@ def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] =
     # Save the waterfall image if provided
     if waterfall_image:
         try:
-            import base64
-            import re
-
             # Extract base64 data from data URL
             # Format: data:image/png;base64,iVBORw0KG...
             match = re.match(r"data:image/(\w+);base64,(.+)", waterfall_image)

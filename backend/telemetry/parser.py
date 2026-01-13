@@ -96,6 +96,7 @@ from typing import Any, Dict, Optional, Tuple
 from .ax25parser import AX25Parser
 from .ccsdsparser import CCSDSParser
 from .cspparser import CSPParser
+from .parsers.geoscan import GeoscanParser
 from .payloadanalyzers import PayloadAnalyzer
 
 logger = logging.getLogger("telemetry.parser")
@@ -332,8 +333,6 @@ class TelemetryParser:
                 ax25_payload = ax25_result["payload"]
                 # GEOSCAN universal path: use GeoscanParser on the AX.25 info field with frame_size hint
                 try:
-                    from .parsers.geoscan import GeoscanParser
-
                     fs_hint = _coerce_frame_size(parser_hint)
                     parser = GeoscanParser()
                     data = parser.parse(
@@ -391,8 +390,6 @@ class TelemetryParser:
                         }
                         # Universal GEOSCAN path: run GeoscanParser on AX.25 info field with frame_size hint
                         try:
-                            from .parsers.geoscan import GeoscanParser
-
                             fs_hint = _coerce_frame_size(parser_hint)
                             parser = GeoscanParser()
                             data = parser.parse(
@@ -427,8 +424,6 @@ class TelemetryParser:
             )
             # Universal proprietary path: try GeoscanParser (66/74) with frame_size hint
             try:
-                from .parsers.geoscan import GeoscanParser
-
                 fs_hint2 = _coerce_frame_size(parser_hint)
 
                 parser = GeoscanParser()

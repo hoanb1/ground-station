@@ -13,11 +13,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 from typing import Dict, Union
 
 import crud
+from crud import fetch_all_preferences
 from db import AsyncSessionLocal
+from demodulators.amdemodulator import AMDemodulator
+from demodulators.fmdemodulator import FMDemodulator
+from demodulators.fmstereodemodulator import FMStereoDemodulator
+from demodulators.ssbdemodulator import SSBDemodulator
+from handlers.entities.filebrowser import emit_file_browser_state
 from processing.processmanager import process_manager
+from server.audiorecorder import start_audio_recording, stop_audio_recording
+from server.recorder import start_recording, stop_recording
+from server.snapshots import save_waterfall_snapshot
 from server.startup import audio_queue
 from session.service import session_service
 from session.tracker import session_tracker
@@ -265,9 +275,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
         elif cmd == "start-recording":
             try:
-                from handlers.entities.filebrowser import emit_file_browser_state
-                from server.recorder import start_recording
-
                 sdr_id = data.get("selectedSDRId", None)
                 recording_name = data.get("recordingName", "")
                 target_satellite_norad_id = data.get("targetSatelliteNoradId", "")
@@ -305,9 +312,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
         elif cmd == "stop-recording":
             try:
-                from handlers.entities.filebrowser import emit_file_browser_state
-                from server.recorder import stop_recording
-
                 sdr_id = data.get("selectedSDRId", None)
                 waterfall_image = data.get("waterfallImage", None)
 
@@ -344,8 +348,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
         elif cmd == "start-audio-recording":
             try:
-                from server.audiorecorder import start_audio_recording
-
                 sdr_id = data.get("selectedSDRId")
                 vfo_number = data.get("vfoNumber")
                 recording_name = data.get("recordingName", "")
@@ -371,8 +373,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 logger.info(f"Started audio recording for VFO {vfo_number}, session {client_id}")
 
                 # Emit file browser state update so all clients see the new audio recording
-                from handlers.entities.filebrowser import emit_file_browser_state
-
                 await emit_file_browser_state(
                     sio,
                     {
@@ -398,8 +398,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
         elif cmd == "stop-audio-recording":
             try:
-                from server.audiorecorder import stop_audio_recording
-
                 sdr_id = data.get("selectedSDRId")
                 vfo_number = data.get("vfoNumber")
 
@@ -409,8 +407,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 logger.info(f"Stopped audio recording for VFO {vfo_number}, session {client_id}")
 
                 # Emit file browser state update so all clients see the finalized audio recording
-                from handlers.entities.filebrowser import emit_file_browser_state
-
                 await emit_file_browser_state(
                     sio,
                     {
@@ -436,9 +432,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
         elif cmd == "save-waterfall-snapshot":
             try:
-                from handlers.entities.filebrowser import emit_file_browser_state
-                from server.snapshots import save_waterfall_snapshot
-
                 waterfall_image = data.get("waterfallImage", None)
                 snapshot_name = data.get("snapshotName", "")
 
@@ -497,8 +490,6 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
     log_suffix = f" VFO {vfo_number}" if vfo_number else ""
 
     if mode == "fm":
-        from demodulators.fmdemodulator import FMDemodulator
-
         result = process_manager.start_demodulator(
             sdr_id, session_id, FMDemodulator, audio_queue, vfo_number=vfo_number
         )
@@ -509,8 +500,6 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
         return result
 
     elif mode == "fm_stereo":
-        from demodulators.fmstereodemodulator import FMStereoDemodulator
-
         result = process_manager.start_demodulator(
             sdr_id, session_id, FMStereoDemodulator, audio_queue, vfo_number=vfo_number
         )
@@ -521,8 +510,6 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
         return result
 
     elif mode in ["usb", "lsb", "cw"]:
-        from demodulators.ssbdemodulator import SSBDemodulator
-
         result = process_manager.start_demodulator(
             sdr_id, session_id, SSBDemodulator, audio_queue, vfo_number=vfo_number, mode=mode
         )
@@ -533,8 +520,6 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
         return result
 
     elif mode == "am":
-        from demodulators.amdemodulator import AMDemodulator
-
         result = process_manager.start_demodulator(
             sdr_id, session_id, AMDemodulator, audio_queue, vfo_number=vfo_number
         )
@@ -573,8 +558,6 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
             return
 
         # Fetch API keys from preferences
-        from crud import fetch_all_preferences
-
         async def fetch_and_start():
             async with AsyncSessionLocal() as dbsession:
                 prefs_result = await fetch_all_preferences(dbsession)
@@ -650,8 +633,6 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
                     logger.warning(f"Failed to auto-start transcription for VFO {vfo_number}")
 
         # Run the async function
-        import asyncio
-
         loop = asyncio.get_event_loop()
         if loop.is_running():
             asyncio.ensure_future(fetch_and_start())

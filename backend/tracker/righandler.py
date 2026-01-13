@@ -19,17 +19,9 @@ Handles all rig-related operations including connection, frequency control, and 
 """
 
 import logging
-import sys
 import time
 
 import crud
-
-# anext is a builtin in Python 3.10+ but mypy may not recognize it
-if sys.version_info >= (3, 10):
-    anext = anext  # type: ignore[name-defined]
-else:
-    anext = __builtins__.anext  # type: ignore[attr-defined,name-defined,unused-ignore]
-
 from common.constants import DictKeys, SocketEvents, TrackingEvents, TrackingStateNames
 from controllers.rig import RigController
 from controllers.sdr import SDRController

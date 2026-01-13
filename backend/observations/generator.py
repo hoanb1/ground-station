@@ -45,6 +45,7 @@ from observations.constants import (
     STATUS_COMPLETED,
     STATUS_SCHEDULED,
 )
+from tracking.elcalculator import calculate_elevation_crossing_time
 from tracking.passes import calculate_next_events
 
 # CONFLICT RESOLUTION STRATEGY
@@ -334,11 +335,8 @@ async def _generate_observations_for_satellite(
                 task_end_time = None
 
                 if task_start_elevation > 0:
-                    import crud.locations
-                    from tracking.elcalculator import calculate_elevation_crossing_time
-
                     satellite_tle = {"tle1": pass_data.get("tle1"), "tle2": pass_data.get("tle2")}
-                    location_result = await crud.locations.fetch_all_locations(session)
+                    location_result = await crud_locations.fetch_all_locations(session)
                     if (
                         location_result
                         and location_result.get("success")
@@ -567,9 +565,6 @@ async def _create_observation(session: AsyncSession, monitored_sat: dict, pass_d
         monitored_sat: Monitored satellite configuration
         pass_data: Pass prediction data
     """
-    import crud.locations
-    from tracking.elcalculator import calculate_elevation_crossing_time
-
     satellite = monitored_sat["satellite"]
     event_start = datetime.fromisoformat(pass_data["event_start"].replace("Z", "+00:00"))
     event_end = datetime.fromisoformat(pass_data["event_end"].replace("Z", "+00:00"))
@@ -584,7 +579,7 @@ async def _create_observation(session: AsyncSession, monitored_sat: dict, pass_d
         satellite_tle = {"tle1": pass_data.get("tle1"), "tle2": pass_data.get("tle2")}
 
         # Get ground station location
-        location_result = await crud.locations.fetch_all_locations(session)
+        location_result = await crud_locations.fetch_all_locations(session)
         if (
             location_result
             and location_result.get("success")
@@ -661,9 +656,6 @@ async def _update_observation(
         monitored_sat: Monitored satellite configuration
         pass_data: New pass prediction data
     """
-    import crud.locations
-    from tracking.elcalculator import calculate_elevation_crossing_time
-
     satellite = monitored_sat["satellite"]
     event_start = datetime.fromisoformat(pass_data["event_start"].replace("Z", "+00:00"))
     event_end = datetime.fromisoformat(pass_data["event_end"].replace("Z", "+00:00"))
@@ -678,7 +670,7 @@ async def _update_observation(
         satellite_tle = {"tle1": pass_data.get("tle1"), "tle2": pass_data.get("tle2")}
 
         # Get ground station location
-        location_result = await crud.locations.fetch_all_locations(session)
+        location_result = await crud_locations.fetch_all_locations(session)
         if (
             location_result
             and location_result.get("success")

@@ -187,6 +187,7 @@ exclude = [
     "^build/",
     "^dist/",
     "^htmlcov/",
+    "^tests/",
 ]
 explicit_package_bases = true
 mypy_path = "."

@@ -5,7 +5,9 @@ from typing import Optional
 from audio.audiobroadcaster import AudioBroadcaster
 from audio.audiostreamer import WebAudioStreamer
 from common.logger import logger
-from session.service import session_service
+from observations.events import observation_sync
+from processing.utils import active_sdr_clients
+from tracker.runner import tracker_process
 
 # Globals used by audio threads
 audio_consumer: Optional[WebAudioStreamer] = None
@@ -18,8 +20,6 @@ def cleanup_everything():
 
     # Stop all running observations first
     try:
-        from observations.events import observation_sync
-
         if observation_sync and observation_sync.executor:
             logger.info("Stopping all running observations...")
             # Get all scheduled APScheduler jobs for observations
@@ -53,8 +53,6 @@ def cleanup_everything():
 
     # Terminate tracker process
     try:
-        from tracker.runner import tracker_process
-
         if tracker_process and tracker_process.is_alive():
             logger.info(f"Killing tracker process PID: {tracker_process.pid}")
             tracker_process.kill()
@@ -64,9 +62,9 @@ def cleanup_everything():
 
     # Clean up all SDR sessions
     try:
-        from processing.utils import active_sdr_clients
-
         if active_sdr_clients:
+            from session.service import session_service
+
             logger.info(f"Cleaning up {len(active_sdr_clients)} SDR sessions...")
             session_ids = list(active_sdr_clients.keys())
             for sid in session_ids:
@@ -94,7 +92,7 @@ def cleanup_everything():
 
     # Stop all transcription consumers (per-VFO)
     try:
-        from server import process_manager
+        from processing.processmanager import process_manager
 
         if process_manager and process_manager.transcription_manager:
             # Stop all transcription consumers across all SDRs and sessions
@@ -121,8 +119,6 @@ def signal_handler(signum, frame):
 def stop_tracker():
     """Simple function to kill the tracker process."""
     try:
-        from tracker.runner import tracker_process
-
         if tracker_process and tracker_process.is_alive():
             tracker_process.kill()
     except Exception:  # pragma: no cover - best effort cleanup

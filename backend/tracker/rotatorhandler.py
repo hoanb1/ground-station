@@ -19,16 +19,8 @@ Handles all rotator-related operations including connection, positioning, and li
 """
 
 import logging
-import sys
 
 import crud
-
-# anext is a builtin in Python 3.10+ but mypy may not recognize it
-if sys.version_info >= (3, 10):
-    anext = anext  # type: ignore[name-defined]
-else:
-    anext = __builtins__.anext  # type: ignore[attr-defined,name-defined,unused-ignore]
-
 from common.constants import DictKeys, SocketEvents, TrackingEvents, TrackingStateNames
 from controllers.rotator import RotatorController
 from db.__init__ import AsyncSessionLocal
