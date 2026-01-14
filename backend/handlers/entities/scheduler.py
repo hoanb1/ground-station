@@ -19,8 +19,9 @@ from typing import Any, Dict, List, Optional, Union
 
 import crud.monitoredsatellites as crud_satellites
 import crud.scheduledobservations as crud_observations
+import observations.events as obs_events
 from db import AsyncSessionLocal
-from observations.events import emit_scheduled_observations_changed, observation_sync
+from observations.events import emit_scheduled_observations_changed
 from observations.generator import generate_observations_for_monitored_satellites
 from observations.validation import validate_transmitter_frequencies
 
@@ -88,8 +89,8 @@ async def create_scheduled_observation(
 
         # Sync to APScheduler if successful
         if result["success"]:
-            if observation_sync:
-                sync_result = await observation_sync.sync_observation(observation_id)
+            if obs_events.observation_sync:
+                sync_result = await obs_events.observation_sync.sync_observation(observation_id)
 
                 # Check if APScheduler sync failed
                 if not sync_result.get("success"):
@@ -151,8 +152,8 @@ async def update_scheduled_observation(
 
         # Sync to APScheduler if successful
         if result["success"]:
-            if observation_sync:
-                sync_result = await observation_sync.sync_observation(observation_id)
+            if obs_events.observation_sync:
+                sync_result = await obs_events.observation_sync.sync_observation(observation_id)
 
                 # Check if APScheduler sync failed
                 if not sync_result.get("success"):
@@ -203,7 +204,7 @@ async def delete_scheduled_observations(
         return {"success": False, "error": "List of IDs required"}
 
     # First, check if any observations are running and cancel them
-    if observation_sync:
+    if obs_events.observation_sync:
         async with AsyncSessionLocal() as dbsession:
             # Fetch observations to check their status
             fetch_result = await crud_observations.fetch_scheduled_observations(dbsession)
@@ -222,9 +223,11 @@ async def delete_scheduled_observations(
                     )
                     for obs in running_observations:
                         obs_id = obs["id"]
-                        if observation_sync.executor:
-                            cancel_result = await observation_sync.executor.cancel_observation(
-                                obs_id
+                        if obs_events.observation_sync.executor:
+                            cancel_result = (
+                                await obs_events.observation_sync.executor.cancel_observation(
+                                    obs_id
+                                )
                             )
                             if not cancel_result.get("success", False):
                                 logger.warning(
@@ -236,9 +239,9 @@ async def delete_scheduled_observations(
 
         # Remove from APScheduler if successful
         if result["success"]:
-            if observation_sync:
+            if obs_events.observation_sync:
                 for observation_id in data:
-                    await observation_sync.remove_observation(observation_id)
+                    await obs_events.observation_sync.remove_observation(observation_id)
 
             # Emit event to all clients that observations have changed
             await emit_scheduled_observations_changed()
@@ -284,8 +287,8 @@ async def toggle_observation_enabled(
 
         # Sync to APScheduler if successful
         if result["success"]:
-            if observation_sync:
-                await observation_sync.sync_observation(observation_id)
+            if obs_events.observation_sync:
+                await obs_events.observation_sync.sync_observation(observation_id)
 
             # Emit event to all clients that observations have changed
             await emit_scheduled_observations_changed()
@@ -316,8 +319,10 @@ async def cancel_observation(
     observation_id = data
 
     # Cancel via executor (handles running observations properly)
-    if observation_sync and observation_sync.executor:
-        cancel_result = await observation_sync.executor.cancel_observation(observation_id)
+    if obs_events.observation_sync and obs_events.observation_sync.executor:
+        cancel_result = await obs_events.observation_sync.executor.cancel_observation(
+            observation_id
+        )
         if not cancel_result.get("success", False):
             return {
                 "success": bool(cancel_result.get("success", False)),
@@ -326,8 +331,8 @@ async def cancel_observation(
             }
 
     # Remove from APScheduler
-    if observation_sync:
-        await observation_sync.remove_observation(observation_id)
+    if obs_events.observation_sync:
+        await obs_events.observation_sync.remove_observation(observation_id)
 
     return {"success": True, "data": {"id": observation_id}}
 
@@ -573,8 +578,8 @@ async def regenerate_observations(
             )
 
             # Sync all observations to APScheduler
-            if observation_sync:
-                sync_result = await observation_sync.sync_all_observations()
+            if obs_events.observation_sync:
+                sync_result = await obs_events.observation_sync.sync_all_observations()
                 if sync_result["success"]:
                     sync_stats = sync_result.get("stats", {})
                     logger.info(

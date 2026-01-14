@@ -152,23 +152,7 @@ class ObservationSchedulerSync:
                 logger.debug(f"Observation {observation_id} is in the past, not scheduling")
                 return {"success": True, "action": "skipped_past"}
 
-            # 4.5. Reset execution_log for future observations
-            # This clears old scheduling events from previous backend restarts
-            async with AsyncSessionLocal() as session:
-                from sqlalchemy import update
-
-                from db.models import ScheduledObservations
-
-                stmt = (
-                    update(ScheduledObservations)
-                    .where(ScheduledObservations.id == observation_id)
-                    .values(execution_log=[])
-                )
-                await session.execute(stmt)
-                await session.commit()
-                logger.debug(f"Reset execution_log for observation {observation_id}")
-
-            # 4.6. Get task start/end times (pre-calculated and stored in observation)
+            # 4.5. Get task start/end times (pre-calculated and stored in observation)
             task_start_str = observation.get("task_start")
             task_end_str = observation.get("task_end")
 

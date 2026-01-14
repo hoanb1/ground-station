@@ -191,12 +191,6 @@ loggers:
       - default
     propagate: no
 
-  apscheduler.scheduler:
-    level: INFO
-    handlers:
-      - default
-    propagate: no
-
   fm-demodulator:
     level: INFO
     handlers:
@@ -282,7 +276,7 @@ loggers:
     propagate: no
 
   apscheduler.scheduler:
-    level: WARNING
+    level: INFO
     handlers:
       - default
     propagate: no
