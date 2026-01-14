@@ -33,20 +33,24 @@ async def get_scheduled_observations(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, List, str]]:
     """
-    Get all scheduled observations.
+    Get all scheduled observations or a single observation by ID.
 
     Args:
         sio: Socket.IO server instance
-        data: Not used
+        data: Optional dict with 'observation_id' key to fetch single observation
         logger: Logger instance
         sid: Socket.IO session ID
 
     Returns:
-        Dictionary with success status and observations list
+        Dictionary with success status and observations list or single observation
     """
+    observation_id = data.get("observation_id") if data else None
     async with AsyncSessionLocal() as dbsession:
-        result = await crud_observations.fetch_scheduled_observations(dbsession)
-        return {"success": result["success"], "data": result.get("data", [])}
+        result = await crud_observations.fetch_scheduled_observations(dbsession, observation_id)
+        return {
+            "success": result["success"],
+            "data": result.get("data", [] if not observation_id else None),
+        }
 
 
 async def create_scheduled_observation(
@@ -85,7 +89,22 @@ async def create_scheduled_observation(
         # Sync to APScheduler if successful
         if result["success"]:
             if observation_sync:
-                await observation_sync.sync_observation(observation_id)
+                sync_result = await observation_sync.sync_observation(observation_id)
+
+                # Check if APScheduler sync failed
+                if not sync_result.get("success"):
+                    error_msg = f"Failed to schedule in APScheduler: {sync_result.get('error')}"
+                    logger.error(error_msg)
+
+                    # Delete the observation since it can't be scheduled
+                    await crud_observations.delete_scheduled_observations(
+                        dbsession, [observation_id]
+                    )
+
+                    return {
+                        "success": False,
+                        "error": error_msg,
+                    }
 
             # Emit event to all clients that observations have changed
             await emit_scheduled_observations_changed()
@@ -133,7 +152,26 @@ async def update_scheduled_observation(
         # Sync to APScheduler if successful
         if result["success"]:
             if observation_sync:
-                await observation_sync.sync_observation(observation_id)
+                sync_result = await observation_sync.sync_observation(observation_id)
+
+                # Check if APScheduler sync failed
+                if not sync_result.get("success"):
+                    error_msg = f"Failed to reschedule in APScheduler: {sync_result.get('error')}"
+                    logger.error(error_msg)
+
+                    # Mark observation as failed in database
+                    from crud.scheduledobservations import update_scheduled_observation_status
+                    from observations.constants import STATUS_FAILED
+
+                    async with AsyncSessionLocal() as status_session:
+                        await update_scheduled_observation_status(
+                            status_session, observation_id, STATUS_FAILED, error_msg
+                        )
+
+                    return {
+                        "success": False,
+                        "error": error_msg,
+                    }
 
             # Emit event to all clients that observations have changed
             await emit_scheduled_observations_changed()

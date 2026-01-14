@@ -105,6 +105,26 @@ export const fetchScheduledObservations = createAsyncThunk(
     }
 );
 
+// Fetch a single scheduled observation by ID
+export const fetchSingleObservation = createAsyncThunk(
+    'scheduler/fetchSingle',
+    async ({ socket, observationId }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-scheduled-observations', { observation_id: observationId }, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to fetch observation'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // Create a new scheduled observation
 export const createScheduledObservation = createAsyncThunk(
     'scheduler/create',
@@ -571,6 +591,18 @@ const schedulerSlice = createSlice({
             .addCase(fetchScheduledObservations.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
+            })
+            // Fetch single observation
+            .addCase(fetchSingleObservation.fulfilled, (state, action) => {
+                // Update the observation in the array
+                const index = state.observations.findIndex(obs => obs.id === action.payload.id);
+                if (index !== -1) {
+                    state.observations[index] = action.payload;
+                }
+                // Update selectedObservationForData if it's the same observation
+                if (state.selectedObservationForData?.id === action.payload.id) {
+                    state.selectedObservationForData = action.payload;
+                }
             })
             // Create observation
             .addCase(createScheduledObservation.pending, (state) => {

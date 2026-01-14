@@ -119,11 +119,11 @@ const MonitoredSatellitesTable = () => {
     };
 
     const handleRegenerateClick = () => {
-        // Start dry-run preview instead of showing confirmation
-        if (selectedIds.length > 0 && socket) {
+        if (socket) {
             setIsLoadingPreview(true);
 
-            // For multiple satellites, run dry-run without specific ID
+            // For single satellite selection, pass specific ID
+            // For no selection or multiple, pass null to regenerate all enabled
             const monitored_satellite_id = selectedIds.length === 1 ? selectedIds[0] : null;
 
             socket.emit('data_submission', 'regenerate-observations', {
@@ -142,7 +142,7 @@ const MonitoredSatellitesTable = () => {
     };
 
     const handlePreviewConfirm = (conflictChoices) => {
-        if (selectedIds.length > 0 && socket) {
+        if (socket) {
             const monitored_satellite_id = selectedIds.length === 1 ? selectedIds[0] : null;
 
             socket.emit('data_submission', 'regenerate-observations', {
@@ -408,22 +408,40 @@ const MonitoredSatellitesTable = () => {
                         Disable
                     </Box>
                 </Button>
-                <Button
-                    variant="contained"
-                    color="warning"
-                    onClick={handleRegenerateClick}
-                    disabled={selectedIds.length === 0 || isLoadingPreview}
-                    sx={{
-                        minWidth: 'auto',
-                        px: { xs: 1, md: 2 }
-                    }}
+                <Tooltip
+                    title={
+                        selectedIds.length === 0
+                            ? "Regenerate observations for ALL enabled satellites"
+                            : selectedIds.length === 1
+                                ? "Regenerate observations for the selected satellite only"
+                                : "Please select only one satellite to regenerate specific observations"
+                    }
+                    arrow
                 >
-                    <RefreshIcon sx={{ display: { xs: 'block', md: 'none' } }} />
-                    <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
-                        <RefreshIcon sx={{ mr: 1 }} />
-                        {isLoadingPreview ? 'Loading Preview...' : 'Re-Generate'}
-                    </Box>
-                </Button>
+                    <span>
+                        <Button
+                            variant="contained"
+                            color="warning"
+                            onClick={handleRegenerateClick}
+                            disabled={selectedIds.length > 1 || isLoadingPreview}
+                            sx={{
+                                minWidth: 'auto',
+                                px: { xs: 1, md: 2 }
+                            }}
+                        >
+                            <RefreshIcon sx={{ display: { xs: 'block', md: 'none' } }} />
+                            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                                <RefreshIcon sx={{ mr: 1 }} />
+                                {isLoadingPreview
+                                    ? 'Loading Preview...'
+                                    : selectedIds.length === 0
+                                        ? 'Regenerate All Enabled'
+                                        : `Regenerate for ${selectedIds.length} Selected`
+                                }
+                            </Box>
+                        </Button>
+                    </span>
+                </Tooltip>
                 <Button
                     variant="contained"
                     color="error"

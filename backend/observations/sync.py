@@ -27,7 +27,7 @@ from crud.scheduledobservations import fetch_scheduled_observations
 from db import AsyncSessionLocal
 from observations.constants import STATUS_MISSED, STATUS_SCHEDULED
 from observations.executor import ObservationExecutor
-from observations.helpers import update_observation_status
+from observations.helpers import log_execution_event, update_observation_status
 
 
 class ObservationSchedulerSync:
@@ -50,6 +50,19 @@ class ObservationSchedulerSync:
         self.executor = executor
         self._job_prefix = "obs"  # Prefix for all observation jobs
         self.sio = executor.sio  # Socket.IO instance for event emission
+
+    def _is_scheduler_running(self) -> bool:
+        """
+        Check if APScheduler is running and healthy.
+
+        Returns:
+            True if scheduler is running, False otherwise
+        """
+        try:
+            return bool(self.scheduler.running)
+        except Exception as e:
+            logger.error(f"Error checking scheduler status: {e}")
+            return False
 
     def _make_job_id(self, observation_id: str, event_type: str) -> str:
         """
@@ -83,6 +96,13 @@ class ObservationSchedulerSync:
         """
         try:
             logger.debug(f"Syncing observation {observation_id} to APScheduler")
+
+            # Check scheduler health first
+            if not self._is_scheduler_running():
+                error_msg = "APScheduler is not running - cannot schedule observation"
+                logger.error(error_msg)
+                await log_execution_event(observation_id, error_msg, "error")
+                return {"success": False, "error": error_msg}
 
             # 1. Fetch observation from database
             async with AsyncSessionLocal() as session:
@@ -132,7 +152,23 @@ class ObservationSchedulerSync:
                 logger.debug(f"Observation {observation_id} is in the past, not scheduling")
                 return {"success": True, "action": "skipped_past"}
 
-            # 4.5. Get task start/end times (pre-calculated and stored in observation)
+            # 4.5. Reset execution_log for future observations
+            # This clears old scheduling events from previous backend restarts
+            async with AsyncSessionLocal() as session:
+                from sqlalchemy import update
+
+                from db.models import ScheduledObservations
+
+                stmt = (
+                    update(ScheduledObservations)
+                    .where(ScheduledObservations.id == observation_id)
+                    .values(execution_log=[])
+                )
+                await session.execute(stmt)
+                await session.commit()
+                logger.debug(f"Reset execution_log for observation {observation_id}")
+
+            # 4.6. Get task start/end times (pre-calculated and stored in observation)
             task_start_str = observation.get("task_start")
             task_end_str = observation.get("task_end")
 
@@ -157,18 +193,37 @@ class ObservationSchedulerSync:
 
             if start_time > now:
                 start_job_id = self._make_job_id(observation_id, "start")
-                self.scheduler.add_job(
-                    self.executor.start_observation,
-                    trigger=DateTrigger(run_date=start_time),
-                    args=[observation_id],
-                    id=start_job_id,
-                    name=f"Start observation: {observation.get('name', observation_id)}",
-                    replace_existing=True,
-                    misfire_grace_time=300,  # 5 minute grace period
-                )
-                logger.info(
-                    f"Scheduled start job for {observation.get('name')} at {start_time.isoformat()}"
-                )
+                try:
+                    self.scheduler.add_job(
+                        self.executor.start_observation,
+                        trigger=DateTrigger(run_date=start_time),
+                        args=[observation_id],
+                        id=start_job_id,
+                        name=f"Start observation: {observation.get('name', observation_id)}",
+                        replace_existing=True,
+                        misfire_grace_time=300,  # 5 minute grace period
+                    )
+
+                    # Verify job was actually added
+                    job = self.scheduler.get_job(start_job_id)
+                    if not job:
+                        raise RuntimeError(
+                            f"Start job {start_job_id} was not created in APScheduler"
+                        )
+
+                    logger.info(
+                        f"Scheduled start job for {observation.get('name')} at {start_time.isoformat()}"
+                    )
+                    await log_execution_event(
+                        observation_id,
+                        f"Start job scheduled for {start_time.isoformat()}",
+                        "info",
+                    )
+                except Exception as e:
+                    error_msg = f"Failed to add start job to APScheduler: {e}"
+                    logger.error(error_msg)
+                    await log_execution_event(observation_id, error_msg, "error")
+                    raise  # Re-raise to be caught by outer exception handler
             else:
                 logger.debug(
                     f"Start time for observation {observation_id} has passed, not scheduling start job"
@@ -182,18 +237,35 @@ class ObservationSchedulerSync:
 
             if stop_time > now:
                 stop_job_id = self._make_job_id(observation_id, "stop")
-                self.scheduler.add_job(
-                    self.executor.stop_observation,
-                    trigger=DateTrigger(run_date=stop_time),
-                    args=[observation_id],
-                    id=stop_job_id,
-                    name=f"Stop observation: {observation.get('name', observation_id)}",
-                    replace_existing=True,
-                    misfire_grace_time=300,  # 5 minute grace period
-                )
-                logger.info(
-                    f"Scheduled stop job for {observation.get('name')} at {stop_time.isoformat()}"
-                )
+                try:
+                    self.scheduler.add_job(
+                        self.executor.stop_observation,
+                        trigger=DateTrigger(run_date=stop_time),
+                        args=[observation_id],
+                        id=stop_job_id,
+                        name=f"Stop observation: {observation.get('name', observation_id)}",
+                        replace_existing=True,
+                        misfire_grace_time=300,  # 5 minute grace period
+                    )
+
+                    # Verify job was actually added
+                    job = self.scheduler.get_job(stop_job_id)
+                    if not job:
+                        raise RuntimeError(f"Stop job {stop_job_id} was not created in APScheduler")
+
+                    logger.info(
+                        f"Scheduled stop job for {observation.get('name')} at {stop_time.isoformat()}"
+                    )
+                    await log_execution_event(
+                        observation_id,
+                        f"Stop job scheduled for {stop_time.isoformat()}",
+                        "info",
+                    )
+                except Exception as e:
+                    error_msg = f"Failed to add stop job to APScheduler: {e}"
+                    logger.error(error_msg)
+                    await log_execution_event(observation_id, error_msg, "error")
+                    raise  # Re-raise to be caught by outer exception handler
 
             return {"success": True, "action": "scheduled"}
 

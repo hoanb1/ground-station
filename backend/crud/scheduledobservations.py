@@ -112,30 +112,9 @@ def _transform_from_db_format(db_obj: dict) -> dict:
     satellite_config = db_obj.get("satellite_config", {})
     pass_config = db_obj.get("pass_config", {})
 
-    # Handle datetime fields - they may already be strings after serialize_object
-    event_start = db_obj.get("event_start")
-    if event_start and hasattr(event_start, "isoformat"):
-        event_start = event_start.isoformat()
-
-    event_end = db_obj.get("event_end")
-    if event_end and hasattr(event_end, "isoformat"):
-        event_end = event_end.isoformat()
-
-    task_start = db_obj.get("task_start")
-    if task_start and hasattr(task_start, "isoformat"):
-        task_start = task_start.isoformat()
-
-    task_end = db_obj.get("task_end")
-    if task_end and hasattr(task_end, "isoformat"):
-        task_end = task_end.isoformat()
-
-    created_at = db_obj.get("created_at")
-    if created_at and hasattr(created_at, "isoformat"):
-        created_at = created_at.isoformat()
-
-    updated_at = db_obj.get("updated_at")
-    if updated_at and hasattr(updated_at, "isoformat"):
-        updated_at = updated_at.isoformat()
+    # Helper function to convert datetime to ISO format
+    def to_iso(dt):
+        return dt.isoformat() if dt and hasattr(dt, "isoformat") else dt
 
     return {
         "id": db_obj.get("id"),
@@ -148,20 +127,28 @@ def _transform_from_db_format(db_obj: dict) -> dict:
             "group_id": satellite_config.get("group_id"),
         },
         "pass": {
-            "event_start": event_start,
-            "event_end": event_end,
+            "event_start": to_iso(db_obj.get("event_start")),
+            "event_end": to_iso(db_obj.get("event_end")),
             "peak_altitude": pass_config.get("peak_altitude"),
         },
-        "task_start": task_start,
-        "task_end": task_end,
+        "task_start": to_iso(db_obj.get("task_start")),
+        "task_end": to_iso(db_obj.get("task_end")),
         "task_start_elevation": pass_config.get("task_start_elevation", 10),
         "sdr": hardware_config.get("sdr", {}),
         "rotator": hardware_config.get("rotator", {}),
         "rig": hardware_config.get("rig", {}),
         "transmitter": hardware_config.get("transmitter", {}),
         "tasks": db_obj.get("tasks", []),
-        "created_at": created_at,
-        "updated_at": updated_at,
+        "created_at": to_iso(db_obj.get("created_at")),
+        "updated_at": to_iso(db_obj.get("updated_at")),
+        # Error tracking fields
+        "error_message": db_obj.get("error_message"),
+        "error_count": db_obj.get("error_count", 0),
+        "last_error_time": to_iso(db_obj.get("last_error_time")),
+        # Execution metadata fields
+        "actual_start_time": to_iso(db_obj.get("actual_start_time")),
+        "actual_end_time": to_iso(db_obj.get("actual_end_time")),
+        "execution_log": db_obj.get("execution_log", []),
     }
 
 
@@ -372,10 +359,18 @@ async def update_scheduled_observation_status(
             "updated_at": datetime.now(timezone.utc),
         }
 
+        # Store error message and update error tracking
         if error_message:
-            # Store error message in a way that makes sense for your schema
-            # You might need to add an error_message field or store in metadata
-            pass
+            update_data["error_message"] = error_message
+            update_data["last_error_time"] = datetime.now(timezone.utc)
+
+            # Increment error count
+            stmt = select(ScheduledObservations.error_count).where(
+                ScheduledObservations.id == observation_id
+            )
+            result = await session.execute(stmt)
+            current_count = result.scalar() or 0
+            update_data["error_count"] = current_count + 1
 
         stmt = (
             update(ScheduledObservations)
@@ -390,6 +385,59 @@ async def update_scheduled_observation_status(
     except Exception as e:
         await session.rollback()
         logger.error(f"Error updating observation status: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def log_observation_event(
+    session: AsyncSession,
+    observation_id: str,
+    event: str,
+    level: str = "info",
+) -> dict:
+    """
+    Append an execution event to the observation's execution_log.
+
+    Args:
+        session: Database session
+        observation_id: The observation ID
+        event: Event description
+        level: Event level (info, warning, error)
+
+    Returns:
+        Dictionary with success status
+    """
+    try:
+        # Fetch current execution log
+        stmt = select(ScheduledObservations.execution_log).where(
+            ScheduledObservations.id == observation_id
+        )
+        result = await session.execute(stmt)
+        current_log = result.scalar() or []
+
+        # Append new event
+        current_log.append(
+            {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "level": level,
+                "event": event,
+            }
+        )
+
+        # Update execution log
+        stmt = (
+            update(ScheduledObservations)
+            .where(ScheduledObservations.id == observation_id)
+            .values(execution_log=current_log)
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+        return {"success": True}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error logging observation event: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 

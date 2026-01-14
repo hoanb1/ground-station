@@ -19,7 +19,7 @@ import traceback
 from typing import Any, Optional
 
 from common.logger import logger
-from crud.scheduledobservations import update_scheduled_observation_status
+from crud.scheduledobservations import log_observation_event, update_scheduled_observation_status
 from db import AsyncSessionLocal
 from observations.events import observation_sync
 
@@ -56,6 +56,23 @@ async def update_observation_status(
 
     except Exception as e:
         logger.error(f"Error updating observation status: {e}")
+        logger.error(traceback.format_exc())
+
+
+async def log_execution_event(observation_id: str, event: str, level: str = "info") -> None:
+    """
+    Log an execution event to the observation's execution_log.
+
+    Args:
+        observation_id: The observation ID
+        event: Event description
+        level: Event level (info, warning, error)
+    """
+    try:
+        async with AsyncSessionLocal() as session:
+            await log_observation_event(session, observation_id, event, level)
+    except Exception as e:
+        logger.error(f"Error logging execution event for {observation_id}: {e}")
         logger.error(traceback.format_exc())
 
 

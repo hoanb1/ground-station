@@ -435,6 +435,16 @@ class ScheduledObservations(Base):
     )
     generated_at = Column(AwareDateTime, nullable=True)
 
+    # Error tracking
+    error_message = Column(String, nullable=True)  # Last error message
+    error_count = Column(Integer, nullable=False, default=0)  # Number of errors encountered
+    last_error_time = Column(AwareDateTime, nullable=True)  # When last error occurred
+
+    # Execution metadata
+    actual_start_time = Column(AwareDateTime, nullable=True)  # When execution actually started
+    actual_end_time = Column(AwareDateTime, nullable=True)  # When execution actually ended
+    execution_log = Column(JSON, nullable=True)  # Array of timestamped events/errors
+
     # Metadata
     created_at = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
     updated_at = Column(

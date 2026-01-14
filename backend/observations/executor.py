@@ -31,7 +31,11 @@ from observations.constants import (
     STATUS_SCHEDULED,
 )
 from observations.events import observation_sync
-from observations.helpers import remove_scheduled_stop_job, update_observation_status
+from observations.helpers import (
+    log_execution_event,
+    remove_scheduled_stop_job,
+    update_observation_status,
+)
 from observations.tasks.decoderhandler import DecoderHandler
 from observations.tasks.recorderhandler import RecorderHandler
 from observations.tasks.trackerhandler import TrackerHandler
@@ -107,6 +111,7 @@ class ObservationExecutor:
         """
         try:
             logger.info(f"Starting observation: {observation_id}")
+            await log_execution_event(observation_id, "Start requested", "info")
 
             # Check if this observation is already running (prevent duplicate execution)
             lock = self._get_observations_lock()
@@ -114,6 +119,7 @@ class ObservationExecutor:
                 if observation_id in self._running_observations:
                     error_msg = f"Observation {observation_id} is already executing"
                     logger.error(error_msg)
+                    await log_execution_event(observation_id, error_msg, "error")
                     return {"success": False, "error": error_msg}
 
                 # Mark as running immediately to prevent race condition
@@ -126,6 +132,7 @@ class ObservationExecutor:
                 if not result["success"] or not result["data"]:
                     error_msg = f"Observation not found: {observation_id}"
                     logger.error(error_msg)
+                    await log_execution_event(observation_id, error_msg, "error")
                     return {"success": False, "error": error_msg}
 
                 observation = result["data"]
@@ -133,14 +140,17 @@ class ObservationExecutor:
             # 2. Check if observation is enabled and scheduled
             if not observation.get("enabled", True):
                 logger.warning(f"Observation {observation_id} is disabled, skipping")
+                await log_execution_event(observation_id, "Observation is disabled", "warning")
                 return {"success": False, "error": "Observation is disabled"}
 
             status = observation.get("status", "").lower()
             if status != STATUS_SCHEDULED:
+                error_msg = f"Invalid status: {observation.get('status')}"
                 logger.warning(
                     f"Observation {observation_id} has status {observation.get('status')}, skipping"
                 )
-                return {"success": False, "error": f"Invalid status: {observation.get('status')}"}
+                await log_execution_event(observation_id, error_msg, "warning")
+                return {"success": False, "error": error_msg}
 
             # 3. Check if SDR is available (not in use by other sessions)
             sdr_config_dict = observation.get("sdr", {})
@@ -149,6 +159,7 @@ class ObservationExecutor:
             if not sdr_id:
                 error_msg = f"Observation {observation_id} has no SDR configured"
                 logger.error(error_msg)
+                await log_execution_event(observation_id, error_msg, "error")
                 await update_observation_status(self.sio, observation_id, STATUS_FAILED, error_msg)
                 await remove_scheduled_stop_job(observation_id)
                 return {"success": False, "error": error_msg}
@@ -156,19 +167,22 @@ class ObservationExecutor:
             # Check if SDR is already in use - if so, we'll hijack it and reconfigure
             sessions_using_sdr = session_tracker.get_sessions_for_sdr(sdr_id)
             if sessions_using_sdr:
-                logger.info(
-                    f"SDR '{sdr_id}' is currently in use by {len(sessions_using_sdr)} session(s) {list(sessions_using_sdr)}. "
-                    f"Observation {observation_id} ({observation.get('name')}) will hijack the SDR and reconfigure it."
-                )
+                msg = f"SDR '{sdr_id}' in use by {len(sessions_using_sdr)} session(s), will hijack"
+                logger.info(msg)
+                await log_execution_event(observation_id, msg, "info")
             else:
                 logger.info(f"SDR {sdr_id} is available for observation {observation_id}")
 
-            # 4. Execute placeholder observation task
+            # 4. Execute observation task
             logger.info(f"Executing observation task for {observation['name']}")
+            await log_execution_event(
+                observation_id, f"Starting tasks for {observation['name']}", "info"
+            )
             await self._execute_observation_task(observation_id, observation)
 
             # 5. Update observation status to RUNNING
             await update_observation_status(self.sio, observation_id, STATUS_RUNNING)
+            await log_execution_event(observation_id, "All tasks started successfully", "info")
 
             logger.info(f"Observation {observation_id} started successfully")
             return {"success": True}
@@ -177,6 +191,7 @@ class ObservationExecutor:
             error_msg = f"Error starting observation {observation_id}: {e}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
+            await log_execution_event(observation_id, error_msg, "error")
 
             # Clean up running observation tracking
             self._running_observations.discard(observation_id)
@@ -202,8 +217,11 @@ class ObservationExecutor:
         Returns:
             Dictionary with success status and error message if failed
         """
+        stop_errors = []
+
         try:
             logger.info(f"Stopping observation: {observation_id}")
+            await log_execution_event(observation_id, "Stop requested", "info")
 
             # 1. Load observation from database
             async with AsyncSessionLocal() as session:
@@ -211,15 +229,37 @@ class ObservationExecutor:
                 if not result["success"] or not result["data"]:
                     error_msg = f"Observation not found: {observation_id}"
                     logger.error(error_msg)
+                    await log_execution_event(observation_id, error_msg, "error")
                     return {"success": False, "error": error_msg}
 
                 observation = result["data"]
 
-            # 2. Stop placeholder observation task
-            await self._stop_observation_task(observation_id, observation)
+            # 2. Stop observation task - collect errors but continue
+            try:
+                await self._stop_observation_task(observation_id, observation)
+                await log_execution_event(observation_id, "All tasks stopped", "info")
+            except Exception as task_error:
+                error_msg = f"Error stopping tasks: {task_error}"
+                stop_errors.append(error_msg)
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                await log_execution_event(observation_id, error_msg, "error")
 
-            # 3. Update observation status to COMPLETED
-            await update_observation_status(self.sio, observation_id, STATUS_COMPLETED)
+            # 3. Determine final status based on errors
+            if stop_errors:
+                # Observation ran but cleanup had issues
+                combined_errors = "; ".join(stop_errors)
+                warning_msg = f"Completed with cleanup warnings: {combined_errors}"
+                await update_observation_status(
+                    self.sio, observation_id, STATUS_COMPLETED, warning_msg
+                )
+                await log_execution_event(observation_id, warning_msg, "warning")
+                logger.warning(f"Observation {observation_id} completed but cleanup had issues")
+            else:
+                await update_observation_status(self.sio, observation_id, STATUS_COMPLETED)
+                await log_execution_event(
+                    observation_id, "Observation completed successfully", "info"
+                )
 
             # 4. Remove from running observations tracking
             self._running_observations.discard(observation_id)
@@ -227,17 +267,19 @@ class ObservationExecutor:
             logger.info(
                 f"Observation {observation['name']} ({observation_id}) stopped successfully"
             )
-            return {"success": True}
+            return {"success": len(stop_errors) == 0, "errors": stop_errors}
 
         except Exception as e:
-            error_msg = f"Error stopping observation {observation_id}: {e}"
+            # Critical failure during stop
+            error_msg = f"Critical error stopping observation {observation_id}: {e}"
             logger.error(error_msg)
             logger.error(traceback.format_exc())
+            await log_execution_event(observation_id, error_msg, "error")
 
             # Clean up running observation tracking even on error
             self._running_observations.discard(observation_id)
 
-            # Mark observation as failed since stop encountered an error
+            # Mark observation as failed since stop encountered a critical error
             try:
                 await update_observation_status(self.sio, observation_id, STATUS_FAILED, error_msg)
             except Exception as update_error:

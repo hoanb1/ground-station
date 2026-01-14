@@ -386,8 +386,37 @@ async def _generate_observations_for_satellite(
                         # Conflicts detected - need to check all of them
                         new_elevation = pass_data["peak_altitude"]
 
-                        # Determine action based on strategy
-                        if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_SKIP:
+                        # Check if user provided resolution for these conflicts
+                        user_action = None
+                        for conflicting_obs in conflicting_obs_list:
+                            conflict_id = conflicting_obs.id
+                            if conflict_id in user_conflict_overrides:
+                                user_action = user_conflict_overrides[conflict_id]
+                                break  # Use first user action found
+
+                        # If user provided explicit action, use it; otherwise use strategy
+                        if user_action == "replace":
+                            # User wants to replace existing observations with new pass
+                            if not dry_run:
+                                conflicting_ids = [obs.id for obs in conflicting_obs_list]
+                                logger.info(
+                                    f"USER OVERRIDE: Replacing {len(conflicting_ids)} observation(s) "
+                                    f"with {satellite_data['name']} (elevation {new_elevation:.1f}°)"
+                                )
+                                await delete_scheduled_observations(session, conflicting_ids)
+                                await _create_observation(session, monitored_sat, pass_data)
+                            stats["generated"] += 1
+
+                        elif user_action == "keep":
+                            # User wants to keep existing observations
+                            if not dry_run:
+                                logger.info(
+                                    f"USER OVERRIDE: Keeping existing observation(s), skipping {satellite_data['name']}"
+                                )
+                            stats["skipped"] += 1
+
+                        # Determine action based on strategy (only if no user override)
+                        elif CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_SKIP:
                             # Skip: Don't create this pass at all
                             if not dry_run:
                                 logger.info(
