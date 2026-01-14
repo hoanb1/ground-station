@@ -198,6 +198,10 @@ const ObservationFormDialog = () => {
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openCancelConfirm, setOpenCancelConfirm] = useState(false);
 
+    // Determine if form should be disabled based on observation status
+    const isFormDisabled = selectedObservation && 
+        ['running', 'completed', 'failed', 'cancelled'].includes(selectedObservation.status?.toLowerCase());
+
     // Sync selectedGroupId from Redux into formData.satellite.group_id
     useEffect(() => {
         if (selectedGroupId) {
@@ -593,9 +597,9 @@ const ObservationFormDialog = () => {
         if (paramDef.type === 'select') {
             // For null values, use a special string key that won't conflict with actual values
             const displayValue = currentValue === null ? '__auto__' : currentValue;
-            
+
             return (
-                <FormControl fullWidth size="small" key={paramKey}>
+                <FormControl fullWidth size="small" key={paramKey} disabled={isFormDisabled}>
                     <InputLabel>{paramDef.label}</InputLabel>
                     <Select
                         value={displayValue}
@@ -629,6 +633,7 @@ const ObservationFormDialog = () => {
                         <Checkbox
                             checked={currentValue}
                             onChange={(e) => handleDecoderParameterChange(taskIndex, paramKey, e.target.checked)}
+                            disabled={isFormDisabled}
                         />
                     }
                     label={
@@ -797,6 +802,7 @@ const ObservationFormDialog = () => {
                                             enabled: e.target.checked,
                                         }))
                                     }
+                                    disabled={isFormDisabled}
                                 />
                             }
                             label={
@@ -826,6 +832,7 @@ const ObservationFormDialog = () => {
                                 setFormData((prev) => ({ ...prev, name: e.target.value }))
                             }
                             required
+                            disabled={isFormDisabled}
                         />
                     </Box>
 
@@ -874,6 +881,7 @@ const ObservationFormDialog = () => {
                                     }));
                                 }
                             }}
+                            disabled={isFormDisabled}
                         />
                     </Box>
 
@@ -885,7 +893,7 @@ const ObservationFormDialog = () => {
                             Rotator
                         </Typography>
                         <Stack spacing={2}>
-                            <FormControl fullWidth size="small">
+                            <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                 <InputLabel>Rotator</InputLabel>
                                 <Select
                                     value={formData.rotator.id || '__none__'}
@@ -973,7 +981,7 @@ const ObservationFormDialog = () => {
                                     </Typography>
                                 </Box>
                             )}
-                            <FormControl fullWidth size="small" required error={!!sdrParametersError[formData.sdr.id]}>
+                            <FormControl fullWidth size="small" required error={!!sdrParametersError[formData.sdr.id]} disabled={isFormDisabled}>
                                 <InputLabel>SDR</InputLabel>
                                 <Select
                                     value={formData.sdr.id}
@@ -1010,7 +1018,7 @@ const ObservationFormDialog = () => {
                                 </Select>
                             </FormControl>
 
-                            <FormControl fullWidth size="small" required error={!bandwidthValidation.valid}>
+                            <FormControl fullWidth size="small" required error={!bandwidthValidation.valid} disabled={isFormDisabled}>
                                 <InputLabel>Sample Rate</InputLabel>
                                 <Select
                                     value={formData.sdr.sample_rate}
@@ -1057,7 +1065,7 @@ const ObservationFormDialog = () => {
                                 helperText="Auto-calculated to avoid DC spike and cover all transmitters"
                             />
 
-                            <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                            <FormControl fullWidth size="small" required disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>Gain</InputLabel>
                                 <Select
                                     value={
@@ -1084,7 +1092,7 @@ const ObservationFormDialog = () => {
                                 </Select>
                             </FormControl>
 
-                            <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                            <FormControl fullWidth size="small" required disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
                                 <InputLabel>Antenna Port</InputLabel>
                                 <Select
                                     value={
@@ -1125,6 +1133,7 @@ const ObservationFormDialog = () => {
                                     variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('decoder')}
+                                    disabled={isFormDisabled}
                                 >
                                     Decoder
                                 </Button>
@@ -1133,6 +1142,7 @@ const ObservationFormDialog = () => {
                                     variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('audio_recording')}
+                                    disabled={isFormDisabled}
                                 >
                                     Audio Recording
                                 </Button>
@@ -1141,6 +1151,7 @@ const ObservationFormDialog = () => {
                                     variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('transcription')}
+                                    disabled={isFormDisabled}
                                 >
                                     Transcription
                                 </Button>
@@ -1149,6 +1160,7 @@ const ObservationFormDialog = () => {
                                     variant="outlined"
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('iq_recording')}
+                                    disabled={isFormDisabled}
                                 >
                                     IQ Recording
                                 </Button>
@@ -1236,6 +1248,7 @@ const ObservationFormDialog = () => {
                                             <IconButton
                                                 size="small"
                                                 onClick={() => handleRemoveTask(index)}
+                                                disabled={isFormDisabled}
                                             >
                                                 <DeleteIcon fontSize="small" />
                                             </IconButton>
@@ -1250,7 +1263,7 @@ const ObservationFormDialog = () => {
 
                                                 return (
                                                     <>
-                                                        <FormControl fullWidth size="small">
+                                                        <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                             <InputLabel>Transmitter</InputLabel>
                                                             <Select
                                                                 value={task.config.transmitter_id || ''}
@@ -1262,7 +1275,7 @@ const ObservationFormDialog = () => {
                                                                     )
                                                                 }
                                                                 label="Transmitter"
-                                                                disabled={availableTransmitters.length === 0}
+                                                                disabled={isFormDisabled || availableTransmitters.length === 0}
                                                             >
                                                                 {availableTransmitters.length === 0 ? (
                                                                     <MenuItem disabled value="">
@@ -1312,7 +1325,7 @@ const ObservationFormDialog = () => {
                                                             </Select>
                                                         </FormControl>
 
-                                                        <FormControl fullWidth size="small">
+                                                        <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                             <InputLabel>Decoder Type</InputLabel>
                                                             <Select
                                                                 value={decoderType}
@@ -1413,7 +1426,7 @@ const ObservationFormDialog = () => {
 
                                             {task.type === 'audio_recording' && (
                                                 <>
-                                                    <FormControl fullWidth size="small">
+                                                    <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Transmitter</InputLabel>
                                                         <Select
                                                             value={task.config.transmitter_id || ''}
@@ -1425,7 +1438,7 @@ const ObservationFormDialog = () => {
                                                                 )
                                                             }
                                                             label="Transmitter"
-                                                            disabled={availableTransmitters.length === 0}
+                                                            disabled={isFormDisabled || availableTransmitters.length === 0}
                                                         >
                                                             {availableTransmitters.length === 0 ? (
                                                                 <MenuItem disabled value="">
@@ -1474,7 +1487,7 @@ const ObservationFormDialog = () => {
                                                         </Select>
                                                     </FormControl>
 
-                                                    <FormControl fullWidth size="small">
+                                                    <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Demodulator</InputLabel>
                                                         <Select
                                                             value={task.config.demodulator || 'fm'}
@@ -1503,7 +1516,7 @@ const ObservationFormDialog = () => {
 
                                             {task.type === 'transcription' && (
                                                 <>
-                                                    <FormControl fullWidth size="small">
+                                                    <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Transmitter</InputLabel>
                                                         <Select
                                                             value={task.config.transmitter_id || ''}
@@ -1515,7 +1528,7 @@ const ObservationFormDialog = () => {
                                                                 )
                                                             }
                                                             label="Transmitter"
-                                                            disabled={availableTransmitters.length === 0}
+                                                            disabled={isFormDisabled || availableTransmitters.length === 0}
                                                         >
                                                             {availableTransmitters.length === 0 ? (
                                                                 <MenuItem disabled value="">
@@ -1551,7 +1564,7 @@ const ObservationFormDialog = () => {
                                                         </Select>
                                                     </FormControl>
 
-                                                    <FormControl fullWidth size="small">
+                                                    <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Modulation</InputLabel>
                                                         <Select
                                                             value={task.config.modulation || 'fm'}
@@ -1572,7 +1585,7 @@ const ObservationFormDialog = () => {
                                                         </Select>
                                                     </FormControl>
 
-                                                    <FormControl fullWidth size="small">
+                                                    <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Provider</InputLabel>
                                                         <Select
                                                             value={task.config.provider || 'gemini'}
@@ -1590,7 +1603,7 @@ const ObservationFormDialog = () => {
                                                         </Select>
                                                     </FormControl>
 
-                                                    <FormControl fullWidth size="small">
+                                                    <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Source Language</InputLabel>
                                                         <Select
                                                             value={task.config.language || 'auto'}
@@ -1624,7 +1637,7 @@ const ObservationFormDialog = () => {
                                                         </Select>
                                                     </FormControl>
 
-                                                    <FormControl fullWidth size="small">
+                                                    <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Translate To</InputLabel>
                                                         <Select
                                                             value={task.config.translate_to || 'none'}
@@ -1666,7 +1679,7 @@ const ObservationFormDialog = () => {
 
                                             {task.type === 'iq_recording' && (
                                                 <>
-                                                    <FormControl fullWidth size="small">
+                                                    <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Transmitter</InputLabel>
                                                         <Select
                                                             value={task.config.transmitter_id || ''}
@@ -1804,7 +1817,7 @@ const ObservationFormDialog = () => {
                     <Button
                         onClick={handleSave}
                         variant="contained"
-                        disabled={!isFormValid() || isSaving}
+                        disabled={!isFormValid() || isSaving || isFormDisabled}
                         startIcon={isSaving && <CircularProgress size={20} color="inherit" />}
                         sx={{
                             '&.Mui-disabled': {

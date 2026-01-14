@@ -52,7 +52,7 @@ import {
 
 const SATELLITE_NUMBER_LIMIT = 150;
 
-const SatelliteGroupDropdown = ({ onSatelliteSelect }) => {
+const SatelliteGroupDropdown = ({ onSatelliteSelect, disabled = false }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
 
@@ -85,7 +85,7 @@ const SatelliteGroupDropdown = ({ onSatelliteSelect }) => {
     };
 
     return (
-        <FormControl fullWidth variant="outlined" size="small" disabled={selectedFromSearch}>
+        <FormControl fullWidth variant="outlined" size="small" disabled={disabled || selectedFromSearch}>
             <InputLabel>Satellite Group</InputLabel>
             <Select
                 value={satGroups.length > 0 ? groupId : ''}
@@ -127,7 +127,7 @@ const SatelliteGroupDropdown = ({ onSatelliteSelect }) => {
     );
 };
 
-const SatelliteDropdown = ({ onSatelliteSelect }) => {
+const SatelliteDropdown = ({ onSatelliteSelect, disabled = false }) => {
     const dispatch = useDispatch();
     const { groupOfSats, satelliteId, selectedFromSearch } = useSelector((state) => state.scheduler?.satelliteSelection || {});
 
@@ -143,7 +143,7 @@ const SatelliteDropdown = ({ onSatelliteSelect }) => {
     };
 
     return (
-        <FormControl fullWidth variant="outlined" size="small" disabled={selectedFromSearch}>
+        <FormControl fullWidth variant="outlined" size="small" disabled={disabled || selectedFromSearch}>
             <InputLabel>Satellite</InputLabel>
             <Select
                 value={groupOfSats.length > 0 && groupOfSats.find(s => s.norad_id === satelliteId) ? satelliteId : ''}
@@ -160,7 +160,7 @@ const SatelliteDropdown = ({ onSatelliteSelect }) => {
     );
 };
 
-const SatelliteSearchAutocomplete = ({ onSatelliteSelect }) => {
+const SatelliteSearchAutocomplete = ({ onSatelliteSelect, disabled = false }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { searchOptions, searchLoading } = useSelector((state) => state.scheduler?.satelliteSelection || {});
@@ -245,6 +245,7 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect }) => {
             onClose={handleClose}
             onInputChange={handleInputChange}
             onChange={handleOptionSelect}
+            disabled={disabled}
             isOptionEqualToValue={(option, value) => option.norad_id === value.norad_id}
             getOptionLabel={(option) => `${option.norad_id} - ${option.name}`}
             options={searchOptions}
@@ -272,7 +273,7 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect }) => {
     );
 };
 
-const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
+const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disabled = false }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { passes, passesLoading, satelliteId, selectedPassId } = useSelector(
@@ -471,6 +472,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
                         fullWidth
                         size="small"
                         error={effectiveSelectedPassId && isPassOverlapping(passes.find(p => p.id === effectiveSelectedPassId))}
+                        disabled={disabled}
                     >
                         <InputLabel>Select Pass</InputLabel>
                         <Select
@@ -512,7 +514,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId }) => {
     );
 };
 
-export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSelector = true, initialSatellite = null, initialPass = null, currentObservationId = null }) => {
+export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSelector = true, initialSatellite = null, initialPass = null, currentObservationId = null, disabled = false }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const satGroups = useSelector((state) => state.scheduler?.satelliteSelection?.satGroups || []);
@@ -593,12 +595,12 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
 
     return (
         <Stack spacing={2}>
-            <SatelliteSearchAutocomplete onSatelliteSelect={onSatelliteSelect} />
+            <SatelliteSearchAutocomplete onSatelliteSelect={onSatelliteSelect} disabled={disabled} />
             <Stack direction="row" spacing={2}>
-                <SatelliteGroupDropdown onSatelliteSelect={onSatelliteSelect} />
-                <SatelliteDropdown onSatelliteSelect={onSatelliteSelect} />
+                <SatelliteGroupDropdown onSatelliteSelect={onSatelliteSelect} disabled={disabled} />
+                <SatelliteDropdown onSatelliteSelect={onSatelliteSelect} disabled={disabled} />
             </Stack>
-            {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} currentObservationId={currentObservationId} />}
+            {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} currentObservationId={currentObservationId} disabled={disabled} />}
         </Stack>
     );
 };
