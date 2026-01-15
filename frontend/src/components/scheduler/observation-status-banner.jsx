@@ -19,7 +19,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, Paper, Typography, Chip, Stack, Button, Tooltip } from '@mui/material';
+import { Box, Paper, Typography, Chip, Stack, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility, Cancel, Stop } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
 import { cancelRunningObservation } from './scheduler-slice.jsx';
@@ -34,6 +34,7 @@ export default function ObservationStatusBanner() {
     const { socket } = useSocket();
     const observations = useSelector((state) => state.scheduler.observations);
     const [countdown, setCountdown] = useState('');
+    const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
     const { runningObservation, nextObservation } = useMemo(() => {
         const now = new Date();
@@ -60,11 +61,22 @@ export default function ObservationStatusBanner() {
     const observation = runningObservation || nextObservation;
     const isRunning = !!runningObservation;
 
-    // Handler for canceling/aborting observation
-    const handleCancelObservation = () => {
+    // Handler to open confirmation dialog
+    const handleCancelClick = () => {
+        setConfirmDialogOpen(true);
+    };
+
+    // Handler for confirming cancellation
+    const handleConfirmCancel = () => {
         if (observation?.id && socket) {
             dispatch(cancelRunningObservation({ socket, id: observation.id }));
         }
+        setConfirmDialogOpen(false);
+    };
+
+    // Handler for closing dialog
+    const handleCloseDialog = () => {
+        setConfirmDialogOpen(false);
     };
 
     // Check if satellite is already visible (for upcoming observations)
@@ -289,7 +301,7 @@ export default function ObservationStatusBanner() {
                             variant="outlined"
                             size="small"
                             startIcon={isRunning ? <Stop /> : <Cancel />}
-                            onClick={handleCancelObservation}
+                            onClick={handleCancelClick}
                             sx={{
                                 color: isRunning ? '#4caf50' : '#2196f3',
                                 borderColor: isRunning ? '#4caf50' : '#2196f3',
@@ -304,6 +316,42 @@ export default function ObservationStatusBanner() {
                     </Tooltip>
                 )}
             </Stack>
+
+            {/* Confirmation Dialog */}
+            <Dialog open={confirmDialogOpen} onClose={handleCloseDialog}>
+                <DialogTitle>
+                    {isRunning ? 'Stop Observation' : 'Abort Observation'}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        {isRunning ? (
+                            <>
+                                Are you sure you want to stop the observation <strong>{observation?.satellite?.name || 'Unknown'}</strong>?
+                                <br />
+                                This will immediately stop the observation and remove all scheduled jobs.
+                            </>
+                        ) : (
+                            <>
+                                Are you sure you want to abort the observation <strong>{observation?.satellite?.name || 'Unknown'}</strong>?
+                                <br />
+                                This will cancel the scheduled observation and remove all scheduled jobs.
+                            </>
+                        )}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDialog}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleConfirmCancel}
+                        color={isRunning ? 'success' : 'primary'}
+                        variant="contained"
+                    >
+                        {isRunning ? 'Stop' : 'Abort'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Paper>
     );
 }
