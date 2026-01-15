@@ -14,6 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+import asyncio
 import logging
 
 from processing.consumerbase import ConsumerManager
@@ -24,9 +25,10 @@ class RecorderManager(ConsumerManager):
     Manager for recorder consumers
     """
 
-    def __init__(self, processes):
+    def __init__(self, processes, sio=None):
         super().__init__(processes)
         self.logger = logging.getLogger("recorder-manager")
+        self.sio = sio  # Socket.IO instance for emitting notifications
 
     def start_recorder(self, sdr_id, session_id, recorder_class, **kwargs):
         """
@@ -76,6 +78,10 @@ class RecorderManager(ConsumerManager):
                 subscription_key = session_id  # Fallback for old format
 
             recorder_name = type(recorder).__name__
+
+            # Get recording path before stopping (for IQ recordings)
+            recording_path = getattr(recorder, "recording_path", None)
+
             recorder.stop()
             recorder.join(timeout=2.0)  # Wait up to 2 seconds
 
@@ -86,11 +92,38 @@ class RecorderManager(ConsumerManager):
 
             del recorders[session_id]
             self.logger.info(f"Stopped {recorder_name} for session {session_id}")
+
+            # Emit file browser state update to notify UI of new IQ recording
+            # Only emit for IQRecorder (not for other recorder types)
+            if self.sio and recording_path and recorder_name == "IQRecorder":
+                asyncio.create_task(self._emit_recording_stopped_notification(recording_path))
+
             return True
 
         except Exception as e:
             self.logger.error(f"Error stopping recorder: {str(e)}")
             return False
+
+    async def _emit_recording_stopped_notification(self, recording_path):
+        """
+        Emit file browser state update for IQ recording stopped.
+
+        Args:
+            recording_path: Path to the IQ recording file (without extension)
+        """
+        try:
+            from handlers.entities.filebrowser import emit_file_browser_state
+
+            await emit_file_browser_state(
+                self.sio,
+                {
+                    "action": "recording-stopped",
+                    "recording_path": recording_path,
+                },
+                self.logger,
+            )
+        except Exception as e:
+            self.logger.error(f"Error emitting recording-stopped notification: {e}")
 
     def _stop_consumer(self, sdr_id, session_id, storage_key, vfo_number=None):
         """

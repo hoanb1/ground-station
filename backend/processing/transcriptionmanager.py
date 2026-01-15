@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import logging
 import threading
 import time
@@ -284,6 +285,13 @@ class TranscriptionManager:
                         f"(language={language}, translate_to={translate_to})"
                     )
 
+                    # Emit file browser state update to notify UI that transcription started
+                    if self.sio:
+                        asyncio.run_coroutine_threadsafe(
+                            self._emit_transcription_started_notification(),
+                            self.event_loop,
+                        )
+
                     # Update timestamp
                     self._last_start_ts[key] = now_ms
                     return True
@@ -371,6 +379,9 @@ class TranscriptionManager:
         audio_broadcaster = consumer_entry.get("audio_broadcaster")
         provider = consumer_entry.get("provider", "unknown")
 
+        # Get transcription file path before stopping (if available)
+        transcription_file_path = getattr(worker, "transcription_file_path", None)
+
         # Stop the worker thread (non-blocking)
         worker.stop()
         # Don't join - let it stop asynchronously to avoid blocking
@@ -385,6 +396,51 @@ class TranscriptionManager:
         self.logger.info(
             f"Stopped {provider} transcription worker for session {session_id} VFO {vfo_number}"
         )
+
+        # Emit file browser state update to notify UI of new transcription file
+        if self.sio and transcription_file_path:
+            asyncio.run_coroutine_threadsafe(
+                self._emit_transcription_stopped_notification(transcription_file_path),
+                self.event_loop,
+            )
+
+    async def _emit_transcription_started_notification(self):
+        """
+        Emit file browser state update for transcription started.
+        """
+        try:
+            from handlers.entities.filebrowser import emit_file_browser_state
+
+            await emit_file_browser_state(
+                self.sio,
+                {
+                    "action": "transcription-started",
+                },
+                self.logger,
+            )
+        except Exception as e:
+            self.logger.error(f"Error emitting transcription-started notification: {e}")
+
+    async def _emit_transcription_stopped_notification(self, transcription_file_path):
+        """
+        Emit file browser state update for transcription stopped.
+
+        Args:
+            transcription_file_path: Path to the transcription file
+        """
+        try:
+            from handlers.entities.filebrowser import emit_file_browser_state
+
+            await emit_file_browser_state(
+                self.sio,
+                {
+                    "action": "transcription-stopped",
+                    "transcription_file_path": transcription_file_path,
+                },
+                self.logger,
+            )
+        except Exception as e:
+            self.logger.error(f"Error emitting transcription-stopped notification: {e}")
 
     def _cleanup_consumer(self, consumer_entry: dict):
         """

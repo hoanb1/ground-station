@@ -14,6 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+import asyncio
 import logging
 
 from processing.consumerbase import ConsumerManager
@@ -25,9 +26,10 @@ class AudioRecorderManager(ConsumerManager):
     Manages per-VFO audio recording threads.
     """
 
-    def __init__(self, processes):
+    def __init__(self, processes, sio=None):
         super().__init__(processes)
         self.logger = logging.getLogger("audio-recorder-manager")
+        self.sio = sio  # Socket.IO instance for emitting notifications
 
     def start_audio_recorder(self, sdr_id, session_id, vfo_number, recorder_class, **kwargs):
         """
@@ -137,6 +139,7 @@ class AudioRecorderManager(ConsumerManager):
             recorder_entry = audio_recorders[vfo_number]
             recorder = recorder_entry["instance"]
             subscription_key = recorder_entry["subscription_key"]
+            recording_path = recorder_entry.get("recording_path", "")
 
             # Stop the recorder
             recorder.stop()
@@ -155,12 +158,38 @@ class AudioRecorderManager(ConsumerManager):
             # Remove from storage
             del audio_recorders[vfo_number]
             self.logger.info(f"Stopped AudioRecorder for session {session_id} VFO {vfo_number}")
+
+            # Emit file browser state update to notify UI of new audio file
+            if self.sio and recording_path:
+                asyncio.create_task(self._emit_audio_stopped_notification(recording_path))
+
             return True
 
         except Exception as e:
             self.logger.error(f"Error stopping audio recorder: {str(e)}")
             self.logger.exception(e)
             return False
+
+    async def _emit_audio_stopped_notification(self, recording_path):
+        """
+        Emit file browser state update for audio recording stopped.
+
+        Args:
+            recording_path: Path to the audio recording file (without extension)
+        """
+        try:
+            from handlers.entities.filebrowser import emit_file_browser_state
+
+            await emit_file_browser_state(
+                self.sio,
+                {
+                    "action": "audio-recording-stopped",
+                    "recording_path": recording_path,
+                },
+                self.logger,
+            )
+        except Exception as e:
+            self.logger.error(f"Error emitting audio-recording-stopped notification: {e}")
 
     def _stop_consumer(self, sdr_id, session_id, storage_key, vfo_number=None):
         """

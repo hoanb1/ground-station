@@ -50,8 +50,8 @@ class ProcessManager:
 
         # Initialize specialized managers
         self.demodulator_manager = DemodulatorManager(self.processes)
-        self.recorder_manager = RecorderManager(self.processes)
-        self.audio_recorder_manager = AudioRecorderManager(self.processes)
+        self.recorder_manager = RecorderManager(self.processes, sio=self.sio)
+        self.audio_recorder_manager = AudioRecorderManager(self.processes, sio=self.sio)
         self.decoder_manager = DecoderManager(self.processes, self.demodulator_manager)
         self.transcription_manager = None  # Will be initialized when event loop is available
         self.lifecycle_manager = ProcessLifecycleManager(

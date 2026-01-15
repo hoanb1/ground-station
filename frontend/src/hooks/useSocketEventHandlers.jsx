@@ -262,11 +262,8 @@ export const useSocketEventHandlers = (socket) => {
 
                 case 'delete-recording':
                 case 'delete-snapshot':
-                    toast.success(state.message || t('notifications.file_browser.item_deleted'));
-                    break;
-
                 case 'delete-decoded':
-                    // No toast notification for decoded packet deletion
+                    // No toast notification for deletions
                     break;
 
                 case 'recording-started':
@@ -274,6 +271,8 @@ export const useSocketEventHandlers = (socket) => {
                 case 'snapshot-saved':
                 case 'audio-recording-started':
                 case 'audio-recording-stopped':
+                case 'transcription-started':
+                case 'transcription-stopped':
                     // Set new files indicator when files are created/modified
                     store.dispatch({ type: 'filebrowser/setHasNewFiles', payload: true });
                     break;

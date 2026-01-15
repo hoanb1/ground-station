@@ -282,6 +282,8 @@ export default function FilebrowserMain() {
                 case 'decoded-saved':
                 case 'audio-recording-started':
                 case 'audio-recording-stopped':
+                case 'transcription-started':
+                case 'transcription-stopped':
                     // Refetch files to show updated list using current filter state from Redux
                     dispatch(fetchFiles({
                         socket,
