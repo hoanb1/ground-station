@@ -300,16 +300,9 @@ export default function ObservationStatusBanner() {
                         <Button
                             variant="outlined"
                             size="small"
+                            color="error"
                             startIcon={isRunning ? <Stop /> : <Cancel />}
                             onClick={handleCancelClick}
-                            sx={{
-                                color: isRunning ? '#4caf50' : '#2196f3',
-                                borderColor: isRunning ? '#4caf50' : '#2196f3',
-                                '&:hover': {
-                                    borderColor: isRunning ? '#4caf50' : '#2196f3',
-                                    bgcolor: isRunning ? 'rgba(76, 175, 80, 0.1)' : 'rgba(33, 150, 243, 0.1)',
-                                },
-                            }}
                         >
                             {isRunning ? 'Stop' : 'Abort'}
                         </Button>
@@ -345,7 +338,7 @@ export default function ObservationStatusBanner() {
                     </Button>
                     <Button
                         onClick={handleConfirmCancel}
-                        color={isRunning ? 'success' : 'primary'}
+                        color="error"
                         variant="contained"
                     >
                         {isRunning ? 'Stop' : 'Abort'}
