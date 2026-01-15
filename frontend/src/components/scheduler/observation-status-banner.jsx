@@ -19,7 +19,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, Paper, Typography, Chip, Stack, IconButton, Tooltip } from '@mui/material';
+import { Box, Paper, Typography, Chip, Stack, Button, Tooltip } from '@mui/material';
 import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility, Cancel, Stop } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
 import { cancelRunningObservation } from './scheduler-slice.jsx';
@@ -284,25 +284,24 @@ export default function ObservationStatusBanner() {
 
                 {/* Cancel/Stop button */}
                 {observation && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary">
+                    <Tooltip title={isRunning ? 'Stop observation' : 'Abort scheduled observation'}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={isRunning ? <Stop /> : <Cancel />}
+                            onClick={handleCancelObservation}
+                            sx={{
+                                color: isRunning ? '#4caf50' : '#2196f3',
+                                borderColor: isRunning ? '#4caf50' : '#2196f3',
+                                '&:hover': {
+                                    borderColor: isRunning ? '#4caf50' : '#2196f3',
+                                    bgcolor: isRunning ? 'rgba(76, 175, 80, 0.1)' : 'rgba(33, 150, 243, 0.1)',
+                                },
+                            }}
+                        >
                             {isRunning ? 'Stop' : 'Abort'}
-                        </Typography>
-                        <Tooltip title={isRunning ? 'Stop observation' : 'Abort scheduled observation'}>
-                            <IconButton
-                                size="small"
-                                onClick={handleCancelObservation}
-                                sx={{
-                                    color: isRunning ? '#4caf50' : '#2196f3',
-                                    '&:hover': {
-                                        bgcolor: isRunning ? 'rgba(76, 175, 80, 0.1)' : 'rgba(33, 150, 243, 0.1)',
-                                    },
-                                }}
-                            >
-                                {isRunning ? <Stop /> : <Cancel />}
-                            </IconButton>
-                        </Tooltip>
-                    </Box>
+                        </Button>
+                    </Tooltip>
                 )}
             </Stack>
         </Paper>
