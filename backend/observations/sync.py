@@ -21,10 +21,12 @@ from typing import Any, Dict, List
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
+from sqlalchemy import update
 
 from common.logger import logger
 from crud.scheduledobservations import fetch_scheduled_observations
 from db import AsyncSessionLocal
+from db.models import ScheduledObservations
 from observations.constants import STATUS_MISSED, STATUS_SCHEDULED
 from observations.executor import ObservationExecutor
 from observations.helpers import log_execution_event, update_observation_status
@@ -390,10 +392,6 @@ class ObservationSchedulerSync:
         """
         try:
             async with AsyncSessionLocal() as session:
-                from sqlalchemy import update
-
-                from db.models import ScheduledObservations
-
                 stmt = (
                     update(ScheduledObservations)
                     .where(ScheduledObservations.id == observation_id)
