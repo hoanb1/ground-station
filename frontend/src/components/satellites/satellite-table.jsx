@@ -302,7 +302,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                 <FormControl sx={{minWidth: 200, flex: 1}} variant={"filled"}>
                     <InputLabel htmlFor="grouped-select">{t('satellite_database.select_group')}</InputLabel>
                     <Select
-                        disabled={loading || searchKeyword !== ''}
+                        disabled={loading}
                         value={satGroupId}
                         id="grouped-select"
                         label="Grouping"
@@ -341,7 +341,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     label={t('satellite_database.search_satellites')}
                     value={localSearchValue}
                     onChange={handleSearchChange}
-                    disabled={loading || satGroupId !== ''}
+                    disabled={loading}
                     placeholder={t('satellite_database.search_placeholder')}
                     helperText={localSearchValue.length > 0 && localSearchValue.length < 3 ? t('satellite_database.search_min_chars') : ''}
                     InputProps={{
