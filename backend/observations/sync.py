@@ -118,6 +118,10 @@ class ObservationSchedulerSync:
             # 2. Remove existing jobs first
             await self._remove_observation_jobs(observation_id)
 
+            # 2.5. Clear execution log to prevent accumulation on restart
+            # This ensures the log only contains events from the current scheduling cycle
+            await self._clear_execution_log(observation_id)
+
             # 3. Check if observation should be scheduled
             enabled = observation.get("enabled", True)
             status = observation.get("status", STATUS_SCHEDULED)
@@ -375,6 +379,32 @@ class ObservationSchedulerSync:
     # ============================================================================
     # HELPER METHODS
     # ============================================================================
+
+    async def _clear_execution_log(self, observation_id: str) -> None:
+        """
+        Clear the execution log for an observation.
+        Called when rescheduling to prevent accumulation of old scheduling events.
+
+        Args:
+            observation_id: The observation ID
+        """
+        try:
+            async with AsyncSessionLocal() as session:
+                from sqlalchemy import update
+
+                from db.models import ScheduledObservations
+
+                stmt = (
+                    update(ScheduledObservations)
+                    .where(ScheduledObservations.id == observation_id)
+                    .values(execution_log=[])
+                )
+                await session.execute(stmt)
+                await session.commit()
+                logger.debug(f"Cleared execution log for observation {observation_id}")
+        except Exception as e:
+            logger.warning(f"Failed to clear execution log for {observation_id}: {e}")
+            # Non-critical error, continue with scheduling
 
     async def _remove_observation_jobs(self, observation_id: str) -> int:
         """

@@ -359,18 +359,29 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
         }
     };
 
-    // Check if a pass overlaps with any existing observation
-    const isPassOverlapping = (pass) => {
+    // Check if a pass overlaps with any existing observation and return conflict info
+    const getPassConflict = (pass) => {
         const passStart = new Date(pass.event_start);
         const passEnd = new Date(pass.event_end);
 
-        return observations.some(obs => {
+        console.log(`[PassSelector] Checking pass: ${pass.event_start} to ${pass.event_end}`, {
+            passStart: passStart.toISOString(),
+            passEnd: passEnd.toISOString(),
+            totalObservations: observations.length,
+            currentObservationId
+        });
+
+        const conflictingObs = observations.find(obs => {
             // Skip the observation we're currently editing
             if (currentObservationId && obs.id === currentObservationId) {
+                console.log(`[PassSelector] Skipping current observation: ${obs.name}`);
                 return false;
             }
 
-            if (!obs.pass) return false;
+            if (!obs.pass) {
+                console.log(`[PassSelector] Observation has no pass: ${obs.name}`);
+                return false;
+            }
 
             // Use task_start/task_end if available (actual execution window),
             // otherwise fall back to event_start/event_end (full visibility window)
@@ -378,8 +389,36 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
             const obsEnd = obs.task_end ? new Date(obs.task_end) : new Date(obs.pass.event_end);
 
             // Check for any overlap
-            return (passStart < obsEnd && passEnd > obsStart);
+            const hasOverlap = (passStart < obsEnd && passEnd > obsStart);
+
+            console.log(`[PassSelector] Checking observation "${obs.name}":`, {
+                obsStart: obsStart.toISOString(),
+                obsEnd: obsEnd.toISOString(),
+                hasOverlap,
+                calculation: `${passStart.toISOString()} < ${obsEnd.toISOString()} = ${passStart < obsEnd}`,
+                calculation2: `${passEnd.toISOString()} > ${obsStart.toISOString()} = ${passEnd > obsStart}`
+            });
+
+            if (hasOverlap) {
+                console.log(`[PassSelector] ⚠️ CONFLICT FOUND with observation:`, {
+                    name: obs.name,
+                    satellite: obs.satellite?.name,
+                    obsStart: obsStart.toISOString(),
+                    obsEnd: obsEnd.toISOString(),
+                    passStart: passStart.toISOString(),
+                    passEnd: passEnd.toISOString(),
+                });
+            }
+
+            return hasOverlap;
         });
+
+        return conflictingObs || null;
+    };
+
+    // Check if a pass overlaps with any existing observation
+    const isPassOverlapping = (pass) => {
+        return getPassConflict(pass) !== null;
     };
 
     const humanizeTime = (isoString) => {
@@ -487,7 +526,8 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
                             {/* Future passes */}
                             {passes.map((pass) => {
                                 const info = formatPassInfo(pass);
-                                const isOverlapping = isPassOverlapping(pass);
+                                const conflictingObs = getPassConflict(pass);
+                                const isOverlapping = conflictingObs !== null;
                                 return (
                                     <MenuItem
                                         key={pass.id}
@@ -496,8 +536,9 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
                                         sx={isOverlapping ? {
                                             opacity: 0.6,
                                             bgcolor: (theme) => theme.palette.mode === 'dark'
-                                                ? 'rgba(244, 67, 54, 0.1)'
-                                                : 'rgba(244, 67, 54, 0.05)',
+                                                ? 'rgba(244, 67, 54, 0.15)'
+                                                : 'rgba(244, 67, 54, 0.08)',
+                                            borderLeft: (theme) => `3px solid ${theme.palette.error.main}`,
                                         } : {}}
                                     >
                                         <Box sx={{ width: '100%' }}>
@@ -512,16 +553,27 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
                                             </Typography>
                                             <Typography
                                                 variant="caption"
-                                                color={isOverlapping ? 'error' : 'text.secondary'}
-                                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                                                sx={{
+                                                    display: 'block',
+                                                    color: isOverlapping ? 'error.main' : 'text.secondary'
+                                                }}
                                             >
                                                 {info.secondary}
-                                                {isOverlapping && (
-                                                    <Box component="span" sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold', ml: 0.5 }}>
-                                                        ⚠️ Conflicts with existing observation
-                                                    </Box>
-                                                )}
                                             </Typography>
+                                            {isOverlapping && conflictingObs && (
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        display: 'block',
+                                                        color: 'error.main',
+                                                        fontWeight: 'bold',
+                                                        mt: 0.5,
+                                                        fontSize: '0.7rem'
+                                                    }}
+                                                >
+                                                    ⚠️ Conflicts with: {conflictingObs.name || conflictingObs.satellite?.name || 'Unknown'}
+                                                </Typography>
+                                            )}
                                         </Box>
                                     </MenuItem>
                                 );

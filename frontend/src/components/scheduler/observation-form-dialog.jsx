@@ -721,7 +721,7 @@ const ObservationFormDialog = () => {
         });
 
         // Check if selected pass conflicts with existing observations
-        const hasConflict = formData.pass && observations.some(obs => {
+        const conflictingObs = formData.pass && observations.find(obs => {
             // Skip the observation we're currently editing
             if (selectedObservation?.id && obs.id === selectedObservation.id) {
                 return false;
@@ -729,11 +729,50 @@ const ObservationFormDialog = () => {
             if (!obs.pass) return false;
             const passStart = new Date(formData.pass.event_start);
             const passEnd = new Date(formData.pass.event_end);
-            const obsStart = new Date(obs.pass.event_start);
-            const obsEnd = new Date(obs.pass.event_end);
+            // Use task_start/task_end if available (actual execution window),
+            // otherwise fall back to event_start/event_end (full visibility window)
+            const obsStart = obs.task_start ? new Date(obs.task_start) : new Date(obs.pass.event_start);
+            const obsEnd = obs.task_end ? new Date(obs.task_end) : new Date(obs.pass.event_end);
             // Check for any overlap
-            return (passStart < obsEnd && passEnd > obsStart);
+            const hasOverlap = (passStart < obsEnd && passEnd > obsStart);
+
+            if (hasOverlap) {
+                console.log('[FormValidation] Overlap detected:', {
+                    newPass: { start: passStart.toISOString(), end: passEnd.toISOString() },
+                    existingObs: {
+                        name: obs.name,
+                        start: obsStart.toISOString(),
+                        end: obsEnd.toISOString()
+                    }
+                });
+            }
+
+            return hasOverlap;
         });
+        const hasConflict = conflictingObs !== null && conflictingObs !== undefined;
+
+        // Debug logging
+        const validationChecks = {
+            name: formData.name.trim() !== '',
+            satellite: formData.satellite.norad_id !== '',
+            sdr: formData.sdr.id !== '',
+            gain: formData.sdr.gain !== '',
+            antennaPort: formData.sdr.antenna_port !== '',
+            bandwidth: bandwidthValidation.valid,
+            hasValidPass: hasValidPass,
+            hasConflict: hasConflict,
+        };
+
+        console.log('=== Form Validation Debug ===');
+        console.log('Validation checks:', validationChecks);
+        console.log('formData.pass:', formData.pass);
+        console.log('passes length:', passes.length);
+        if (hasConflict) {
+            console.log('⚠️ CONFLICT DETECTED with:', conflictingObs?.name || conflictingObs?.satellite?.name);
+            console.log('Conflicting observation:', conflictingObs);
+        }
+        console.log('Overall valid:', Object.values(validationChecks).every(v => v === true && validationChecks.hasConflict === false));
+        console.log('============================');
 
         return (
             formData.name.trim() !== '' &&

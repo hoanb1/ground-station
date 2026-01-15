@@ -300,7 +300,14 @@ const DatabaseBackupCard = () => {
                                     </TableHead>
                                     <TableBody>
                                         {tables.map((table) => (
-                                            <TableRow key={table.name}>
+                                            <TableRow
+                                                key={table.name}
+                                                sx={{
+                                                    '&:hover': {
+                                                        backgroundColor: 'action.hover'
+                                                    }
+                                                }}
+                                            >
                                                 <TableCell component="th" scope="row">
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {table.name}

@@ -278,10 +278,10 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
                         <Typography variant="h6">
-                            Observation Details - {latestObservation?.satellite?.name || 'Unknown'}
+                            {latestObservation?.name || `${latestObservation?.satellite?.name || 'Unknown'} Observation`}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            ID: {latestObservation?.id || 'N/A'}
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            {latestObservation?.satellite?.name || 'Unknown Satellite'} • ID: {latestObservation?.id || 'N/A'}
                         </Typography>
                     </Box>
                     <Chip 
