@@ -18,9 +18,11 @@
  */
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { Box, Paper, Typography, Chip, Stack } from '@mui/material';
-import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility } from '@mui/icons-material';
+import { useSelector, useDispatch } from 'react-redux';
+import { Box, Paper, Typography, Chip, Stack, IconButton, Tooltip } from '@mui/material';
+import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility, Cancel, Stop } from '@mui/icons-material';
+import { useSocket } from '../common/socket.jsx';
+import { cancelRunningObservation } from './scheduler-slice.jsx';
 
 /**
  * Compact banner showing either:
@@ -28,6 +30,8 @@ import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility } from '@
  * - Next upcoming observation with countdown
  */
 export default function ObservationStatusBanner() {
+    const dispatch = useDispatch();
+    const { socket } = useSocket();
     const observations = useSelector((state) => state.scheduler.observations);
     const [countdown, setCountdown] = useState('');
 
@@ -55,6 +59,13 @@ export default function ObservationStatusBanner() {
 
     const observation = runningObservation || nextObservation;
     const isRunning = !!runningObservation;
+
+    // Handler for canceling/aborting observation
+    const handleCancelObservation = () => {
+        if (observation?.id && socket) {
+            dispatch(cancelRunningObservation({ socket, id: observation.id }));
+        }
+    };
 
     // Check if satellite is already visible (for upcoming observations)
     const isSatelliteVisible = useMemo(() => {
@@ -186,6 +197,24 @@ export default function ObservationStatusBanner() {
                         {isRunning ? 'NOW OBSERVING' : 'NEXT OBSERVATION'}
                     </Typography>
                 </Box>
+
+                {/* Cancel/Stop button */}
+                {observation && (
+                    <Tooltip title={isRunning ? 'Stop observation' : 'Abort scheduled observation'}>
+                        <IconButton
+                            size="small"
+                            onClick={handleCancelObservation}
+                            sx={{
+                                color: isRunning ? '#4caf50' : '#2196f3',
+                                '&:hover': {
+                                    bgcolor: isRunning ? 'rgba(76, 175, 80, 0.1)' : 'rgba(33, 150, 243, 0.1)',
+                                },
+                            }}
+                        >
+                            {isRunning ? <Stop /> : <Cancel />}
+                        </IconButton>
+                    </Tooltip>
+                )}
 
                 {/* Satellite name */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
