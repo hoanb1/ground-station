@@ -120,10 +120,6 @@ class ObservationSchedulerSync:
             # 2. Remove existing jobs first
             await self._remove_observation_jobs(observation_id)
 
-            # 2.5. Clear execution log to prevent accumulation on restart
-            # This ensures the log only contains events from the current scheduling cycle
-            await self._clear_execution_log(observation_id)
-
             # 3. Check if observation should be scheduled
             enabled = observation.get("enabled", True)
             status = observation.get("status", STATUS_SCHEDULED)
@@ -147,6 +143,11 @@ class ObservationSchedulerSync:
             if not event_start or not event_end:
                 logger.warning(f"Observation {observation_id} missing event times")
                 return {"success": False, "error": "Missing event times"}
+
+            # 3.5. Clear execution log to prevent accumulation on restart
+            # Only do this for observations that will actually be scheduled
+            # This preserves execution history for completed/failed/cancelled observations
+            await self._clear_execution_log(observation_id)
 
             # 4. Parse event times
             aos_time = datetime.fromisoformat(event_start.replace("Z", "+00:00"))
