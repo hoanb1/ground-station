@@ -493,14 +493,34 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
                                         key={pass.id}
                                         value={pass.id}
                                         disabled={isOverlapping}
+                                        sx={isOverlapping ? {
+                                            opacity: 0.6,
+                                            bgcolor: (theme) => theme.palette.mode === 'dark'
+                                                ? 'rgba(244, 67, 54, 0.1)'
+                                                : 'rgba(244, 67, 54, 0.05)',
+                                        } : {}}
                                     >
-                                        <Box>
-                                            <Typography variant="body2">
+                                        <Box sx={{ width: '100%' }}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={isOverlapping ? {
+                                                    color: 'text.disabled',
+                                                    textDecoration: 'line-through'
+                                                } : {}}
+                                            >
                                                 {info.primary}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography
+                                                variant="caption"
+                                                color={isOverlapping ? 'error' : 'text.secondary'}
+                                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+                                            >
                                                 {info.secondary}
-                                                {isOverlapping && ' • ⚠ Conflicts with existing observation'}
+                                                {isOverlapping && (
+                                                    <Box component="span" sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold', ml: 0.5 }}>
+                                                        ⚠️ Conflicts with existing observation
+                                                    </Box>
+                                                )}
                                             </Typography>
                                         </Box>
                                     </MenuItem>
