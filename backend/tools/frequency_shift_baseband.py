@@ -85,6 +85,8 @@ def process_baseband_file(input_file, output_file, shift_hz, chunk_size=10_000_0
     with open(input_file, "rb") as fin, open(output_file, "wb") as fout:
         sample_offset = 0
         chunk_num = 0
+        # Track phase to maintain continuity across chunks
+        phase = 0.0
 
         while sample_offset < num_samples:
             # Calculate chunk size (last chunk might be smaller)
@@ -100,10 +102,14 @@ def process_baseband_file(input_file, output_file, shift_hz, chunk_size=10_000_0
 
             iq_chunk = np.fromfile(fin, dtype=np.complex64, count=current_chunk_size)
 
-            # Apply frequency shift with correct time offset
-            t = (np.arange(current_chunk_size) + sample_offset) / sample_rate
-            shift_signal = np.exp(1j * 2 * np.pi * shift_hz * t)
+            # Apply frequency shift with phase continuity
+            # Use relative time within chunk to avoid numerical overflow
+            t = np.arange(current_chunk_size, dtype=np.float64) / sample_rate
+            shift_signal = np.exp(1j * (2 * np.pi * shift_hz * t + phase))
             shifted_chunk = iq_chunk * shift_signal
+
+            # Update phase for next chunk (wrap to keep it bounded)
+            phase = (phase + 2 * np.pi * shift_hz * current_chunk_size / sample_rate) % (2 * np.pi)
 
             # Write shifted chunk
             shifted_chunk.astype(np.complex64).tofile(fout)

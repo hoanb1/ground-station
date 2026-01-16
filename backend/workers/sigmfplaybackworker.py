@@ -494,6 +494,13 @@ def remove_dc_offset(samples):
     mean_i = np.mean(np.real(samples))
     mean_q = np.mean(np.imag(samples))
 
+    # Check for invalid values (inf/nan from overflow)
+    if not np.isfinite(mean_i) or not np.isfinite(mean_q):
+        logger.warning(
+            f"Invalid mean values detected (mean_i={mean_i}, mean_q={mean_q}), skipping DC offset removal"
+        )
+        return samples
+
     # Subtract the mean
     samples_no_dc = samples - (mean_i + 1j * mean_q)
 
