@@ -437,7 +437,7 @@ class ObservationExecutor:
 
                 elif task_type == "iq_recording":
                     await self.recorder_handler.start_iq_recording_task(
-                        observation_id, session_id, sdr_id, satellite
+                        observation_id, session_id, sdr_id, satellite, task_config
                     )
 
                 elif task_type == "audio_recording":

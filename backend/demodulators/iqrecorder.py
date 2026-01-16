@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
+import numpy as np
+
 logger = logging.getLogger("iq-recorder")
 
 
@@ -42,6 +44,8 @@ class IQRecorder(threading.Thread):
         recording_path,
         target_satellite_norad_id="",
         target_satellite_name="",
+        target_center_freq=None,
+        enable_frequency_shift=False,
     ):
         super().__init__(daemon=True, name=f"IQRecorder-{session_id}")
         self.iq_queue = iq_queue
@@ -50,6 +54,12 @@ class IQRecorder(threading.Thread):
         self.running = True
         self.target_satellite_norad_id = target_satellite_norad_id
         self.target_satellite_name = target_satellite_name
+        self.target_center_freq = target_center_freq
+        self.enable_frequency_shift = enable_frequency_shift
+
+        # Frequency shift tracking
+        self.shift_hz = 0
+        self.sample_offset = 0  # Track total samples processed for phase continuity
 
         # Metadata tracking
         self.total_samples = 0
@@ -117,12 +127,26 @@ class IQRecorder(threading.Thread):
                     self.current_center_freq != center_freq
                     or self.current_sample_rate != sample_rate
                 ):
+                    # Calculate frequency shift if needed
+                    if self.enable_frequency_shift and self.target_center_freq is not None:
+                        # Shift from current center_freq to target_center_freq
+                        # Signal at target_center_freq is at (target - center) offset in current recording
+                        # We want to shift it to center (0 Hz offset)
+                        self.shift_hz = center_freq - self.target_center_freq
+                        output_center_freq = self.target_center_freq
+                        logger.info(
+                            f"Frequency shift enabled: {center_freq/1e6:.3f} MHz -> {self.target_center_freq/1e6:.3f} MHz "
+                            f"(shift by {self.shift_hz/1e3:.1f} kHz)"
+                        )
+                    else:
+                        self.shift_hz = 0
+                        output_center_freq = center_freq
 
-                    # Add new capture segment
+                    # Add new capture segment with output center frequency
                     self.captures.append(
                         {
                             "core:sample_start": self.total_samples,
-                            "core:frequency": int(center_freq),
+                            "core:frequency": int(output_center_freq),
                             "core:datetime": datetime.fromtimestamp(timestamp, tz=timezone.utc)
                             .replace(microsecond=0, tzinfo=None)
                             .isoformat()
@@ -138,8 +162,19 @@ class IQRecorder(threading.Thread):
 
                     logger.info(
                         f"New capture segment at sample {self.total_samples}: "
-                        f"freq={center_freq/1e6:.3f} MHz, rate={sample_rate/1e6:.2f} MS/s"
+                        f"freq={output_center_freq/1e6:.3f} MHz, rate={sample_rate/1e6:.2f} MS/s"
                     )
+
+                # Apply frequency shift if enabled
+                if self.enable_frequency_shift and self.shift_hz != 0:
+                    # Generate time array for this chunk with proper phase continuity
+                    t = (np.arange(len(samples)) + self.sample_offset) / sample_rate
+                    # Create complex exponential for frequency shift
+                    shift_signal = np.exp(1j * 2 * np.pi * self.shift_hz * t)
+                    # Apply shift
+                    samples = samples * shift_signal
+                    # Update sample offset for next chunk
+                    self.sample_offset += len(samples)
 
                 # Write samples to file
                 samples.tofile(self.data_file)
@@ -233,6 +268,26 @@ class IQRecorder(threading.Thread):
         # Add target satellite name if provided
         if self.target_satellite_name:
             global_metadata["gs:target_satellite_name"] = self.target_satellite_name
+
+        # Add frequency shift metadata if applied
+        if self.enable_frequency_shift and self.shift_hz != 0:
+            global_metadata["gs:frequency_shift_applied"] = True
+            global_metadata["gs:frequency_shift_hz"] = self.shift_hz
+            global_metadata["gs:original_center_freq"] = self.current_center_freq
+            global_metadata["gs:target_center_freq"] = self.target_center_freq
+
+            # Add annotation documenting the frequency shift
+            if self.total_samples > 0 and self.current_center_freq is not None:
+                self.annotations.append(
+                    {
+                        "core:sample_start": 0,
+                        "core:sample_count": self.total_samples,
+                        "core:comment": f"Real-time frequency shift applied: {self.shift_hz} Hz. "
+                        f"Original center: {self.current_center_freq/1e6:.3f} MHz, "
+                        f"Target center: {self.target_center_freq/1e6:.3f} MHz. "
+                        f"Signal now centered at {self.target_center_freq/1e6:.3f} MHz.",
+                    }
+                )
 
         metadata = {
             "global": global_metadata,

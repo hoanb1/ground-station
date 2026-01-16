@@ -18,7 +18,7 @@
 import os
 import traceback
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from sqlalchemy import select
 
@@ -51,6 +51,7 @@ class RecorderHandler:
         session_id: str,
         sdr_id: str,
         satellite: Dict[str, Any],
+        task_config: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
         Start an IQ recording task.
@@ -82,14 +83,32 @@ class RecorderHandler:
             recordings_dir = os.path.join(backend_dir, "data", "recordings")
             recording_path = os.path.join(recordings_dir, recording_name)
 
+            # Extract frequency shift parameters from task config
+            task_config = task_config or {}
+            enable_frequency_shift = task_config.get("enable_frequency_shift", False)
+            target_center_freq = task_config.get("target_center_freq")
+
+            # Build recorder kwargs
+            recorder_kwargs = {
+                "recording_path": recording_path,
+                "target_satellite_norad_id": str(satellite.get("norad_id", "")),
+                "target_satellite_name": satellite.get("name", ""),
+            }
+
+            # Add frequency shift parameters if enabled
+            if enable_frequency_shift and target_center_freq:
+                recorder_kwargs["enable_frequency_shift"] = True
+                recorder_kwargs["target_center_freq"] = float(target_center_freq)
+                logger.info(
+                    f"IQ recording will use frequency shift: target={target_center_freq/1e6:.3f} MHz"
+                )
+
             # Start IQ recorder
             success = self.process_manager.start_recorder(
                 sdr_id,
                 session_id,
                 IQRecorder,
-                recording_path=recording_path,
-                target_satellite_norad_id=str(satellite.get("norad_id", "")),
-                target_satellite_name=satellite.get("name", ""),
+                **recorder_kwargs,
             )
 
             if success:

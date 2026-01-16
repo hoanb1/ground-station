@@ -430,6 +430,9 @@ const ObservationFormDialog = () => {
                     type: 'iq_recording',
                     config: {
                         transmitter_id: '',
+                        enable_frequency_shift: false,
+                        auto_fill_target_freq: false,
+                        target_center_freq: '',
                     },
                 };
                 break;
@@ -528,7 +531,12 @@ const ObservationFormDialog = () => {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
             const transmitterName = transmitter?.description || 'No transmitter';
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
-            const parts = [transmitterName, freqMHz, 'SigMF (cf32_le)'].filter(Boolean);
+            const extraInfo = [];
+            if (task.config.enable_frequency_shift && task.config.target_center_freq) {
+                const targetMHz = (task.config.target_center_freq / 1000000).toFixed(3);
+                extraInfo.push(`Centered@${targetMHz}MHz`);
+            }
+            const parts = [transmitterName, freqMHz, ...extraInfo, 'SigMF (cf32_le)'].filter(Boolean);
             return parts.join(' • ');
         }
         return '';
@@ -1710,6 +1718,67 @@ const ObservationFormDialog = () => {
                                                         </Select>
                                                     </FormControl>
 
+                                                    <Box>
+                                                        <FormControlLabel
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={task.config.enable_frequency_shift || false}
+                                                                    onChange={(e) => {
+                                                                        handleTaskConfigChange(index, 'enable_frequency_shift', e.target.checked);
+                                                                        // Reset related fields when disabling
+                                                                        if (!e.target.checked) {
+                                                                            handleTaskConfigChange(index, 'auto_fill_target_freq', false);
+                                                                            handleTaskConfigChange(index, 'target_center_freq', '');
+                                                                        }
+                                                                    }}
+                                                                    disabled={isFormDisabled}
+                                                                />
+                                                            }
+                                                            label="Enable Frequency Shift"
+                                                        />
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4, mt: -0.5 }}>
+                                                            Centers the signal at the target frequency. Avoids DC spike issues and required by some decoders.
+                                                        </Typography>
+                                                    </Box>
+
+                                                    {task.config.enable_frequency_shift && (
+                                                        <>
+                                                            <FormControlLabel
+                                                                control={
+                                                                    <Checkbox
+                                                                        checked={task.config.auto_fill_target_freq || false}
+                                                                        onChange={(e) => {
+                                                                            const autoFill = e.target.checked;
+                                                                            handleTaskConfigChange(index, 'auto_fill_target_freq', autoFill);
+
+                                                                            // Auto-fill immediately if enabled and transmitter is selected
+                                                                            if (autoFill && task.config.transmitter_id) {
+                                                                                const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+                                                                                if (transmitter?.downlink_low) {
+                                                                                    handleTaskConfigChange(index, 'target_center_freq', transmitter.downlink_low);
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        disabled={isFormDisabled}
+                                                                    />
+                                                                }
+                                                                label="Auto-fill from Transmitter Frequency"
+                                                            />
+
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label="Target Center Frequency (Hz)"
+                                                                type="number"
+                                                                value={task.config.target_center_freq || ''}
+                                                                onChange={(e) =>
+                                                                    handleTaskConfigChange(index, 'target_center_freq', parseFloat(e.target.value) || '')
+                                                                }
+                                                                disabled={isFormDisabled || task.config.auto_fill_target_freq}
+                                                            />
+                                                        </>
+                                                    )}
+
                                                     <Typography variant="caption" color="text.secondary">
                                                         Audio transcription will be performed using the selected modulation type.
                                                     </Typography>
@@ -1722,13 +1791,18 @@ const ObservationFormDialog = () => {
                                                         <InputLabel>Transmitter</InputLabel>
                                                         <Select
                                                             value={task.config.transmitter_id || ''}
-                                                            onChange={(e) =>
-                                                                handleTaskConfigChange(
-                                                                    index,
-                                                                    'transmitter_id',
-                                                                    e.target.value
-                                                                )
-                                                            }
+                                                            onChange={(e) => {
+                                                                const transmitterId = e.target.value;
+                                                                handleTaskConfigChange(index, 'transmitter_id', transmitterId);
+
+                                                                // Auto-fill target frequency if checkbox is enabled
+                                                                if (task.config.auto_fill_target_freq && transmitterId) {
+                                                                    const transmitter = availableTransmitters.find(t => t.id === transmitterId);
+                                                                    if (transmitter?.downlink_low) {
+                                                                        handleTaskConfigChange(index, 'target_center_freq', transmitter.downlink_low);
+                                                                    }
+                                                                }
+                                                            }}
                                                             label="Transmitter"
                                                         >
                                                             {availableTransmitters.length === 0 ? (
@@ -1765,8 +1839,72 @@ const ObservationFormDialog = () => {
                                                         </Select>
                                                     </FormControl>
 
+                                                    <Box>
+                                                        <FormControlLabel
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={task.config.enable_frequency_shift || false}
+                                                                    onChange={(e) => {
+                                                                        handleTaskConfigChange(index, 'enable_frequency_shift', e.target.checked);
+                                                                        // Reset related fields when disabling
+                                                                        if (!e.target.checked) {
+                                                                            handleTaskConfigChange(index, 'auto_fill_target_freq', false);
+                                                                            handleTaskConfigChange(index, 'target_center_freq', '');
+                                                                        }
+                                                                    }}
+                                                                    disabled={isFormDisabled}
+                                                                />
+                                                            }
+                                                            label="Enable Frequency Shift"
+                                                        />
+                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4, mt: -0.5 }}>
+                                                            Centers the signal at the target frequency. Avoids DC spike issues and required by some decoders.
+                                                        </Typography>
+                                                    </Box>
+
+                                                    {task.config.enable_frequency_shift && (
+                                                        <>
+                                                            <FormControlLabel
+                                                                control={
+                                                                    <Checkbox
+                                                                        checked={task.config.auto_fill_target_freq || false}
+                                                                        onChange={(e) => {
+                                                                            const autoFill = e.target.checked;
+                                                                            handleTaskConfigChange(index, 'auto_fill_target_freq', autoFill);
+
+                                                                            // Auto-fill immediately if enabled and transmitter is selected
+                                                                            if (autoFill && task.config.transmitter_id) {
+                                                                                const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+                                                                                if (transmitter?.downlink_low) {
+                                                                                    handleTaskConfigChange(index, 'target_center_freq', transmitter.downlink_low);
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        disabled={isFormDisabled}
+                                                                    />
+                                                                }
+                                                                label="Auto-fill from Transmitter Frequency"
+                                                            />
+
+                                                            <TextField
+                                                                fullWidth
+                                                                size="small"
+                                                                label="Target Center Frequency (Hz)"
+                                                                type="number"
+                                                                value={task.config.target_center_freq || ''}
+                                                                onChange={(e) =>
+                                                                    handleTaskConfigChange(index, 'target_center_freq', parseFloat(e.target.value) || '')
+                                                                }
+                                                                disabled={isFormDisabled || task.config.auto_fill_target_freq}
+                                                            />
+                                                        </>
+                                                    )}
+
                                                     <Typography variant="caption" color="text.secondary">
-                                                        IQ data will be recorded in SigMF format (cf32_le). The recording uses the SDR sample rate configured above.
+                                                        IQ data will be recorded in SigMF format (cf32_le).
+                                                        {task.config.enable_frequency_shift
+                                                            ? ' Frequency shifting will center the signal at the target frequency, avoiding DC offset issues.'
+                                                            : ' The recording uses the SDR sample rate configured above.'}
                                                     </Typography>
                                                 </>
                                             )}
