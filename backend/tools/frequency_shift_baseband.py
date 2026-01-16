@@ -112,8 +112,11 @@ def process_baseband_file(input_file, output_file, shift_hz, chunk_size=10_000_0
             # Apply frequency shift with phase continuity
             # Use relative time within chunk to avoid numerical overflow
             t = np.arange(current_chunk_size, dtype=np.float64) / sample_rate
-            shift_signal = np.exp(1j * (2 * np.pi * shift_hz * t + phase))
-            shifted_chunk = iq_chunk * shift_signal
+            # Use cos/sin instead of exp to handle large phase arguments better
+            arg = 2 * np.pi * shift_hz * t + phase
+            shift_signal = np.cos(arg) + 1j * np.sin(arg)
+            # Ensure result stays complex64 to match input dtype
+            shifted_chunk = (iq_chunk * shift_signal).astype(np.complex64)
 
             # Verify output is valid before writing
             if not np.all(np.isfinite(shifted_chunk)):

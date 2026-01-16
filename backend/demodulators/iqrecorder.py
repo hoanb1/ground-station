@@ -167,12 +167,15 @@ class IQRecorder(threading.Thread):
 
                 # Apply frequency shift if enabled
                 if self.enable_frequency_shift and self.shift_hz != 0:
-                    # Generate time array for this chunk (relative time to avoid overflow)
+                    # Generate time array for this chunk
                     t = np.arange(len(samples), dtype=np.float64) / sample_rate
-                    # Create complex exponential for frequency shift with phase continuity
-                    shift_signal = np.exp(1j * (2 * np.pi * self.shift_hz * t + self.phase))
-                    # Apply shift
-                    samples = samples * shift_signal
+                    # Compute phase incrementally: phase = 2*pi*f*t + phase_offset
+                    # To avoid overflow in the argument to exp, we use cos/sin directly
+                    # since exp(1j*theta) = cos(theta) + 1j*sin(theta)
+                    arg = 2 * np.pi * self.shift_hz * t + self.phase
+                    shift_signal = np.cos(arg) + 1j * np.sin(arg)
+                    # Apply shift (ensure result stays complex64)
+                    samples = (samples * shift_signal).astype(np.complex64)
                     # Update phase for next chunk (wrap to keep bounded)
                     self.phase = (
                         self.phase + 2 * np.pi * self.shift_hz * len(samples) / sample_rate
