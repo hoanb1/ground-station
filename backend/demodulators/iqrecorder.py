@@ -59,7 +59,7 @@ class IQRecorder(threading.Thread):
 
         # Frequency shift tracking
         self.shift_hz = 0
-        self.sample_offset = 0  # Track total samples processed for phase continuity
+        self.phase = 0.0  # Track phase for continuity across chunks
 
         # Metadata tracking
         self.total_samples = 0
@@ -167,14 +167,16 @@ class IQRecorder(threading.Thread):
 
                 # Apply frequency shift if enabled
                 if self.enable_frequency_shift and self.shift_hz != 0:
-                    # Generate time array for this chunk with proper phase continuity
-                    t = (np.arange(len(samples)) + self.sample_offset) / sample_rate
-                    # Create complex exponential for frequency shift
-                    shift_signal = np.exp(1j * 2 * np.pi * self.shift_hz * t)
+                    # Generate time array for this chunk (relative time to avoid overflow)
+                    t = np.arange(len(samples), dtype=np.float64) / sample_rate
+                    # Create complex exponential for frequency shift with phase continuity
+                    shift_signal = np.exp(1j * (2 * np.pi * self.shift_hz * t + self.phase))
                     # Apply shift
                     samples = samples * shift_signal
-                    # Update sample offset for next chunk
-                    self.sample_offset += len(samples)
+                    # Update phase for next chunk (wrap to keep bounded)
+                    self.phase = (
+                        self.phase + 2 * np.pi * self.shift_hz * len(samples) / sample_rate
+                    ) % (2 * np.pi)
 
                 # Write samples to file
                 samples.tofile(self.data_file)

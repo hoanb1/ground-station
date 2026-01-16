@@ -102,11 +102,25 @@ def process_baseband_file(input_file, output_file, shift_hz, chunk_size=10_000_0
 
             iq_chunk = np.fromfile(fin, dtype=np.complex64, count=current_chunk_size)
 
+            # Check for corrupted input data
+            if not np.all(np.isfinite(iq_chunk)):
+                raise ValueError(
+                    f"Input file contains invalid values (inf/nan) at chunk {chunk_num}. "
+                    f"The input recording is corrupted."
+                )
+
             # Apply frequency shift with phase continuity
             # Use relative time within chunk to avoid numerical overflow
             t = np.arange(current_chunk_size, dtype=np.float64) / sample_rate
             shift_signal = np.exp(1j * (2 * np.pi * shift_hz * t + phase))
             shifted_chunk = iq_chunk * shift_signal
+
+            # Verify output is valid before writing
+            if not np.all(np.isfinite(shifted_chunk)):
+                raise ValueError(
+                    f"Frequency shift produced invalid values (inf/nan) at chunk {chunk_num}. "
+                    f"This may indicate input data corruption or numerical overflow."
+                )
 
             # Update phase for next chunk (wrap to keep it bounded)
             phase = (phase + 2 * np.pi * shift_hz * current_chunk_size / sample_rate) % (2 * np.pi)
