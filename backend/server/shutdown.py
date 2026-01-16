@@ -2,12 +2,12 @@ import asyncio
 import os
 from typing import Optional
 
+import tracker.runner
 from audio.audiobroadcaster import AudioBroadcaster
 from audio.audiostreamer import WebAudioStreamer
 from common.logger import logger
 from observations.events import observation_sync
 from processing.utils import active_sdr_clients
-from tracker.runner import tracker_process
 
 # Globals used by audio threads
 audio_consumer: Optional[WebAudioStreamer] = None
@@ -53,12 +53,24 @@ def cleanup_everything():
 
     # Terminate tracker process
     try:
-        if tracker_process and tracker_process.is_alive():
-            logger.info(f"Killing tracker process PID: {tracker_process.pid}")
-            tracker_process.kill()
-            logger.info("Tracker killed")
+        if tracker.runner.tracker_process and tracker.runner.tracker_process.is_alive():
+            logger.info(f"Stopping tracker process PID: {tracker.runner.tracker_process.pid}")
+
+            # Signal graceful shutdown
+            tracker.runner.tracker_stop_event.set()
+
+            # Wait up to 3 seconds for graceful exit
+            tracker.runner.tracker_process.join(timeout=3.0)
+
+            # Force kill if still alive
+            if tracker.runner.tracker_process.is_alive():
+                logger.warning("Tracker didn't exit gracefully, force killing...")
+                tracker.runner.tracker_process.kill()
+                tracker.runner.tracker_process.join()
+
+            logger.info("Tracker process stopped")
     except Exception as e:  # pragma: no cover - best effort cleanup
-        logger.info(f"Error killing tracker: {e}")
+        logger.warning(f"Error stopping tracker: {e}")
 
     # Clean up all SDR sessions
     try:
@@ -119,7 +131,7 @@ def signal_handler(signum, frame):
 def stop_tracker():
     """Simple function to kill the tracker process."""
     try:
-        if tracker_process and tracker_process.is_alive():
-            tracker_process.kill()
+        if tracker.runner.tracker_process and tracker.runner.tracker_process.is_alive():
+            tracker.runner.tracker_process.kill()
     except Exception:  # pragma: no cover - best effort cleanup
         pass

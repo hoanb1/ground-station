@@ -78,8 +78,7 @@ def start_tracker_process():
         target=run_tracking_task, name="Ground Station - SatelliteTracker"
     )
 
-    # Process will terminate when main process exits
-    tracker_process.daemon = True
+    # Start the process (not daemon - we want proper cleanup)
     tracker_process.start()
 
     logger.info(
