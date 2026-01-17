@@ -79,8 +79,8 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
         } else if (item.type === 'decoded') {
             if (item.decoder_type === 'SSTV') {
                 return 'SSTV Image';
-            } else if (item.decoder_type === 'BPSK' || item.decoder_type === 'FSK' || item.decoder_type === 'GFSK') {
-                return 'Telemetry';
+            } else if (item.decoder_type === 'BPSK' || item.decoder_type === 'FSK' || item.decoder_type === 'GFSK' || item.decoder_type === 'GMSK') {
+                return 'Packet';
             } else if (item.decoder_type) {
                 return item.decoder_type;
             }
