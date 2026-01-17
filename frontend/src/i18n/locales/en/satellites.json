@@ -92,7 +92,8 @@
     "delete_satellite": "Delete Satellite",
     "delete_confirm_title": "Delete Satellite",
     "delete_confirm_message": "Are you sure you want to delete this satellite? This action cannot be undone.",
-    "delete_confirm_transmitters": "Note: This will also delete {{count}} associated transmitter{{plural}}.",
+    "delete_confirm_transmitters_one": "Note: This will also delete {{count}} associated transmitter.",
+    "delete_confirm_transmitters_other": "Note: This will also delete {{count}} associated transmitters.",
     "delete_success": "Satellite deleted successfully",
     "delete_failed": "Failed to delete satellite: {{error}}",
     "fields": {

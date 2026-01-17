@@ -168,7 +168,7 @@ const initialState = {
     lastVisitedTimestamp: new Date().toISOString(), // ISO timestamp - initialized to app start time
     hasNewFiles: false, // Flag indicating if new files were added since last visit
     // View mode
-    viewMode: 'card', // 'card' or 'table'
+    viewMode: 'table', // 'card' or 'table'
 };
 
 const fileBrowserSlice = createSlice({

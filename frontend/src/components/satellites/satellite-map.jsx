@@ -394,7 +394,7 @@ const SatelliteMapContainer = ({ satelliteData }) => {
             />
 
             {InternationalDateLinePolyline()}
-            <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8} />
+            {location && <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8} />}
             {currentPastSatellitesPaths}
             {currentFutureSatellitesPaths}
             {currentSatellitesPosition}

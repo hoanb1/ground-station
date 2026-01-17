@@ -18,8 +18,8 @@
  */
 
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Box } from '@mui/material';
+import React, {useRef, useEffect, useState, useCallback} from 'react';
+import {Box} from '@mui/material';
 
 const FrequencyBandOverlay = ({
                                   centerFrequency,
@@ -51,12 +51,63 @@ const FrequencyBandOverlay = ({
             }
         }
     }, []);
-0
+
     // Convert frequency to pixel position (full spectrum coordinates)
     const frequencyToPixel = useCallback((frequency) => {
         const freqRange = endFreq - startFreq;
         return ((frequency - startFreq) / freqRange) * actualWidth;
     }, [startFreq, endFreq, actualWidth]);
+
+    // Abbreviate label based on available width
+    const abbreviateLabel = useCallback((ctx, name, availableWidth) => {
+        ctx.font = '12px Arial, sans-serif';
+        const fullWidth = ctx.measureText(name).width;
+
+        // If full name fits, use it
+        if (fullWidth <= availableWidth - 16) {
+            return name;
+        }
+
+        // Common abbreviations for band names
+        const abbreviations = {
+            'Ham': '',
+            'Amateur': 'Ham',
+            'Satellite': 'Sat',
+            'downlink': 'DL',
+            'uplink': 'UL',
+            'Broadcast': 'BC',
+            'Emergency': 'Emrg',
+            'Aircraft': 'AC',
+            'Weather': 'WX',
+            ' MHz': '',
+            ' GHz': '',
+        };
+
+        let abbreviated = name;
+        for (const [full, short] of Object.entries(abbreviations)) {
+            abbreviated = abbreviated.replace(new RegExp(full, 'g'), short);
+        }
+        abbreviated = abbreviated.replace(/\s+/g, ' ').trim();
+
+        // If still too long, extract key parts
+        if (ctx.measureText(abbreviated).width > availableWidth - 16) {
+            // Extract numbers and first significant word
+            const match = name.match(/(\d+[mkgMKG]?\w*)|([A-Z]+)/g);
+            if (match) {
+                abbreviated = match.slice(0, 2).join(' ');
+            }
+        }
+
+        // Last resort: truncate with ellipsis
+        if (ctx.measureText(abbreviated).width > availableWidth - 16) {
+            while (abbreviated.length > 3 && ctx.measureText(abbreviated + '…').width > availableWidth - 16) {
+                abbreviated = abbreviated.slice(0, -1);
+            }
+            abbreviated += '…';
+        }
+
+        return abbreviated;
+    }, []);
 
     // Poll for container width changes
     useEffect(() => {
@@ -70,44 +121,6 @@ const FrequencyBandOverlay = ({
     useEffect(() => {
         updateActualWidth();
     }, [containerWidth, updateActualWidth]);
-
-    // Helper function to create segments from overlapping bands
-    const createBandSegments = useCallback((bands) => {
-        // Create a list of all frequency boundaries
-        const boundaries = new Set();
-        const visibleBands = bands.filter(band =>
-            !(band.endFrequency < startFreq || band.startFrequency > endFreq)
-        );
-
-        visibleBands.forEach(band => {
-            boundaries.add(band.startFrequency);
-            boundaries.add(band.endFrequency);
-        });
-
-        const sortedBoundaries = Array.from(boundaries).sort((a, b) => a - b);
-
-        // Create segments between each pair of boundaries
-        const segments = [];
-        for (let i = 0; i < sortedBoundaries.length - 1; i++) {
-            const segmentStart = sortedBoundaries[i];
-            const segmentEnd = sortedBoundaries[i + 1];
-
-            // Find all bands that contain this segment
-            const bandsInSegment = visibleBands.filter(band =>
-                band.startFrequency <= segmentStart && band.endFrequency >= segmentEnd
-            );
-
-            if (bandsInSegment.length > 0) {
-                segments.push({
-                    startFrequency: segmentStart,
-                    endFrequency: segmentEnd,
-                    bands: bandsInSegment
-                });
-            }
-        }
-
-        return segments;
-    }, [startFreq, endFreq]);
 
     // Draw the frequency bands
     useEffect(() => {
@@ -128,158 +141,168 @@ const FrequencyBandOverlay = ({
         // Calculate the band drawing area (bottom of the canvas)
         const bandY = height - bandHeight - 1;
 
-        // Create segments from overlapping bands
-        const segments = createBandSegments(bands);
+        // Filter visible bands
+        const visibleBands = bands.filter(band =>
+            !(band.endFrequency < startFreq || band.startFrequency > endFreq)
+        );
 
-        // Draw each segment
-        segments.forEach((segment) => {
-            const { startFrequency, endFrequency, bands: segmentBands } = segment;
+        // Enable alpha blending for overlapping bands
+        ctx.globalCompositeOperation = 'source-over';
+
+        // Draw each band with alpha blending (bands already have rgba colors with alpha)
+        visibleBands.forEach((band) => {
+            const {startFrequency, endFrequency, color = 'rgba(255, 255, 0, 0.3)'} = band;
 
             // Convert frequencies to pixel positions
             const startX = frequencyToPixel(startFrequency);
             const endX = frequencyToPixel(endFrequency);
-            const segmentWidth = endX - startX;
+            const bandWidth = endX - startX;
 
-            if (segmentWidth <= 0) return;
-
-            // For overlapping bands, use the first band's color (or blend them)
-            // You could also choose to blend colors or use the last band
-            const band = segmentBands[segmentBands.length - 1]; // Use the last (topmost) band
-            const { color = '#ffff00' } = band;
+            if (bandWidth <= 0) return;
 
             ctx.fillStyle = color;
-            ctx.fillRect(startX, bandY, segmentWidth, bandHeight);
+            ctx.fillRect(startX, bandY, bandWidth, bandHeight);
         });
 
-        // Draw labels for original bands (not segments)
-        bands.forEach((band) => {
-            const { startFrequency, endFrequency, color = '#ffff00', textColor = '#000000', name } = band;
+        // Prepare label data with abbreviation and smart spacing
+        const labelData = [];
+        ctx.font = '12px Arial, sans-serif';
 
-            // Skip if the band is completely outside the full frequency range
-            if (endFrequency < startFreq || startFrequency > endFreq) {
-                return;
-            }
+        visibleBands.forEach((band) => {
+            const {startFrequency, endFrequency, color = 'rgba(255, 255, 0, 0.3)', textColor = '#000000', name} = band;
+
+            if (!name) return;
 
             // Convert frequencies to pixel positions
             const startX = frequencyToPixel(startFrequency);
             const endX = frequencyToPixel(endFrequency);
+            const visibleStartX = Math.max(0, startX);
+            const visibleEndX = Math.min(actualWidth, endX);
+            const visibleWidth = visibleEndX - visibleStartX;
 
-            // Draw the label if there's a name
-            if (name) {
-                const centerX = (startX + endX) / 2;
-                const labelY = bandY + (bandHeight / 2);
+            // Skip very narrow bands (less than 25px)
+            if (visibleWidth < 25) return;
 
-                // Measure text width for positioning
-                ctx.font = '12px Arial, sans-serif';
-                const textMetrics = ctx.measureText(name);
-                const textWidth = textMetrics.width;
-                const padding = 8;
-                const totalLabelWidth = textWidth + (padding * 2);
+            // Abbreviate label based on available width
+            const displayName = abbreviateLabel(ctx, name, visibleWidth);
+            const textWidth = ctx.measureText(displayName).width;
+            const padding = 8;
 
-                // Calculate the visible portion of the band on the canvas
-                const visibleStartX = Math.max(0, startX);
-                const visibleEndX = Math.min(actualWidth, endX);
-                const visibleWidth = visibleEndX - visibleStartX;
+            // Calculate initial label position (centered)
+            const centerX = (startX + endX) / 2;
+            let labelX = centerX;
 
-                // Only show label if any part of the band is visible
-                if (visibleWidth > 0) {
-                    let labelX = centerX;
-                    let drawConnectingLine = false;
-                    let strategy = 'center';
+            // Adjust if center is not visible
+            if (centerX < 0) {
+                labelX = visibleStartX + (visibleWidth / 2);
+            } else if (centerX > actualWidth) {
+                labelX = visibleEndX - (visibleWidth / 2);
+            }
 
-                    // Check if the center position would be visible
-                    if (centerX >= 0 && centerX <= actualWidth) {
-                        // Center is visible, use it
-                        labelX = centerX;
-                        strategy = 'center';
-                    } else if (visibleWidth >= totalLabelWidth) {
-                        // Center is not visible but we have enough visible width to show the label
-                        if (centerX < 0) {
-                            // Band center is to the left, position label at the visible left edge
-                            labelX = visibleStartX + totalLabelWidth / 2 + padding;
-                            strategy = 'left-edge';
+            // Ensure label stays within canvas
+            labelX = Math.max(textWidth / 2 + padding, Math.min(actualWidth - textWidth / 2 - padding, labelX));
+
+            labelData.push({
+                x: labelX,
+                y: bandY + (bandHeight / 2),
+                width: textWidth + padding * 2,
+                name: displayName,
+                textColor,
+                color,
+                bandWidth: visibleWidth,
+                bandCenterX: centerX,
+                visibleStartX,
+                visibleEndX,
+            });
+        });
+
+        // Sort labels by band width (wider bands get priority)
+        labelData.sort((a, b) => b.bandWidth - a.bandWidth);
+
+        // Apply smart horizontal spacing to avoid collisions
+        const placedLabels = [];
+        const minSpacing = 5; // Minimum pixels between labels
+
+        labelData.forEach((label) => {
+            let finalX = label.x;
+            let hasCollision = true;
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            while (hasCollision && attempts < maxAttempts) {
+                hasCollision = false;
+
+                // Check for horizontal collision with already placed labels
+                for (const placed of placedLabels) {
+                    const distance = Math.abs(finalX - placed.finalX);
+                    const minDistance = (label.width + placed.width) / 2 + minSpacing;
+
+                    if (distance < minDistance) {
+                        hasCollision = true;
+
+                        // Try to shift label left or right
+                        if (finalX < placed.finalX) {
+                            finalX = placed.finalX - minDistance;
                         } else {
-                            // Band center is to the right, position label at the visible right edge
-                            labelX = visibleEndX - totalLabelWidth / 2 - padding;
-                            strategy = 'right-edge';
+                            finalX = placed.finalX + minDistance;
                         }
-                    } else if (visibleWidth >= 30) {
-                        // Small visible width but enough for a label
-                        labelX = (visibleStartX + visibleEndX) / 2;
-                        strategy = 'constrained-center';
-                    } else {
-                        // Very small visible area - position label outside but connected
-                        const leftSpace = visibleStartX;
-                        const rightSpace = actualWidth - visibleEndX;
-
-                        if (leftSpace >= totalLabelWidth && leftSpace >= rightSpace) {
-                            // Position to the left of the visible area
-                            labelX = Math.max(totalLabelWidth / 2, visibleStartX - totalLabelWidth / 2 - 10);
-                            drawConnectingLine = true;
-                            strategy = 'outside-left';
-                        } else if (rightSpace >= totalLabelWidth) {
-                            // Position to the right of the visible area
-                            labelX = Math.min(actualWidth - totalLabelWidth / 2, visibleEndX + totalLabelWidth / 2 + 10);
-                            drawConnectingLine = true;
-                            strategy = 'outside-right';
-                        } else {
-                            // Force position at the best available space
-                            if (leftSpace > rightSpace) {
-                                labelX = Math.max(totalLabelWidth / 2, leftSpace / 2);
-                                strategy = 'forced-left';
-                            } else {
-                                labelX = Math.min(actualWidth - totalLabelWidth / 2, actualWidth - rightSpace / 2);
-                                strategy = 'forced-right';
-                            }
-                        }
+                        break;
                     }
+                }
 
-                    // Final bounds check to ensure label stays within canvas
-                    labelX = Math.max(totalLabelWidth / 2, Math.min(actualWidth - totalLabelWidth / 2, labelX));
+                // Keep label within canvas bounds
+                const minX = label.width / 2;
+                const maxX = actualWidth - label.width / 2;
 
-                    // Set text properties
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
+                if (finalX < minX || finalX > maxX) {
+                    // Can't fit, skip this label
+                    finalX = null;
+                    break;
+                }
 
-                    // Draw the text with shadow for better readability
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-                    ctx.shadowBlur = 2;
-                    ctx.shadowOffsetX = 1;
-                    ctx.shadowOffsetY = 1;
+                attempts++;
+            }
 
-                    ctx.fillStyle = textColor;
-                    ctx.fillText(name, labelX, labelY);
+            // Draw label if we found a valid position
+            if (finalX !== null) {
+                placedLabels.push({...label, finalX});
 
-                    // Draw connecting line if needed
-                    if (drawConnectingLine) {
-                        // Reset shadow for the line
-                        ctx.shadowColor = 'transparent';
-                        ctx.shadowBlur = 0;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 0;
+                // Set text properties
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
 
-                        // Find the closest point on the visible band to connect to
-                        const connectToX = Math.max(visibleStartX, Math.min(visibleEndX, centerX));
+                // Draw text with shadow for readability
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
 
-                        ctx.strokeStyle = color;
-                        ctx.lineWidth = 1;
-                        ctx.setLineDash([2, 2]);
-                        ctx.beginPath();
-                        ctx.moveTo(connectToX, labelY);
-                        ctx.lineTo(labelX, labelY);
-                        ctx.stroke();
-                        ctx.setLineDash([]); // Reset to solid line
-                    }
+                ctx.fillStyle = label.textColor;
+                ctx.fillText(label.name, finalX, label.y);
 
-                    // Reset shadow
-                    ctx.shadowColor = 'transparent';
-                    ctx.shadowBlur = 0;
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 0;
+                // Reset shadow
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+
+                // Draw connecting line if label was moved significantly
+                const needsConnector = Math.abs(finalX - label.x) > 10;
+                if (needsConnector) {
+                    const connectToX = Math.max(label.visibleStartX, Math.min(label.visibleEndX, label.bandCenterX));
+
+                    ctx.strokeStyle = label.color;
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([2, 2]);
+                    ctx.beginPath();
+                    ctx.moveTo(connectToX, label.y);
+                    ctx.lineTo(finalX, label.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
                 }
             }
         });
-    }, [bands, centerFrequency, sampleRate, actualWidth, height, bandHeight, startFreq, endFreq, frequencyToPixel, createBandSegments]);
+    }, [bands, centerFrequency, sampleRate, actualWidth, height, bandHeight, startFreq, endFreq, frequencyToPixel, abbreviateLabel]);
 
     // Handle click events on the canvas
     const handleCanvasClick = useCallback((e) => {

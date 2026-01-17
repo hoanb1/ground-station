@@ -56,7 +56,8 @@ const SatelliteInfoContent = ({
     satelliteData,
     asDialog = false,
     onClose = null,
-    showDeleteButton = true
+    showDeleteButton = true,
+    deleteButtonSlot = null
 }) => {
     const { t } = useTranslation('satellites');
     const dispatch = useDispatch();
@@ -120,8 +121,8 @@ const SatelliteInfoContent = ({
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            {/* Header - only shown if showDeleteButton is true */}
-            {showDeleteButton && (
+            {/* Delete button - render in slot if provided, otherwise show here */}
+            {showDeleteButton && !deleteButtonSlot && (
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                     <Button
                         variant="contained"
@@ -130,51 +131,55 @@ const SatelliteInfoContent = ({
                     >
                         {t('satellite_info.delete_satellite')}
                     </Button>
-                    <Dialog open={deleteSatelliteConfirmOpen} onClose={() => setDeleteSatelliteConfirmOpen(false)}>
-                        <DialogTitle>{t('satellite_info.delete_confirm_title')}</DialogTitle>
-                        <DialogContent>
-                            {t('satellite_info.delete_confirm_message')}
-                            {satelliteData.transmitters && satelliteData.transmitters.length > 0 && (
-                                <Typography sx={{ mt: 2, color: 'warning.main' }}>
-                                    {t('satellite_info.delete_confirm_transmitters', {
-                                        count: satelliteData.transmitters.length,
-                                        plural: satelliteData.transmitters.length !== 1 ? 'ες' : 'η'
-                                    })}
-                                </Typography>
-                            )}
-                        </DialogContent>
-                        <DialogActions>
-                            <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>
-                                {t('satellite_info.transmitters.cancel')}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                color="error"
-                                onClick={async () => {
-                                    try {
-                                        await dispatch(deleteSatellite({
-                                            socket,
-                                            noradId: satelliteData.norad_id
-                                        })).unwrap();
-                                        if (!asDialog) {
-                                            navigate('/satellites/satellites');
-                                        } else if (onClose) {
-                                            onClose();
-                                        }
-                                        toast.success(t('satellite_info.delete_success'));
-                                    } catch (error) {
-                                        console.error('Failed to delete satellite:', error);
-                                        toast.error(t('satellite_info.delete_failed', { error }));
-                                    }
-                                    setDeleteSatelliteConfirmOpen(false);
-                                }}
-                            >
-                                {t('satellite_info.transmitters.delete')}
-                            </Button>
-                        </DialogActions>
-                    </Dialog>
                 </Box>
             )}
+
+            {/* Delete confirmation dialog */}
+            <Dialog open={deleteSatelliteConfirmOpen} onClose={() => setDeleteSatelliteConfirmOpen(false)}>
+                <DialogTitle>{t('satellite_info.delete_confirm_title')}</DialogTitle>
+                <DialogContent>
+                    {t('satellite_info.delete_confirm_message')}
+                    {satelliteData.transmitters && satelliteData.transmitters.length > 0 && (
+                        <Typography sx={{ mt: 2, color: 'warning.main' }}>
+                            {t('satellite_info.delete_confirm_transmitters', {
+                                count: satelliteData.transmitters.length
+                            })}
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>
+                        {t('satellite_info.transmitters.cancel')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={async () => {
+                            try {
+                                await dispatch(deleteSatellite({
+                                    socket,
+                                    noradId: satelliteData.norad_id
+                                })).unwrap();
+                                if (!asDialog) {
+                                    navigate('/satellites/satellites');
+                                } else if (onClose) {
+                                    onClose();
+                                }
+                                toast.success(t('satellite_info.delete_success'));
+                            } catch (error) {
+                                console.error('Failed to delete satellite:', error);
+                                toast.error(t('satellite_info.delete_failed', { error }));
+                            }
+                            setDeleteSatelliteConfirmOpen(false);
+                        }}
+                    >
+                        {t('satellite_info.transmitters.delete')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Render delete button in custom slot if provided */}
+            {deleteButtonSlot && deleteButtonSlot(() => setDeleteSatelliteConfirmOpen(true))}
 
             {/* Main Content */}
             <Grid
@@ -533,25 +538,29 @@ const SatelliteInfoPage = () => {
                 p: 3,
                 backgroundColor: 'background.default',
             }}>
-            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
-                <Box>
-                    <IconButton onClick={handleBackClick} sx={{mr: 2}}>
-                        <ArrowBackIcon/>
-                    </IconButton>
-                    <Box sx={{
-                        display: 'inline-flex',
-                    }}>
-                        <Typography variant="h6" display="inline">
-                            {clickedSatellite.name} - {t('satellite_info.title')}
-                        </Typography>
-                    </Box>
-                </Box>
-            </Box>
-
             <SatelliteInfoContent
                 satelliteData={clickedSatellite}
                 asDialog={false}
                 showDeleteButton={true}
+                deleteButtonSlot={(onDeleteClick) => (
+                    <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <IconButton onClick={handleBackClick} sx={{mr: 2}}>
+                                <ArrowBackIcon/>
+                            </IconButton>
+                            <Typography variant="h6">
+                                {clickedSatellite.name} - {t('satellite_info.title')}
+                            </Typography>
+                        </Box>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            onClick={onDeleteClick}
+                        >
+                            {t('satellite_info.delete_satellite')}
+                        </Button>
+                    </Box>
+                )}
             />
         </Box>
     );

@@ -87,7 +87,8 @@
     "delete_satellite": "ΔΙΑΓΡΑΦΗ ΔΟΡΥΦΟΡΟΥ",
     "delete_confirm_title": "Διαγραφή Δορυφόρου",
     "delete_confirm_message": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον δορυφόρο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
-    "delete_confirm_transmitters": "Σημείωση: Αυτό θα διαγράψει επίσης {{count}} συσχετισμένο{{plural}} πομποδέκτ{{plural}}.",
+    "delete_confirm_transmitters_one": "Σημείωση: Αυτό θα διαγράψει επίσης {{count}} συσχετισμένο πομποδέκτη.",
+    "delete_confirm_transmitters_other": "Σημείωση: Αυτό θα διαγράψει επίσης {{count}} συσχετισμένους πομποδέκτες.",
     "delete_success": "Ο δορυφόρος διαγράφηκε με επιτυχία",
     "delete_failed": "Αποτυχία διαγραφής δορυφόρου: {{error}}",
     "fields": {
