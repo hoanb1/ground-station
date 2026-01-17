@@ -737,46 +737,133 @@ export default function SDRsPage() {
                         <Dialog
                             open={openDeleteConfirm}
                             onClose={() => dispatch(setOpenDeleteConfirm(false))}
+                            maxWidth="sm"
+                            fullWidth
                             PaperProps={{
                                 sx: {
                                     bgcolor: 'background.paper',
-                                    border: (theme) => `1px solid ${theme.palette.divider}`,
                                     borderRadius: 2,
                                 }
                             }}
                         >
                             <DialogTitle
                                 sx={{
-                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
-                                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                                    fontSize: '1.25rem',
-                                    fontWeight: 'bold',
-                                    py: 2.5,
+                                    bgcolor: 'error.main',
+                                    color: 'error.contrastText',
+                                    fontSize: '1.125rem',
+                                    fontWeight: 600,
+                                    py: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
                                 }}
                             >
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: '50%',
+                                        bgcolor: 'error.contrastText',
+                                        color: 'error.main',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 'bold',
+                                        fontSize: '1rem',
+                                    }}
+                                >
+                                    !
+                                </Box>
                                 {t('sdr.confirm_deletion')}
                             </DialogTitle>
-                            <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3, mt: 2 }}>
-                                {t('sdr.confirm_delete_message')}
+                            <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                                <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
+                                    {t('sdr.confirm_delete_message')}
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                                    {selected.length === 1 ? 'SDR to be deleted:' : `${selected.length} SDRs to be deleted:`}
+                                </Typography>
+                                <Box sx={{
+                                    maxHeight: 300,
+                                    overflowY: 'auto',
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                                    borderRadius: 1,
+                                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                                }}>
+                                    {selected.map((id, index) => {
+                                        const sdr = sdrs.find(s => s.id === id);
+                                        if (!sdr) return null;
+                                        return (
+                                            <Box
+                                                key={id}
+                                                sx={{
+                                                    p: 2,
+                                                    borderBottom: index < selected.length - 1 ? (theme) => `1px solid ${theme.palette.divider}` : 'none',
+                                                }}
+                                            >
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                                    {sdr.name}
+                                                </Typography>
+                                                <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
+                                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                        Type:
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                        {sdr.type}
+                                                    </Typography>
+
+                                                    {sdr.host && sdr.host !== '-' && (
+                                                        <>
+                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                                Host:
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                                {sdr.host}{sdr.port && sdr.port !== '-' ? `:${sdr.port}` : ''}
+                                                            </Typography>
+                                                        </>
+                                                    )}
+
+                                                    {sdr.serial && sdr.serial !== '-' && (
+                                                        <>
+                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                                Serial:
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                                {sdr.serial}
+                                                            </Typography>
+                                                        </>
+                                                    )}
+
+                                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                        Range:
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                        {sdr.frequency_min} - {sdr.frequency_max} MHz
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        );
+                                    })}
+                                </Box>
                             </DialogContent>
                             <DialogActions
                                 sx={{
-                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
                                     borderTop: (theme) => `1px solid ${theme.palette.divider}`,
                                     px: 3,
-                                    py: 2.5,
-                                    gap: 2,
+                                    py: 2,
+                                    gap: 1.5,
                                 }}
                             >
                                 <Button
                                     onClick={() => dispatch(setOpenDeleteConfirm(false))}
                                     variant="outlined"
+                                    color="inherit"
                                     sx={{
-                                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
-                                        '&:hover': {
-                                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
-                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
-                                        },
+                                        minWidth: 100,
+                                        textTransform: 'none',
+                                        fontWeight: 500,
                                     }}
                                 >
                                     {t('sdr.cancel')}
@@ -785,6 +872,11 @@ export default function SDRsPage() {
                                     variant="contained"
                                     onClick={handleDelete}
                                     color="error"
+                                    sx={{
+                                        minWidth: 100,
+                                        textTransform: 'none',
+                                        fontWeight: 600,
+                                    }}
                                 >
                                     {t('sdr.delete')}
                                 </Button>
