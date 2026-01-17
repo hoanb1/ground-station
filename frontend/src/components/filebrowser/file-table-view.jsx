@@ -115,7 +115,17 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
             }
             return <InsertDriveFileIcon sx={{ color: 'success.main', fontSize: 32 }} />;
         } else if (item.type === 'audio') {
-            return <AudiotrackIcon sx={{ color: 'info.main', fontSize: 32 }} />;
+            return <AudiotrackIcon sx={{
+                color: 'info.main',
+                fontSize: 32,
+                ...(item.status === 'recording' && {
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    '@keyframes pulse': {
+                        '0%, 100%': { opacity: 1 },
+                        '50%': { opacity: 0.4 }
+                    }
+                })
+            }} />;
         } else if (item.type === 'transcription') {
             return <SubjectIcon sx={{ color: 'secondary.main', fontSize: 32 }} />;
         } else {
@@ -323,6 +333,17 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                         variant="outlined"
                         color="error"
                         sx={{ height: '20px', fontSize: '0.65rem', fontFamily: 'monospace' }}
+                    />
+                );
+            }
+            if (item.status === 'recording') {
+                chips.push(
+                    <Chip
+                        key="recording"
+                        label="🔴 Recording"
+                        size="small"
+                        color="error"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
                     />
                 );
             }
