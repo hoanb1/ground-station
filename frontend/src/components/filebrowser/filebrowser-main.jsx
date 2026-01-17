@@ -1749,8 +1749,44 @@ export default function FilebrowserMain() {
             <Dialog
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
             >
-                <DialogTitle>
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
                     {itemToDelete?.type === 'recording'
                         ? t('delete_dialog.title_recording', 'Delete Recording')
                         : itemToDelete?.type === 'decoded'
@@ -1761,22 +1797,85 @@ export default function FilebrowserMain() {
                         ? t('delete_dialog.title_transcription', 'Delete Transcription')
                         : t('delete_dialog.title_snapshot', 'Delete Snapshot')}
                 </DialogTitle>
-                <DialogContent>
-                    <Alert severity="warning" sx={{ mb: 2 }}>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
                         {t('delete_dialog.warning', 'This action cannot be undone!')}
-                    </Alert>
-                    <Typography>
-                        {t('delete_dialog.confirm', 'Are you sure you want to delete')} <strong>{itemToDelete?.displayName || itemToDelete?.name}</strong>?
                     </Typography>
-                    {itemToDelete?.type === 'recording' && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            {t('recording.delete_message', 'This will delete the data file, metadata file, and snapshot.')}
+                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                        {t('delete_dialog.confirm', 'Are you sure you want to delete')}:
+                    </Typography>
+                    <Box sx={{
+                        p: 2,
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                            {itemToDelete?.displayName || itemToDelete?.name}
                         </Typography>
-                    )}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                Type:
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                {itemToDelete?.type === 'recording' ? 'Recording' :
+                                 itemToDelete?.type === 'decoded' ? 'Decoded File' :
+                                 itemToDelete?.type === 'audio' ? 'Audio Recording' :
+                                 itemToDelete?.type === 'transcription' ? 'Transcription' : 'Snapshot'}
+                            </Typography>
+
+                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                Size:
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                {formatBytes(itemToDelete?.data_size || itemToDelete?.size || 0)}
+                            </Typography>
+
+                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                Created:
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                {itemToDelete && formatDate(itemToDelete.created)}
+                            </Typography>
+                        </Box>
+                        {itemToDelete?.type === 'recording' && (
+                            <Typography variant="body2" sx={{ mt: 2, fontSize: '0.813rem', color: 'warning.main', fontStyle: 'italic' }}>
+                                {t('recording.delete_message', 'This will delete the data file, metadata file, and snapshot.')}
+                            </Typography>
+                        )}
+                    </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteDialogOpen(false)}>{t('delete_dialog.cancel', 'Cancel')}</Button>
-                    <Button onClick={confirmDelete} color="error" variant="contained">
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => setDeleteDialogOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
+                        {t('delete_dialog.cancel', 'Cancel')}
+                    </Button>
+                    <Button
+                        onClick={confirmDelete}
+                        color="error"
+                        variant="contained"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                        }}
+                    >
                         {t('delete_dialog.delete', 'Delete')}
                     </Button>
                 </DialogActions>
@@ -1786,22 +1885,141 @@ export default function FilebrowserMain() {
             <Dialog
                 open={batchDeleteDialogOpen}
                 onClose={() => setBatchDeleteDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
             >
-                <DialogTitle>{t('batch_delete_dialog.title', 'Delete Multiple Items')}</DialogTitle>
-                <DialogContent>
-                    <Alert severity="warning" sx={{ mb: 2 }}>
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
+                    {t('batch_delete_dialog.title', 'Delete Multiple Items')}
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
                         {t('delete_dialog.warning', 'This action cannot be undone!')}
-                    </Alert>
-                    <Typography>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
                         {t('batch_delete_dialog.confirm', 'Are you sure you want to delete {{count}} item(s)?', { count: selectedItems.length })}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    <Box sx={{
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                        {selectedItems.map((key, index) => {
+                            const item = files.find(f => {
+                                const itemKey = f.type === 'recording' ? f.name : f.filename;
+                                return itemKey === key;
+                            });
+                            if (!item) return null;
+                            return (
+                                <Box
+                                    key={key}
+                                    sx={{
+                                        p: 2,
+                                        borderBottom: index < selectedItems.length - 1 ? (theme) => `1px solid ${theme.palette.divider}` : 'none',
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                        {item.displayName || item.name || item.filename}
+                                    </Typography>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            Type:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {item.type === 'recording' ? 'Recording' :
+                                             item.type === 'decoded' ? 'Decoded File' :
+                                             item.type === 'audio' ? 'Audio Recording' :
+                                             item.type === 'transcription' ? 'Transcription' : 'Snapshot'}
+                                        </Typography>
+
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            Size:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {formatBytes(item.data_size || item.size || 0)}
+                                        </Typography>
+
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            Created:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {formatDate(item.created)}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                    <Typography variant="body2" sx={{ mt: 2, fontSize: '0.813rem', color: 'warning.main', fontStyle: 'italic' }}>
                         {t('batch_delete_dialog.message', 'This will permanently delete all selected recordings and snapshots.')}
                     </Typography>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setBatchDeleteDialogOpen(false)}>{t('delete_dialog.cancel', 'Cancel')}</Button>
-                    <Button onClick={confirmBatchDelete} color="error" variant="contained">
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => setBatchDeleteDialogOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
+                        {t('delete_dialog.cancel', 'Cancel')}
+                    </Button>
+                    <Button
+                        onClick={confirmBatchDelete}
+                        color="error"
+                        variant="contained"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                        }}
+                    >
                         {t('delete_dialog.delete', 'Delete')}
                     </Button>
                 </DialogActions>

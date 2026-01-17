@@ -153,29 +153,108 @@ const GridLayoutStorageCard = () => {
             </Grid>
 
             {/* Clear Layout Confirmation Dialog */}
-            <Dialog open={confirmClearLayoutOpen} onClose={() => setConfirmClearLayoutOpen(false)}>
-                <DialogTitle>Clear All Grid Layouts?</DialogTitle>
-                <DialogContent>
-                    <Alert severity="info" sx={{mb: 2}}>
+            <Dialog
+                open={confirmClearLayoutOpen}
+                onClose={() => setConfirmClearLayoutOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
+                    Clear All Grid Layouts?
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
                         <AlertTitle>Local Browser Cache Only</AlertTitle>
                         This will only clear layout preferences stored in your browser's local storage. No backend data
                         will be affected.
                     </Alert>
-                    <Typography paragraph>
+                    <Typography variant="body1" sx={{ mb: 2, color: 'text.primary' }}>
                         This will reset all widget layouts to their defaults on the following pages:
                     </Typography>
-                    <ul>
-                        <li>Overview page</li>
-                        <li>Target page</li>
-                        <li>Waterfall page</li>
-                    </ul>
-                    <Typography paragraph>
-                        You will need to refresh the page to see the changes. Are you sure you want to continue?
-                    </Typography>
+                    <Box sx={{
+                        p: 2,
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                        <Typography component="div" variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                            <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
+                                <li>Overview page</li>
+                                <li>Target page</li>
+                                <li>Waterfall page</li>
+                            </ul>
+                        </Typography>
+                    </Box>
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                        <AlertTitle>Page Refresh Required</AlertTitle>
+                        You will need to refresh the page to see the changes.
+                    </Alert>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmClearLayoutOpen(false)}>Cancel</Button>
-                    <Button onClick={clearLayoutLocalStorage} color="warning" variant="contained">
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => setConfirmClearLayoutOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={clearLayoutLocalStorage}
+                        color="error"
+                        variant="contained"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                        }}
+                    >
                         Clear Layouts
                     </Button>
                 </DialogActions>

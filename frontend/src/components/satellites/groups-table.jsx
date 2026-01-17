@@ -32,6 +32,7 @@ import {
     Stack,
     DialogContentText,
     Chip,
+    Typography,
 } from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
@@ -291,15 +292,132 @@ const GroupsTable = () => {
                 </Dialog>
             )}
 
-            <Dialog open={deleteConfirmDialogOpen} onClose={() => dispatch(setDeleteConfirmDialogOpen(false))}>
-                <DialogTitle>{t('groups.confirm_deletion')}</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
+            <Dialog
+                open={deleteConfirmDialogOpen}
+                onClose={() => dispatch(setDeleteConfirmDialogOpen(false))}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
+                    {t('groups.confirm_deletion')}
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
                         {t('groups.confirm_delete_message')}
-                    </DialogContentText>
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                        {selected.length === 1 ? 'Group to be deleted:' : `${selected.length} Groups to be deleted:`}
+                    </Typography>
+                    <Box sx={{
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                        {selected.map((id, index) => {
+                            const group = groups.find(g => g.id === id);
+                            if (!group) return null;
+                            const satelliteIds = group.satellite_ids
+                                ? (Array.isArray(group.satellite_ids)
+                                    ? group.satellite_ids
+                                    : group.satellite_ids.split(',').map(id => id.trim()).filter(Boolean))
+                                : [];
+                            return (
+                                <Box
+                                    key={id}
+                                    sx={{
+                                        p: 2,
+                                        borderBottom: index < selected.length - 1 ? (theme) => `1px solid ${theme.palette.divider}` : 'none',
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                        {group.name}
+                                    </Typography>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            Satellites:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {satelliteIds.length > 0 ? `${satelliteIds.length} satellite(s)` : 'No satellites'}
+                                        </Typography>
+
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            Added:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {betterDateTimes(group.added, timezone)}
+                                        </Typography>
+
+                                        {group.updated && (
+                                            <>
+                                                <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                    Updated:
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                    {betterDateTimes(group.updated, timezone)}
+                                                </Typography>
+                                            </>
+                                        )}
+                                    </Box>
+                                </Box>
+                            );
+                        })}
+                    </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => dispatch(setDeleteConfirmDialogOpen(false))} color="error" variant="outlined">
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => dispatch(setDeleteConfirmDialogOpen(false))}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
                         {t('groups.cancel')}
                     </Button>
                     <Button
@@ -308,8 +426,13 @@ const GroupsTable = () => {
                             handleDeleteGroup();
                         }}
                         color="error"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                        }}
                     >
-                        {t('groups.confirm')}
+                        {t('groups.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

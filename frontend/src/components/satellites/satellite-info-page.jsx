@@ -135,20 +135,127 @@ const SatelliteInfoContent = ({
             )}
 
             {/* Delete confirmation dialog */}
-            <Dialog open={deleteSatelliteConfirmOpen} onClose={() => setDeleteSatelliteConfirmOpen(false)}>
-                <DialogTitle>{t('satellite_info.delete_confirm_title')}</DialogTitle>
-                <DialogContent>
-                    {t('satellite_info.delete_confirm_message')}
-                    {satelliteData.transmitters && satelliteData.transmitters.length > 0 && (
-                        <Typography sx={{ mt: 2, color: 'warning.main' }}>
-                            {t('satellite_info.delete_confirm_transmitters', {
-                                count: satelliteData.transmitters.length
-                            })}
+            <Dialog
+                open={deleteSatelliteConfirmOpen}
+                onClose={() => setDeleteSatelliteConfirmOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
+                    {t('satellite_info.delete_confirm_title')}
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
+                        {t('satellite_info.delete_confirm_message')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                        Satellite to be deleted:
+                    </Typography>
+                    <Box sx={{
+                        p: 2,
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                            {satelliteData.name}
                         </Typography>
-                    )}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                NORAD ID:
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                {satelliteData.norad_id}
+                            </Typography>
+
+                            {satelliteData.status && (
+                                <>
+                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                        Status:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                        {betterStatusValue(satelliteData.status)}
+                                    </Typography>
+                                </>
+                            )}
+
+                            {satelliteData.countries && (
+                                <>
+                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                        Countries:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                        {renderCountryFlagsCSV(satelliteData.countries)}
+                                    </Typography>
+                                </>
+                            )}
+
+                            {satelliteData.transmitters && satelliteData.transmitters.length > 0 && (
+                                <>
+                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                        Transmitters:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'warning.main', fontWeight: 500 }}>
+                                        {satelliteData.transmitters.length} transmitter(s) will also be deleted
+                                    </Typography>
+                                </>
+                            )}
+                        </Box>
+                    </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => setDeleteSatelliteConfirmOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
                         {t('satellite_info.transmitters.cancel')}
                     </Button>
                     <Button
@@ -171,6 +278,11 @@ const SatelliteInfoContent = ({
                                 toast.error(t('satellite_info.delete_failed', { error }));
                             }
                             setDeleteSatelliteConfirmOpen(false);
+                        }}
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
                         }}
                     >
                         {t('satellite_info.transmitters.delete')}

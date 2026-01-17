@@ -53,6 +53,10 @@ export const themeConfigs = {
             disconnected: '#f44336',
             polling: '#f57c00',
         },
+        action: {
+            play: '#4caf50',
+            stop: '#f44336',
+        },
     },
 
     light: {
@@ -84,6 +88,10 @@ export const themeConfigs = {
             connecting: '#ff9800',
             disconnected: '#f44336',
             polling: '#f57c00',
+        },
+        action: {
+            play: '#4caf50',
+            stop: '#f44336',
         },
     },
 
@@ -117,6 +125,10 @@ export const themeConfigs = {
             disconnected: '#ff0000',
             polling: '#ff8800',
         },
+        action: {
+            play: '#00ff00',
+            stop: '#ff0000',
+        },
     },
 
     night: {
@@ -149,6 +161,10 @@ export const themeConfigs = {
             disconnected: '#cf6679',
             polling: '#ff9800',
         },
+        action: {
+            play: '#4caf50',
+            stop: '#cf6679',
+        },
     },
 
     'sunset-orange': {
@@ -180,6 +196,10 @@ export const themeConfigs = {
             connecting: '#ffa726',
             disconnected: '#ef5350',
             polling: '#ff9800',
+        },
+        action: {
+            play: '#66bb6a',
+            stop: '#ef5350',
         },
     },
 
@@ -218,6 +238,10 @@ export const themeConfigs = {
             low: '#6fb300',
             medium: '#d4a017',
             high: '#ff4500',
+        },
+        action: {
+            play: '#6fb300',
+            stop: '#8b2500',
         },
     },
 
@@ -261,6 +285,10 @@ export const themeConfigs = {
             active: '#ff00aa',
             tracking: '#ffaa00',
             offline: '#444444',
+        },
+        action: {
+            play: '#00ff41',
+            stop: '#ff0040',
         },
     },
 
@@ -311,6 +339,10 @@ export const themeConfigs = {
             safe: '#88cc00',
             warning: '#ffaa00',
             critical: '#ff3300',
+        },
+        action: {
+            play: '#88cc00',
+            stop: '#ff3300',
         },
     },
 };

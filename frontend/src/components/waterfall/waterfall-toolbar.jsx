@@ -117,20 +117,30 @@ const WaterfallToolbar = ({
                 <IconButton
                     loading={startStreamingLoading}
                     disabled={playButtonDisabled}
-                    color="primary"
                     onClick={startStreaming}
                     title={t('toolbar.start_streaming')}
-                    sx={{ borderRadius: 0 }}
+                    sx={{
+                        borderRadius: 0,
+                        color: 'action.play',
+                        '&:hover': {
+                            backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                        },
+                    }}
                 >
                     <PlayArrowIcon/>
                 </IconButton>
 
                 <IconButton
                     disabled={!isStreaming}
-                    color="error"
                     onClick={stopStreaming}
                     title={t('toolbar.stop_streaming')}
-                    sx={{ borderRadius: 0 }}
+                    sx={{
+                        borderRadius: 0,
+                        color: 'action.stop',
+                        '&:hover': {
+                            backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                        },
+                    }}
                 >
                     <StopIcon/>
                 </IconButton>

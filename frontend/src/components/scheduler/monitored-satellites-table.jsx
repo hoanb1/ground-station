@@ -461,10 +461,51 @@ const MonitoredSatellitesTable = () => {
             </Stack>
 
             {/* Delete Confirmation Dialog */}
-            <Dialog open={openDeleteConfirm} onClose={() => setOpenDeleteConfirm(false)}>
-                <DialogTitle>Confirm Deletion</DialogTitle>
-                <DialogContent>
-                    <Typography gutterBottom>
+            <Dialog
+                open={openDeleteConfirm}
+                onClose={() => setOpenDeleteConfirm(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
+                    Confirm Deletion
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
                         Are you sure you want to delete {selectedIds.length} monitored satellite(s)? This will stop automatic observation generation for these satellites.
                     </Typography>
                     <FormControlLabel
@@ -476,16 +517,84 @@ const MonitoredSatellitesTable = () => {
                             />
                         }
                         label="Also delete all scheduled observations for these satellites"
+                        sx={{ mb: 2 }}
                     />
+                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                        {selectedIds.length === 1 ? 'Monitored satellite to be deleted:' : `${selectedIds.length} Monitored satellites to be deleted:`}
+                    </Typography>
+                    <Box sx={{
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                        {selectedIds.map((id, index) => {
+                            const monSat = monitoredSatellites.find(ms => ms.id === id);
+                            if (!monSat) return null;
+                            return (
+                                <Box
+                                    key={id}
+                                    sx={{
+                                        p: 2,
+                                        borderBottom: index < selectedIds.length - 1 ? (theme) => `1px solid ${theme.palette.divider}` : 'none',
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                        {monSat.satellite?.name || 'Unknown Satellite'}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
+                                            NORAD ID: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.satellite?.norad_id || 'N/A'}</Typography>
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
+                                            Status: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.enabled ? 'Enabled' : 'Disabled'}</Typography>
+                                        </Typography>
+                                        {monSat.min_elevation != null && (
+                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
+                                                Min Elevation: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.min_elevation}°</Typography>
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+                            );
+                        })}
+                    </Box>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => {
-                        setOpenDeleteConfirm(false);
-                        setDeleteObservations(false);
-                    }} color="error" variant="outlined">
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => {
+                            setOpenDeleteConfirm(false);
+                            setDeleteObservations(false);
+                        }}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
                         Cancel
                     </Button>
-                    <Button variant="contained" onClick={handleDelete} color="error">
+                    <Button
+                        variant="contained"
+                        onClick={handleDelete}
+                        color="error"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                        }}
+                    >
                         Delete
                     </Button>
                 </DialogActions>

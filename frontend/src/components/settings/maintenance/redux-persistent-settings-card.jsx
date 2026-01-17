@@ -251,44 +251,123 @@ const ReduxPersistentSettingsCard = () => {
             </Grid>
 
             {/* Clear Redux Persist Confirmation Dialog */}
-            <Dialog open={confirmClearReduxOpen} onClose={() => setConfirmClearReduxOpen(false)}>
-                <DialogTitle>Clear All Redux Persistent State?</DialogTitle>
-                <DialogContent>
-                    <Alert severity="info" sx={{mb: 2}}>
+            <Dialog
+                open={confirmClearReduxOpen}
+                onClose={() => setConfirmClearReduxOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
+                    Clear All Redux Persistent State?
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
                         <AlertTitle>Local Browser Cache Only</AlertTitle>
                         This will only clear application settings stored in your browser's local storage. No backend
                         data (satellites, rigs, rotators, recordings, etc.) will be deleted.
                     </Alert>
-                    <Alert severity="warning" sx={{mb: 2}}>
-                        <AlertTitle>Warning</AlertTitle>
+                    <Typography variant="body1" sx={{ mb: 2, color: 'text.primary' }}>
                         This action will reset ALL local application settings to their defaults!
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                        Settings to be cleared:
+                    </Typography>
+                    <Box sx={{
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                        p: 2,
+                    }}>
+                        <Typography component="div" variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                            <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
+                                <li>Waterfall settings (frequency, gain, sample rate, colormap, FFT)</li>
+                                <li>VFO settings (markers, frequencies, modes, active states)</li>
+                                <li>Cached rig configurations</li>
+                                <li>Cached rotator configurations</li>
+                                <li>Cached TLE sources</li>
+                                <li>Cached satellite and group data</li>
+                                <li>Location settings</li>
+                                <li>User preferences (timezone, theme)</li>
+                                <li>Dashboard settings</li>
+                                <li>Weather settings</li>
+                                <li>Camera settings</li>
+                                <li>SDR settings</li>
+                                <li>File browser settings</li>
+                            </ul>
+                        </Typography>
+                    </Box>
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                        <AlertTitle>Page Refresh Required</AlertTitle>
+                        You will need to refresh the page after clearing. The application will re-fetch all configuration data from the backend.
                     </Alert>
-                    <Typography paragraph>
-                        This will clear all locally cached settings including:
-                    </Typography>
-                    <ul>
-                        <li>Waterfall settings (frequency, gain, sample rate, colormap, FFT)</li>
-                        <li>VFO settings (markers, frequencies, modes, active states)</li>
-                        <li>Cached rig configurations</li>
-                        <li>Cached rotator configurations</li>
-                        <li>Cached TLE sources</li>
-                        <li>Cached satellite and group data</li>
-                        <li>Location settings</li>
-                        <li>User preferences (timezone, theme)</li>
-                        <li>Dashboard settings</li>
-                        <li>Weather settings</li>
-                        <li>Camera settings</li>
-                        <li>SDR settings</li>
-                        <li>File browser settings</li>
-                    </ul>
-                    <Typography paragraph>
-                        <strong>You will need to refresh the page after clearing.</strong> The application will re-fetch
-                        all configuration data from the backend. Are you sure you want to continue?
-                    </Typography>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmClearReduxOpen(false)}>Cancel</Button>
-                    <Button onClick={clearReduxPersistentState} color="error" variant="contained">
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => setConfirmClearReduxOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={clearReduxPersistentState}
+                        color="error"
+                        variant="contained"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                        }}
+                    >
                         Clear All Settings
                     </Button>
                 </DialogActions>
