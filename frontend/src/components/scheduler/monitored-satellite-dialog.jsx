@@ -920,7 +920,7 @@ export default function MonitoredSatelliteDialog() {
                                 </Select>
                             </FormControl>
 
-                            <FormControl fullWidth size="small" required error={!bandwidthValidation.valid}>
+                            <FormControl fullWidth size="small" required error={!bandwidthValidation.valid} disabled={!formData.sdr.id || sdrParametersLoading}>
                                 <InputLabel>Sample Rate</InputLabel>
                                 <Select
                                     value={formData.sdr.sample_rate}
@@ -935,11 +935,17 @@ export default function MonitoredSatelliteDialog() {
                                     }}
                                     label="Sample Rate"
                                 >
-                                    {SAMPLE_RATES.map((rate) => (
-                                        <MenuItem key={rate.value} value={rate.value}>
-                                            {rate.label}
-                                        </MenuItem>
-                                    ))}
+                                    {(sdrParameters[formData.sdr.id]?.sample_rate_values || SAMPLE_RATES.map(r => r.value)).map((rate) => {
+                                        const rateValue = typeof rate === 'number' ? rate : rate.value;
+                                        const rateLabel = rateValue >= 1000000
+                                            ? `${(rateValue / 1000000).toFixed(rateValue % 1000000 === 0 ? 0 : 1)} MHz`
+                                            : `${(rateValue / 1000).toFixed(0)} kHz`;
+                                        return (
+                                            <MenuItem key={rateValue} value={rateValue}>
+                                                {rateLabel}
+                                            </MenuItem>
+                                        );
+                                    })}
                                 </Select>
                                 {!bandwidthValidation.valid && bandwidthValidation.details.length > 0 && (
                                     <Box sx={{ mt: 0.5 }}>
