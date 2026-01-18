@@ -31,6 +31,11 @@ import {
     Box,
     Button,
     CssBaseline,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
     Divider,
     Drawer,
     IconButton,
@@ -58,13 +63,14 @@ import CheckIcon from '@mui/icons-material/Check';
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import { useTranslation } from 'react-i18next';
-import { setIsEditing } from "./dashboard-slice.jsx";
+import { setIsEditing, setShowLocationSetupDialog } from "./dashboard-slice.jsx";
 import { addStreamingVFO, removeStreamingVFO } from "../waterfall/vfo-marker/vfo-slice.jsx";
 import WakeLockStatus from "./wake-lock-icon.jsx";
 import ConnectionStatus from "./connection-popover.jsx";
 import Tooltip from "@mui/material/Tooltip";
 import { AudioProvider, useAudio } from "./audio-provider.jsx";
 import HardwareSettingsPopover from "./hardware-popover.jsx";
+import LocationWarningPopover from "./location-popover.jsx";
 import ConnectionOverlay from "./reconnecting-overlay.jsx";
 import SatelliteInfoPopover from "./target-popover.jsx";
 import VersionInfo from "./version-info.jsx";
@@ -179,6 +185,7 @@ function ToolbarActions() {
     return (
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
             <ConnectionStatus />
+            <LocationWarningPopover />
             <SatelliteSyncPopover />
             <SatelliteInfoPopover />
             <HardwareSettingsPopover />
@@ -437,6 +444,7 @@ export default function Layout() {
         disconnected,
         reConnectAttempt,
         connectionError,
+        showLocationSetupDialog,
     } = useSelector((state) => state.dashboard);
     const {
         hasVersionChanged,
@@ -804,6 +812,69 @@ export default function Layout() {
                 {hasVersionChanged && <VersionUpdateOverlay />}
                 <PerformanceMetricsDialog />
             </Box>
+
+            {/* Location Setup Dialog */}
+            <Dialog
+                open={showLocationSetupDialog}
+                onClose={() => dispatch(setShowLocationSetupDialog(false))}
+                aria-labelledby="location-setup-dialog-title"
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        borderRadius: 2,
+                        boxShadow: 24,
+                    }
+                }}
+            >
+                <DialogTitle
+                    id="location-setup-dialog-title"
+                    sx={{
+                        pb: 1,
+                        fontSize: '1.5rem',
+                        fontWeight: 600,
+                        color: 'warning.main',
+                    }}
+                >
+                    {t('dashboard.location_not_set_title', 'Ground Station Location Required')}
+                </DialogTitle>
+                <DialogContent sx={{ pt: 2 }}>
+                    <DialogContentText sx={{ fontSize: '1rem', lineHeight: 1.6, color: 'text.primary' }}>
+                        {t('dashboard.location_not_set_message', 'Your ground station location has not been configured yet. Location information is required for:')}
+                    </DialogContentText>
+                    <Box component="ul" sx={{ mt: 2, mb: 2, pl: 3, '& li': { mb: 1, color: 'text.primary' } }}>
+                        <li>{t('dashboard.location_required_tracking', 'Real-time satellite tracking and visualization')}</li>
+                        <li>{t('dashboard.location_required_passes', 'Calculating satellite pass predictions')}</li>
+                        <li>{t('dashboard.location_required_scheduling', 'Automated observation scheduling')}</li>
+                    </Box>
+                    <DialogContentText sx={{ fontSize: '0.95rem', color: 'text.secondary' }}>
+                        {t('dashboard.location_prompt', 'Please configure your location to enable full functionality.')}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+                    <Button
+                        onClick={() => dispatch(setShowLocationSetupDialog(false))}
+                        sx={{ mr: 1 }}
+                    >
+                        {t('dashboard.location_dialog_later', 'Remind Me Later')}
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            dispatch(setShowLocationSetupDialog(false));
+                            navigate('/settings/location');
+                        }}
+                        variant="contained"
+                        size="large"
+                        autoFocus
+                        sx={{
+                            px: 3,
+                            fontWeight: 600,
+                        }}
+                    >
+                        {t('dashboard.location_dialog_go_to_settings', 'Set Location Now')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

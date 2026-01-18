@@ -553,7 +553,14 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
             .unwrap()
             .then((data) => {
                 if (data && selectedSatGroupId !== "" && selectedSatGroupId !== "none") {
-                    dispatch(fetchSatellitesByGroupId({socket: socket, satGroupId: selectedSatGroupId}));
+                    // Verify the group ID exists in the loaded groups before fetching satellites
+                    const groupExists = data.some(group => group.id === selectedSatGroupId);
+                    if (groupExists) {
+                        dispatch(fetchSatellitesByGroupId({socket: socket, satGroupId: selectedSatGroupId}));
+                    } else {
+                        console.warn(`Satellite group ${selectedSatGroupId} not found in loaded groups. Clearing selection.`);
+                        dispatch(setSelectedSatGroupId(""));
+                    }
                 }
             })
             .catch((err) => {

@@ -30,6 +30,7 @@ import { fetchSatelliteGroups } from '../components/satellites/groups-slice.jsx'
 import { getTrackingStateFromBackend, getTargetMapSettings } from '../components/target/target-slice.jsx';
 import { getOverviewMapSettings } from '../components/overview/overview-slice.jsx';
 import { fetchScheduledObservations, fetchMonitoredSatellites } from '../components/scheduler/scheduler-slice.jsx';
+import { setShowLocationSetupDialog } from '../components/dashboard/dashboard-slice.jsx';
 
 /**
  * Initialize all application data from backend when connection is established
@@ -38,7 +39,25 @@ import { fetchScheduledObservations, fetchMonitoredSatellites } from '../compone
 export function initializeAppData(socket) {
     store.dispatch(fetchVersionInfo());
     store.dispatch(fetchPreferences({socket}));
-    store.dispatch(fetchLocationForUserId({socket}));
+
+    // Fetch location and check if it's set
+    store.dispatch(fetchLocationForUserId({socket}))
+        .unwrap()
+        .then((location) => {
+            console.log('Location fetched from backend:', location);
+            // Check if location is not set (null or undefined)
+            if (!location) {
+                console.log('Location is not set - showing dialog');
+                // Location is not set - trigger dialog
+                store.dispatch(setShowLocationSetupDialog(true));
+            } else {
+                console.log('Location is set:', location);
+            }
+        })
+        .catch((error) => {
+            console.error('Failed to fetch location:', error);
+        });
+
     store.dispatch(fetchRigs({socket}));
     store.dispatch(fetchRotators({socket}));
     store.dispatch(fetchCameras({socket}));

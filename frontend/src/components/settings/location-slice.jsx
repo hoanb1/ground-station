@@ -38,7 +38,7 @@ export const fetchLocationForUserId = createAsyncThunk(
                             // Return the first location from the list
                             resolve(response.data[0]);
                         } else {
-                            toast.info('No location found in the backend, please set one');
+                            toast.warning('No location found in the backend, please set one');
                             resolve(null); // or resolve({}) if no data
                         }
                     } else {
@@ -125,6 +125,12 @@ const locationSlice = createSlice({
                     state.locationId = action.payload.id;
                     state.altitude = action.payload.alt || 0;
                     state.qth = getMaidenhead(parseFloat(payload.lat), parseFloat(payload.lon));
+                } else {
+                    // If no location from backend, clear persisted location data
+                    state.location = null;
+                    state.locationId = null;
+                    state.altitude = 0;
+                    state.qth = '';
                 }
             })
             .addCase(fetchLocationForUserId.rejected, (state, action) => {

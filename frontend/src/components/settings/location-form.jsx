@@ -131,29 +131,40 @@ const LocationPage = () => {
         altitude,
     } = useSelector((state) => state.location);
 
+    // Use local display location - defaults to 0,0 if Redux location is null
+    // This prevents polluting Redux with temporary display values
+    const displayLocation = location || { lat: 0, lon: 0 };
+
     // On location change, fetch the nearest city
     useEffect(() => {
-        getNearestCity(location.lat, location.lon)
-            .then((city) => {
-                setNearestCity(city);
-            })
-            .catch((error) => {
+        if (location && location.lat != null && location.lon != null) {
+            getNearestCity(location.lat, location.lon)
+                .then((city) => {
+                    setNearestCity(city);
+                })
+                .catch((error) => {
 
-            });
+                });
+        }
     }, [location]);
 
     // Recompute polylines when the location changes. Alternatively, you can handle this in the slice.
     useEffect(() => {
-        const horizontalLine = [
-            [location.lat, -270],
-            [location.lat, 270],
-        ];
-        const verticalLine = [
-            [-90, location.lon],
-            [90, location.lon],
-        ];
-        dispatch(setPolylines([horizontalLine, verticalLine]));
-        dispatch(setQth(getMaidenhead(location.lat, location.lon)));
+        if (location && location.lat != null && location.lon != null) {
+            const horizontalLine = [
+                [location.lat, -270],
+                [location.lat, 270],
+            ];
+            const verticalLine = [
+                [-90, location.lon],
+                [90, location.lon],
+            ];
+            dispatch(setPolylines([horizontalLine, verticalLine]));
+            dispatch(setQth(getMaidenhead(location.lat, location.lon)));
+        } else {
+            // Clear polylines when location is null
+            dispatch(setPolylines([]));
+        }
     }, [location, dispatch]);
 
     const handleMapClick = async (e) => {
@@ -161,10 +172,8 @@ const LocationPage = () => {
         dispatch(setLocation({ lat, lon: lng }));
         dispatch(setQth(getMaidenhead(lat, lng)));
         reCenterMap(lat, lng);
-        const city = await getNearestCity(location.lat, location.lon);
+        const city = await getNearestCity(lat, lng);
         setNearestCity(city);
-
-
     };
 
     const handleWhenReady = (map) => {
@@ -195,7 +204,7 @@ const LocationPage = () => {
     // Call this in your location update logic
     useEffect(() => {
         const updateLocationDetails = async () => {
-            if (location.lat && location.lon) {
+            if (location && location.lat && location.lon) {
                 const city = await getNearestCity(location.lat, location.lon);
                 // Update your state with the city name
                 setNearestCity(city);
@@ -214,7 +223,7 @@ const LocationPage = () => {
     useEffect(() => {
         const intervalUpdate = setInterval(() => {
             // Use ref instead of global variable
-            if (mapRef.current) {
+            if (mapRef.current && location && location.lat != null && location.lon != null) {
                 mapRef.current.invalidateSize();
                 reCenterMap(location.lat, location.lon);
             }
@@ -273,7 +282,7 @@ const LocationPage = () => {
     };
 
     const handleSetLocation = () => {
-        dispatch(storeLocation({socket, location, altitude, locationId}));
+        dispatch(storeLocation({socket, location: displayLocation, altitude, locationId}));
     }
 
     return (
@@ -312,7 +321,7 @@ const LocationPage = () => {
                                             {t('location.latitude')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {location.lat?.toFixed(6)}°
+                                            {displayLocation.lat?.toFixed(6)}°
                                         </Typography>
                                     </Box>
                                     <Box>
@@ -320,7 +329,7 @@ const LocationPage = () => {
                                             {t('location.longitude')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {location.lon?.toFixed(6)}°
+                                            {displayLocation.lon?.toFixed(6)}°
                                         </Typography>
                                     </Box>
                                     <Box>
@@ -372,23 +381,6 @@ const LocationPage = () => {
                                 </Box>
                             </Grid>
 
-                            {/* Station Information Section */}
-                            <Grid size={{ xs: 3 }}>
-                                <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                                    {t('location.station_info')}
-                                </Typography>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    <Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {t('location.station_name')}
-                                        </Typography>
-                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            Ground Station 1
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Grid>
-
                             {/* Action Buttons Section */}
                             <Grid size={{ xs: 2, md: 3 }}>
                                 <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
@@ -416,7 +408,7 @@ const LocationPage = () => {
                                         fullWidth
                                         onClick={() => {
                                             // Placeholder for export functionality
-                                            navigator.clipboard.writeText(`${location.lat?.toFixed(6)}, ${location.lon?.toFixed(6)}`);
+                                            navigator.clipboard.writeText(`${displayLocation.lat?.toFixed(6)}, ${displayLocation.lon?.toFixed(6)}`);
                                             toast.success(t('location.coordinates_copied'));
                                         }}
                                     >
@@ -439,7 +431,7 @@ const LocationPage = () => {
                         }}
                     >
                         <MapContainer
-                            center={[location.lat, location.lon]}
+                            center={[displayLocation.lat, displayLocation.lon]}
                             zoom={2}
                             maxZoom={10}
                             whenReady={handleWhenReady}
@@ -452,10 +444,12 @@ const LocationPage = () => {
                                 attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                             />
                             <MapClickHandler onClick={handleMapClick} />
-                            <Marker position={location} icon={customIcon}>
-                                <Popup>{t('location.your_selected_location')}</Popup>
-                            </Marker>
-                            {polylines.map((polyline, index) => (
+                            {location && location.lat != null && location.lon != null && (
+                                <Marker position={displayLocation} icon={customIcon}>
+                                    <Popup>{t('location.your_selected_location')}</Popup>
+                                </Marker>
+                            )}
+                            {location && location.lat != null && location.lon != null && polylines.map((polyline, index) => (
                                 <Polyline
                                     key={index}
                                     positions={polyline}
@@ -472,17 +466,19 @@ const LocationPage = () => {
                                     weight={1}
                                 />
                             ))}
-                            <Circle
-                                center={location}
-                                radius={400000}
-                                pathOptions={{
-                                    color: 'white',
-                                    fillOpacity: 0,
-                                    weight: 1,
-                                    opacity: 0.8,
-                                    dashArray: "2, 2",
-                                }}
-                            />
+                            {location && location.lat != null && location.lon != null && (
+                                <Circle
+                                    center={displayLocation}
+                                    radius={400000}
+                                    pathOptions={{
+                                        color: 'white',
+                                        fillOpacity: 0,
+                                        weight: 1,
+                                        opacity: 0.8,
+                                        dashArray: "2, 2",
+                                    }}
+                                />
+                            )}
                         </MapContainer>
                     </Box>
                 </Grid>

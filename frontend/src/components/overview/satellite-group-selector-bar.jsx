@@ -17,8 +17,9 @@
  *
  */
 
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useStore } from "react-redux";
 import { Box, FormControl, InputLabel, Select, MenuItem, ListSubheader, Chip, Menu, Typography, Badge, Tooltip, ToggleButton, Button } from "@mui/material";
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -42,18 +43,51 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
     const dispatch = useDispatch();
     const { t } = useTranslation('overview');
     const { socket } = useSocket();
+    const store = useStore();
 
     const selectedSatGroupId = useSelector(state => state.overviewSatTrack.selectedSatGroupId);
     const satGroups = useSelector(state => state.overviewSatTrack.satGroups);
     const passesLoading = useSelector(state => state.overviewSatTrack.passesLoading);
-    const selectedSatellitePositions = useSelector(state => state.overviewSatTrack.selectedSatellitePositions);
     const recentGroups = useSelector(state => state.overviewSatTrack.recentSatelliteGroups);
+
+    // Use ref-based selector to prevent re-renders from position updates
+    const selectedSatellitePositionsRef = useRef(() => {
+        const state = store.getState();
+        return state.overviewSatTrack.selectedSatellitePositions;
+    });
 
     const [visiblePillIds, setVisiblePillIds] = useState(new Set());
     const [anchorEl, setAnchorEl] = useState(null);
+    const [visibleSatStats, setVisibleSatStats] = useState({ total: 0, rising: 0, peak: 0, falling: 0 });
     const containerRef = useRef(null);
     const pillRefs = useRef(new Map());
     const observerRef = useRef(null);
+
+    // Update visible satellite stats periodically (every 3 seconds) to avoid constant re-renders
+    useEffect(() => {
+        const updateStats = () => {
+            const positions = selectedSatellitePositionsRef.current();
+            const visibleSatellites = Object.values(positions || {}).filter(pos => pos.el > 0);
+            const risingCount = visibleSatellites.filter(pos => pos.trend === 'rising').length;
+            const fallingCount = visibleSatellites.filter(pos => pos.trend === 'falling').length;
+            const peakCount = visibleSatellites.filter(pos => pos.trend === 'peak').length;
+
+            setVisibleSatStats({
+                total: visibleSatellites.length,
+                rising: risingCount,
+                peak: peakCount,
+                falling: fallingCount
+            });
+        };
+
+        // Initial update
+        updateStats();
+
+        // Update every 3 seconds
+        const interval = setInterval(updateStats, 3000);
+
+        return () => clearInterval(interval);
+    }, [selectedSatellitePositionsRef]);
 
     // Load recent groups from localStorage on mount and store in Redux
     useEffect(() => {
@@ -98,10 +132,18 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
     }, [dispatch, socket]);
 
     const handleRecentGroupClick = useCallback((groupId) => {
+        // Verify the group exists before fetching
+        const groupExists = satGroups.some(group => group.id === groupId);
+        if (!groupExists) {
+            console.warn(`Satellite group ${groupId} not found. Ignoring selection.`);
+            setAnchorEl(null);
+            return;
+        }
+
         dispatch(setSelectedSatGroupId(groupId));
         dispatch(fetchSatellitesByGroupId({ socket, satGroupId: groupId }));
         setAnchorEl(null); // Close menu if open
-    }, [dispatch, socket]);
+    }, [dispatch, socket, satGroups]);
 
     // Get groups to display as pills (recent or fallback to first few from dropdown)
     // Include satellite count for each group
@@ -182,16 +224,8 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
     const hiddenPills = pillGroups.filter(group => !visiblePillIds.has(group.id));
     const hasHiddenPills = hiddenPills.length > 0;
 
-    // Count satellites with positive elevation (visible satellites)
-    const visibleSatellites = Object.values(selectedSatellitePositions || {}).filter(
-        pos => pos.el > 0
-    );
-    const visibleSatellitesCount = visibleSatellites.length;
-
-    // Count satellites by trend
-    const risingCount = visibleSatellites.filter(pos => pos.trend === 'rising').length;
-    const fallingCount = visibleSatellites.filter(pos => pos.trend === 'falling').length;
-    const peakCount = visibleSatellites.filter(pos => pos.trend === 'peak').length;
+    // Use the state variable for visible satellite counts (updated periodically)
+    const { total: visibleSatellitesCount, rising: risingCount, peak: peakCount, falling: fallingCount } = visibleSatStats;
 
     return (
         <Box
@@ -219,52 +253,56 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
                 <InputLabel htmlFor="grouped-select">{t('satellite_selector.group_label')}</InputLabel>
                 <Select
                     disabled={passesLoading}
-                    value={satGroups.length ? selectedSatGroupId : ""}
+                    value={satGroups.length > 0 ? selectedSatGroupId : "none"}
                     id="grouped-select"
                     label={t('satellite_selector.group_label')}
                     size="small"
                     onChange={handleOnGroupChange}
                 >
-                    <ListSubheader>{t('satellite_selector.user_groups')}</ListSubheader>
-                    {satGroups.filter(group => group.type === "user").length === 0 ? (
-                        <MenuItem disabled value="">
-                            {t('satellite_selector.none_defined')}
+                    {satGroups.length === 0 ? [
+                        <MenuItem value="none" key="none">
+                            [select group]
                         </MenuItem>
-                    ) : (
-                        satGroups.map((group, index) => {
+                    ] : [
+                        <ListSubheader key="user-header">{t('satellite_selector.user_groups')}</ListSubheader>,
+                        ...(satGroups.filter(group => group.type === "user").length === 0 ? [
+                            <MenuItem disabled value="" key="user-none">
+                                {t('satellite_selector.none_defined')}
+                            </MenuItem>
+                        ] : satGroups.map((group, index) => {
                             if (group.type === "user") {
                                 return (
                                     <MenuItem
                                         disabled={group.satellite_ids.length > SATELLITE_NUMBER_LIMIT}
                                         value={group.id}
-                                        key={index}
+                                        key={`user-${index}`}
                                     >
                                         {group.name} ({group.satellite_ids.length})
                                     </MenuItem>
                                 );
                             }
-                        })
-                    )}
-                    <ListSubheader>{t('satellite_selector.tle_groups')}</ListSubheader>
-                    {satGroups.filter(group => group.type === "system").length === 0 ? (
-                        <MenuItem disabled value="">
-                            {t('satellite_selector.none_defined')}
-                        </MenuItem>
-                    ) : (
-                        satGroups.map((group, index) => {
+                            return null;
+                        }).filter(Boolean)),
+                        <ListSubheader key="system-header">{t('satellite_selector.tle_groups')}</ListSubheader>,
+                        ...(satGroups.filter(group => group.type === "system").length === 0 ? [
+                            <MenuItem disabled value="" key="system-none">
+                                {t('satellite_selector.none_defined')}
+                            </MenuItem>
+                        ] : satGroups.map((group, index) => {
                             if (group.type === "system") {
                                 return (
                                     <MenuItem
                                         disabled={group.satellite_ids.length > SATELLITE_NUMBER_LIMIT}
                                         value={group.id}
-                                        key={index}
+                                        key={`system-${index}`}
                                     >
                                         {group.name} ({group.satellite_ids.length})
                                     </MenuItem>
                                 );
                             }
-                        })
-                    )}
+                            return null;
+                        }).filter(Boolean))
+                    ]}
                 </Select>
             </FormControl>
 

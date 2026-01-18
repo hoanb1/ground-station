@@ -29,6 +29,7 @@ const rigsSlice = createSlice({
         reconnecting: false,
         reConnectAttempt: 0,
         connectionError: null,
+        showLocationSetupDialog: false,
     },
     reducers: {
         setIsEditing: (state, action) => {
@@ -49,6 +50,9 @@ const rigsSlice = createSlice({
         setConnectionError: (state, action) => {
             state.connectionError = action.payload;
         },
+        setShowLocationSetupDialog: (state, action) => {
+            state.showLocationSetupDialog = action.payload;
+        },
     },
 });
 
@@ -59,6 +63,7 @@ export const {
     setReconnecting,
     setReConnectAttempt,
     setConnectionError,
+    setShowLocationSetupDialog,
 } = rigsSlice.actions;
 
 export default rigsSlice.reducer;

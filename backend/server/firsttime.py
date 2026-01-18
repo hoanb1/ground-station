@@ -21,7 +21,7 @@ import string
 
 from common.logger import logger
 from db import AsyncSessionLocal
-from db.models import Locations, TLESources
+from db.models import TLESources
 from tlesync.logic import synchronize_satellite_data
 
 
@@ -53,19 +53,10 @@ async def first_time_initialization():
             )
             session.add(amateur_source)
 
-            # Add a default location at coordinates 0,0
-            default_location = Locations(
-                name="Default Location",
-                lat=0.0,
-                lon=0.0,
-                alt=0,
-            )
-            session.add(default_location)
-
             await session.commit()
             logger.info(
                 "Initial data populated successfully with default TLE sources "
-                "(Cubesats and Amateur) and default location at coordinates (0.0, 0.0)."
+                "(Cubesats and Amateur)."
             )
 
         except Exception as e:

@@ -78,6 +78,7 @@ import {
 import { updateMetrics } from '../components/performance/performance-slice.jsx';
 import { setSystemInfo } from '../components/settings/system-info-slice.jsx';
 import { setRuntimeSnapshot } from '../components/settings/sessions-slice.jsx';
+import { fetchSatelliteGroups } from '../components/overview/overview-slice.jsx';
 import { addTranscription } from '../components/waterfall/transcription-slice.jsx';
 import ImageIcon from '@mui/icons-material/Image';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -121,15 +122,15 @@ export const useSocketEventHandlers = (socket) => {
             // Load preferences first to ensure toast position is correct
             await store.dispatch(fetchPreferences({socket}));
 
-            toast.success(
-                <ToastMessage
-                    title={t('notifications.connection.connected_to_backend')}
-                    body={`${socket.io.opts.secure ? 'wss://' : 'ws://'}${socket.io.opts.hostname}:${socket.io.opts.port}${socket.io.opts.path}`}
-                />,
-                {
-                    icon: () => <CableIcon/>,
-                }
-            );
+            // toast.success(
+            //     <ToastMessage
+            //         title={t('notifications.connection.connected_to_backend')}
+            //         body={`${socket.io.opts.secure ? 'wss://' : 'ws://'}${socket.io.opts.hostname}:${socket.io.opts.port}${socket.io.opts.path}`}
+            //     />,
+            //     {
+            //         icon: () => <CableIcon/>,
+            //     }
+            // );
             initializeAppData(socket);
         });
 
@@ -235,6 +236,11 @@ export const useSocketEventHandlers = (socket) => {
                     }
                 );
                 dispatch(setSynchronizing(false));
+
+                // Refresh satellite groups in Redux store so all components get updated
+                if (socket && socket.connected) {
+                    store.dispatch(fetchSatelliteGroups({ socket }));
+                }
             }
         });
 

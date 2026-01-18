@@ -92,7 +92,8 @@ class TrackerManager:
                 return dict(current_state_reply)
 
             # Merge new values with existing state
-            current_value = current_state_reply.get("data", {}).get("value", {})
+            # Handle case where data is None (tracking state doesn't exist yet)
+            current_value = (current_state_reply.get("data") or {}).get("value", {})
             updated_value = {**current_value, **kwargs}
 
             # Update tracking state in database
