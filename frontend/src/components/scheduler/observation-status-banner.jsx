@@ -35,6 +35,7 @@ export default function ObservationStatusBanner() {
     const observations = useSelector((state) => state.scheduler.observations);
     const [countdown, setCountdown] = useState('');
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [isSatelliteVisible, setIsSatelliteVisible] = useState(false);
 
     const { runningObservation, nextObservation } = useMemo(() => {
         const now = new Date();
@@ -79,22 +80,24 @@ export default function ObservationStatusBanner() {
         setConfirmDialogOpen(false);
     };
 
-    // Check if satellite is already visible (for upcoming observations)
-    const isSatelliteVisible = useMemo(() => {
-        if (isRunning || !observation?.pass) return false;
-        const now = new Date();
-        const eventStart = new Date(observation.pass.event_start); // AOS time
-        const taskStart = new Date(observation.task_start || observation.pass.event_start); // Task start time
-        // Satellite is visible if AOS has passed but task hasn't started yet
-        return now >= eventStart && now < taskStart;
-    }, [isRunning, observation]);
 
-    // Live countdown for scheduled observations
+    // Live countdown and satellite visibility check for scheduled observations
     useEffect(() => {
         if (!observation?.pass) return;
 
         const updateCountdown = () => {
             const now = new Date();
+
+            // Check if satellite is visible (for upcoming observations)
+            if (!isRunning) {
+                const eventStart = new Date(observation.pass.event_start); // AOS time
+                const taskStart = new Date(observation.task_start || observation.pass.event_start); // Task start time
+                // Satellite is visible if AOS has passed but task hasn't started yet
+                setIsSatelliteVisible(now >= eventStart && now < taskStart);
+            } else {
+                setIsSatelliteVisible(false);
+            }
+
             if (isRunning) {
                 // Use task_end (root level) if available, fallback to event_end (in pass)
                 const endTime = new Date(observation.task_end || observation.pass.event_end);
