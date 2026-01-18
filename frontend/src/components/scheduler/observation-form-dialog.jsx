@@ -771,17 +771,6 @@ const ObservationFormDialog = () => {
             hasConflict: hasConflict,
         };
 
-        console.log('=== Form Validation Debug ===');
-        console.log('Validation checks:', validationChecks);
-        console.log('formData.pass:', formData.pass);
-        console.log('passes length:', passes.length);
-        if (hasConflict) {
-            console.log('⚠️ CONFLICT DETECTED with:', conflictingObs?.name || conflictingObs?.satellite?.name);
-            console.log('Conflicting observation:', conflictingObs);
-        }
-        console.log('Overall valid:', Object.values(validationChecks).every(v => v === true && validationChecks.hasConflict === false));
-        console.log('============================');
-
         return (
             formData.name.trim() !== '' &&
             formData.satellite.norad_id !== '' &&
