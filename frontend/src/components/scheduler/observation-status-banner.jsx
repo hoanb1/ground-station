@@ -200,7 +200,7 @@ export default function ObservationStatusBanner() {
                 borderLeft: isRunning ? '4px solid #4caf50' : '4px solid #2196f3',
             }}
         >
-            <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+            <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" sx={{ position: 'relative', pr: 10 }}>
                 {/* Status indicator */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {isRunning ? (
@@ -294,22 +294,21 @@ export default function ObservationStatusBanner() {
                     </Typography>
                 )}
 
-                {/* Spacer to push button to the right */}
-                <Box sx={{ flexGrow: 1 }} />
-
-                {/* Cancel/Stop button */}
+                {/* Cancel/Stop button - absolutely positioned to always float right */}
                 {observation && (
-                    <Tooltip title={isRunning ? 'Stop observation' : 'Abort scheduled observation'}>
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            color="error"
-                            startIcon={isRunning ? <Stop /> : <Cancel />}
-                            onClick={handleCancelClick}
-                        >
-                            {isRunning ? 'Stop' : 'Abort'}
-                        </Button>
-                    </Tooltip>
+                    <Box sx={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)' }}>
+                        <Tooltip title={isRunning ? 'Stop observation' : 'Abort scheduled observation'}>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                color="error"
+                                startIcon={isRunning ? <Stop /> : <Cancel />}
+                                onClick={handleCancelClick}
+                            >
+                                {isRunning ? 'Stop' : 'Abort'}
+                            </Button>
+                        </Tooltip>
+                    </Box>
                 )}
             </Stack>
 
