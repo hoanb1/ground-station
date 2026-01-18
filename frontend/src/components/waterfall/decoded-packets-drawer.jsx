@@ -796,22 +796,138 @@ const DecodedPacketsDrawer = () => {
             <Dialog
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
             >
-                <DialogTitle>Delete Decoded File</DialogTitle>
-                <DialogContent>
-                    <Alert severity="warning" sx={{ mb: 2 }}>
-                        This action cannot be undone!
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
+                    Delete Decoded File
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
+                        Are you sure you want to delete this decoded packet file?
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                        File to be deleted:
+                    </Typography>
+                    <Box sx={{
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                {packetToDelete?.filename}
+                            </Typography>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                    Decoder:
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                    {getDecoderDisplay(packetToDelete?.decoderType)}
+                                </Typography>
+
+                                {packetToDelete?.from && packetToDelete?.from !== '-' && (
+                                    <>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            From:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {packetToDelete.from}
+                                        </Typography>
+                                    </>
+                                )}
+
+                                {packetToDelete?.to && packetToDelete?.to !== '-' && (
+                                    <>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            To:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {packetToDelete.to}
+                                        </Typography>
+                                    </>
+                                )}
+
+                                <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                    Size:
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                    {humanizeBytes(packetToDelete?.packetLength)}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Box>
+                    <Alert severity="warning" sx={{ mt: 2 }}>
+                        This action cannot be undone! The file will be permanently deleted from the filesystem.
                     </Alert>
-                    <Typography>
-                        Are you sure you want to delete <strong>{packetToDelete?.filename}</strong>?
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        This will permanently delete the decoded packet file from the filesystem.
-                    </Typography>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={confirmDeletePacket} color="error" variant="contained">
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => setDeleteDialogOpen(false)}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={confirmDeletePacket}
+                        color="error"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                        }}
+                    >
                         Delete
                     </Button>
                 </DialogActions>
