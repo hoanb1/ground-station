@@ -314,6 +314,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
             try:
                 sdr_id = data.get("selectedSDRId", None)
                 waterfall_image = data.get("waterfallImage", None)
+                skip_auto_waterfall = data.get("skipAutoWaterfall", False)
 
                 if waterfall_image:
                     logger.info(
@@ -322,7 +323,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 else:
                     logger.info("stop-recording command received without waterfall image")
 
-                result = stop_recording(sdr_id, client_id, waterfall_image)
+                result = stop_recording(sdr_id, client_id, waterfall_image, skip_auto_waterfall)
                 reply.update(result)
 
                 # Emit file browser state update so all clients see the completed recording

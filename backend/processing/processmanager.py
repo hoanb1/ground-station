@@ -394,18 +394,19 @@ class ProcessManager:
         """
         return self.recorder_manager.start_recorder(sdr_id, session_id, recorder_class, **kwargs)
 
-    def stop_recorder(self, sdr_id, session_id):
+    def stop_recorder(self, sdr_id, session_id, skip_auto_waterfall=False):
         """
         Stop a recorder thread for a specific session.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
+            skip_auto_waterfall: If True, skip automatic waterfall generation
 
         Returns:
             bool: True if stopped successfully, False otherwise
         """
-        return self.recorder_manager.stop_recorder(sdr_id, session_id)
+        return self.recorder_manager.stop_recorder(sdr_id, session_id, skip_auto_waterfall)
 
     def get_active_recorder(self, sdr_id, session_id):
         """

@@ -16,8 +16,10 @@
 
 import asyncio
 import logging
+from pathlib import Path
 
 from processing.consumerbase import ConsumerManager
+from processing.waterfallgenerator import WaterfallConfig, WaterfallGenerator
 
 
 class RecorderManager(ConsumerManager):
@@ -29,6 +31,15 @@ class RecorderManager(ConsumerManager):
         super().__init__(processes)
         self.logger = logging.getLogger("recorder-manager")
         self.sio = sio  # Socket.IO instance for emitting notifications
+
+        # Load waterfall configuration
+        waterfall_config = self._load_waterfall_config()
+        self.waterfall_generator = WaterfallGenerator(waterfall_config)
+
+    def _load_waterfall_config(self) -> WaterfallConfig:
+        """Load waterfall configuration from file or use defaults."""
+        config_path = Path("backend/data/configs/waterfall_config.json")
+        return WaterfallConfig.load_from_file(config_path)
 
     def start_recorder(self, sdr_id, session_id, recorder_class, **kwargs):
         """
@@ -47,13 +58,14 @@ class RecorderManager(ConsumerManager):
             sdr_id, session_id, recorder_class, None, "recorders", "recorder", **kwargs
         )
 
-    def stop_recorder(self, sdr_id, session_id):
+    def stop_recorder(self, sdr_id, session_id, skip_auto_waterfall=False):
         """
         Stop a recorder thread for a specific session.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
+            skip_auto_waterfall: If True, skip automatic waterfall generation
 
         Returns:
             bool: True if stopped successfully, False otherwise
@@ -97,6 +109,9 @@ class RecorderManager(ConsumerManager):
             # Only emit for IQRecorder (not for other recorder types)
             if self.sio and recording_path and recorder_name == "IQRecorder":
                 asyncio.create_task(self._emit_recording_stopped_notification(recording_path))
+                # Generate waterfall spectrograms (unless UI already provided one)
+                if not skip_auto_waterfall:
+                    asyncio.create_task(self._generate_waterfall_async(recording_path))
 
             return True
 
@@ -124,6 +139,44 @@ class RecorderManager(ConsumerManager):
             )
         except Exception as e:
             self.logger.error(f"Error emitting recording-stopped notification: {e}")
+
+    async def _generate_waterfall_async(self, recording_path):
+        """
+        Generate waterfall spectrograms asynchronously after recording stops.
+
+        Args:
+            recording_path: Path to the IQ recording file (without extension)
+        """
+        try:
+            self.logger.info(f"Starting waterfall generation for {recording_path}")
+
+            # Run in thread pool to avoid blocking event loop
+            loop = asyncio.get_event_loop()
+            success = await loop.run_in_executor(
+                None, self.waterfall_generator.generate_from_sigmf, Path(recording_path)
+            )
+
+            if success:
+                self.logger.info(f"Waterfall generation completed for {recording_path}")
+
+                # Emit notification that waterfall is ready
+                if self.sio:
+                    from handlers.entities.filebrowser import emit_file_browser_state
+
+                    await emit_file_browser_state(
+                        self.sio,
+                        {
+                            "action": "waterfall-generated",
+                            "recording_path": recording_path,
+                        },
+                        self.logger,
+                    )
+            else:
+                self.logger.warning(f"Waterfall generation failed for {recording_path}")
+
+        except Exception as e:
+            self.logger.error(f"Error generating waterfall: {e}")
+            self.logger.exception(e)
 
     def _stop_consumer(self, sdr_id, session_id, storage_key, vfo_number=None):
         """

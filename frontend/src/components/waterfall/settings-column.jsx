@@ -534,7 +534,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                 waterfallImage = null;
             }
 
-            dispatch(stopRecording({ socket, selectedSDRId, waterfallImage }))
+            // Always skip auto-waterfall generation since UI provides its own waterfall image
+            dispatch(stopRecording({ socket, selectedSDRId, waterfallImage, skipAutoWaterfall: true }))
                 .unwrap()
                 .then(() => {
                     console.log('Recording stopped successfully');

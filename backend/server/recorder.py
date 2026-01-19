@@ -92,7 +92,12 @@ def start_recording(
         raise Exception("Failed to start IQ recorder")
 
 
-def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] = None) -> dict:
+def stop_recording(
+    sdr_id: str,
+    client_id: str,
+    waterfall_image: Optional[str] = None,
+    skip_auto_waterfall: bool = False,
+) -> dict:
     """
     Stop IQ recording for a given SDR and client.
 
@@ -100,6 +105,7 @@ def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] =
         sdr_id: SDR device identifier
         client_id: Client session identifier
         waterfall_image: Base64 encoded PNG image of the waterfall (optional)
+        skip_auto_waterfall: If True, skip automatic waterfall generation (default: False)
 
     Returns:
         dict: Result with 'success' (bool), 'data' or 'error' fields
@@ -120,7 +126,7 @@ def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] =
     recording_path = recorder.recording_path
 
     # Stop the recorder (this will finalize the SigMF metadata)
-    process_manager.stop_recorder(sdr_id, client_id)
+    process_manager.stop_recorder(sdr_id, client_id, skip_auto_waterfall)
     logger.info(f"Stopped IQ recording for client {client_id}")
 
     # Save the waterfall image if provided
