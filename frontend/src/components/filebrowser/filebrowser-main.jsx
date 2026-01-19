@@ -263,45 +263,20 @@ export default function FilebrowserMain() {
         }
     }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded, filters.showAudio, filters.showTranscriptions]);
 
-    // Listen for file browser state updates to trigger refetch (global handler in useSocketEventHandlers.jsx updates Redux)
+    // Listen for file browser state updates for local-only actions (global handler in useSocketEventHandlers.jsx handles file list refresh)
     useEffect(() => {
         if (!socket) return;
 
         const handleFileBrowserState = (state) => {
-            // Global handler already updated Redux state for 'list-files'
-            // Here we only handle actions that need refetch
+            // Only handle actions that need local component-specific logic
             switch (state.action) {
-                case 'delete-recording':
-                case 'delete-snapshot':
-                case 'delete-decoded':
-                case 'delete-audio':
                 case 'delete-batch':
-                case 'recording-started':
-                case 'recording-stopped':
-                case 'snapshot-saved':
-                case 'decoded-saved':
-                case 'audio-recording-started':
-                case 'audio-recording-stopped':
-                case 'transcription-started':
-                case 'transcription-stopped':
-                    // Refetch files to show updated list using current filter state from Redux
-                    dispatch(fetchFiles({
-                        socket,
-                        showRecordings: filters.showRecordings,
-                        showSnapshots: filters.showSnapshots,
-                        showDecoded: filters.showDecoded,
-                        showAudio: filters.showAudio,
-                        showTranscriptions: filters.showTranscriptions,
-                    }));
-
                     // Show toast for batch delete
-                    if (state.action === 'delete-batch') {
-                        if (state.success_count > 0) {
-                            toast.success(state.message);
-                        }
-                        if (state.failed_count > 0) {
-                            toast.warning(t('toast.batch_delete_partial', 'Some items could not be deleted'));
-                        }
+                    if (state.success_count > 0) {
+                        toast.success(state.message);
+                    }
+                    if (state.failed_count > 0) {
+                        toast.warning(t('toast.batch_delete_partial', 'Some items could not be deleted'));
                     }
                     break;
             }
@@ -312,7 +287,7 @@ export default function FilebrowserMain() {
         return () => {
             socket.off('file_browser_state', handleFileBrowserState);
         };
-    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded, filters.showAudio, t]);
+    }, [socket, t]);
 
     // Legacy: Listen for file change events from backend
     useEffect(() => {

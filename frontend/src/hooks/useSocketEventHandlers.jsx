@@ -287,12 +287,19 @@ export const useSocketEventHandlers = (socket) => {
                 case 'audio-recording-stopped':
                 case 'transcription-started':
                 case 'transcription-stopped':
+                case 'decoded-saved':
+                case 'waterfall-generated':
                     // Set new files indicator when files are created/modified
                     store.dispatch({ type: 'filebrowser/setHasNewFiles', payload: true });
-                    break;
-                case 'decoded-saved':
-                    // Set new files indicator when decoded files are saved
-                    store.dispatch({ type: 'filebrowser/setHasNewFiles', payload: true });
+                    // Trigger global file list refresh
+                    store.dispatch(fetchFiles({
+                        socket,
+                        showRecordings: store.getState().filebrowser.filters.showRecordings,
+                        showSnapshots: store.getState().filebrowser.filters.showSnapshots,
+                        showDecoded: store.getState().filebrowser.filters.showDecoded,
+                        showAudio: store.getState().filebrowser.filters.showAudio,
+                        showTranscriptions: store.getState().filebrowser.filters.showTranscriptions,
+                    }));
                     break;
 
                 default:
