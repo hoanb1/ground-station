@@ -85,6 +85,8 @@ class ProcessManager:
         """
         self.sio = sio
         self.lifecycle_manager.sio = sio
+        self.recorder_manager.sio = sio
+        self.audio_recorder_manager.sio = sio
 
         # Initialize transcription manager if we have both sio and event loop
         if self.event_loop and not self.transcription_manager:

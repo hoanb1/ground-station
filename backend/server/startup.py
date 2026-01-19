@@ -32,6 +32,7 @@ from server.scheduler import run_initial_observation_generation, start_scheduler
 from server.sessionsnapshot import start_session_runtime_emitter
 from server.systeminfo import start_system_info_emitter
 from server.version import get_full_version_info
+from tasks.manager import BackgroundTaskManager
 from tracker.messages import handle_tracker_messages
 from tracker.runner import start_tracker_process
 
@@ -53,6 +54,9 @@ _needs_initial_sync: bool = False
 audio_queue: queue.Queue = queue.Queue(maxsize=10)
 audio_broadcaster: AudioBroadcaster = AudioBroadcaster(audio_queue)
 
+# Background task manager (initialized after sio is created)
+background_task_manager: BackgroundTaskManager = None
+
 
 async def run_discover_soapy():
     """Background task to periodically discover SoapySDR servers."""
@@ -67,6 +71,8 @@ async def run_discover_soapy():
 @asynccontextmanager
 async def lifespan(fastapiapp: FastAPI):
     """Custom lifespan for FastAPI."""
+    global background_task_manager
+
     logger.info("FastAPI lifespan startup...")
     start_tracker_process()
     # In an async context, prefer get_running_loop() (get_event_loop() is deprecated when no loop set)
@@ -74,6 +80,10 @@ async def lifespan(fastapiapp: FastAPI):
 
     # Set socketio instance for observations events
     set_socketio_instance(sio)
+
+    # Initialize background task manager
+    background_task_manager = BackgroundTaskManager(sio)
+    logger.info("BackgroundTaskManager initialized")
 
     # Start audio broadcaster
     audio_broadcaster.start()
@@ -144,6 +154,9 @@ async def lifespan(fastapiapp: FastAPI):
         yield
     finally:
         logger.info("FastAPI lifespan cleanup...")
+        # Shutdown background task manager
+        if background_task_manager:
+            await background_task_manager.shutdown()
         # Cancel background tasks we created
         for task in list(background_tasks):
             task.cancel()

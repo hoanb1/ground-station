@@ -107,15 +107,29 @@ class RecorderManager(ConsumerManager):
 
             # Emit file browser state update to notify UI of new IQ recording
             # Only emit for IQRecorder (not for other recorder types)
-            if self.sio and recording_path and recorder_name == "IQRecorder":
-                asyncio.create_task(self._emit_recording_stopped_notification(recording_path))
-                # Generate waterfall spectrograms (unless UI already provided one)
-                if not skip_auto_waterfall:
-                    self.logger.info(f"Scheduling waterfall generation for {recording_path}")
-                    asyncio.create_task(self._generate_waterfall_async(recording_path))
-                else:
-                    self.logger.info(
-                        f"Skipping auto-waterfall generation for {recording_path} (UI provided)"
+            if recorder_name == "IQRecorder":
+                self.logger.info(
+                    f"IQ recorder stopped - sio={self.sio is not None}, "
+                    f"recording_path={recording_path}, skip_auto_waterfall={skip_auto_waterfall}"
+                )
+
+                if self.sio and recording_path:
+                    asyncio.create_task(self._emit_recording_stopped_notification(recording_path))
+                    # Generate waterfall spectrograms (unless UI already provided one)
+                    if not skip_auto_waterfall:
+                        self.logger.info(f"Scheduling waterfall generation for {recording_path}")
+                        asyncio.create_task(self._generate_waterfall_async(recording_path))
+                    else:
+                        self.logger.info(
+                            f"Skipping auto-waterfall generation for {recording_path} (UI provided)"
+                        )
+                elif not self.sio:
+                    self.logger.warning(
+                        "Socket.IO instance not available, skipping waterfall generation"
+                    )
+                elif not recording_path:
+                    self.logger.warning(
+                        "Recording path not available, skipping waterfall generation"
                     )
 
             return True
@@ -138,7 +152,7 @@ class RecorderManager(ConsumerManager):
                 self.sio,
                 {
                     "action": "recording-stopped",
-                    "recording_path": recording_path,
+                    "recording_path": str(recording_path),
                 },
                 self.logger,
             )
@@ -147,40 +161,53 @@ class RecorderManager(ConsumerManager):
 
     async def _generate_waterfall_async(self, recording_path):
         """
-        Generate waterfall spectrograms asynchronously after recording stops.
+        Generate waterfall spectrograms using the background task system.
 
         Args:
             recording_path: Path to the IQ recording file (without extension)
         """
         try:
-            self.logger.info(f"Starting waterfall generation for {recording_path}")
+            from server.startup import background_task_manager
+            from tasks.registry import get_task
 
-            # Run in thread pool to avoid blocking event loop
-            loop = asyncio.get_event_loop()
-            success = await loop.run_in_executor(
-                None, self.waterfall_generator.generate_from_sigmf, Path(recording_path)
-            )
-
-            if success:
-                self.logger.info(f"Waterfall generation completed for {recording_path}")
-
-                # Emit notification that waterfall is ready
-                if self.sio:
+            if not background_task_manager:
+                self.logger.error(
+                    "Background task manager not available, falling back to legacy method"
+                )
+                # Fallback to old method if task manager not available
+                loop = asyncio.get_event_loop()
+                success = await loop.run_in_executor(
+                    None, self.waterfall_generator.generate_from_sigmf, Path(recording_path)
+                )
+                if success and self.sio:
                     from handlers.entities.filebrowser import emit_file_browser_state
 
                     await emit_file_browser_state(
                         self.sio,
-                        {
-                            "action": "waterfall-generated",
-                            "recording_path": recording_path,
-                        },
+                        {"action": "waterfall-generated", "recording_path": recording_path},
                         self.logger,
                     )
-            else:
-                self.logger.warning(f"Waterfall generation failed for {recording_path}")
+                return
+
+            # Use background task system
+            task_func = get_task("generate_waterfall")
+            recording_name = Path(recording_path).name
+
+            task_id = await background_task_manager.start_task(
+                func=task_func,
+                args=(str(recording_path),),
+                kwargs={},
+                name=f"Waterfall: {recording_name}",
+            )
+
+            self.logger.info(f"Started waterfall generation task {task_id} for {recording_path}")
+
+            # Note: The completion will be handled by the task manager's completion event
+            # which will emit "background_task:completed" to the UI
+            # The UI can then emit the file browser update if needed
 
         except Exception as e:
-            self.logger.error(f"Error generating waterfall: {e}")
+            self.logger.error(f"Error starting waterfall generation task: {e}")
             self.logger.exception(e)
 
     def _stop_consumer(self, sdr_id, session_id, storage_key, vfo_number=None):

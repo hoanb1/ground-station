@@ -64,6 +64,9 @@ def register_socketio_handlers(sio):
 
     @sio.on("connect")
     async def connect(sid, environ, auth=None):
+        from server.startup import background_task_manager
+
+        # Import here to avoid circular dependency
         # Prefer reverse-proxy header if present, else fall back to REMOTE_ADDR
         xff = environ.get("HTTP_X_FORWARDED_FOR") or environ.get("X-Forwarded-For")
         if xff:
@@ -92,6 +95,12 @@ def register_socketio_handlers(sio):
             )
         except Exception:
             logger.debug("Failed to set session metadata in tracker", exc_info=True)
+
+        # Send current running tasks to newly connected client
+        if background_task_manager:
+            running_tasks = background_task_manager.get_running_tasks()
+            if running_tasks:
+                await sio.emit("background_task:list", {"tasks": running_tasks}, to=sid)
 
     @sio.on("disconnect")
     async def disconnect(sid, environ):
@@ -213,6 +222,123 @@ def register_socketio_handlers(sio):
 
         except Exception as e:
             logger.error(f"Error in database backup handler: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    @sio.on("background_task:start")
+    async def handle_background_task_start(sid, data=None):
+        """Handle request to start a background task."""
+        from server.startup import background_task_manager
+        from tasks.registry import get_task
+
+        logger.info(f"Background task start request from: {sid}, data: {data}")
+
+        if not background_task_manager:
+            return {"success": False, "error": "Background task manager not initialized"}
+
+        if not data or "task_name" not in data:
+            return {"success": False, "error": "Missing task_name parameter"}
+
+        try:
+            task_name = data["task_name"]
+            args = tuple(data.get("args", []))  # Convert to tuple
+            kwargs = data.get("kwargs", {})
+            name = data.get("name")
+            task_id = data.get("task_id")
+
+            # Get task function from registry (prevents arbitrary code execution)
+            try:
+                task_func = get_task(task_name)
+            except KeyError:
+                return {"success": False, "error": f"Unknown task: {task_name}"}
+
+            # Start the task
+            task_id = await background_task_manager.start_task(
+                func=task_func, args=args, kwargs=kwargs, name=name, task_id=task_id
+            )
+
+            return {"success": True, "task_id": task_id}
+
+        except Exception as e:
+            logger.error(f"Error starting background task: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    @sio.on("background_task:stop")
+    async def handle_background_task_stop(sid, data=None):
+        """Handle request to stop a background task."""
+        from server.startup import background_task_manager
+
+        logger.info(f"Background task stop request from: {sid}, data: {data}")
+
+        if not background_task_manager:
+            return {"success": False, "error": "Background task manager not initialized"}
+
+        if not data or "task_id" not in data:
+            return {"success": False, "error": "Missing task_id parameter"}
+
+        try:
+            task_id = data["task_id"]
+            timeout = data.get("timeout", 5.0)
+
+            # Stop the task
+            stopped = await background_task_manager.stop_task(task_id, timeout=timeout)
+
+            if stopped:
+                return {"success": True, "task_id": task_id}
+            else:
+                return {"success": False, "error": "Task not found or already finished"}
+
+        except Exception as e:
+            logger.error(f"Error stopping background task: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    @sio.on("background_task:get")
+    async def handle_background_task_get(sid, data=None):
+        """Handle request to get information about a background task."""
+        from server.startup import background_task_manager
+
+        logger.debug(f"Background task get request from: {sid}, data: {data}")
+
+        if not background_task_manager:
+            return {"success": False, "error": "Background task manager not initialized"}
+
+        if not data or "task_id" not in data:
+            return {"success": False, "error": "Missing task_id parameter"}
+
+        try:
+            task_id = data["task_id"]
+            task_info = background_task_manager.get_task(task_id)
+
+            if task_info:
+                return {"success": True, "task": task_info}
+            else:
+                return {"success": False, "error": "Task not found"}
+
+        except Exception as e:
+            logger.error(f"Error getting background task: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    @sio.on("background_task:list")
+    async def handle_background_task_list(sid, data=None):
+        """Handle request to list all background tasks."""
+        from server.startup import background_task_manager
+
+        logger.debug(f"Background task list request from: {sid}")
+
+        if not background_task_manager:
+            return {"success": False, "error": "Background task manager not initialized"}
+
+        try:
+            only_running = data.get("only_running", False) if data else False
+
+            if only_running:
+                tasks = background_task_manager.get_running_tasks()
+            else:
+                tasks = background_task_manager.get_all_tasks()
+
+            return {"success": True, "tasks": tasks}
+
+        except Exception as e:
+            logger.error(f"Error listing background tasks: {str(e)}")
             return {"success": False, "error": str(e)}
 
     return SESSIONS

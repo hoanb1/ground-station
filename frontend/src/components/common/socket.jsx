@@ -428,6 +428,9 @@ export const SocketProvider = ({ children }) => {
         setSocket(newSocket);
         setSocketForMiddleware(newSocket);
 
+        // Expose socket globally for development/testing
+        window.__socket = newSocket;
+
         // Reset stats when socket connects
         newSocket.on('connect', () => {
             const now = Date.now();

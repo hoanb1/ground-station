@@ -86,6 +86,14 @@ import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { observationStatusUpdated, fetchScheduledObservations } from '../components/scheduler/scheduler-slice.jsx';
+import {
+    taskStarted,
+    taskProgress,
+    taskCompleted,
+    taskStopped,
+    taskError,
+    setTaskList,
+} from '../components/tasks/tasks-slice.jsx';
 
 /**
  * Custom hook to handle all socket event listeners
@@ -787,6 +795,63 @@ export const useSocketEventHandlers = (socket) => {
             }
         });
 
+        // Background task event handlers
+        socket.on('background_task:started', (data) => {
+            dispatch(taskStarted(data));
+        });
+
+        socket.on('background_task:progress', (data) => {
+            dispatch(taskProgress(data));
+        });
+
+        socket.on('background_task:completed', (data) => {
+            dispatch(taskCompleted(data));
+            // Show notification for completed task
+            const statusIcon = data.status === 'completed' ? CheckCircleIcon : ErrorOutlineIcon;
+            toast.success(
+                <ToastMessage
+                    title={`Task ${data.status}: ${data.name}`}
+                    body={`Duration: ${Math.floor(data.duration / 1000)}s | Exit code: ${data.return_code}`}
+                />,
+                {
+                    icon: () => <Box component={statusIcon} />,
+                    autoClose: 5000,
+                }
+            );
+        });
+
+        socket.on('background_task:stopped', (data) => {
+            dispatch(taskStopped(data));
+            toast.warning(
+                <ToastMessage
+                    title={`Task stopped: ${data.name}`}
+                    body={`Duration: ${Math.floor(data.duration / 1000)}s`}
+                />,
+                {
+                    icon: () => <CancelIcon />,
+                    autoClose: 5000,
+                }
+            );
+        });
+
+        socket.on('background_task:error', (data) => {
+            dispatch(taskError(data));
+            toast.error(
+                <ToastMessage
+                    title={`Task error: ${data.name}`}
+                    body={data.error}
+                />,
+                {
+                    icon: () => <ErrorOutlineIcon />,
+                    autoClose: 8000,
+                }
+            );
+        });
+
+        socket.on('background_task:list', (data) => {
+            dispatch(setTaskList(data));
+        });
+
         // Cleanup function
         return () => {
             clearInterval(timingInterval);
@@ -812,6 +877,12 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("transcription-data");
             socket.off("transcription-error");
             socket.off("decoder-data");
+            socket.off("background_task:started");
+            socket.off("background_task:progress");
+            socket.off("background_task:completed");
+            socket.off("background_task:stopped");
+            socket.off("background_task:error");
+            socket.off("background_task:list");
             socket.off("observation-status-update");
             socket.off("scheduled-observations-changed");
         };

@@ -77,6 +77,7 @@ import VersionInfo from "./version-info.jsx";
 import VersionUpdateOverlay from "./version-update-overlay.jsx";
 import SatelliteSyncPopover from "./tlesync-popover.jsx";
 import PerformanceMetricsDialog from "../performance/performance-metrics-dialog.jsx";
+import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import {getNavigation} from "../../config/navigation.jsx";
@@ -189,6 +190,7 @@ function ToolbarActions() {
             <SatelliteSyncPopover />
             <SatelliteInfoPopover />
             <HardwareSettingsPopover />
+            <BackgroundTasksPopover />
             <WakeLockStatus />
             <DashboardEditor />
             <TimeDisplay />
