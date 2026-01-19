@@ -23,7 +23,7 @@ import pytest
 
 from crud.groups import add_satellite_group
 from crud.satellites import add_satellite
-from crud.tle_sources import (
+from crud.tlesources import (
     add_satellite_tle_source,
     delete_satellite_tle_sources,
     edit_satellite_tle_source,

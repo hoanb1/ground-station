@@ -230,7 +230,7 @@ class SatelliteTracker:
                     self.stats["db_queries"] += 1
 
                     # Get tracking state from the db (snapshot at start of iteration)
-                    tracking_state_reply = await crud.tracking_state.get_tracking_state(
+                    tracking_state_reply = await crud.trackingstate.get_tracking_state(
                         dbsession, name=TrackingStateNames.SATELLITE_TRACKING
                     )
                     self.stats["db_queries"] += 1
@@ -363,7 +363,7 @@ class SatelliteTracker:
                     try:
                         async with AsyncSessionLocal() as dbsession:
                             final_tracking_state_reply = (
-                                await crud.tracking_state.get_tracking_state(
+                                await crud.trackingstate.get_tracking_state(
                                     dbsession, name=TrackingStateNames.SATELLITE_TRACKING
                                 )
                             )

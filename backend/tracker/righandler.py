@@ -127,7 +127,7 @@ class RigHandler:
         )
 
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.tracking_state.set_tracking_state(
+            new_tracking_state = await crud.trackingstate.set_tracking_state(
                 dbsession,
                 {
                     DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,

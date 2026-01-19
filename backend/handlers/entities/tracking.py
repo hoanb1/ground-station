@@ -44,7 +44,7 @@ async def emit_tracker_data(dbsession, sio, logger):
     try:
         logger.debug("Sending tracker data to clients...")
 
-        tracking_state_reply = await crud.tracking_state.get_tracking_state(
+        tracking_state_reply = await crud.trackingstate.get_tracking_state(
             dbsession, name="satellite-tracking"
         )
 
@@ -84,7 +84,7 @@ async def emit_ui_tracker_values(dbsession, sio, logger):
     try:
         logger.debug("Sending UI tracker value to clients...")
 
-        tracking_state_reply = await crud.tracking_state.get_tracking_state(
+        tracking_state_reply = await crud.trackingstate.get_tracking_state(
             dbsession, name="satellite-tracking"
         )
 
@@ -126,7 +126,7 @@ async def get_tracking_state(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Fetching tracking state, data: {data}")
-        tracking_state = await crud.tracking_state.get_tracking_state(
+        tracking_state = await crud.trackingstate.get_tracking_state(
             dbsession, name="satellite-tracking"
         )
         await emit_tracker_data(dbsession, sio, logger)

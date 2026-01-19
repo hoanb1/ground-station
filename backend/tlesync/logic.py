@@ -98,7 +98,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         celestrak_list: List[Dict[str, Any]] = []
         group_assignments: Dict[str, List[int]] = {}
 
-        tle_sources_reply = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
+        tle_sources_reply = await crud.tlesources.fetch_satellite_tle_source(dbsession)
         sources = tle_sources_reply.get("data", [])
 
         # Use a single ThreadPoolExecutor for all async_fetch calls

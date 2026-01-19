@@ -39,7 +39,7 @@ async def get_tle_sources(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug("Getting TLE sources")
-        tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
+        tle_sources = await crud.tlesources.fetch_satellite_tle_source(dbsession)
         return {"success": tle_sources["success"], "data": tle_sources.get("data", [])}
 
 
@@ -60,9 +60,9 @@ async def submit_tle_source(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding TLE source, data: {data}")
-        submit_reply = await crud.tle_sources.add_satellite_tle_source(dbsession, data)
+        submit_reply = await crud.tlesources.add_satellite_tle_source(dbsession, data)
 
-        tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
+        tle_sources = await crud.tlesources.fetch_satellite_tle_source(dbsession)
         return {
             "success": (tle_sources["success"] & submit_reply["success"]),
             "data": tle_sources.get("data", []),
@@ -89,9 +89,9 @@ async def edit_tle_source(
         if not data or "id" not in data:
             return {"success": False, "data": [], "error": "Missing TLE source ID"}
 
-        edit_reply = await crud.tle_sources.edit_satellite_tle_source(dbsession, data["id"], data)
+        edit_reply = await crud.tlesources.edit_satellite_tle_source(dbsession, data["id"], data)
 
-        tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
+        tle_sources = await crud.tlesources.fetch_satellite_tle_source(dbsession)
         return {
             "success": (tle_sources["success"] & edit_reply["success"]),
             "data": tle_sources.get("data", []),
@@ -115,9 +115,9 @@ async def delete_tle_sources(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Deleting TLE source, data: {data}")
-        delete_reply = await crud.tle_sources.delete_satellite_tle_sources(dbsession, data)
+        delete_reply = await crud.tlesources.delete_satellite_tle_sources(dbsession, data)
 
-        tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
+        tle_sources = await crud.tlesources.fetch_satellite_tle_source(dbsession)
         return {
             "success": (tle_sources["success"] & delete_reply["success"]),
             "data": tle_sources.get("data", []),

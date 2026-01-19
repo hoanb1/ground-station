@@ -134,7 +134,7 @@ class StateManager:
 
         # Update rig state in database
         async with AsyncSessionLocal() as dbsession:
-            tracking_state_reply = await crud.tracking_state.set_tracking_state(
+            tracking_state_reply = await crud.trackingstate.set_tracking_state(
                 dbsession,
                 {
                     DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
@@ -215,7 +215,7 @@ class StateManager:
             logger.warning("Tracking state said rotator must be connected but it is not")
 
             async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.tracking_state.set_tracking_state(
+                new_tracking_state = await crud.trackingstate.set_tracking_state(
                     dbsession,
                     {
                         DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
@@ -242,7 +242,7 @@ class StateManager:
             logger.warning("Tracking state said rig must be connected but it is not")
 
             async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.tracking_state.set_tracking_state(
+                new_tracking_state = await crud.trackingstate.set_tracking_state(
                     dbsession,
                     {
                         DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,

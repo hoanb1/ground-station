@@ -359,7 +359,7 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
             else:
                 satellites = {"success": True, "data": []}
 
-            tracking_state = await crud.tracking_state.get_tracking_state(
+            tracking_state = await crud.trackingstate.get_tracking_state(
                 dbsession, name="satellite-tracking"
             )
             transmitters = await crud.transmitters.fetch_transmitters_for_satellite(

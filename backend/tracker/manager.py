@@ -83,7 +83,7 @@ class TrackerManager:
 
         async with AsyncSessionLocal() as dbsession:
             # Get current tracking state
-            current_state_reply = await crud.tracking_state.get_tracking_state(
+            current_state_reply = await crud.trackingstate.get_tracking_state(
                 dbsession, name=TrackingStateNames.SATELLITE_TRACKING
             )
 
@@ -97,7 +97,7 @@ class TrackerManager:
             updated_value = {**current_value, **kwargs}
 
             # Update tracking state in database
-            result = await crud.tracking_state.set_tracking_state(
+            result = await crud.trackingstate.set_tracking_state(
                 dbsession,
                 {
                     "name": TrackingStateNames.SATELLITE_TRACKING,
@@ -135,7 +135,7 @@ class TrackerManager:
             # }
         """
         async with AsyncSessionLocal() as dbsession:
-            result = await crud.tracking_state.get_tracking_state(
+            result = await crud.trackingstate.get_tracking_state(
                 dbsession, name=TrackingStateNames.SATELLITE_TRACKING
             )
 
