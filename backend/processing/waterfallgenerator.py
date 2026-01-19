@@ -282,8 +282,8 @@ class WaterfallGenerator:
         Returns:
             Tuple of (min_db, max_db)
         """
-        # Sample 10 FFT frames scattered throughout the recording (matches UI logic)
-        num_samples = min(10, len(iq_data) // fft_size)
+        # Sample 50 FFT frames scattered throughout the recording to better capture signal dynamics
+        num_samples = min(50, len(iq_data) // fft_size)
         if num_samples < 3:
             self.logger.warning("Not enough samples for auto-scaling, using default range")
             return self.config.db_range
