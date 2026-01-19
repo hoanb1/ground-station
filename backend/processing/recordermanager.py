@@ -111,7 +111,12 @@ class RecorderManager(ConsumerManager):
                 asyncio.create_task(self._emit_recording_stopped_notification(recording_path))
                 # Generate waterfall spectrograms (unless UI already provided one)
                 if not skip_auto_waterfall:
+                    self.logger.info(f"Scheduling waterfall generation for {recording_path}")
                     asyncio.create_task(self._generate_waterfall_async(recording_path))
+                else:
+                    self.logger.info(
+                        f"Skipping auto-waterfall generation for {recording_path} (UI provided)"
+                    )
 
             return True
 
