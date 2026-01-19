@@ -127,9 +127,14 @@ const BackgroundTasksPopover = () => {
             dispatch(removeTask(taskId));
         });
 
-        // If no running tasks remain after clearing, hide the icon
+        // If no running tasks remain after clearing, close popover and hide the icon
         if (runningTaskIds.length === 0) {
-            setHideIcon(true);
+            // Close popover first
+            setAnchorEl(null);
+            // Then hide icon after popover closes (300ms transition)
+            setTimeout(() => {
+                setHideIcon(true);
+            }, 300);
         }
     }, [completedTaskIds, runningTaskIds, dispatch]);
 
