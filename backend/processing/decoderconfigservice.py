@@ -178,9 +178,9 @@ class DecoderConfigService:
         self, decoder_type: str, sat_params: Dict, satellite: Dict, transmitter: Dict, baudrate: int
     ) -> DecoderConfig:
         """Build configuration from satellite-specific parameters"""
-        # If this is a "smart_default" (satellite not found in gr-satellites),
-        # detect framing from transmitter metadata instead of using default
-        if sat_params.get("source") == "smart_default":
+        # If source is NOT satellite_config, satellite was not found in gr-satellites
+        # In that case, detect framing from transmitter metadata instead of using default
+        if sat_params.get("source") != "satellite_config":
             mode = transmitter.get("mode", "")
             description = transmitter.get("description", "")
             framing = self._detect_framing(mode, description)
@@ -196,7 +196,7 @@ class DecoderConfigService:
             # Use framing and deviation from gr-satellites database
             framing = sat_params.get("framing", "ax25")
             deviation = sat_params.get("deviation")
-            config_source = sat_params.get("source", "satellite_config")
+            config_source = "satellite_config"
 
         config = DecoderConfig(
             baudrate=baudrate,

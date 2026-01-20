@@ -67,10 +67,13 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                     transmitter: transmitter || undefined,
                 },
                 (response) => {
+                    console.log('[DecoderConfigSuggestion] Backend response:', response);
                     setLoading(false);
                     if (response.success) {
+                        console.log('[DecoderConfigSuggestion] Config data:', response.data);
                         setConfig(response.data);
                     } else {
+                        console.error('[DecoderConfigSuggestion] Error:', response.error);
                         setError(response.error || 'Failed to fetch decoder configuration');
                     }
                 }
@@ -184,17 +187,17 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
     const getSourceLabel = () => {
         switch (config.config_source) {
             case 'satellite_config':
-                return 'Configuration sourced from';
+                return 'Configuration from satellite database';
             case 'transmitter_metadata':
-                return 'Configuration detected from transmitter metadata, verified against';
+                return 'Configuration detected from transmitter metadata (mode, description, baud rate)';
             case 'smart_default':
-                return 'Configuration estimated using heuristics from';
+                return 'Configuration estimated using smart defaults based on decoder type and baud rate';
             case 'weather_satellite':
-                return 'Weather satellite pipeline sourced from';
+                return 'Weather satellite pipeline auto-detected from mode and frequency';
             case 'manual':
-                return 'Manual configuration (not from';
+                return 'Manual configuration specified by user';
             default:
-                return 'Configuration sourced from';
+                return 'Configuration source unknown';
         }
     };
 
@@ -312,39 +315,44 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                         opacity: 0.85,
                     }}
                 >
-                    {getSourceLabel()}{' '}
-                    <Link
-                        href="https://github.com/daniestevez/gr-satellites"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        sx={{
-                            color: 'inherit',
-                            fontWeight: 600,
-                            textDecoration: 'underline',
-                            '&:hover': {
-                                opacity: 0.8,
-                            },
-                        }}
-                    >
-                        gr-satellites
-                    </Link>{' '}
-                    by{' '}
-                    <Link
-                        href="https://destevez.net"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        sx={{
-                            color: 'inherit',
-                            fontWeight: 600,
-                            textDecoration: 'underline',
-                            '&:hover': {
-                                opacity: 0.8,
-                            },
-                        }}
-                    >
-                        Daniel Estévez
-                    </Link>
-                    {config.config_source === 'manual' && ')'}
+                    {config.config_source === 'satellite_config' ? (
+                        <>
+                            {getSourceLabel()}{' '}
+                            <Link
+                                href="https://github.com/daniestevez/gr-satellites"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                    color: 'inherit',
+                                    fontWeight: 600,
+                                    textDecoration: 'underline',
+                                    '&:hover': {
+                                        opacity: 0.8,
+                                    },
+                                }}
+                            >
+                                gr-satellites
+                            </Link>{' '}
+                            by{' '}
+                            <Link
+                                href="https://destevez.net"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                    color: 'inherit',
+                                    fontWeight: 600,
+                                    textDecoration: 'underline',
+                                    '&:hover': {
+                                        opacity: 0.8,
+                                    },
+                                }}
+                            >
+                                Daniel Estévez
+                            </Link>
+                        </>
+                    ) : (
+                        getSourceLabel()
+                    )}
                 </Typography>
             </Box>
         </Box>

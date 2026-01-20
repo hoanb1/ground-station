@@ -41,6 +41,10 @@ import {
     ListSubheader,
     CircularProgress,
     Backdrop,
+    Menu,
+    List,
+    ListItemButton,
+    ListItemText,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon, ErrorOutline as ErrorOutlineIcon } from '@mui/icons-material';
 import {
@@ -158,7 +162,7 @@ export default function MonitoredSatelliteDialog() {
     const [formData, setFormData] = useState({
         enabled: true,
         satellite: { norad_id: '', name: '', group_id: '' },
-        sdr: { id: '', name: '', sample_rate: 1000000, gain: '', antenna_port: '', center_frequency: 0 },
+        sdr: { id: '', name: '', sample_rate: 1000000, gain: '', antenna_port: '', center_frequency: 0, auto_center_frequency: true },
         tasks: [],
         rotator: { id: null, tracking_enabled: false },
         rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
@@ -168,6 +172,7 @@ export default function MonitoredSatelliteDialog() {
     });
 
     const [expandedTasks, setExpandedTasks] = useState({});
+    const [transmitterMenuAnchor, setTransmitterMenuAnchor] = useState(null);
 
     const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
     const availableTransmitters = selectedSatellite?.transmitters || [];
@@ -195,8 +200,11 @@ export default function MonitoredSatelliteDialog() {
         }
     }, [socket, formData.sdr.id, dispatch]);
 
-    // Calculate center frequency when tasks or sample rate changes
+    // Calculate center frequency when tasks or sample rate changes (only if auto mode enabled)
     useEffect(() => {
+        // Only auto-calculate if auto mode is enabled
+        if (!formData.sdr.auto_center_frequency) return;
+
         const sampleRate = formData.sdr.sample_rate;
         if (!sampleRate) return;
 
@@ -248,16 +256,23 @@ export default function MonitoredSatelliteDialog() {
             }
             return prev;
         });
-    }, [formData.tasks, formData.sdr.sample_rate, availableTransmitters]);
+    }, [formData.tasks, formData.sdr.sample_rate, formData.sdr.auto_center_frequency, availableTransmitters]);
 
     useEffect(() => {
         if (selectedMonitoredSatellite) {
-            setFormData(selectedMonitoredSatellite);
+            // Ensure auto_center_frequency exists for backward compatibility
+            setFormData({
+                ...selectedMonitoredSatellite,
+                sdr: {
+                    ...selectedMonitoredSatellite.sdr,
+                    auto_center_frequency: selectedMonitoredSatellite.sdr?.auto_center_frequency ?? true,
+                },
+            });
         } else {
             setFormData({
                 enabled: true,
                 satellite: { norad_id: '', name: '', group_id: '' },
-                sdr: { id: '', name: '', sample_rate: 1000000, gain: '', antenna_port: '', center_frequency: 0 },
+                sdr: { id: '', name: '', sample_rate: 1000000, gain: '', antenna_port: '', center_frequency: 0, auto_center_frequency: true },
                 tasks: [],
                 rotator: { id: null, tracking_enabled: false },
                 rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
@@ -964,69 +979,204 @@ export default function MonitoredSatelliteDialog() {
                                 )}
                             </FormControl>
 
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="Center Frequency"
-                                value={formData.sdr.center_frequency ? `${(formData.sdr.center_frequency / 1000000).toFixed(6)} MHz` : 'N/A'}
-                                disabled
-                                helperText="Auto-calculated to avoid DC spike and cover all transmitters"
-                            />
+                            <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                                <InputLabel>Gain</InputLabel>
+                                <Select
+                                    value={
+                                        formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
+                                            ? formData.sdr.gain
+                                            : ''
+                                    }
+                                    onChange={(e) => {
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            sdr: {
+                                                ...prev.sdr,
+                                                gain: e.target.value,
+                                            },
+                                        }));
+                                    }}
+                                    label="Gain"
+                                >
+                                    {sdrParameters[formData.sdr.id]?.gain_values?.map((gain) => (
+                                        <MenuItem key={gain} value={gain}>
+                                            {gain} dB
+                                        </MenuItem>
+                                    )) || []}
+                                </Select>
+                            </FormControl>
+
+                            <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
+                                <InputLabel>Antenna Port</InputLabel>
+                                <Select
+                                    value={
+                                        formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
+                                            ? formData.sdr.antenna_port
+                                            : ''
+                                    }
+                                    onChange={(e) => {
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            sdr: {
+                                                ...prev.sdr,
+                                                antenna_port: e.target.value,
+                                            },
+                                        }));
+                                    }}
+                                    label="Antenna Port"
+                                >
+                                    {sdrParameters[formData.sdr.id]?.antennas?.rx?.map((port) => (
+                                        <MenuItem key={port} value={port}>
+                                            {port}
+                                        </MenuItem>
+                                    )) || []}
+                                </Select>
+                            </FormControl>
+
+                            <Box>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={formData.sdr.auto_center_frequency}
+                                            onChange={(e) =>
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    sdr: {
+                                                        ...prev.sdr,
+                                                        auto_center_frequency: e.target.checked,
+                                                    },
+                                                }))
+                                            }
+                                        />
+                                    }
+                                    label={
+                                        <Box>
+                                            <Typography variant="body2">Auto-calculate Center Frequency</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Automatically optimize frequency to cover all transmitters and avoid DC spike
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+                            </Box>
 
                             <Box sx={{ display: 'flex', gap: 2 }}>
-                                <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
-                                    <InputLabel>Gain</InputLabel>
-                                    <Select
-                                        value={
-                                            formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
-                                                ? formData.sdr.gain
-                                                : ''
-                                        }
-                                        onChange={(e) => {
-                                            setFormData((prev) => ({
-                                                ...prev,
-                                                sdr: {
-                                                    ...prev.sdr,
-                                                    gain: e.target.value,
-                                                },
-                                            }));
-                                        }}
-                                        label="Gain"
-                                    >
-                                        {sdrParameters[formData.sdr.id]?.gain_values?.map((gain) => (
-                                            <MenuItem key={gain} value={gain}>
-                                                {gain} dB
-                                            </MenuItem>
-                                        )) || []}
-                                    </Select>
-                                </FormControl>
+                                <TextField
+                                    size="small"
+                                    label="Center Frequency (Hz)"
+                                    type="number"
+                                    value={formData.sdr.center_frequency || ''}
+                                    onChange={(e) => {
+                                        const value = parseFloat(e.target.value) || 0;
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            sdr: {
+                                                ...prev.sdr,
+                                                center_frequency: value,
+                                            },
+                                        }));
+                                    }}
+                                    disabled={formData.sdr.auto_center_frequency}
+                                    helperText={
+                                        formData.sdr.auto_center_frequency
+                                            ? `Auto-calculated: ${formData.sdr.center_frequency ? (formData.sdr.center_frequency / 1000000).toFixed(6) + ' MHz' : 'N/A'}`
+                                            : 'Enter center frequency in Hz'
+                                    }
+                                    sx={{ flex: '1' }}
+                                />
 
-                                <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
-                                    <InputLabel>Antenna Port</InputLabel>
-                                    <Select
-                                        value={
-                                            formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
-                                                ? formData.sdr.antenna_port
-                                                : ''
-                                        }
-                                        onChange={(e) => {
-                                            setFormData((prev) => ({
-                                                ...prev,
-                                                sdr: {
-                                                    ...prev.sdr,
-                                                    antenna_port: e.target.value,
-                                                },
-                                            }));
+                                <Box sx={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        onClick={(e) => setTransmitterMenuAnchor(e.currentTarget)}
+                                        disabled={formData.sdr.auto_center_frequency || availableTransmitters.length === 0}
+                                        sx={{
+                                            height: '40px',
+                                            textTransform: 'none',
+                                            justifyContent: 'flex-start',
+                                            px: 2,
+                                            borderColor: 'primary.main',
+                                            color: 'primary.main',
+                                            bgcolor: (theme) => theme.palette.mode === 'dark'
+                                                ? 'rgba(144, 202, 249, 0.08)'
+                                                : 'rgba(25, 118, 210, 0.04)',
+                                            '&:hover': {
+                                                bgcolor: (theme) => theme.palette.mode === 'dark'
+                                                    ? 'rgba(144, 202, 249, 0.15)'
+                                                    : 'rgba(25, 118, 210, 0.08)',
+                                            }
                                         }}
-                                        label="Antenna Port"
                                     >
-                                        {sdrParameters[formData.sdr.id]?.antennas?.rx?.map((port) => (
-                                            <MenuItem key={port} value={port}>
-                                                {port}
+                                        ← Select from transmitter list
+                                    </Button>
+                                    <Menu
+                                        anchorEl={transmitterMenuAnchor}
+                                        open={Boolean(transmitterMenuAnchor)}
+                                        onClose={() => setTransmitterMenuAnchor(null)}
+                                        PaperProps={{
+                                            sx: {
+                                                maxHeight: 400,
+                                                minWidth: 300,
+                                            }
+                                        }}
+                                    >
+                                        {availableTransmitters.length === 0 ? (
+                                            <MenuItem disabled>
+                                                No transmitters available
                                             </MenuItem>
-                                        )) || []}
-                                    </Select>
-                                </FormControl>
+                                        ) : (
+                                            groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
+                                                <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                ...transmitters.map((transmitter) => {
+                                                    const freqMHz = transmitter.downlink_low
+                                                        ? (transmitter.downlink_low / 1000000).toFixed(3)
+                                                        : 'N/A';
+                                                    return (
+                                                        <MenuItem
+                                                            key={transmitter.id}
+                                                            onClick={() => {
+                                                                if (transmitter?.downlink_low) {
+                                                                    setFormData((prev) => ({
+                                                                        ...prev,
+                                                                        sdr: {
+                                                                            ...prev.sdr,
+                                                                            center_frequency: transmitter.downlink_low,
+                                                                        },
+                                                                    }));
+                                                                    setTransmitterMenuAnchor(null);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                                                <Box
+                                                                    sx={{
+                                                                        width: 8,
+                                                                        height: 8,
+                                                                        borderRadius: '50%',
+                                                                        backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
+                                                                        boxShadow: transmitter.alive
+                                                                            ? '0 0 6px rgba(76, 175, 80, 0.6)'
+                                                                            : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                                                        flexShrink: 0,
+                                                                    }}
+                                                                />
+                                                                <Box sx={{ flexGrow: 1 }}>
+                                                                    <Typography variant="body2">
+                                                                        {transmitter.description || 'Unknown'}
+                                                                    </Typography>
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {freqMHz} MHz
+                                                                    </Typography>
+                                                                </Box>
+                                                            </Box>
+                                                        </MenuItem>
+                                                    );
+                                                })
+                                            ])
+                                        )}
+                                    </Menu>
+                                </Box>
                             </Box>
                         </Stack>
                     </Box>

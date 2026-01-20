@@ -234,16 +234,17 @@ class SatelliteConfigService:
             params["modulation"] = tx.get("modulation", "FSK")
             params["framing"] = self._map_framing(tx.get("framing", "AX.25"))
 
-            # Use YAML deviation if specified
+            # Use YAML deviation if specified, otherwise estimate from satellite's baudrate
             if "deviation" in tx:
                 params["deviation"] = tx["deviation"]
-                params["source"] = "gr_satellites_yaml"
-                source_label = "gr-satellites"
+                params["source"] = "satellite_config"
+                source_label = "gr-satellites (explicit)"
             else:
-                # Smart default: estimate from modulation and baudrate
+                # Estimate from satellite's modulation and baudrate
+                # Still considered satellite_config since we found the satellite in database
                 params["deviation"] = self._estimate_deviation(tx)
-                params["source"] = "smart_default"
-                source_label = "estimated"
+                params["source"] = "satellite_config"
+                source_label = "gr-satellites (estimated deviation)"
 
             logger.info(
                 f"{sat_name} (NORAD {norad_id}) | "
