@@ -61,15 +61,19 @@ test.describe('Satellite Overview', () => {
   });
 
   test('should display multiple satellites on map', async ({ page }) => {
-    // Wait for map to load
-    await page.waitForTimeout(2000);
+    // Select a satellite group first (e.g., "Amateur")
+    const amateurGroupButton = page.getByRole('button', { name: /amateur/i });
+    await amateurGroupButton.click();
 
-    // Check for satellite markers or paths
-    // Adjust selector based on your implementation
-    const satelliteMarkers = page.locator('.leaflet-marker-icon, .satellite-marker');
+    // Wait for satellites to load
+    await page.waitForTimeout(3000);
 
-    // Should have at least one satellite visible
+    // Check for satellite markers
+    // Leaflet creates markers with the class 'leaflet-marker-icon'
+    const satelliteMarkers = page.locator('.leaflet-marker-icon');
+
+    // Should have at least one satellite visible (excluding home icon)
     const count = await satelliteMarkers.count();
-    expect(count).toBeGreaterThan(0);
+    expect(count).toBeGreaterThan(1); // More than 1 because home icon is also a marker
   });
 });
