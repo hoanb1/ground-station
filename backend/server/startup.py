@@ -19,7 +19,6 @@ from common.logger import logger
 from db import *  # noqa: F401,F403
 from db import engine  # Explicit import for type checker
 from db.migrations import run_migrations
-from hardware.soapysdrbrowser import discover_soapy_servers
 from observations import events as obs_events
 from observations.events import emit_scheduled_observations_changed as _emit
 from observations.events import set_socketio_instance
@@ -58,13 +57,6 @@ audio_broadcaster: AudioBroadcaster = AudioBroadcaster(audio_queue)
 background_task_manager: BackgroundTaskManager = None
 
 
-async def run_discover_soapy():
-    """Background task to periodically discover SoapySDR servers."""
-    while True:
-        await discover_soapy_servers()
-        await asyncio.sleep(120)
-
-
 # test comment
 
 
@@ -99,10 +91,28 @@ async def lifespan(fastapiapp: FastAPI):
     logger.info("ProcessManager initialized with event loop")
 
     asyncio.create_task(handle_tracker_messages(sio))
+
+    # SoapySDR discovery (runs as background tasks)
     if arguments.runonce_soapy_discovery:
-        await discover_soapy_servers()
+        # Single discovery at startup
+        logger.info("Starting one-time SoapySDR discovery at startup...")
+        from tasks.registry import get_task
+
+        discovery_func = get_task("soapysdr_discovery")
+        await background_task_manager.start_task(
+            func=discovery_func, kwargs={"mode": "single"}, name="SoapySDR Discovery (startup)"
+        )
     if arguments.enable_soapy_discovery:
-        asyncio.create_task(run_discover_soapy())
+        # Continuous monitoring mode
+        logger.info("Starting continuous SoapySDR discovery monitoring...")
+        from tasks.registry import get_task
+
+        discovery_func = get_task("soapysdr_discovery")
+        await background_task_manager.start_task(
+            func=discovery_func,
+            kwargs={"mode": "monitor", "refresh_interval": 120},
+            name="SoapySDR Discovery (monitor)",
+        )
 
     # Schedule initial sync if needed
     if _needs_initial_sync:

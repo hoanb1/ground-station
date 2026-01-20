@@ -168,7 +168,6 @@ export default function SDRsPage() {
         }
     }, [dispatch, socket]);
 
-
     const columns = [
         {
             field: 'name', headerName: t('sdr.name'), flex: 1, minWidth: 150

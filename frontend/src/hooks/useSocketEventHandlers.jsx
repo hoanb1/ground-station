@@ -80,6 +80,7 @@ import { setSystemInfo } from '../components/settings/system-info-slice.jsx';
 import { setRuntimeSnapshot } from '../components/settings/sessions-slice.jsx';
 import { fetchSatelliteGroups } from '../components/overview/overview-slice.jsx';
 import { addTranscription } from '../components/waterfall/transcription-slice.jsx';
+import { fetchSoapySDRServers } from '../components/hardware/sdr-slice.jsx';
 import ImageIcon from '@mui/icons-material/Image';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
@@ -129,6 +130,9 @@ export const useSocketEventHandlers = (socket) => {
 
             // Load preferences first to ensure toast position is correct
             await store.dispatch(fetchPreferences({socket}));
+
+            // Request current background tasks list (in case tasks started before we connected)
+            socket.emit('background_task:list', { filter: 'all' });
 
             // toast.success(
             //     <ToastMessage
@@ -813,18 +817,6 @@ export const useSocketEventHandlers = (socket) => {
 
         socket.on('background_task:completed', (data) => {
             dispatch(taskCompleted(data));
-            // Show notification for completed task
-            const statusIcon = data.status === 'completed' ? CheckCircleIcon : ErrorOutlineIcon;
-            toast.success(
-                <ToastMessage
-                    title={`Task ${data.status}: ${data.name}`}
-                    body={`Duration: ${Math.floor(data.duration / 1000)}s | Exit code: ${data.return_code}`}
-                />,
-                {
-                    icon: () => <Box component={statusIcon} />,
-                    autoClose: 5000,
-                }
-            );
         });
 
         socket.on('background_task:stopped', (data) => {
@@ -857,6 +849,60 @@ export const useSocketEventHandlers = (socket) => {
 
         socket.on('background_task:list', (data) => {
             dispatch(setTaskList(data));
+        });
+
+        // SoapySDR discovery events
+        socket.on('soapysdr:discovery_started', (data) => {
+            console.log('SoapySDR discovery started:', data);
+            // Show notification that discovery is running
+            toast.info(
+                <ToastMessage
+                    title="SoapySDR Discovery Started"
+                    body={`Searching for servers (${data.duration}s)...`}
+                />,
+                {
+                    icon: () => <RadioIcon />,
+                    autoClose: 3000,
+                }
+            );
+        });
+
+        socket.on('soapysdr:discovery_complete', (data) => {
+            console.log('SoapySDR discovery completed:', data);
+            // Refresh the server list in Redux store
+            dispatch(fetchSoapySDRServers({ socket }));
+
+            // Show notification
+            toast.success(
+                <ToastMessage
+                    title="SoapySDR Discovery Complete"
+                    body={`Found ${data.server_count} server(s), ${data.active_count} active with SDRs`}
+                />,
+                {
+                    icon: () => <RadioIcon />,
+                    autoClose: 5000,
+                }
+            );
+        });
+
+        socket.on('soapysdr:refresh_complete', (data) => {
+            console.log('SoapySDR refresh completed:', data);
+            // Refresh the server list in Redux store
+            dispatch(fetchSoapySDRServers({ socket }));
+        });
+
+        socket.on('soapysdr:discovery_error', (data) => {
+            console.error('SoapySDR discovery error:', data);
+            toast.error(
+                <ToastMessage
+                    title="SoapySDR Discovery Error"
+                    body={data.error}
+                />,
+                {
+                    icon: () => <ErrorOutlineIcon />,
+                    autoClose: 8000,
+                }
+            );
         });
 
         // Cleanup function
@@ -892,6 +938,10 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("background_task:list");
             socket.off("observation-status-update");
             socket.off("scheduled-observations-changed");
+            socket.off("soapysdr:discovery_started");
+            socket.off("soapysdr:discovery_complete");
+            socket.off("soapysdr:refresh_complete");
+            socket.off("soapysdr:discovery_error");
         };
     }, [socket, dispatch, t]);
 };

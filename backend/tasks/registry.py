@@ -8,6 +8,7 @@ Only registered functions can be started via Socket.IO to prevent arbitrary code
 from typing import Callable, Dict
 
 from tasks.exampletask import example_failing_task, example_long_task, example_quick_task
+from tasks.soapysdrdiscovery import soapysdr_discovery_task, soapysdr_quick_refresh_task
 from tasks.waterfallgenerator import generate_waterfall_task
 
 # Registry of available background tasks
@@ -19,6 +20,8 @@ TASK_REGISTRY: Dict[str, Callable] = {
     "example_failing_task": example_failing_task,
     # Real tasks
     "generate_waterfall": generate_waterfall_task,
+    "soapysdr_discovery": soapysdr_discovery_task,
+    "soapysdr_quick_refresh": soapysdr_quick_refresh_task,
 }
 
 

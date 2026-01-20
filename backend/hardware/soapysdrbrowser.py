@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import socket
+import threading
 from typing import Any, Dict, List, Union
 
 from zeroconf import ServiceStateChange
@@ -28,6 +29,9 @@ logger = logging.getLogger("soapysdr-browser")
 
 # Store discovered servers here with a dictionary for each server containing all properties
 discovered_servers: Dict[str, Dict[str, Union[str, List[Any], int, float]]] = {}
+
+# Thread lock for safe access to discovered_servers from multiple threads/processes
+_servers_lock = threading.Lock()
 
 
 # Custom JSON encoder to handle SoapySDR types
@@ -49,6 +53,32 @@ class SoapySDREncoder(json.JSONEncoder):
 
         # Let the base class handle everything else
         return super().default(obj)
+
+
+# Thread-safe helper functions for accessing discovered_servers
+def update_discovered_servers(servers_data: Dict[str, Dict[str, Any]]) -> None:
+    """
+    Thread-safe update of discovered_servers from background task data.
+
+    Args:
+        servers_data: Dictionary of server data to update
+    """
+    global discovered_servers
+    with _servers_lock:
+        discovered_servers.clear()
+        discovered_servers.update(servers_data)
+        logger.debug(f"Updated discovered_servers with {len(servers_data)} server(s)")
+
+
+def get_discovered_servers() -> Dict[str, Dict[str, Any]]:
+    """
+    Thread-safe retrieval of discovered_servers.
+
+    Returns:
+        Copy of discovered_servers dictionary
+    """
+    with _servers_lock:
+        return discovered_servers.copy()
 
 
 # Helper function to convert SoapySDR objects to serializable dictionaries
@@ -263,7 +293,7 @@ async def discover_soapy_servers():
     )
 
     try:
-        search_duration = 10
+        search_duration = 15
         logger.info(f"Searching for {search_duration} seconds...")
         await asyncio.sleep(search_duration)
 

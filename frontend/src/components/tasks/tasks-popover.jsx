@@ -271,7 +271,7 @@ const BackgroundTasksPopover = () => {
                                 fontFamily: 'monospace',
                             }}
                         >
-                            {task.output_lines.slice(-5).map((line, idx) => (
+                            {task.output_lines.slice(-40).map((line, idx) => (
                                 <Typography key={idx} variant="caption" component="div" sx={{ fontFamily: 'monospace' }}>
                                     {line.output}
                                 </Typography>

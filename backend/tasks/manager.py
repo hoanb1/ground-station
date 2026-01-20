@@ -410,6 +410,49 @@ class BackgroundTaskManager:
             error = message.get("error", "Unknown error")
             task_info.error_lines.append(f"FAILED: {error}")
 
+        elif msg_type == "discovery_update":
+            # SoapySDR discovery data update from background task
+            servers_data = message.get("servers", {})
+            server_count = message.get("server_count", 0)
+            active_count = message.get("active_count", 0)
+            refresh_count = message.get("refresh_count")
+
+            logger.info(
+                f"Received discovery update: {server_count} server(s), {active_count} active"
+            )
+
+            # Update the main process's discovered_servers
+            try:
+                from hardware.soapysdrbrowser import update_discovered_servers
+
+                update_discovered_servers(servers_data)
+                logger.info("Updated main process discovered_servers")
+
+                # Emit Socket.IO event based on whether this is initial discovery or refresh
+                if refresh_count is not None:
+                    # This is a refresh
+                    await self.sio.emit(
+                        "soapysdr:refresh_complete",
+                        {
+                            "refresh_count": refresh_count,
+                            "active_count": active_count,
+                            "servers": servers_data,
+                        },
+                    )
+                else:
+                    # This is initial discovery
+                    await self.sio.emit(
+                        "soapysdr:discovery_complete",
+                        {
+                            "server_count": server_count,
+                            "active_count": active_count,
+                            "servers": servers_data,
+                        },
+                    )
+
+            except Exception as e:
+                logger.error(f"Failed to update discovered servers: {e}")
+
     async def stop_task(self, task_id: str, timeout: float = 5.0) -> bool:
         """
         Stop a running background task.
