@@ -519,23 +519,12 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
 
     const handleStopRecording = async () => {
         try {
-            // Capture waterfall snapshot with overlay using the shared function
-            let waterfallImage = null;
+            // Don't capture snapshot when stopping from UI - let background task generate waterfall
+            // Note: The snapshot hook remains intact for other use cases
+            const waterfallImage = null;
 
-            try {
-                if (window.captureWaterfallSnapshotWithOverlay) {
-                    waterfallImage = await window.captureWaterfallSnapshotWithOverlay(1620);
-                } else if (window.captureWaterfallSnapshot) {
-                    // Fallback to the old method if the new one is not available
-                    waterfallImage = await window.captureWaterfallSnapshot(1620);
-                }
-            } catch (captureError) {
-                console.error('Error capturing waterfall:', captureError);
-                waterfallImage = null;
-            }
-
-            // Always skip auto-waterfall generation since UI provides its own waterfall image
-            dispatch(stopRecording({ socket, selectedSDRId, waterfallImage, skipAutoWaterfall: true }))
+            // Enable auto-waterfall generation so background task creates the waterfall image
+            dispatch(stopRecording({ socket, selectedSDRId, waterfallImage, skipAutoWaterfall: false }))
                 .unwrap()
                 .then(() => {
                     console.log('Recording stopped successfully');
