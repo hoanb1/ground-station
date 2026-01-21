@@ -598,6 +598,8 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
             const noradId = initialSatellite.norad_id;
             const storedGroupId = initialSatellite.group_id;
 
+            console.log('[SatelliteSelector] Initializing with satellite:', { noradId, storedGroupId, hasTransmitters: !!initialSatellite.transmitters?.length });
+
             // Immediately set the satellite ID to trigger pass fetching
             dispatch(setSatelliteId(noradId));
             dispatch(setSelectedFromSearch(false));
@@ -609,10 +611,13 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
 
             // If we have a stored group_id, load that group directly
             if (storedGroupId) {
+                console.log('[SatelliteSelector] Fetching satellites for stored group_id:', storedGroupId);
                 socket.emit('data_request', 'get-satellites-for-group-id', storedGroupId, (response) => {
+                    console.log('[SatelliteSelector] Received response for group_id:', storedGroupId, { success: response.success, dataLength: response.data?.length });
                     if (response.success) {
                         const found = response.data.find(sat => sat.norad_id === noradId || sat.norad_id == noradId || String(sat.norad_id) === String(noradId));
                         if (found) {
+                            console.log('[SatelliteSelector] Found satellite in group, transmitters count:', found.transmitters?.length || 0);
                             dispatch(setGroupId(storedGroupId));
                             dispatch(setGroupOfSats(response.data));
 
@@ -621,14 +626,17 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
                                 onSatelliteSelect(found);
                             }
                         } else {
+                            console.log('[SatelliteSelector] Satellite not found in stored group, searching all groups');
                             searchAllGroups();
                         }
                     } else {
+                        console.error('[SatelliteSelector] Failed to fetch satellites for group_id:', storedGroupId, response);
                         searchAllGroups();
                     }
                 });
             } else {
                 // No stored group_id, search through all groups
+                console.log('[SatelliteSelector] No stored group_id, searching all groups');
                 searchAllGroups();
             }
 
@@ -636,15 +644,19 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
                 let foundGroup = false;
                 let checkedGroups = 0;
 
+                console.log('[SatelliteSelector] Searching through', satGroups.length, 'groups for noradId:', noradId);
+
                 satGroups.forEach((group) => {
                     if (foundGroup) return;
 
                     socket.emit('data_request', 'get-satellites-for-group-id', group.id, (response) => {
                         checkedGroups++;
+                        console.log('[SatelliteSelector] Checked group', group.id, `(${checkedGroups}/${satGroups.length})`, { success: response.success, foundInThisGroup: !!response.data?.find(sat => sat.norad_id === noradId) });
                         if (response.success && !foundGroup) {
                             const found = response.data.find(sat => sat.norad_id === noradId);
                             if (found) {
                                 foundGroup = true;
+                                console.log('[SatelliteSelector] Found satellite in group:', group.id, 'transmitters:', found.transmitters?.length || 0);
                                 dispatch(setGroupId(group.id));
                                 dispatch(setGroupOfSats(response.data));
 
@@ -653,6 +665,11 @@ export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSel
                                     onSatelliteSelect(found);
                                 }
                             }
+                        }
+
+                        // Log if all groups checked and nothing found
+                        if (checkedGroups === satGroups.length && !foundGroup) {
+                            console.error('[SatelliteSelector] Satellite not found in any group after checking all', satGroups.length, 'groups');
                         }
                     });
                 });
