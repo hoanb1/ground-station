@@ -195,20 +195,6 @@ const ObservationFormDialog = () => {
     // Check if we're waiting for transmitters to load
     const isLoadingTransmitters = selectedObservation && selectedSatelliteId && availableTransmitters.length === 0;
 
-    // Debug logging for transmitter loading state
-    React.useEffect(() => {
-        if (selectedObservation) {
-            console.log('[ObservationFormDialog] Loading state:', {
-                isLoadingTransmitters,
-                hasSelectedObservation: !!selectedObservation,
-                selectedSatelliteId,
-                groupOfSatsLength: groupOfSats.length,
-                selectedSatellite: selectedSatellite ? { norad_id: selectedSatellite.norad_id, name: selectedSatellite.name, transmittersCount: selectedSatellite.transmitters?.length || 0 } : null,
-                availableTransmittersLength: availableTransmitters.length,
-            });
-        }
-    }, [isLoadingTransmitters, selectedObservation, selectedSatelliteId, groupOfSats.length, availableTransmitters.length, selectedSatellite]);
-
     const [satelliteSearch, setSatelliteSearch] = useState('');
     const [satelliteOptions, setSatelliteOptions] = useState([]);
     const [passOptions, setPassOptions] = useState([]);
@@ -337,12 +323,6 @@ const ObservationFormDialog = () => {
     // Clear satellite selection state when opening dialog
     useEffect(() => {
         if (open) {
-            console.log('[ObservationFormDialog] Dialog opened, clearing satellite selection state', {
-                hasSelectedObservation: !!selectedObservation,
-                observationId: selectedObservation?.id,
-                satelliteName: selectedObservation?.satellite?.name,
-                satelliteNoradId: selectedObservation?.satellite?.norad_id,
-            });
             // Always clear satellite selection state to allow fresh initialization
             // The SatelliteSelector will reinitialize from initialSatellite prop
             dispatch(setSatelliteId(''));
