@@ -62,17 +62,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create required directories for Avahi and D-Bus
 RUN mkdir -p /var/run/avahi-daemon /var/run/dbus
 
-# Configure Avahi for mDNS discovery in Docker (bridge network mode)
-RUN sed -i 's/#enable-reflector=no/enable-reflector=yes/' /etc/avahi/avahi-daemon.conf && \
-    sed -i 's/#reflect-ipv=no/reflect-ipv=yes/' /etc/avahi/avahi-daemon.conf && \
-    sed -i 's/use-ipv4=yes/use-ipv4=yes/' /etc/avahi/avahi-daemon.conf && \
-    sed -i 's/use-ipv6=yes/use-ipv6=no/' /etc/avahi/avahi-daemon.conf && \
-    sed -i 's/#disallow-other-stacks=no/disallow-other-stacks=no/' /etc/avahi/avahi-daemon.conf && \
-    sed -i 's/#deny-interfaces=/deny-interfaces=/' /etc/avahi/avahi-daemon.conf && \
-    echo "enable-dbus=yes" >> /etc/avahi/avahi-daemon.conf && \
-    echo "publish-workstation=yes" >> /etc/avahi/avahi-daemon.conf && \
-    echo "publish-addresses=yes" >> /etc/avahi/avahi-daemon.conf
-
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 # Copy backend requirements
@@ -421,17 +410,10 @@ ENV GR_BUFFER_TYPE=vmcirc_mmap_tmpfile
 # Expose the port the app runs on
 EXPOSE 7000
 
-# Note: For mDNS (Avahi) to work in Docker bridge mode, you MUST:
-# 1. Enable multicast routing on the host:
-#    sudo ip link set docker0 multicast on
-#    sudo route add -net 224.0.0.0 netmask 240.0.0.0 dev docker0
-# 2. Run container with network capabilities:
-#    docker run --cap-add=NET_ADMIN --cap-add=NET_RAW \
-#               -p 7000:7000 -p 5353:5353/udp ...
-# 3. OR use docker-compose with network_mode: host (simplest option)
-#
-# Alternative: Use host network mode for guaranteed mDNS discovery:
-#    docker run --network host ...
+# Configure Avahi for Docker mDNS (done late to preserve build cache)
+RUN sed -i 's/#enable-reflector=no/enable-reflector=yes/' /etc/avahi/avahi-daemon.conf && \
+    sed -i 's/#reflect-ipv=no/reflect-ipv=yes/' /etc/avahi/avahi-daemon.conf && \
+    sed -i 's/use-ipv6=yes/use-ipv6=no/' /etc/avahi/avahi-daemon.conf
 
 WORKDIR backend/
 

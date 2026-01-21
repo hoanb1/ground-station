@@ -70,6 +70,8 @@ jobs:
             **Git Commit:** ${{ steps.version.outputs.git_sha }}
             **Build Date:** ${{ steps.version.outputs.build_date }}
 
+            📖 **[View Project Documentation](https://github.com/sgoudelis/ground-station)**
+
             ### Commits in this release:
             ${{ steps.commits.outputs.commit_list }}
 
@@ -96,12 +98,46 @@ jobs:
 
             ### Run the container:
 
-            **For AMD64 systems:**
+            **Option 1: With SoapySDR Remote Server Discovery (Recommended)**
+
+            Uses host networking to enable mDNS discovery of SoapySDR remote servers:
+
             ```bash
+            # AMD64
             docker run -d \
               --platform linux/amd64 \
-              --shm-size=512m \
-              --ipc=host \
+              --network host \
+              --name ground-station \
+              --restart unless-stopped \
+              --device=/dev/bus/usb \
+              --privileged \
+              -v /path/to/data:/app/backend/data \
+              -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+              -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+
+            # ARM64 (Raspberry Pi, etc)
+            docker run -d \
+              --platform linux/arm64 \
+              --network host \
+              --name ground-station \
+              --restart unless-stopped \
+              -v /dev:/dev \
+              --privileged \
+              -v /path/to/data:/app/backend/data \
+              -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+              -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
+            ```
+
+            **Option 2: Standard Bridge Mode (No SoapySDR Remote Discovery)**
+
+            Uses standard bridge networking with port mapping:
+
+            ```bash
+            # AMD64
+            docker run -d \
+              --platform linux/amd64 \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
@@ -111,14 +147,10 @@ jobs:
               -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
               -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
-            ```
 
-            **For ARM64 systems (Raspberry Pi, etc):**
-            ```bash
+            # ARM64 (Raspberry Pi, etc)
             docker run -d \
               --platform linux/arm64 \
-              --shm-size=512m \
-              --ipc=host \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
@@ -130,7 +162,9 @@ jobs:
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
             ```
 
-            > **Note:** Replace `/path/to/data` with your desired data directory path. The `--platform` flag ensures the correct architecture is used. For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible.
+            > **Note:** Replace `/path/to/data` with your desired data directory path. Option 1 (host networking) is required for automatic mDNS discovery of SoapySDR remote servers. Option 2 works for local SDRs and all other features. For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible.
+
+            After starting the container, access the web interface at `http://<YOUR_HOST>:7000`
 
             ### Upgrading an existing container:
             ```bash

@@ -625,10 +625,13 @@ The repository includes a multi-stage `Dockerfile` that builds the React fronten
 
 ```bash
 docker build -t ground-station .
-docker run --rm -p 7000:7000 ground-station
-```
 
-Pass `--device` options (for example `--device /dev/bus/usb`) or `--network host` when hardware access or multicast discovery is required.
+# Option 1: Standard bridge mode (works for local SDRs)
+docker run --rm -p 7000:7000 --device /dev/bus/usb ground-station
+
+# Option 2: Host networking (required for SoapySDR remote server discovery via mDNS)
+docker run --rm --network host --device /dev/bus/usb ground-station
+```
 
 ### Using Pre-built Docker Images
 
@@ -639,20 +642,43 @@ Pre-built multi-architecture Docker images are available for each release. For d
 ```bash
 # Pull the latest image
 docker pull ghcr.io/sgoudelis/ground-station:latest
-
-# Run the container with persistent data storage
-docker run --rm -p 7000:7000 -v ground-station-data:/app/backend/data ghcr.io/sgoudelis/ground-station:latest
-
-# For hardware access (USB devices, SDRs, etc.)
-docker run --rm -p 7000:7000 -v ground-station-data:/app/backend/data --device /dev/bus/usb ghcr.io/sgoudelis/ground-station:latest
-
-# For network discovery and multicast (recommended for rotator/rig control)
-docker run --rm --network host -v ground-station-data:/app/backend/data ghcr.io/sgoudelis/ground-station:latest
 ```
 
-**Important:** The `-v ground-station-data:/app/backend/data` volume mount persists satellite database, TLE data, and configuration between container restarts.
+**Option 1: With SoapySDR Remote Server Discovery (Recommended)**
 
-Access the web interface at `http://localhost:7000`.
+Uses host networking to enable automatic mDNS discovery of SoapySDR remote servers:
+
+```bash
+docker run -d \
+  --network host \
+  --name ground-station \
+  --restart unless-stopped \
+  --device=/dev/bus/usb \
+  --privileged \
+  -v ground-station-data:/app/backend/data \
+  ghcr.io/sgoudelis/ground-station:latest
+```
+
+**Option 2: Standard Bridge Mode (No SoapySDR Remote Discovery)**
+
+Uses standard bridge networking with port mapping (works for locally connected SDRs):
+
+```bash
+docker run -d \
+  -p 7000:7000 \
+  --name ground-station \
+  --restart unless-stopped \
+  --device=/dev/bus/usb \
+  --privileged \
+  -v ground-station-data:/app/backend/data \
+  ghcr.io/sgoudelis/ground-station:latest
+```
+
+**Important Notes:**
+- The `-v ground-station-data:/app/backend/data` volume mount persists satellite database, TLE data, and configuration between container restarts
+- Option 1 (host networking) is required for automatic discovery of SoapySDR remote servers via mDNS
+- Option 2 works perfectly for locally connected SDRs and all other features
+- Access the web interface at `http://<YOUR_HOST>:7000`
 
 ## Contributing
 
