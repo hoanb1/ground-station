@@ -5,10 +5,32 @@
 ldconfig
 
 # Start system services
+echo "Starting D-Bus system daemon..."
+mkdir -p /var/run/dbus
+rm -f /var/run/dbus/pid
 dbus-daemon --system --nofork --nopidfile &
+DBUS_PID=$!
 sleep 2
-avahi-daemon --no-chroot -D &
-sleep 2
+
+# Verify D-Bus is running
+if ! ps -p $DBUS_PID > /dev/null; then
+    echo "ERROR: D-Bus failed to start"
+fi
+
+echo "Starting Avahi mDNS daemon..."
+mkdir -p /var/run/avahi-daemon
+rm -f /var/run/avahi-daemon/pid
+avahi-daemon --no-chroot -D
+sleep 3
+
+# Verify Avahi is running
+if ! pgrep -x avahi-daemon > /dev/null; then
+    echo "ERROR: Avahi daemon failed to start"
+    echo "Attempting to start with debug mode..."
+    avahi-daemon --no-chroot -D --debug
+else
+    echo "Avahi daemon started successfully"
+fi
 
 # Start SDRplay API service
 /opt/sdrplay_api/sdrplay_apiService &
