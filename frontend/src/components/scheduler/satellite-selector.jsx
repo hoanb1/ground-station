@@ -364,22 +364,13 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
         const passStart = new Date(pass.event_start);
         const passEnd = new Date(pass.event_end);
 
-        console.log(`[PassSelector] Checking pass: ${pass.event_start} to ${pass.event_end}`, {
-            passStart: passStart.toISOString(),
-            passEnd: passEnd.toISOString(),
-            totalObservations: observations.length,
-            currentObservationId
-        });
-
         const conflictingObs = observations.find(obs => {
             // Skip the observation we're currently editing
             if (currentObservationId && obs.id === currentObservationId) {
-                console.log(`[PassSelector] Skipping current observation: ${obs.name}`);
                 return false;
             }
 
             if (!obs.pass) {
-                console.log(`[PassSelector] Observation has no pass: ${obs.name}`);
                 return false;
             }
 
@@ -390,25 +381,6 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
 
             // Check for any overlap
             const hasOverlap = (passStart < obsEnd && passEnd > obsStart);
-
-            console.log(`[PassSelector] Checking observation "${obs.name}":`, {
-                obsStart: obsStart.toISOString(),
-                obsEnd: obsEnd.toISOString(),
-                hasOverlap,
-                calculation: `${passStart.toISOString()} < ${obsEnd.toISOString()} = ${passStart < obsEnd}`,
-                calculation2: `${passEnd.toISOString()} > ${obsStart.toISOString()} = ${passEnd > obsStart}`
-            });
-
-            if (hasOverlap) {
-                console.log(`[PassSelector] ⚠️ CONFLICT FOUND with observation:`, {
-                    name: obs.name,
-                    satellite: obs.satellite?.name,
-                    obsStart: obsStart.toISOString(),
-                    obsEnd: obsEnd.toISOString(),
-                    passStart: passStart.toISOString(),
-                    passEnd: passEnd.toISOString(),
-                });
-            }
 
             return hasOverlap;
         });
