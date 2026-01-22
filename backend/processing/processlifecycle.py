@@ -942,6 +942,9 @@ class ProcessLifecycleManager:
                                                     # Ensure no leftover timestamp field is kept/used
                                                     if "stats_timestamp" in entry:
                                                         del entry["stats_timestamp"]
+                                    # Don't emit decoder-stats to UI - only used internally by PerformanceMonitor
+                                    # UI receives aggregated performance data via 'performance-metrics' events
+                                    continue
 
                                 # Check if this is an internal session (automated observation)
                                 is_internal = VFOManager.is_internal_session(session_id)
