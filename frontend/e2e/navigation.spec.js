@@ -40,6 +40,9 @@ test.describe('Navigation State', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
+    // Wait for any dialogs to close
+    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+
     // Navigate to tracking console
     const trackingLink = page.getByRole('link', { name: /tracking console/i }).or(
       page.getByRole('button', { name: /tracking console/i })
