@@ -93,6 +93,9 @@ test.describe('File Browser Navigation', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
+    // Wait for any dialogs to close
+    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+
     // Find and click file browser link
     const fileBrowserLink = page.getByRole('link', { name: /file browser/i }).or(
       page.getByRole('button', { name: /file browser/i })

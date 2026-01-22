@@ -12,6 +12,9 @@ test.describe('Smoke Tests', () => {
     // Wait for the app to load
     await page.waitForLoadState('networkidle');
 
+    // Wait for any dialogs to close
+    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+
     // Check if the Ground Station branding is visible
     await expect(page.locator('text=Ground Station')).toBeVisible();
   });

@@ -61,6 +61,9 @@ test.describe('Satellite Overview', () => {
   });
 
   test('should display multiple satellites on map', async ({ page }) => {
+    // Wait for any dialogs to close
+    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+
     // Select a satellite group first (e.g., "Amateur")
     const amateurGroupButton = page.getByRole('button', { name: /amateur/i });
     await amateurGroupButton.click();

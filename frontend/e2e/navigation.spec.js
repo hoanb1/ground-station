@@ -11,6 +11,9 @@ test.describe('Navigation Menu', () => {
   });
 
   test('should navigate to file browser', async ({ page }) => {
+    // Wait for any dialogs to close
+    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+
     const fileBrowserLink = page.getByRole('link', { name: /file browser/i }).or(
       page.getByRole('button', { name: /file browser/i })
     );

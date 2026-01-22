@@ -136,6 +136,9 @@ test.describe('Hardware Navigation Flow', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
+    // Wait for any dialogs to close
+    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+
     // Click on Rigs link
     const rigsLink = page.getByRole('link', { name: /rigs/i }).or(
       page.getByRole('button', { name: /rigs/i })
