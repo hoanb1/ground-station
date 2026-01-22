@@ -7,9 +7,17 @@ for connected SDR devices. It's designed to run as a background task with progre
 
 import asyncio
 import logging
+import multiprocessing
 import signal
 from multiprocessing import Queue
 from typing import Optional
+
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
 
 from hardware.soapysdrbrowser import (
     discover_soapy_servers,
@@ -47,6 +55,11 @@ def soapysdr_discovery_task(
     Returns:
         Dict with discovery results
     """
+    # Set process name
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle("Ground Station - SoapySDR-Discovery")
+    multiprocessing.current_process().name = "Ground Station - SoapySDR-Discovery"
+
     killer = GracefulKiller()
 
     try:
@@ -319,6 +332,11 @@ def soapysdr_quick_refresh_task(_progress_queue: Optional[Queue] = None):
     Returns:
         Dict with refresh results
     """
+    # Set process name
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle("Ground Station - SoapySDR-Refresh")
+    multiprocessing.current_process().name = "Ground Station - SoapySDR-Refresh"
+
     try:
         if _progress_queue:
             _progress_queue.put(

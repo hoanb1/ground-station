@@ -6,9 +6,17 @@ It's designed to run as a background task with progress reporting.
 """
 
 import logging
+import multiprocessing
 from multiprocessing import Queue
 from pathlib import Path
 from typing import Optional
+
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
 
 from processing.waterfallgenerator import WaterfallConfig, WaterfallGenerator
 
@@ -29,6 +37,11 @@ def generate_waterfall_task(
     Returns:
         Dict with generation results
     """
+    # Set process name
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle("Ground Station - Waterfall-Generator")
+    multiprocessing.current_process().name = "Ground Station - Waterfall-Generator"
+
     try:
         recording_path_obj = Path(recording_path)
 

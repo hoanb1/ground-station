@@ -8,10 +8,18 @@ task with comprehensive progress reporting.
 
 import asyncio
 import logging
+import multiprocessing
 import signal
 import sys
 from multiprocessing import Queue
 from typing import Optional
+
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -51,6 +59,11 @@ def tle_sync_background_task(_progress_queue: Optional[Queue] = None):
     Returns:
         Dict with synchronization results and statistics
     """
+    # Set process name
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle("Ground Station - TLE-Sync")
+    multiprocessing.current_process().name = "Ground Station - TLE-Sync"
+
     killer = GracefulKiller()
 
     if _progress_queue:
