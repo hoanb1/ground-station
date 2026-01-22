@@ -177,8 +177,11 @@ export default function MonitoredSatelliteDialog() {
     const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
     const availableTransmitters = selectedSatellite?.transmitters || [];
 
-    // Check if we're waiting for transmitters to load
-    const isLoadingTransmitters = selectedMonitoredSatellite && selectedSatelliteId && availableTransmitters.length === 0;
+    // Helper to get safe transmitter value (returns empty string if transmitter not in available list)
+    const getSafeTransmitterValue = (transmitterId) => {
+        if (!transmitterId) return '';
+        return availableTransmitters.find(t => t.id === transmitterId) ? transmitterId : '';
+    };
 
     // Sync selectedGroupId from Redux into formData.satellite.group_id
     useEffect(() => {
@@ -641,19 +644,6 @@ export default function MonitoredSatelliteDialog() {
                 },
             }}
         >
-            {/* Loading overlay while fetching transmitters */}
-            {isLoadingTransmitters && (
-                <Backdrop
-                    open={isLoadingTransmitters}
-                    sx={{
-                        position: 'absolute',
-                        zIndex: (theme) => theme.zIndex.drawer + 1,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    }}
-                >
-                    <CircularProgress color="primary" />
-                </Backdrop>
-            )}
 
             <DialogTitle
                 sx={{
@@ -1323,7 +1313,7 @@ export default function MonitoredSatelliteDialog() {
                                                                 <FormControl fullWidth size="small">
                                                                     <InputLabel>Transmitter</InputLabel>
                                                                     <Select
-                                                                        value={task.config.transmitter_id || ''}
+                                                                        value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                         onChange={(e) =>
                                                                             handleTaskConfigChange(
                                                                                 index,
@@ -1486,7 +1476,7 @@ export default function MonitoredSatelliteDialog() {
                                                             <FormControl fullWidth size="small">
                                                                 <InputLabel>Transmitter</InputLabel>
                                                                 <Select
-                                                                    value={task.config.transmitter_id || ''}
+                                                                    value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                     onChange={(e) =>
                                                                         handleTaskConfigChange(
                                                                             index,
@@ -1576,7 +1566,7 @@ export default function MonitoredSatelliteDialog() {
                                                             <FormControl fullWidth size="small">
                                                                 <InputLabel>Transmitter</InputLabel>
                                                                 <Select
-                                                                    value={task.config.transmitter_id || ''}
+                                                                    value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                     onChange={(e) =>
                                                                         handleTaskConfigChange(
                                                                             index,
@@ -1752,7 +1742,7 @@ export default function MonitoredSatelliteDialog() {
                                                             <FormControl fullWidth size="small">
                                                                 <InputLabel>Transmitter</InputLabel>
                                                                 <Select
-                                                                    value={task.config.transmitter_id || ''}
+                                                                    value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                     onChange={(e) => {
                                                                         const transmitterId = e.target.value;
                                                                         handleTaskConfigChange(index, 'transmitter_id', transmitterId);

@@ -48,6 +48,7 @@ import {
     setSelectedFromSearch,
     fetchNextPassesForScheduler,
     setSelectedPassId,
+    fetchSatelliteWithTransmitters,
 } from './scheduler-slice.jsx';
 
 const SATELLITE_NUMBER_LIMIT = 150;
@@ -160,12 +161,68 @@ const SatelliteDropdown = ({ onSatelliteSelect, disabled = false }) => {
     );
 };
 
-const SatelliteSearchAutocomplete = ({ onSatelliteSelect, disabled = false }) => {
+const SatelliteSearchAutocomplete = ({ onSatelliteSelect, disabled = false, initialSatellite = null }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { searchOptions, searchLoading } = useSelector((state) => state.scheduler?.satelliteSelection || {});
 
     const [open, setOpen] = React.useState(false);
+    const [value, setValue] = React.useState(null);
+    const [hasInitialized, setHasInitialized] = React.useState(false);
+
+    // Set initial value when editing and trigger satellite ID selection (for pass fetching)
+    React.useEffect(() => {
+        if (initialSatellite && !hasInitialized && socket) {
+            setValue(initialSatellite);
+
+            // Fetch the satellite with transmitters using async thunk
+            dispatch(fetchSatelliteWithTransmitters({
+                socket,
+                satelliteName: initialSatellite.name,
+                noradId: initialSatellite.norad_id
+            }))
+                .unwrap()
+                .then((satelliteWithTransmitters) => {
+                    // Set the satellite ID to trigger pass fetching
+                    dispatch(setSatelliteId(satelliteWithTransmitters.norad_id));
+                    dispatch(setSelectedFromSearch(true));
+
+                    // Put the satellite with transmitters in groupOfSats
+                    dispatch(setGroupOfSats([satelliteWithTransmitters]));
+
+                    // Set group ID if available
+                    if (satelliteWithTransmitters.group_id || initialSatellite.group_id) {
+                        dispatch(setGroupId(satelliteWithTransmitters.group_id || initialSatellite.group_id));
+                    }
+
+                    // Call the callback with full satellite data
+                    if (onSatelliteSelect) {
+                        onSatelliteSelect(satelliteWithTransmitters);
+                    }
+                })
+                .catch(() => {
+                    // Fallback: use initial satellite without transmitters
+                    dispatch(setSatelliteId(initialSatellite.norad_id));
+                    dispatch(setSelectedFromSearch(true));
+                    dispatch(setGroupOfSats([initialSatellite]));
+
+                    if (initialSatellite.group_id) {
+                        dispatch(setGroupId(initialSatellite.group_id));
+                    }
+
+                    if (onSatelliteSelect) {
+                        onSatelliteSelect(initialSatellite);
+                    }
+                });
+
+            setHasInitialized(true);
+        }
+    }, [initialSatellite, hasInitialized, socket, dispatch, onSatelliteSelect]);
+
+    // Reset initialization when initialSatellite norad_id changes
+    React.useEffect(() => {
+        setHasInitialized(false);
+    }, [initialSatellite?.norad_id]);
 
     const handleInputChange = (event, newInputValue) => {
         if (newInputValue.length > 2 && socket) {
@@ -182,6 +239,8 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect, disabled = false }) =>
     };
 
     const handleOptionSelect = (event, selectedSatellite) => {
+        setValue(selectedSatellite);
+
         if (selectedSatellite) {
             // If satellite has groups, populate the dropdowns properly
             if (selectedSatellite.groups && selectedSatellite.groups.length > 0) {
@@ -236,6 +295,14 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect, disabled = false }) =>
         dispatch(setSearchOptions([]));
     };
 
+    // Combine initial satellite with search options to ensure value is always in options
+    const allOptions = React.useMemo(() => {
+        if (value && !searchOptions.find(opt => opt.norad_id === value.norad_id)) {
+            return [value, ...searchOptions];
+        }
+        return searchOptions;
+    }, [value, searchOptions]);
+
     return (
         <Autocomplete
             size="small"
@@ -245,10 +312,11 @@ const SatelliteSearchAutocomplete = ({ onSatelliteSelect, disabled = false }) =>
             onClose={handleClose}
             onInputChange={handleInputChange}
             onChange={handleOptionSelect}
+            value={value}
             disabled={disabled}
             isOptionEqualToValue={(option, value) => option.norad_id === value.norad_id}
             getOptionLabel={(option) => `${option.norad_id} - ${option.name}`}
-            options={searchOptions}
+            options={allOptions}
             loading={searchLoading}
             renderInput={(params) => (
                 <TextField
@@ -561,89 +629,10 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
 export const SatelliteSelector = ({ onSatelliteSelect, onPassSelect, showPassSelector = true, initialSatellite = null, initialPass = null, currentObservationId = null, disabled = false }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
-    const satGroups = useSelector((state) => state.scheduler?.satelliteSelection?.satGroups || []);
-    const [hasInitialized, setHasInitialized] = React.useState(false);
-
-    // Initialize satellite selector with initialSatellite when provided
-    useEffect(() => {
-        if (initialSatellite && socket && satGroups.length > 0 && !hasInitialized) {
-            const noradId = initialSatellite.norad_id;
-            const storedGroupId = initialSatellite.group_id;
-
-            // Immediately set the satellite ID to trigger pass fetching
-            dispatch(setSatelliteId(noradId));
-            dispatch(setSelectedFromSearch(false));
-
-            // Temporarily add the initialSatellite to groupOfSats so it shows in the dropdown
-            dispatch(setGroupOfSats([initialSatellite]));
-
-            setHasInitialized(true);
-
-            // If we have a stored group_id, load that group directly
-            if (storedGroupId) {
-                socket.emit('data_request', 'get-satellites-for-group-id', storedGroupId, (response) => {
-                    if (response.success) {
-                        const found = response.data.find(sat => sat.norad_id === noradId || sat.norad_id == noradId || String(sat.norad_id) === String(noradId));
-                        if (found) {
-                            dispatch(setGroupId(storedGroupId));
-                            dispatch(setGroupOfSats(response.data));
-
-                            // Call onSatelliteSelect to update dialog's formData with group_id
-                            if (onSatelliteSelect) {
-                                onSatelliteSelect(found);
-                            }
-                        } else {
-                            searchAllGroups();
-                        }
-                    } else {
-                        searchAllGroups();
-                    }
-                });
-            } else {
-                // No stored group_id, search through all groups
-                searchAllGroups();
-            }
-
-            function searchAllGroups() {
-                let foundGroup = false;
-                let checkedGroups = 0;
-
-                satGroups.forEach((group) => {
-                    if (foundGroup) return;
-
-                    socket.emit('data_request', 'get-satellites-for-group-id', group.id, (response) => {
-                        checkedGroups++;
-                        if (response.success && !foundGroup) {
-                            const found = response.data.find(sat => sat.norad_id === noradId);
-                            if (found) {
-                                foundGroup = true;
-                                dispatch(setGroupId(group.id));
-                                dispatch(setGroupOfSats(response.data));
-
-                                // Call onSatelliteSelect to update dialog's formData with group_id
-                                if (onSatelliteSelect) {
-                                    onSatelliteSelect(found);
-                                }
-                            }
-                        }
-                    });
-                });
-            }
-        }
-    }, [initialSatellite?.norad_id, socket, satGroups.length, hasInitialized, dispatch]);
-
-    // Reset initialization flag when initialSatellite changes
-    useEffect(() => {
-        setHasInitialized(false);
-    }, [initialSatellite?.norad_id]);
 
     return (
         <Stack spacing={2}>
-            <SatelliteSearchAutocomplete onSatelliteSelect={onSatelliteSelect} disabled={disabled} />
-            <Stack direction="row" spacing={2}>
-                <SatelliteGroupDropdown onSatelliteSelect={onSatelliteSelect} disabled={disabled} />
-                <SatelliteDropdown onSatelliteSelect={onSatelliteSelect} disabled={disabled} />
-            </Stack>
+            <SatelliteSearchAutocomplete onSatelliteSelect={onSatelliteSelect} disabled={disabled} initialSatellite={initialSatellite} />
             {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} currentObservationId={currentObservationId} disabled={disabled} />}
         </Stack>
     );

@@ -366,6 +366,32 @@ export const fetchNextPassesForScheduler = createAsyncThunk(
     }
 );
 
+// Fetch satellite with transmitters by name
+export const fetchSatelliteWithTransmitters = createAsyncThunk(
+    'scheduler/fetchSatelliteWithTransmitters',
+    async ({ socket, satelliteName, noradId }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-satellite-search', satelliteName, (response) => {
+                    if (response.success && response.data.length > 0) {
+                        // Find the exact satellite by norad_id
+                        const satellite = response.data.find(sat => sat.norad_id === noradId);
+                        if (satellite) {
+                            resolve(satellite);
+                        } else {
+                            reject(new Error('Satellite not found in search results'));
+                        }
+                    } else {
+                        reject(new Error('Failed to fetch satellite'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // Load status filters from localStorage or use defaults
 const loadStatusFilters = () => {
     try {
