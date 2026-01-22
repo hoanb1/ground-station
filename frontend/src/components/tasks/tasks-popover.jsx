@@ -334,7 +334,8 @@ const BackgroundTasksPopover = () => {
                     horizontal: 'right',
                 }}
             >
-                <Box sx={{ width: 500, maxHeight: 600, overflow: 'auto' }}>
+                <Box sx={{ width: 500, maxHeight: 600, display: 'flex', flexDirection: 'column' }}>
+                    {/* Sticky Header */}
                     <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                             <Typography variant="h6">
@@ -352,40 +353,43 @@ const BackgroundTasksPopover = () => {
                         </Stack>
                     </Box>
 
-                    {runningTaskIds.length === 0 && completedTaskIds.length === 0 && (
-                        <Box sx={{ p: 3, textAlign: 'center' }}>
-                            <Typography color="text.secondary">
-                                {t('tasks_popover.no_tasks_message', 'No background tasks')}
-                            </Typography>
-                        </Box>
-                    )}
-
-                    {runningTaskIds.length > 0 && (
-                        <>
-                            <Box sx={{ p: 2 }}>
-                                <Typography variant="subtitle2" color="text.secondary">
-                                    {t('tasks_popover.running_section', 'Running')} ({runningTaskIds.length})
+                    {/* Scrollable Body */}
+                    <Box sx={{ overflow: 'auto', flex: 1 }}>
+                        {runningTaskIds.length === 0 && completedTaskIds.length === 0 && (
+                            <Box sx={{ p: 3, textAlign: 'center' }}>
+                                <Typography color="text.secondary">
+                                    {t('tasks_popover.no_tasks_message', 'No background tasks')}
                                 </Typography>
                             </Box>
-                            <List disablePadding>
-                                {runningTaskIds.map(taskId => renderTaskItem(taskId))}
-                            </List>
-                        </>
-                    )}
+                        )}
 
-                    {completedTaskIds.length > 0 && (
-                        <>
-                            {runningTaskIds.length > 0 && <Divider />}
-                            <Box sx={{ p: 2 }}>
-                                <Typography variant="subtitle2" color="text.secondary">
-                                    {t('tasks_popover.completed_section', 'Recent')} ({completedTaskIds.length})
-                                </Typography>
-                            </Box>
-                            <List disablePadding>
-                                {completedTaskIds.slice(0, 10).map(taskId => renderTaskItem(taskId))}
-                            </List>
-                        </>
-                    )}
+                        {runningTaskIds.length > 0 && (
+                            <>
+                                <Box sx={{ p: 2 }}>
+                                    <Typography variant="subtitle2" color="text.secondary">
+                                        {t('tasks_popover.running_section', 'Running')} ({runningTaskIds.length})
+                                    </Typography>
+                                </Box>
+                                <List disablePadding>
+                                    {runningTaskIds.map(taskId => renderTaskItem(taskId))}
+                                </List>
+                            </>
+                        )}
+
+                        {completedTaskIds.length > 0 && (
+                            <>
+                                {runningTaskIds.length > 0 && <Divider />}
+                                <Box sx={{ p: 2 }}>
+                                    <Typography variant="subtitle2" color="text.secondary">
+                                        {t('tasks_popover.completed_section', 'Recent')} ({completedTaskIds.length})
+                                    </Typography>
+                                </Box>
+                                <List disablePadding>
+                                    {completedTaskIds.slice(0, 10).map(taskId => renderTaskItem(taskId))}
+                                </List>
+                            </>
+                        )}
+                    </Box>
                 </Box>
             </Popover>
         </>
