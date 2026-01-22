@@ -193,22 +193,6 @@ export const decodersSlice = createSlice({
             }
         },
 
-        // Error occurred
-        decoderErrorOccurred: (state, action) => {
-            const error = action.payload;
-
-            // Add to errors array (prepend for newest first)
-            state.errors.unshift({
-                id: `error_${error.timestamp}`,
-                ...error
-            });
-
-            // Limit to last 20 errors
-            if (state.errors.length > 20) {
-                state.errors = state.errors.slice(0, 20);
-            }
-        },
-
         // Clear decoder session (user stopped decoder)
         clearDecoderSession: (state, action) => {
             const { session_id, vfo } = action.payload;
@@ -396,7 +380,6 @@ export const {
     decoderStatusChanged,
     decoderProgressUpdated,
     decoderOutputReceived,
-    decoderErrorOccurred,
     clearDecoderSession,
     clearDecoderHistory,
     clearDecoderOutputs,

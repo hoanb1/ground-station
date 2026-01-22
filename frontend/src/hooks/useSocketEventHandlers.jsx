@@ -71,7 +71,6 @@ import {
     decoderStatusChanged,
     decoderProgressUpdated,
     decoderOutputReceived,
-    decoderErrorOccurred,
     setCurrentSessionId,
     cleanupStaleDecoders,
 } from '../components/decoders/decoders-slice.jsx';
@@ -796,10 +795,6 @@ export const useSocketEventHandlers = (socket) => {
                     }
                     break;
                 }
-
-                case 'decoder-error':
-                    store.dispatch(decoderErrorOccurred(data));
-                    break;
 
                 default:
                     console.warn('Unknown decoder event type:', data.type);

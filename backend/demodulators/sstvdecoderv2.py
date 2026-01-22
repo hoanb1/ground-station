@@ -575,7 +575,6 @@ class SSTVDecoderV2(BaseDecoderProcess):
             if mode.value["vis_code"] == vis_value:
                 mode_spec = mode.value
                 logger.info(f"Detected: {mode_spec['name']} (VIS: {vis_value})")
-                self._send_vis_detected(vis_value, mode_spec)
                 return mode
 
         logger.error(f"Unsupported VIS: {vis_value}")
@@ -604,27 +603,6 @@ class SSTVDecoderV2(BaseDecoderProcess):
             return end_sync - round(self.mode.value["sync_pulse"] * self.audio_sample_rate)
         else:
             return end_sync
-
-    def _send_vis_detected(self, vis_code, mode_spec):
-        """Send VIS code detection info to UI"""
-        msg = {
-            "type": "decoder-vis-detected",
-            "decoder_type": "sstv",
-            "session_id": self.session_id,
-            "vfo": self.vfo,
-            "timestamp": time.time(),
-            "vis_code": vis_code,
-            "mode": mode_spec["name"],
-            "width": mode_spec["width"],
-            "height": mode_spec["height"],
-            "scan_time": mode_spec["scan_time"],
-        }
-        try:
-            self.data_queue.put(msg, block=False)
-            with self.stats_lock:
-                self.stats["data_messages_out"] += 1  # type: ignore[operator]
-        except queue.Full:
-            logger.warning("Data queue full, dropping VIS detection")
 
     def _send_progress_update(self, current_line, total_lines, mode_name):
         """Send decoding progress update to UI"""

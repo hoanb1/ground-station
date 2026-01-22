@@ -42,7 +42,10 @@ from observations.constants import (
     CONFLICT_STRATEGY_PRIORITY,
     CONFLICT_STRATEGY_SKIP,
     DEFAULT_CONFLICT_STRATEGY,
+    STATUS_CANCELLED,
     STATUS_COMPLETED,
+    STATUS_FAILED,
+    STATUS_MISSED,
     STATUS_SCHEDULED,
 )
 from tracking.elcalculator import calculate_elevation_crossing_time
@@ -58,7 +61,7 @@ CONFLICT_RESOLUTION_STRATEGY = DEFAULT_CONFLICT_STRATEGY
 
 async def cleanup_old_observations(session: AsyncSession) -> int:
     """
-    Delete completed observations that are over 24 hours old.
+    Delete completed, failed, cancelled, and missed observations that are over 24 hours old.
 
     Args:
         session: Database session
@@ -69,10 +72,12 @@ async def cleanup_old_observations(session: AsyncSession) -> int:
     try:
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
 
-        # Find completed observations older than 24 hours
+        # Find completed, failed, cancelled, or missed observations older than 24 hours
         stmt = select(ScheduledObservations).filter(
             and_(
-                ScheduledObservations.status == STATUS_COMPLETED,
+                ScheduledObservations.status.in_(
+                    [STATUS_COMPLETED, STATUS_FAILED, STATUS_CANCELLED, STATUS_MISSED]
+                ),
                 ScheduledObservations.event_end < cutoff_time,
             )
         )
@@ -83,7 +88,7 @@ async def cleanup_old_observations(session: AsyncSession) -> int:
         if old_observations:
             observation_ids = [obs.id for obs in old_observations]
             logger.info(
-                f"Cleaning up {len(observation_ids)} completed observations older than 24 hours"
+                f"Cleaning up {len(observation_ids)} old observations (completed/failed/cancelled/missed) older than 24 hours"
             )
 
             # Delete the observations

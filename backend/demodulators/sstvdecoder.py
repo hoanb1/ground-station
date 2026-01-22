@@ -320,9 +320,6 @@ class SSTVDecoder(threading.Thread):
             if mode.value["vis_code"] == vis_value:
                 mode_spec = mode.value
                 logger.info(f"Detected: {mode_spec['name']} (VIS: {vis_value})")
-
-                # Send VIS detection info to UI
-                self._send_vis_detected(vis_value, mode_spec)
                 return mode
 
         logger.error(f"Unsupported VIS: {vis_value}")
@@ -588,28 +585,6 @@ class SSTVDecoder(threading.Thread):
                 self.stats["data_messages_out"] += 1
         except queue.Full:
             logger.warning("Data queue full, dropping status update")
-
-    def _send_vis_detected(self, vis_code, mode_spec):
-        """Send VIS code detection info to UI"""
-        msg = {
-            "type": "decoder-vis-detected",
-            "decoder_type": "sstv",
-            "session_id": self.session_id,
-            "vfo": self.vfo,
-            "timestamp": time.time(),
-            "vis_code": vis_code,
-            "mode": mode_spec["name"],
-            "width": mode_spec["width"],
-            "height": mode_spec["height"],
-            "scan_time": mode_spec["scan_time"],
-        }
-        logger.info(f"Sending VIS detection: {mode_spec['name']} (code {vis_code})")
-        try:
-            self.data_queue.put(msg, block=False)
-            with self.stats_lock:
-                self.stats["data_messages_out"] += 1
-        except queue.Full:
-            logger.warning("Data queue full, dropping VIS detection")
 
     def _send_progress_update(self, current_line, total_lines, mode_name):
         progress = int((current_line / total_lines) * 100)

@@ -266,7 +266,6 @@ class MorseDecoder(threading.Thread):
                 self.target_freq = detected_freq
                 self._design_bandpass_filter()
                 self.last_auto_tune = current_time
-                self._send_params_update()
 
     def _process_audio(self, audio_chunk):
         """Process incoming audio and extract envelope"""
@@ -456,28 +455,6 @@ class MorseDecoder(threading.Thread):
         except queue.Full:
             logger.warning("Data queue full, dropping status update")
 
-    def _send_params_update(self):
-        """Send current decoder parameters to UI"""
-        msg = {
-            "type": "decoder-params",
-            "decoder_type": "morse",
-            "session_id": self.session_id,
-            "vfo": self.vfo,
-            "timestamp": time.time(),
-            "params": {
-                "wpm": self.wpm,
-                "tone_frequency": self.target_freq,
-                "signal_strength": self.signal_strength,
-                "threshold": self.value_threshold,
-            },
-        }
-        try:
-            self.data_queue.put(msg, block=False)
-            with self.stats_lock:
-                self.stats["data_messages_out"] += 1
-        except queue.Full:
-            pass
-
     def _send_decoded_output(self):
         """Send decoded text output to UI (rate-limited)"""
         current_time = time.time()
@@ -583,8 +560,6 @@ class MorseDecoder(threading.Thread):
 
                         # Send periodic updates
                         if current_time - self.last_update_time > 1.0:
-                            if self.wpm:
-                                self._send_params_update()
                             self._send_stats_update()
                             self._send_decoded_output()
                             self.last_update_time = current_time

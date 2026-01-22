@@ -920,7 +920,6 @@ class ProcessLifecycleManager:
                             "decoder-status",
                             "decoder-progress",
                             "decoder-output",
-                            "decoder-error",
                             "decoder-stats",
                         ]:
                             # Decoder messages (SSTV, AFSK, Morse, GMSK, etc.)
