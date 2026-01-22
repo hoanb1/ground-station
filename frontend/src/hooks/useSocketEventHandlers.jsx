@@ -195,15 +195,6 @@ export const useSocketEventHandlers = (socket) => {
             // Update connection state
             dispatch(setConnecting(true));
             dispatch(setConnected(false));
-
-            toast.error(
-                <ToastMessage
-                    title={t('notifications.connection.lost_connection')}
-                />,
-                {
-                    icon: () => <CableIcon />,
-                }
-            );
         });
 
         // Satellite sync events

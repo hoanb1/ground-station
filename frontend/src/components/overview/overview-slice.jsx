@@ -383,8 +383,8 @@ const overviewSlice = createSlice({
         },
         addRecentSatelliteGroup(state, action) {
             const group = action.payload;
-            // Remove if already exists
-            const filtered = state.recentSatelliteGroups.filter(g => g.id !== group.id);
+            // Remove if already exists (by name, not ID - groups can be recreated with new IDs)
+            const filtered = state.recentSatelliteGroups.filter(g => g.name !== group.name);
             // Add to front
             const updated = [group, ...filtered];
             // Keep only first 20

@@ -19,7 +19,6 @@ from typing import Any, Dict, Optional, Union
 
 import crud
 from db import AsyncSessionLocal
-from tlesync.logic import synchronize_satellite_data
 from tracker.data import compiled_satellite_data
 
 
@@ -161,23 +160,53 @@ async def delete_satellite(
 
 async def sync_satellite_data(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, None]]:
+) -> Dict[str, Union[bool, None, str]]:
     """
-    Synchronize satellite data with known TLE sources.
+    Synchronize satellite data with known TLE sources as a background task.
+
+    This handler starts TLE synchronization as a background task, making it:
+    - Visible in the task manager UI
+    - Cancellable by users
+    - Consistent with scheduled sync behavior
 
     Args:
-        sio: Socket.IO server instance
+        sio: Socket.IO server instance (not used, kept for signature compatibility)
         data: Not used
         logger: Logger instance
         sid: Socket.IO session ID
 
     Returns:
-        Dictionary with success status
+        Dictionary with success status and task_id
     """
-    async with AsyncSessionLocal() as dbsession:
-        logger.debug("Syncing satellite data with known TLE sources")
-        await synchronize_satellite_data(dbsession, logger, sio)
-        return {"success": True, "data": None}
+    try:
+        from server.startup import background_task_manager
+        from tasks.registry import get_task
+
+        if not background_task_manager:
+            logger.error("Background task manager not initialized")
+            return {"success": False, "error": "Background task manager not initialized"}
+
+        logger.info("Starting TLE synchronization as background task (manual trigger)")
+
+        # Get the TLE sync task function
+        tle_sync_task = get_task("tle_sync")
+
+        # Start as background task
+        task_id = await background_task_manager.start_task(
+            func=tle_sync_task, args=(), kwargs={}, name="Manual TLE Sync", task_id=None
+        )
+
+        logger.info(f"Manual TLE sync started as background task: {task_id}")
+        return {"success": True, "task_id": task_id}
+
+    except ValueError as e:
+        # Singleton task already running (e.g., TLE sync already in progress)
+        logger.warning(f"TLE sync already running: {e}")
+        return {"success": False, "error": str(e)}
+
+    except Exception as e:
+        logger.error(f"Error starting TLE synchronization: {e}")
+        return {"success": False, "error": str(e)}
 
 
 def register_handlers(registry):

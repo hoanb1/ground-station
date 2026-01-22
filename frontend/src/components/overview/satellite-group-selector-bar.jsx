@@ -90,17 +90,22 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
     }, [selectedSatellitePositionsRef]);
 
     // Load recent groups from localStorage on mount and store in Redux
+    // Clean up stale groups that no longer exist
     useEffect(() => {
         try {
             const stored = localStorage.getItem(RECENT_GROUPS_KEY);
-            if (stored) {
+            if (stored && satGroups.length > 0) {
                 const parsedGroups = JSON.parse(stored);
-                dispatch(setRecentSatelliteGroups(parsedGroups));
+                // Filter out groups that no longer exist in satGroups
+                const validGroups = parsedGroups.filter(rg =>
+                    satGroups.some(g => g.id === rg.id)
+                );
+                dispatch(setRecentSatelliteGroups(validGroups));
             }
         } catch (e) {
             console.error('Failed to load recent groups:', e);
         }
-    }, [dispatch]);
+    }, [dispatch, satGroups]);
 
     // Update recent groups when selection changes
     useEffect(() => {
@@ -147,11 +152,15 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
 
     // Get groups to display as pills (recent or fallback to first few from dropdown)
     // Include satellite count for each group
+    // Filter out groups that no longer exist in satGroups
     const pillGroups = recentGroups.length > 0
-        ? recentGroups.map(rg => {
-            const group = satGroups.find(g => g.id === rg.id);
-            return { ...rg, satelliteCount: group?.satellite_ids?.length || 0 };
-          })
+        ? recentGroups
+            .map(rg => {
+                const group = satGroups.find(g => g.id === rg.id);
+                if (!group) return null; // Group no longer exists
+                return { ...rg, satelliteCount: group.satellite_ids?.length || 0 };
+            })
+            .filter(Boolean) // Remove null entries
         : satGroups.slice(0, MAX_RECENT_GROUPS).map(g => ({ id: g.id, name: g.name, type: g.type, satelliteCount: g.satellite_ids?.length || 0 }));
 
     // Use IntersectionObserver to detect which pills are visible

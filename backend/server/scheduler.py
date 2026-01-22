@@ -11,7 +11,6 @@ from db import AsyncSessionLocal
 from observations.constants import DEFAULT_AUTO_GENERATE_INTERVAL_HOURS
 from observations.events import emit_scheduled_observations_changed, observation_sync
 from observations.generator import generate_observations_for_monitored_satellites
-from tlesync.logic import synchronize_satellite_data
 
 # Suppress apscheduler internal INFO logs (only show warnings and errors)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
@@ -20,15 +19,36 @@ logging.getLogger("apscheduler").setLevel(logging.WARNING)
 scheduler: Optional[AsyncIOScheduler] = None
 
 
-async def sync_satellite_data_job(sio):
-    """Job wrapper for synchronize_satellite_data that creates its own session."""
+async def sync_satellite_data_job(background_task_manager):
+    """
+    Job wrapper for TLE synchronization that uses the background task manager.
+
+    This runs TLE sync as a background task, making it:
+    - Visible in the task manager UI
+    - Cancellable by users
+    - Consistent with manual sync triggers
+    """
     try:
-        logger.info("Running scheduled satellite data synchronization...")
-        async with AsyncSessionLocal() as session:
-            await synchronize_satellite_data(session, logger, sio)
-        logger.info("Scheduled satellite data synchronization completed successfully")
+        logger.info("Running scheduled satellite data synchronization as background task...")
+
+        from tasks.registry import get_task
+
+        # Get the TLE sync task function
+        tle_sync_task = get_task("tle_sync")
+
+        # Start as background task
+        task_id = await background_task_manager.start_task(
+            func=tle_sync_task, args=(), kwargs={}, name="Scheduled TLE Sync", task_id=None
+        )
+
+        logger.info(f"Scheduled TLE sync started as background task: {task_id}")
+
+    except ValueError as e:
+        # Singleton task already running (likely a manual sync is in progress)
+        logger.info(f"Skipping scheduled TLE sync: {e}")
+
     except Exception as e:
-        logger.error(f"Error during scheduled satellite synchronization: {e}")
+        logger.error(f"Error starting scheduled satellite synchronization: {e}")
         logger.exception(e)
 
 
@@ -110,7 +130,7 @@ async def run_initial_observation_generation():
         logger.exception(e)
 
 
-def start_scheduler(sio, process_manager):
+def start_scheduler(sio, process_manager, background_task_manager):
     """Initialize and start the background task scheduler."""
     global scheduler
 
@@ -124,7 +144,7 @@ def start_scheduler(sio, process_manager):
     scheduler.add_job(
         sync_satellite_data_job,
         trigger=IntervalTrigger(hours=6),
-        args=[sio],
+        args=[background_task_manager],
         id="sync_satellite_data",
         name="Synchronize satellite data",
         replace_existing=True,

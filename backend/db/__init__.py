@@ -29,7 +29,32 @@ engine = create_async_engine(
     pool_recycle=3600,
     connect_args={
         "check_same_thread": False,
+        "timeout": 30,  # 30 second timeout for database locks
     },
 )
 
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
+
+
+def create_subprocess_engine():
+    """
+    Create a new database engine specifically for subprocess use.
+
+    This is necessary because database engines cannot be safely shared across
+    process boundaries (e.g., in multiprocessing scenarios). Each subprocess
+    should create its own engine to avoid connection pool conflicts.
+
+    Returns:
+        A new AsyncEngine instance with the same configuration as the main engine
+    """
+    return create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_size=5,
+        max_overflow=10,
+        pool_recycle=3600,
+        connect_args={
+            "check_same_thread": False,
+            "timeout": 30,
+        },
+    )

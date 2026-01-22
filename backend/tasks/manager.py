@@ -177,6 +177,7 @@ class BackgroundTaskManager:
 
         Raises:
             RuntimeError: If task fails to start
+            ValueError: If a singleton task is already running
         """
         if task_id is None:
             task_id = str(uuid.uuid4())
@@ -186,6 +187,27 @@ class BackgroundTaskManager:
 
         if kwargs is None:
             kwargs = {}
+
+        # Check for singleton tasks (tasks that should not run concurrently with themselves)
+        # TLE sync is a singleton task because it modifies shared database state
+        singleton_task_patterns = ["TLE Sync", "tle_sync"]
+        is_singleton = any(
+            pattern in name or pattern in func.__name__ for pattern in singleton_task_patterns
+        )
+
+        if is_singleton:
+            # Check if this singleton task is already running
+            for existing_task_id, existing_task in self.tasks.items():
+                if existing_task.status == TaskStatus.RUNNING:
+                    # Check if it's the same singleton task type
+                    is_same_singleton = any(
+                        pattern in existing_task.name or pattern == func.__name__
+                        for pattern in singleton_task_patterns
+                    )
+                    if is_same_singleton:
+                        error_msg = f"Cannot start '{name}': A TLE sync task is already running (ID: {existing_task_id})"
+                        logger.warning(error_msg)
+                        raise ValueError(error_msg)
 
         logger.info(f"Starting background task '{name}' (ID: {task_id}): {func.__name__}")
 
@@ -452,6 +474,27 @@ class BackgroundTaskManager:
 
             except Exception as e:
                 logger.error(f"Failed to update discovered servers: {e}")
+
+        elif msg_type == "tle_sync_state":
+            # TLE synchronization state update from background task
+            state = message.get("state", {})
+            progress = message.get("progress", 0)
+
+            # Forward the complete sync state to the frontend
+            # This maintains compatibility with existing UI expectations
+            await self.sio.emit("sat-sync-events", state)
+
+            # Also emit generic progress update for task list visibility
+            await self.sio.emit(
+                "background_task:progress",
+                {
+                    "task_id": task_id,
+                    "name": task_info.name,
+                    "stream": "stdout",
+                    "output": state.get("message", "Synchronizing..."),
+                    "progress": progress,
+                },
+            )
 
     async def stop_task(self, task_id: str, timeout: float = 5.0) -> bool:
         """

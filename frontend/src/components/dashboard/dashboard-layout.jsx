@@ -75,7 +75,6 @@ import ConnectionOverlay from "./reconnecting-overlay.jsx";
 import SatelliteInfoPopover from "./target-popover.jsx";
 import VersionInfo from "./version-info.jsx";
 import VersionUpdateOverlay from "./version-update-overlay.jsx";
-import SatelliteSyncPopover from "./tlesync-popover.jsx";
 import PerformanceMetricsDialog from "../performance/performance-metrics-dialog.jsx";
 import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
 import MenuIcon from '@mui/icons-material/Menu';
@@ -187,7 +186,6 @@ function ToolbarActions() {
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
             <ConnectionStatus />
             <LocationWarningPopover />
-            <SatelliteSyncPopover />
             <SatelliteInfoPopover />
             <HardwareSettingsPopover />
             <BackgroundTasksPopover />

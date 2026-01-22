@@ -48,16 +48,35 @@ from tlesync.utils import (
 # Global state to track satellite synchronization progress
 sync_state = create_initial_sync_state()
 
-# Lock to prevent concurrent synchronization
+# Lock to prevent concurrent synchronization within the same process
+# Note: This lock only works within a single process. For cross-process concurrency control,
+# the BackgroundTaskManager enforces singleton task execution (only one TLE sync at a time).
 _sync_lock = asyncio.Lock()
 
 
-async def synchronize_satellite_data(dbsession, logger, sio):
+async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
     """
-    Fetches all TLE sources from the database and logs the result.
-    Uses a structured progress tracking system to accurately report progress.
+    Core TLE synchronization logic with pluggable callback for progress updates.
+
+    Args:
+        dbsession: Database session
+        logger: Logger instance
+        emit_callback: Async or sync callable that receives state dict updates.
+                      Can be async (await emit_callback(state)) or sync (emit_callback(state))
+
+    This internal function allows the same sync logic to be used in different contexts:
+    - Direct Socket.IO emission (legacy)
+    - Background task with queue-based messaging (new)
+    - Testing with mock callbacks
     """
     global sync_state
+
+    # Helper to call callback regardless of whether it's async or sync
+    async def _emit(state):
+        if asyncio.iscoroutinefunction(emit_callback):
+            await emit_callback(state)
+        else:
+            emit_callback(state)
 
     # Try to acquire the lock without blocking
     if _sync_lock.locked():
@@ -75,7 +94,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
         # Update the sync state in the manager
         sync_state_manager.set_state(sync_state)
-        await sio.emit("sat-sync-events", sync_state)
+        await _emit(sync_state)
 
         # Define progress weights for each phase
         progress_phases = {
@@ -115,7 +134,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     "fetch_tle_sources", i, len(sources), f"Fetching {tle_source_url}"
                 )
                 sync_state["active_sources"] = [tle_source_name]
-                await sio.emit("sat-sync-events", progress_state)
+                await _emit(progress_state)
 
                 try:
                     logger.info(f"Fetching {tle_source_url}")
@@ -145,7 +164,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     sync_state["last_update"] = datetime.now(timezone.utc).isoformat() + "Z"
                     sync_state_manager.set_state(sync_state)
 
-                    await sio.emit("sat-sync-events", sync_state)
+                    await _emit(sync_state)
                     continue
 
                 except requests.exceptions.RequestException as e:
@@ -159,14 +178,14 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     sync_state["last_update"] = datetime.now(timezone.utc).isoformat() + "Z"
                     sync_state_manager.set_state(sync_state)
 
-                    await sio.emit("sat-sync-events", sync_state)
+                    await _emit(sync_state)
                     continue
 
                 # Update progress, completed sources, and emit event
                 progress_state = update_progress(
                     "fetch_tle_sources", i + 1, len(sources), f"Fetched {tle_source_url}"
                 )
-                await sio.emit("sat-sync-events", progress_state)
+                await _emit(progress_state)
 
                 logger.info(
                     f"Group {tle_source_identifier} has {len(group_assignments[tle_source_identifier])} members"
@@ -216,7 +235,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     len(sources),
                     f'Group {tle_source.get("name", None)} created/updated',
                 )
-                await sio.emit("sat-sync-events", progress_state)
+                await _emit(progress_state)
 
             # Mark TLE sources phase as complete
             completed_phases.add("fetch_tle_sources")
@@ -232,7 +251,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
                 sync_state_manager.set_state(sync_state)
 
-                await sio.emit("sat-sync-events", sync_state)
+                await _emit(sync_state)
                 return
 
             # Detect and handle duplicate satellites
@@ -259,7 +278,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             )
             sync_state["active_sources"] = ["SATNOGS Satellites"]
             sync_state_manager.set_state(sync_state)
-            await sio.emit("sat-sync-events", progress_state)
+            await _emit(progress_state)
 
             # get a complete list of satellite data (no TLEs) from Satnogs
             logger.info(f"Fetching satellite data from SATNOGS ({satnogs_satellites_url})")
@@ -281,7 +300,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 progress_state = update_progress(
                     "fetch_satnogs_satellites", 1, 1, "Satellite data fetched from SATNOGS"
                 )
-                await sio.emit("sat-sync-events", progress_state)
+                await _emit(progress_state)
 
             except requests.exceptions.RequestException as e:
                 error_msg = f"Failed to fetch data from {satnogs_satellites_url} ({e})"
@@ -298,7 +317,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             )
             sync_state["active_sources"] = ["SATNOGS Transmitters"]
             sync_state_manager.set_state(sync_state)
-            await sio.emit("sat-sync-events", progress_state)
+            await _emit(progress_state)
 
             # get transmitters from satnogs
             logger.info(f"Fetching transmitter data from SATNOGS ({satnogs_transmitters_url})")
@@ -320,7 +339,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 progress_state = update_progress(
                     "fetch_satnogs_transmitters", 1, 1, "Transmitter data fetched from SATNOGS"
                 )
-                await sio.emit("sat-sync-events", progress_state)
+                await _emit(progress_state)
 
             except requests.exceptions.RequestException as e:
                 error_msg = f"Failed to fetch data from {satnogs_transmitters_url}: {e}"
@@ -340,7 +359,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         )
         sync_state["active_sources"] = ["Database Update"]
         sync_state_manager.set_state(sync_state)
-        await sio.emit("sat-sync-events", progress_state)
+        await _emit(progress_state)
 
         # Get existing satellite and transmitter data
         existing_data = await query_existing_data(dbsession, logger)
@@ -386,7 +405,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
                 # Every 100 satellites, emit an update to avoid flooding
                 if count_sats % 100 == 0 or count_sats == total_satellites:
-                    await sio.emit("sat-sync-events", progress_state)
+                    await _emit(progress_state)
 
                 # let's find the sat info from the satnogs list
                 satnogs_sat_info = get_satellite_by_norad_id(norad_id, satnogs_satellite_data)
@@ -450,7 +469,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                         if count_transmitters % 20 == 0 or (
                             i == total_satellites - 1 and j == len(satnogs_transmitter_info) - 1
                         ):
-                            await sio.emit("sat-sync-events", progress_state)
+                            await _emit(progress_state)
 
                     # Check if the transmitter was modified (not new but has changes)
                     if not is_new_transmitter:
@@ -524,7 +543,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
-            await sio.emit("sat-sync-events", sync_state)
+            await _emit(sync_state)
 
         except Exception as e:
             await dbsession.rollback()  # Rollback in case of error
@@ -540,7 +559,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
-            await sio.emit("sat-sync-events", sync_state)
+            await _emit(sync_state)
 
         finally:
             # Always close the session when you're done

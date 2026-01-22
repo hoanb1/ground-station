@@ -57,9 +57,6 @@ audio_broadcaster: AudioBroadcaster = AudioBroadcaster(audio_queue)
 background_task_manager: BackgroundTaskManager = None
 
 
-# test comment
-
-
 @asynccontextmanager
 async def lifespan(fastapiapp: FastAPI):
     """Custom lifespan for FastAPI."""
@@ -116,10 +113,10 @@ async def lifespan(fastapiapp: FastAPI):
 
     # Schedule initial sync if needed
     if _needs_initial_sync:
-        asyncio.create_task(run_initial_sync(sio))
+        asyncio.create_task(run_initial_sync(background_task_manager))
 
     # Start the background task scheduler
-    scheduler = start_scheduler(sio, process_manager)
+    scheduler = start_scheduler(sio, process_manager, background_task_manager)
 
     # Initialize observation executor and scheduler sync
     observation_executor = ObservationExecutor(process_manager, sio)

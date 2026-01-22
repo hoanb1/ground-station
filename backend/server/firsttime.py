@@ -22,7 +22,10 @@ import string
 from common.logger import logger
 from db import AsyncSessionLocal
 from db.models import TLESources
-from tlesync.logic import synchronize_satellite_data
+from tasks.registry import get_task
+
+# TLE sync is now handled by background task manager
+# from tlesync.logic import synchronize_satellite_data
 
 
 async def first_time_initialization():
@@ -65,15 +68,31 @@ async def first_time_initialization():
             raise
 
 
-async def run_initial_sync(sio):
-    """Run the initial satellite data synchronization after delay."""
+async def run_initial_sync(background_task_manager):
+    """
+    Run the initial satellite data synchronization after delay as a background task.
+
+    This runs on first-time setup after database creation to populate TLE data.
+    Uses the background task manager for consistency with other sync triggers.
+
+    Args:
+        background_task_manager: BackgroundTaskManager instance
+    """
     try:
         logger.info("Waiting 5 seconds before starting initial synchronization...")
         await asyncio.sleep(5)
-        logger.info("Starting initial satellite data synchronization...")
-        async with AsyncSessionLocal() as sync_session:
-            await synchronize_satellite_data(sync_session, logger, sio)
-        logger.info("Initial satellite data synchronization completed successfully")
+        logger.info("Starting initial satellite data synchronization as background task...")
+
+        # Get the TLE sync task function
+        tle_sync_task = get_task("tle_sync")
+
+        # Start as background task
+        task_id = await background_task_manager.start_task(
+            func=tle_sync_task, args=(), kwargs={}, name="Initial TLE Sync", task_id=None
+        )
+
+        logger.info(f"Initial TLE sync started as background task: {task_id}")
+
     except Exception as e:
-        logger.error(f"Error during initial satellite synchronization: {e}")
+        logger.error(f"Error starting initial satellite synchronization: {e}")
         logger.exception(e)
