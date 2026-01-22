@@ -283,6 +283,28 @@ const MonitoredSatellitesTable = () => {
                 );
             },
         },
+        {
+            field: 'actions',
+            headerName: 'Actions',
+            width: 80,
+            align: 'center',
+            headerAlign: 'center',
+            sortable: false,
+            filterable: false,
+            renderCell: (params) => (
+                <Tooltip title="Edit">
+                    <IconButton
+                        size="small"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(params.row);
+                        }}
+                    >
+                        <EditIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+            ),
+        },
     ];
 
     return (
