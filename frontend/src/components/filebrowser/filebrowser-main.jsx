@@ -73,6 +73,7 @@ import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import FolderIcon from '@mui/icons-material/Folder';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
@@ -101,6 +102,7 @@ import TelemetryViewerDialog from './telemetry-viewer-dialog.jsx';
 import AudioDialog from './audio-dialog.jsx';
 import TranscriptionDialog from './transcription-dialog.jsx';
 import FileTableView from './file-table-view.jsx';
+import MeteorFolderDialog from './meteor-folder-dialog.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -243,6 +245,8 @@ export default function FilebrowserMain() {
     const [audioMetadata, setAudioMetadata] = useState(null);
     const [transcriptionDialogOpen, setTranscriptionDialogOpen] = useState(false);
     const [transcriptionFile, setTranscriptionFile] = useState(null);
+    const [meteorFolderDialogOpen, setMeteorFolderDialogOpen] = useState(false);
+    const [meteorFolder, setMeteorFolder] = useState(null);
 
     // Mark file browser as visited when component mounts
     useEffect(() => {
@@ -334,9 +338,11 @@ export default function FilebrowserMain() {
 
             return {
                 ...item,
-                displayName: item.name || item.filename,
+                displayName: item.name || item.filename || item.foldername,
                 image: item.type === 'recording'
                     ? (item.recording_in_progress ? null : item.snapshot?.url)
+                    : item.type === 'decoded_folder'
+                    ? item.thumbnail_url
                     : (item.type === 'snapshot' || isImage ? item.url : null),
                 duration,
                 audioRecordingInProgress,
@@ -435,8 +441,10 @@ export default function FilebrowserMain() {
     };
 
     const handleShowDetails = async (item) => {
-        // For decoded files, open telemetry viewer instead of simple preview
-        if (item.type === 'decoded') {
+        // Route to appropriate dialog based on item type
+        if (item.type === 'decoded_folder') {
+            handleViewMeteorFolder(item);
+        } else if (item.type === 'decoded') {
             await handleViewTelemetry(item);
         } else if (item.type === 'audio') {
             await handleViewAudio(item);
@@ -464,6 +472,9 @@ export default function FilebrowserMain() {
                     // Success toast will be shown by socket event listener
                 } else if (itemToDelete.type === 'decoded') {
                     await dispatch(deleteDecoded({ socket, filename: itemToDelete.filename })).unwrap();
+                    // Success toast will be shown by socket event listener
+                } else if (itemToDelete.type === 'decoded_folder') {
+                    await dispatch(deleteDecoded({ socket, foldername: itemToDelete.foldername, is_folder: true })).unwrap();
                     // Success toast will be shown by socket event listener
                 } else if (itemToDelete.type === 'audio') {
                     await dispatch(deleteAudio({ socket, filename: itemToDelete.filename })).unwrap();
@@ -546,14 +557,22 @@ export default function FilebrowserMain() {
         setTranscriptionDialogOpen(true);
     };
 
+    const handleViewMeteorFolder = (item) => {
+        if (item.type !== 'decoded_folder') return;
+
+        // Open the METEOR folder dialog with the item data
+        setMeteorFolder(item);
+        setMeteorFolderDialogOpen(true);
+    };
+
     const handleToggleSelection = (item) => {
-        const key = item.type === 'recording' ? item.name : item.filename;
+        const key = item.type === 'recording' ? item.name : (item.type === 'decoded_folder' ? item.foldername : item.filename);
         dispatch(toggleItemSelection(key));
     };
 
     const handleSelectAll = () => {
         const allKeys = displayItems.map(item =>
-            item.type === 'recording' ? item.name : item.filename
+            item.type === 'recording' ? item.name : (item.type === 'decoded_folder' ? item.foldername : item.filename)
         );
         dispatch(selectAllItems(allKeys));
     };
@@ -578,13 +597,14 @@ export default function FilebrowserMain() {
                 // Build items array from selected keys
                 const itemsToDelete = files
                     .filter(f => {
-                        const key = f.type === 'recording' ? f.name : f.filename;
+                        const key = f.type === 'recording' ? f.name : (f.type === 'decoded_folder' ? f.foldername : f.filename);
                         return selectedItems.includes(key);
                     })
                     .map(f => ({
                         type: f.type,
                         name: f.type === 'recording' ? f.name : undefined,
                         filename: (f.type === 'snapshot' || f.type === 'decoded' || f.type === 'audio' || f.type === 'transcription') ? f.filename : undefined,
+                        foldername: f.type === 'decoded_folder' ? f.foldername : undefined,
                     }));
 
                 await dispatch(deleteBatch({ socket, items: itemsToDelete })).unwrap();
@@ -901,7 +921,7 @@ export default function FilebrowserMain() {
             }}>
                     {displayItems.map((item) => {
                         const isRecording = item.type === 'recording';
-                        const key = isRecording ? item.name : item.filename;
+                        const key = isRecording ? item.name : (item.type === 'decoded_folder' ? item.foldername : item.filename);
                         const isSelected = selectedItems.includes(key);
 
                         return (
@@ -981,6 +1001,8 @@ export default function FilebrowserMain() {
                                                                 },
                                                             }}
                                                         />
+                                                    ) : item.type === 'decoded_folder' ? (
+                                                        <FolderIcon sx={{ color: 'warning.main', fontSize: 20 }} />
                                                     ) : item.type === 'decoded' ? (
                                                         item.url?.endsWith('.png') ? (
                                                             <ImageIcon sx={{ color: 'success.main', fontSize: 20 }} />
@@ -1166,6 +1188,14 @@ export default function FilebrowserMain() {
                                                                 mb: 1,
                                                             }}
                                                         />
+                                                    ) : item.type === 'decoded_folder' ? (
+                                                        <FolderIcon
+                                                            sx={{
+                                                                fontSize: 80,
+                                                                color: 'warning.main',
+                                                                mb: 1,
+                                                            }}
+                                                        />
                                                     ) : item.type === 'decoded' ? (
                                                         item.url?.endsWith('.png') ? (
                                                             <ImageIcon
@@ -1210,7 +1240,9 @@ export default function FilebrowserMain() {
                                                         />
                                                     )}
                                                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                                        {item.type === 'decoded'
+                                                        {item.type === 'decoded_folder'
+                                                            ? `${item.image_count} images - ${item.pipeline || 'SatDump output'}`
+                                                            : item.type === 'decoded'
                                                             ? (item.decoder_type ? `${item.decoder_type} file` : 'Decoded file')
                                                             : item.type === 'audio'
                                                             ? (item.demodulator_type ? `${item.demodulator_type} audio` : 'Audio recording')
@@ -1248,6 +1280,8 @@ export default function FilebrowserMain() {
                                                                 },
                                                             }}
                                                         />
+                                                    ) : item.type === 'decoded_folder' ? (
+                                                        <FolderIcon sx={{ color: 'warning.main', fontSize: 20 }} />
                                                     ) : item.type === 'decoded' ? (
                                                         item.url?.endsWith('.png') ? (
                                                             <ImageIcon sx={{ color: 'success.main', fontSize: 20 }} />
@@ -1366,6 +1400,10 @@ export default function FilebrowserMain() {
                                                     {item.metadata.description}
                                                 </Typography>
                                             )
+                                        ) : item.type === 'decoded_folder' ? (
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                                {`${item.image_count} images - ${item.pipeline || 'SatDump output'}`}
+                                            </Typography>
                                         ) : item.type === 'decoded' ? (
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                                 {item.decoder_type ? `${item.decoder_type} decoded output` : 'Decoded file'}
@@ -1427,6 +1465,35 @@ export default function FilebrowserMain() {
                                                     size="small"
                                                     variant="outlined"
                                                     color="primary"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                />
+                                            )}
+                                            {item.type === 'decoded_folder' && item.image_count && (
+                                                <Chip
+                                                    label={`${item.image_count} images`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="success"
+                                                    icon={<ImageIcon />}
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
+                                                />
+                                            )}
+                                            {item.type === 'decoded_folder' && item.satellite_name && (
+                                                <Chip
+                                                    label={item.satellite_name}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="secondary"
+                                                    icon={<SatelliteAltIcon />}
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
+                                                />
+                                            )}
+                                            {item.type === 'decoded_folder' && item.pipeline && (
+                                                <Chip
+                                                    label={item.pipeline.toUpperCase()}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="info"
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
@@ -1764,6 +1831,8 @@ export default function FilebrowserMain() {
                     </Box>
                     {itemToDelete?.type === 'recording'
                         ? t('delete_dialog.title_recording', 'Delete Recording')
+                        : itemToDelete?.type === 'decoded_folder'
+                        ? t('delete_dialog.title_decoded_folder', 'Delete Decoded Folder')
                         : itemToDelete?.type === 'decoded'
                         ? t('delete_dialog.title_decoded', 'Delete Decoded File')
                         : itemToDelete?.type === 'audio'
@@ -1794,6 +1863,7 @@ export default function FilebrowserMain() {
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                 {itemToDelete?.type === 'recording' ? 'Recording' :
+                                 itemToDelete?.type === 'decoded_folder' ? 'Decoded Folder' :
                                  itemToDelete?.type === 'decoded' ? 'Decoded File' :
                                  itemToDelete?.type === 'audio' ? 'Audio Recording' :
                                  itemToDelete?.type === 'transcription' ? 'Transcription' : 'Snapshot'}
@@ -1937,6 +2007,7 @@ export default function FilebrowserMain() {
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                             {item.type === 'recording' ? 'Recording' :
+                                             item.type === 'decoded_folder' ? 'Decoded Folder' :
                                              item.type === 'decoded' ? 'Decoded File' :
                                              item.type === 'audio' ? 'Audio Recording' :
                                              item.type === 'transcription' ? 'Transcription' : 'Snapshot'}
@@ -2021,6 +2092,13 @@ export default function FilebrowserMain() {
                 open={transcriptionDialogOpen}
                 onClose={() => setTranscriptionDialogOpen(false)}
                 transcription={transcriptionFile}
+            />
+
+            {/* METEOR Folder Dialog */}
+            <MeteorFolderDialog
+                open={meteorFolderDialogOpen}
+                onClose={() => setMeteorFolderDialogOpen(false)}
+                folder={meteorFolder}
             />
         </Box>
     );

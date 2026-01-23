@@ -43,6 +43,7 @@ import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 import SubjectIcon from '@mui/icons-material/Subject';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import ImageIcon from '@mui/icons-material/Image';
+import FolderIcon from '@mui/icons-material/Folder';
 import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
@@ -76,6 +77,8 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
     const getFileType = () => {
         if (item.type === 'recording') {
             return 'IQ Recording';
+        } else if (item.type === 'decoded_folder') {
+            return 'SatDump Folder';
         } else if (item.type === 'decoded') {
             if (item.decoder_type === 'SSTV') {
                 return 'SSTV Image';
@@ -108,6 +111,8 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                     }
                 })
             }} />;
+        } else if (item.type === 'decoded_folder') {
+            return <FolderIcon sx={{ color: 'warning.main', fontSize: 32 }} />;
         } else if (item.type === 'decoded') {
             // Use image icon for SSTV files
             if (item.decoder_type === 'SSTV') {
@@ -136,6 +141,9 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
     const getSatelliteName = () => {
         if (isRecording && item.metadata?.target_satellite_name) {
             return item.metadata.target_satellite_name;
+        }
+        if (item.type === 'decoded_folder' && item.satellite_name) {
+            return item.satellite_name;
         }
         if (item.type === 'decoded' && item.satellite_name) {
             return item.satellite_name;
@@ -207,6 +215,35 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                         label="🔴 Recording"
                         size="small"
                         color="error"
+                        sx={{ height: '20px', fontSize: '0.65rem' }}
+                    />
+                );
+            }
+        }
+
+        // Decoded folder chips
+        if (item.type === 'decoded_folder') {
+            if (item.image_count) {
+                chips.push(
+                    <Chip
+                        key="image-count"
+                        label={`${item.image_count} images`}
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        icon={<ImageIcon />}
+                        sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-icon': { fontSize: '0.85rem' } }}
+                    />
+                );
+            }
+            if (item.pipeline) {
+                chips.push(
+                    <Chip
+                        key="pipeline"
+                        label={item.pipeline.toUpperCase()}
+                        size="small"
+                        variant="outlined"
+                        color="info"
                         sx={{ height: '20px', fontSize: '0.65rem' }}
                     />
                 );

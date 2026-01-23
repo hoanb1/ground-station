@@ -302,6 +302,32 @@ def delete_decoded_file(decoded_dir: Path, decoded_filename: str, logger) -> boo
     return True
 
 
+def delete_decoded_folder(decoded_dir: Path, foldername: str, logger) -> bool:
+    """
+    Delete a decoded folder and all its contents (e.g., SatDump output folders).
+
+    Args:
+        decoded_dir: Path to decoded directory
+        foldername: Name of the folder to delete
+        logger: Logger instance
+
+    Returns:
+        True if folder was deleted, False if folder did not exist
+    """
+    folder = decoded_dir / foldername
+
+    if not folder.exists() or not folder.is_dir():
+        return False
+
+    try:
+        shutil.rmtree(folder)
+        logger.info(f"Deleted decoded folder: {foldername}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to delete folder {foldername}: {e}")
+        return False
+
+
 def delete_audio_file(audio_dir: Path, audio_filename: str, logger) -> bool:
     """
     Delete an audio recording file and its associated metadata.
@@ -498,7 +524,128 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
             # Gather and process decoded files if filter enabled
             if show_decoded and decoded_dir.exists():
-                # Support multiple file types in decoded directory (exclude .json metadata files)
+                # STEP 1: Find all SatDump folders (directories with .satdump_ in name)
+                satdump_folders = [
+                    d for d in decoded_dir.iterdir() if d.is_dir() and ".satdump_" in d.name
+                ]
+
+                for folder in satdump_folders:
+                    folder_stat = folder.stat()
+
+                    # Parse dataset.json for metadata
+                    dataset_file = folder / "dataset.json"
+                    dataset_meta = {}
+                    if dataset_file.exists():
+                        try:
+                            with open(dataset_file, "r") as f:
+                                dataset_meta = json.load(f)
+                        except Exception as e:
+                            logger.warning(f"Failed to parse {dataset_file}: {e}")
+
+                    # Parse telemetry.json for telemetry data
+                    telemetry_file = folder / "telemetry.json"
+                    telemetry_data = None
+                    if telemetry_file.exists():
+                        try:
+                            with open(telemetry_file, "r") as f:
+                                telemetry_data = json.load(f)
+                                # Extract first entry with digital_tlm if available
+                                if isinstance(telemetry_data, list):
+                                    for entry in telemetry_data:
+                                        if isinstance(entry, dict) and "digital_tlm" in entry:
+                                            telemetry_data = entry
+                                            break
+                        except Exception as e:
+                            logger.warning(f"Failed to parse {telemetry_file}: {e}")
+                            telemetry_data = None
+
+                    # Find all images in subdirectories
+                    images = []
+                    total_size = 0
+                    for img_file in folder.rglob("*.png"):
+                        img_stat = img_file.stat()
+                        width, height = get_image_dimensions(str(img_file))
+                        relative_path = img_file.relative_to(folder)
+
+                        images.append(
+                            {
+                                "filename": img_file.name,
+                                "path": str(relative_path),
+                                "size": img_stat.st_size,
+                                "width": width,
+                                "height": height,
+                                "url": f"/decoded/{folder.name}/{relative_path}",
+                            }
+                        )
+                        total_size += img_stat.st_size
+
+                    # Count .cadu files
+                    cadu_files = list(folder.glob("*.cadu"))
+                    for cadu in cadu_files:
+                        total_size += cadu.stat().st_size
+
+                    # Extract satellite info from folder name
+                    # Format: METEOR-M2_3_20260114_185724.satdump_meteor_m2-x_lrpt
+                    sat_name = None
+                    sat_id = None
+                    timestamp_str = None
+                    pipeline = None
+
+                    folder_parts = folder.name.split(".")
+                    if len(folder_parts) >= 2:
+                        name_part = folder_parts[0]  # METEOR-M2_3_20260114_185724
+                        pipeline = folder_parts[1].replace("satdump_", "")  # meteor_m2-x_lrpt
+
+                        # Extract satellite name (METEOR-M2_3)
+                        parts = name_part.split("_")
+                        if len(parts) >= 3:
+                            sat_name = f"{parts[0]}-{parts[1]}"  # METEOR-M2_3
+                            sat_id = parts[1]  # 3
+                            timestamp_str = (
+                                f"{parts[2]}_{parts[3]}" if len(parts) >= 4 else parts[2]
+                            )
+
+                    # Get thumbnail (prefer MCIR RGB composite)
+                    thumbnail_url = None
+                    for img in images:
+                        if (
+                            "rgb_MCIR" in img["filename"]
+                            and not img["filename"].endswith("_map.png")
+                            and "corrected" not in img["filename"]
+                        ):
+                            thumbnail_url = img["url"]
+                            break
+                    if not thumbnail_url and images:
+                        thumbnail_url = images[0]["url"]  # Fallback to first image
+
+                    processed_items.append(
+                        {
+                            "type": "decoded_folder",
+                            "name": folder.stem,
+                            "foldername": folder.name,
+                            "size": total_size,
+                            "created": datetime.fromtimestamp(
+                                folder_stat.st_ctime, timezone.utc
+                            ).isoformat(),
+                            "modified": datetime.fromtimestamp(
+                                folder_stat.st_mtime, timezone.utc
+                            ).isoformat(),
+                            "url": f"/decoded/{folder.name}",
+                            "thumbnail_url": thumbnail_url,
+                            "satellite_name": sat_name or dataset_meta.get("satellite", "Unknown"),
+                            "satellite_id": sat_id,
+                            "timestamp": timestamp_str,
+                            "pipeline": pipeline,
+                            "products": dataset_meta.get("products", []),
+                            "image_count": len(images),
+                            "images": images,
+                            "has_cadu": len(cadu_files) > 0,
+                            "metadata": dataset_meta,
+                            "telemetry": telemetry_data,
+                        }
+                    )
+
+                # STEP 2: Support multiple file types in decoded directory (exclude .json metadata files)
                 decoded_files = []
                 for pattern in ["*.png", "*.jpg", "*.jpeg", "*.txt", "*.bin"]:
                     decoded_files.extend(list(decoded_dir.glob(pattern)))
@@ -965,27 +1112,38 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             )
 
         elif cmd == "delete-decoded":
-            logger.info(f"Deleting decoded file: {data}")
+            logger.info(f"Deleting decoded file/folder: {data}")
             decoded_filename = data.get("filename")
+            decoded_foldername = data.get("foldername")
+            is_folder = data.get("is_folder", False)
 
-            if not decoded_filename:
+            # Determine what we're deleting
+            identifier = decoded_foldername if is_folder else decoded_filename
+
+            if not identifier:
                 await emit_file_browser_error(
-                    sio, "Decoded filename not provided", "delete-decoded", logger
+                    sio, "Decoded filename or foldername not provided", "delete-decoded", logger
                 )
                 return
 
-            # Validate filename (security check)
-            if not validate_filename(decoded_filename):
+            # Validate identifier (security check)
+            if not validate_filename(identifier):
                 await emit_file_browser_error(
-                    sio, "Invalid decoded filename", "delete-decoded", logger
+                    sio, "Invalid decoded filename or foldername", "delete-decoded", logger
                 )
                 return
 
-            deleted = delete_decoded_file(decoded_dir, decoded_filename, logger)
+            # Delete folder or file
+            if is_folder:
+                deleted = delete_decoded_folder(decoded_dir, identifier, logger)
+                item_type = "folder"
+            else:
+                deleted = delete_decoded_file(decoded_dir, identifier, logger)
+                item_type = "file"
 
             if not deleted:
                 await emit_file_browser_error(
-                    sio, "Decoded file not found", "delete-decoded", logger
+                    sio, f"Decoded {item_type} not found", "delete-decoded", logger
                 )
                 return
 
@@ -995,7 +1153,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 {
                     "action": "delete-decoded",
                     "filename": decoded_filename,
-                    "message": f"Deleted decoded file: {decoded_filename}",
+                    "foldername": decoded_foldername,
+                    "is_folder": is_folder,
+                    "message": f"Deleted decoded {item_type}: {identifier}",
                 },
                 logger,
             )
@@ -1158,33 +1318,46 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             }
                         )
 
-                elif item_type == "decoded":
+                elif item_type == "decoded" or item_type == "decoded_folder":
                     decoded_filename = item.get("filename")
-                    if not decoded_filename:
-                        failed_items.append({"type": "decoded", "error": "Missing filename"})
+                    decoded_foldername = item.get("foldername")
+                    is_folder = item_type == "decoded_folder"
+
+                    identifier = decoded_foldername if is_folder else decoded_filename
+
+                    if not identifier:
+                        failed_items.append(
+                            {"type": item_type, "error": "Missing filename/foldername"}
+                        )
                         continue
 
-                    # Validate filename
-                    if not validate_filename(decoded_filename):
+                    # Validate identifier
+                    if not validate_filename(identifier):
                         failed_items.append(
                             {
-                                "type": "decoded",
+                                "type": item_type,
                                 "filename": decoded_filename,
-                                "error": "Invalid filename",
+                                "foldername": decoded_foldername,
+                                "error": "Invalid filename/foldername",
                             }
                         )
                         continue
 
-                    # Delete decoded file
-                    deleted = delete_decoded_file(decoded_dir, decoded_filename, logger)
+                    # Delete decoded file or folder
+                    if is_folder:
+                        deleted = delete_decoded_folder(decoded_dir, identifier, logger)
+                    else:
+                        deleted = delete_decoded_file(decoded_dir, identifier, logger)
+
                     if deleted:
-                        deleted_decoded.append(decoded_filename)
-                        total_files_deleted.append(decoded_filename)
+                        deleted_decoded.append(identifier)
+                        total_files_deleted.append(identifier)
                     else:
                         failed_items.append(
                             {
-                                "type": "decoded",
+                                "type": item_type,
                                 "filename": decoded_filename,
+                                "foldername": decoded_foldername,
                                 "error": "Not found",
                             }
                         )
