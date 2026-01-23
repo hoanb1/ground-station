@@ -46,6 +46,59 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 
+// Parse ANSI color codes and convert to styled spans
+const parseAnsiColors = (text) => {
+    const ansiRegex = /\[(\d+)m/g;
+    const parts = [];
+    let lastIndex = 0;
+    let currentColor = null;
+    let currentBold = false;
+
+    const matches = [...text.matchAll(ansiRegex)];
+
+    for (const match of matches) {
+        // Add text before this code
+        if (match.index > lastIndex) {
+            const textPart = text.substring(lastIndex, match.index);
+            parts.push({
+                text: textPart,
+                color: currentColor,
+                bold: currentBold,
+            });
+        }
+
+        // Parse color code
+        const code = match[1];
+        if (code === '0' || code === 'm') {
+            // Reset
+            currentColor = null;
+            currentBold = false;
+        } else if (code === '1') {
+            currentBold = true;
+        } else if (code === '30') currentColor = '#000000';
+        else if (code === '31') currentColor = '#ff4444';
+        else if (code === '32') currentColor = '#44ff44';
+        else if (code === '33') currentColor = '#ffff44';
+        else if (code === '34') currentColor = '#4444ff';
+        else if (code === '35') currentColor = '#ff44ff';
+        else if (code === '36') currentColor = '#44ffff';
+        else if (code === '37') currentColor = '#ffffff';
+
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+        parts.push({
+            text: text.substring(lastIndex),
+            color: currentColor,
+            bold: currentBold,
+        });
+    }
+
+    return parts;
+};
+
 const BackgroundTasksPopover = () => {
     const { t } = useTranslation('dashboard');
     const { socket } = useSocket();
@@ -271,11 +324,24 @@ const BackgroundTasksPopover = () => {
                                 fontFamily: 'monospace',
                             }}
                         >
-                            {task.output_lines.slice(-40).map((line, idx) => (
-                                <Typography key={idx} variant="caption" component="div" sx={{ fontFamily: 'monospace' }}>
-                                    {line.output}
-                                </Typography>
-                            ))}
+                            {task.output_lines.slice(-40).map((line, idx) => {
+                                const parts = parseAnsiColors(line.output);
+                                return (
+                                    <Typography key={idx} variant="caption" component="div" sx={{ fontFamily: 'monospace' }}>
+                                        {parts.map((part, partIdx) => (
+                                            <span
+                                                key={partIdx}
+                                                style={{
+                                                    color: part.color || 'inherit',
+                                                    fontWeight: part.bold ? 'bold' : 'normal',
+                                                }}
+                                            >
+                                                {part.text}
+                                            </span>
+                                        ))}
+                                    </Typography>
+                                );
+                            })}
                         </Paper>
                     )}
                 </Stack>
