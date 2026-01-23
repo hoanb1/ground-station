@@ -231,6 +231,10 @@ def satdump_process_recording(
                 if "(D)" in line or "(T)" in line:
                     continue
 
+                # Filter out "Loading pipelines from file" messages
+                if "Loading pipelines from file" in line:
+                    continue
+
                 # Parse progress from SatDump output
                 progress = None
                 if "Progress" in line or "%" in line:
