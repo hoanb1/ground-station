@@ -230,7 +230,7 @@ RUN git clone --depth=1 --branch=stable https://github.com/myriadrf/LimeSuite.gi
 #     cd pycsdr && \
 #     ./setup.py install install_headers
 
-# Install additional dependencies for GNU Radio
+# Install additional dependencies for GNU Radio and SatDump
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgmp-dev \
     libmpfr-dev \
@@ -245,6 +245,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pybind11 \
     libzmq3-dev \
     python3-zmq \
+    libpng-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libcurl4-openssl-dev \
+    libzstd-dev \
+    libtiff-dev \
+    libjemalloc-dev \
+    libairspyhf-dev \
+    libad9361-dev \
+    libiio-dev \
+    libbladerf-dev \
+    libomp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages needed for GNU Radio in the venv
@@ -336,6 +348,28 @@ RUN git clone --depth=1 https://github.com/daniestevez/gr-satellites.git && \
 # Verify gr-satellites Python module installation (including satyaml)
 RUN /app/venv/bin/python3 -c "from satellites.satyaml.satyaml import SatYAML; print('✓ gr-satellites satyaml module available')" || \
     (echo "ERROR: satyaml not properly installed!" && exit 1)
+
+# Compile nng (required by SatDump)
+WORKDIR /src
+RUN git clone https://github.com/nanomsg/nng.git -b v1.9.0 && \
+    cd nng && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local .. && \
+    make -j$(nproc) && \
+    sudo make install && \
+    sudo ldconfig
+
+# Compile SatDump (without GUI)
+WORKDIR /src
+RUN git clone https://github.com/SatDump/SatDump.git && \
+    cd SatDump && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF -DCMAKE_INSTALL_PREFIX=/usr/local .. && \
+    make -j$(nproc) && \
+    sudo make install && \
+    sudo ldconfig
 
 # Configure library paths and copy Python bindings
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
