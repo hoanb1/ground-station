@@ -259,6 +259,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libomp-dev \
     libvolk-dev \
     libnng-dev \
+    libhdf5-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages needed for GNU Radio in the venv
