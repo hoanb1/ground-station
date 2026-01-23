@@ -257,6 +257,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libiio-dev \
     libbladerf-dev \
     libomp-dev \
+    libvolk-dev \
+    libnng-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages needed for GNU Radio in the venv
@@ -265,15 +267,25 @@ RUN pip install packaging pybind11 pyzmq
 # Reinstall numpy in the venv (was installed with --break-system-packages earlier)
 RUN pip install --force-reinstall numpy==2.3.1
 
+# IMPORTANT: We maintain TWO versions of VOLK in this container:
+# 1. System libvolk-dev (3.1.0) installed via apt -> used by SatDump
+# 2. VOLK 3.2 compiled from source -> used by GNU Radio
+#
+# Reason: VOLK 3.2 introduced c1/c2 variables in volk_common.h that conflict with
+# SatDump's calibration.h macros (Planck constants). Installing VOLK 3.2 to /opt/volk
+# keeps it isolated for GNU Radio while SatDump uses the older system version without conflicts.
+
 # Compile VOLK (Vector-Optimized Library of Kernels) - required by GNU Radio
+# Install to /opt/volk to avoid conflicts with system libvolk-dev used by SatDump
 WORKDIR /src
 RUN git clone --depth=1 --recursive https://github.com/gnuradio/volk.git && \
     cd volk && \
     mkdir build && \
     cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/volk .. && \
     make -j$(nproc) && \
     sudo make install -j$(nproc) && \
+    echo "/opt/volk/lib" > /etc/ld.so.conf.d/volk.conf && \
     sudo ldconfig
 
 # Compile cppzmq (C++ bindings for ZeroMQ) - required by GNU Radio gr-zeromq
@@ -285,7 +297,7 @@ RUN git clone --depth=1 https://github.com/zeromq/cppzmq.git && \
     cmake .. && \
     sudo make install -j$(nproc)
 
-# Compile GNU Radio 3.10
+# Compile GNU Radio 3.10 (using VOLK from /opt/volk)
 WORKDIR /src
 RUN git clone --depth=1 --branch=maint-3.10 --recursive https://github.com/gnuradio/gnuradio.git && \
     cd gnuradio && \
@@ -298,6 +310,7 @@ RUN git clone --depth=1 --branch=maint-3.10 --recursive https://github.com/gnura
           -DENABLE_GR_ZEROMQ=ON \
           -DPython3_EXECUTABLE=/app/venv/bin/python3 \
           -DPYTHON_EXECUTABLE=/app/venv/bin/python3 \
+          -DCMAKE_PREFIX_PATH=/opt/volk \
           .. && \
     make -j$(nproc) && \
     sudo make install -j$(nproc) && \
@@ -349,24 +362,13 @@ RUN git clone --depth=1 https://github.com/daniestevez/gr-satellites.git && \
 RUN /app/venv/bin/python3 -c "from satellites.satyaml.satyaml import SatYAML; print('✓ gr-satellites satyaml module available')" || \
     (echo "ERROR: satyaml not properly installed!" && exit 1)
 
-# Compile nng (required by SatDump)
+# Compile SatDump (without GUI, using system libvolk-dev and libnng-dev)
 WORKDIR /src
-RUN git clone https://github.com/nanomsg/nng.git -b v1.9.0 && \
-    cd nng && \
-    mkdir build && \
-    cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local .. && \
-    make -j$(nproc) && \
-    sudo make install && \
-    sudo ldconfig
-
-# Compile SatDump (without GUI)
-WORKDIR /src
-RUN git clone https://github.com/SatDump/SatDump.git && \
+RUN git clone --depth=1 https://github.com/SatDump/SatDump.git && \
     cd SatDump && \
     mkdir build && \
     cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF -DCMAKE_INSTALL_PREFIX=/usr/local .. && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=OFF -DCMAKE_INSTALL_PREFIX=/usr .. && \
     make -j$(nproc) && \
     sudo make install && \
     sudo ldconfig
