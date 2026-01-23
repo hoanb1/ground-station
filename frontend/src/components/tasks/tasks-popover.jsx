@@ -48,6 +48,9 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 
 // Parse ANSI color codes and convert to styled spans
 const parseAnsiColors = (text) => {
+    // Remove replacement characters (�) and other invalid UTF-8
+    text = text.replace(/\uFFFD/g, '');
+
     const ansiRegex = /\[(\d+)m/g;
     const parts = [];
     let lastIndex = 0;
