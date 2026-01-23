@@ -540,7 +540,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
             </TableCell>
             <TableCell sx={{ verticalAlign: 'middle' }}>
                 <Typography variant="body2">
-                    {formatTime(item.created)}
+                    {formatTime(item.modified || item.created)}
                 </Typography>
             </TableCell>
             <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ verticalAlign: 'middle' }}>

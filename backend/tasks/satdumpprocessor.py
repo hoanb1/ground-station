@@ -227,8 +227,8 @@ def satdump_process_recording(
 
             line = line.rstrip()
             if line and _progress_queue:
-                # Filter out debug messages (D) from SatDump
-                if "(D)" in line:
+                # Filter out debug (D) and trace (T) messages from SatDump
+                if "(D)" in line or "(T)" in line:
                     continue
 
                 # Parse progress from SatDump output
