@@ -5,6 +5,7 @@ This task processes IQ recordings using SatDump with various satellite pipelines
 Supports progress tracking and graceful interruption.
 """
 
+import shutil
 import signal
 import subprocess
 from multiprocessing import Queue
@@ -22,6 +23,64 @@ class GracefulKiller:
 
     def exit_gracefully(self, *args):
         self.kill_now = True
+
+
+def _cleanup_empty_directory(directory: Path, progress_queue: Optional[Queue] = None):
+    """
+    Remove directory if it's empty or contains only empty subdirectories.
+
+    Args:
+        directory: Path to check and potentially remove
+        progress_queue: Optional queue for logging
+    """
+    try:
+        if not directory.exists():
+            return
+
+        # Check if directory has any files (recursively)
+        has_files = any(directory.rglob("*"))
+
+        if not has_files or _is_directory_empty(directory):
+            if progress_queue:
+                progress_queue.put(
+                    {
+                        "type": "output",
+                        "output": f"Cleaning up empty output directory: {directory}",
+                        "stream": "stdout",
+                    }
+                )
+            shutil.rmtree(directory)
+    except Exception as e:
+        if progress_queue:
+            progress_queue.put(
+                {
+                    "type": "output",
+                    "output": f"Warning: Failed to clean up directory: {e}",
+                    "stream": "stderr",
+                }
+            )
+
+
+def _is_directory_empty(directory: Path) -> bool:
+    """
+    Check if directory is empty or contains only empty subdirectories.
+
+    Args:
+        directory: Path to check
+
+    Returns:
+        True if directory is empty or contains only empty subdirectories
+    """
+    if not directory.is_dir():
+        return False
+
+    for item in directory.iterdir():
+        if item.is_file():
+            return False
+        if item.is_dir() and not _is_directory_empty(item):
+            return False
+
+    return True
 
 
 def satdump_process_recording(
@@ -226,12 +285,18 @@ def satdump_process_recording(
                 "return_code": return_code,
             }
         else:
+            # Clean up empty output directory
+            _cleanup_empty_directory(output_path, _progress_queue)
+
             error_msg = f"SatDump process failed with return code {return_code}"
             if _progress_queue:
                 _progress_queue.put({"type": "error", "error": error_msg, "stream": "stderr"})
             raise RuntimeError(error_msg)
 
     except Exception as e:
+        # Clean up empty output directory on exception
+        _cleanup_empty_directory(output_path, _progress_queue)
+
         error_msg = f"Error during SatDump processing: {str(e)}"
         if _progress_queue:
             _progress_queue.put({"type": "error", "error": error_msg, "stream": "stderr"})
