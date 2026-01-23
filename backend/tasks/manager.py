@@ -350,6 +350,22 @@ class BackgroundTaskManager:
                 except Exception as e:
                     logger.error(f"Error emitting waterfall-generated notification: {e}")
 
+            # Special handling for SatDump processing tasks
+            if task_info.name.startswith("SatDump:") and task_info.status == TaskStatus.COMPLETED:
+                try:
+                    from handlers.entities.filebrowser import emit_file_browser_state
+
+                    await emit_file_browser_state(
+                        self.sio,
+                        {
+                            "action": "satdump-completed",
+                            "task_id": task_id,
+                        },
+                        logger,
+                    )
+                except Exception as e:
+                    logger.error(f"Error emitting satdump-completed notification: {e}")
+
         except asyncio.CancelledError:
             logger.info(f"Monitoring cancelled for task '{task_info.name}'")
             raise

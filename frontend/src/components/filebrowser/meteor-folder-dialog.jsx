@@ -17,7 +17,7 @@
  *
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -67,6 +67,14 @@ function formatBytes(bytes) {
 export default function MeteorFolderDialog({ open, onClose, folder }) {
     const [activeTab, setActiveTab] = useState(0);
     const [selectedImage, setSelectedImage] = useState(null);
+
+    // Reset activeTab when folder changes or dialog opens
+    useEffect(() => {
+        if (open) {
+            setActiveTab(0);
+            setSelectedImage(null);
+        }
+    }, [open, folder?.foldername]);
 
     if (!folder) return null;
 

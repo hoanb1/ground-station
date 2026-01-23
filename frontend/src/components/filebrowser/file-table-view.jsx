@@ -44,6 +44,7 @@ import SubjectIcon from '@mui/icons-material/Subject';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import ImageIcon from '@mui/icons-material/Image';
 import FolderIcon from '@mui/icons-material/Folder';
+import BuildIcon from '@mui/icons-material/Build';
 import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
@@ -66,7 +67,7 @@ function getLanguageFlag(langCode) {
     return flagMap[langCode] || '🌐';
 }
 
-function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onShowDetails, onDownload, onDelete, timezone, t }) {
+function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onShowDetails, onDownload, onDelete, onProcessing, timezone, t }) {
     const isRecording = item.type === 'recording';
 
     const formatTime = (isoDate) => {
@@ -560,6 +561,17 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                             <DownloadIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
+                    {item.type === 'recording' && onProcessing && (
+                        <Tooltip title="Process Recording">
+                            <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => onProcessing(item)}
+                            >
+                                <BuildIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
                     <Tooltip title={t('actions.delete', 'Delete')}>
                         <IconButton
                             size="small"
@@ -583,6 +595,7 @@ export default function FileTableView({
     onShowDetails,
     onDownload,
     onDelete,
+    onProcessing,
     timezone,
 }) {
     const { t } = useTranslation('filebrowser');
@@ -625,7 +638,8 @@ export default function FileTableView({
                                 <TableBody>
                                     {dayGroup.files.map((item) => {
                                         const isRecording = item.type === 'recording';
-                                        const key = isRecording ? item.name : item.filename;
+                                        const isFolder = item.type === 'decoded_folder';
+                                        const key = isRecording ? item.name : (isFolder ? item.foldername : item.filename);
                                         const isSelected = selectedItems.includes(key);
 
                                         return (
@@ -638,6 +652,7 @@ export default function FileTableView({
                                                 onShowDetails={onShowDetails}
                                                 onDownload={onDownload}
                                                 onDelete={onDelete}
+                                                onProcessing={onProcessing}
                                                 timezone={timezone}
                                                 t={t}
                                             />

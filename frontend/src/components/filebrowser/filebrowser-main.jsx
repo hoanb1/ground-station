@@ -74,6 +74,7 @@ import ViewListIcon from '@mui/icons-material/ViewList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import FolderIcon from '@mui/icons-material/Folder';
+import BuildIcon from '@mui/icons-material/Build';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
@@ -103,6 +104,7 @@ import AudioDialog from './audio-dialog.jsx';
 import TranscriptionDialog from './transcription-dialog.jsx';
 import FileTableView from './file-table-view.jsx';
 import MeteorFolderDialog from './meteor-folder-dialog.jsx';
+import ProcessingDialog from './processing-dialog.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -247,6 +249,8 @@ export default function FilebrowserMain() {
     const [transcriptionFile, setTranscriptionFile] = useState(null);
     const [meteorFolderDialogOpen, setMeteorFolderDialogOpen] = useState(false);
     const [meteorFolder, setMeteorFolder] = useState(null);
+    const [processingDialogOpen, setProcessingDialogOpen] = useState(false);
+    const [processingRecording, setProcessingRecording] = useState(null);
 
     // Mark file browser as visited when component mounts
     useEffect(() => {
@@ -563,6 +567,14 @@ export default function FilebrowserMain() {
         // Open the METEOR folder dialog with the item data
         setMeteorFolder(item);
         setMeteorFolderDialogOpen(true);
+    };
+
+    const handleOpenProcessing = (item) => {
+        if (item.type !== 'recording') return;
+
+        // Open the processing dialog with the recording data
+        setProcessingRecording(item);
+        setProcessingDialogOpen(true);
     };
 
     const handleToggleSelection = (item) => {
@@ -904,6 +916,7 @@ export default function FilebrowserMain() {
                     onShowDetails={handleShowDetails}
                     onDownload={handleDownload}
                     onDelete={handleDelete}
+                    onProcessing={handleOpenProcessing}
                     timezone={timezone}
                 />
             ) : (
@@ -1598,6 +1611,17 @@ export default function FilebrowserMain() {
                                                 <DownloadIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
+                                        {item.type === 'recording' && (
+                                            <Tooltip title="Process Recording">
+                                                <IconButton
+                                                    size="small"
+                                                    color="primary"
+                                                    onClick={() => handleOpenProcessing(item)}
+                                                >
+                                                    <BuildIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
                                         <Tooltip title={t('actions.delete', 'Delete')}>
                                             <IconButton
                                                 size="small"
@@ -2099,6 +2123,13 @@ export default function FilebrowserMain() {
                 open={meteorFolderDialogOpen}
                 onClose={() => setMeteorFolderDialogOpen(false)}
                 folder={meteorFolder}
+            />
+
+            {/* Processing Dialog */}
+            <ProcessingDialog
+                open={processingDialogOpen}
+                onClose={() => setProcessingDialogOpen(false)}
+                recording={processingRecording}
             />
         </Box>
     );

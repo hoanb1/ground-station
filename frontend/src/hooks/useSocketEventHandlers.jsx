@@ -283,6 +283,7 @@ export const useSocketEventHandlers = (socket) => {
                 case 'transcription-stopped':
                 case 'decoded-saved':
                 case 'waterfall-generated':
+                case 'satdump-completed':
                     // Set new files indicator when files are created/modified
                     store.dispatch({ type: 'filebrowser/setHasNewFiles', payload: true });
                     // Trigger global file list refresh
