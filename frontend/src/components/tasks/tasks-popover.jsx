@@ -324,7 +324,7 @@ const BackgroundTasksPopover = () => {
                                 fontFamily: 'monospace',
                             }}
                         >
-                            {task.output_lines.slice(-40).map((line, idx) => {
+                            {task.output_lines.slice(-1000).map((line, idx) => {
                                 const parts = parseAnsiColors(line.output);
                                 return (
                                     <Typography key={idx} variant="caption" component="div" sx={{ fontFamily: 'monospace' }}>
