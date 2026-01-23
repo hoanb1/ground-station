@@ -96,10 +96,21 @@ test.describe('File Browser Navigation', () => {
     // Wait for any dialogs to close
     await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
 
-    // Find and click file browser link
+    // Ensure drawer is open
+    const drawerToggle = page.getByRole('button', { name: /toggle drawer/i });
+    await drawerToggle.waitFor({ state: 'visible', timeout: 5000 });
+
+    // Check if File Browser link is already visible (drawer open)
     const fileBrowserLink = page.getByRole('link', { name: /file browser/i }).or(
       page.getByRole('button', { name: /file browser/i })
     );
+    const isVisible = await fileBrowserLink.isVisible().catch(() => false);
+
+    // If not visible, toggle drawer open
+    if (!isVisible) {
+      await drawerToggle.click();
+      await page.waitForTimeout(300); // Wait for drawer animation
+    }
 
     await fileBrowserLink.waitFor({ state: 'visible', timeout: 15000 });
     await fileBrowserLink.click();
