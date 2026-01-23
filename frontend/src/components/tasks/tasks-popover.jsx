@@ -46,6 +46,52 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 
+// Terminal output component with auto-scroll
+const TaskOutputTerminal = ({ task }) => {
+    const terminalRef = useRef(null);
+
+    // Auto-scroll to bottom when new output arrives
+    useEffect(() => {
+        if (terminalRef.current) {
+            terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+        }
+    }, [task.output_lines]);
+
+    return (
+        <Paper
+            ref={terminalRef}
+            variant="outlined"
+            sx={{
+                p: 1,
+                maxHeight: 100,
+                overflow: 'auto',
+                bgcolor: 'background.default',
+                fontSize: '0.75rem',
+                fontFamily: 'monospace',
+            }}
+        >
+            {task.output_lines.slice(-1000).map((line, idx) => {
+                const parts = parseAnsiColors(line.output);
+                return (
+                    <Typography key={idx} variant="caption" component="div" sx={{ fontFamily: 'monospace' }}>
+                        {parts.map((part, partIdx) => (
+                            <span
+                                key={partIdx}
+                                style={{
+                                    color: part.color || 'inherit',
+                                    fontWeight: part.bold ? 'bold' : 'normal',
+                                }}
+                            >
+                                {part.text}
+                            </span>
+                        ))}
+                    </Typography>
+                );
+            })}
+        </Paper>
+    );
+};
+
 // Parse ANSI color codes and convert to styled spans
 const parseAnsiColors = (text) => {
     // Remove replacement characters (�) and other invalid UTF-8
@@ -316,36 +362,7 @@ const BackgroundTasksPopover = () => {
                     )}
 
                     {task.output_lines && task.output_lines.length > 0 && (
-                        <Paper
-                            variant="outlined"
-                            sx={{
-                                p: 1,
-                                maxHeight: 100,
-                                overflow: 'auto',
-                                bgcolor: 'background.default',
-                                fontSize: '0.75rem',
-                                fontFamily: 'monospace',
-                            }}
-                        >
-                            {task.output_lines.slice(-1000).map((line, idx) => {
-                                const parts = parseAnsiColors(line.output);
-                                return (
-                                    <Typography key={idx} variant="caption" component="div" sx={{ fontFamily: 'monospace' }}>
-                                        {parts.map((part, partIdx) => (
-                                            <span
-                                                key={partIdx}
-                                                style={{
-                                                    color: part.color || 'inherit',
-                                                    fontWeight: part.bold ? 'bold' : 'normal',
-                                                }}
-                                            >
-                                                {part.text}
-                                            </span>
-                                        ))}
-                                    </Typography>
-                                );
-                            })}
-                        </Paper>
+                        <TaskOutputTerminal task={task} />
                     )}
                 </Stack>
             </ListItem>
