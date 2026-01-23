@@ -372,6 +372,7 @@ RUN git clone --depth=1 https://github.com/SatDump/SatDump.git && \
           -DBUILD_GUI=OFF \
           -DCMAKE_INSTALL_PREFIX=/usr \
           -DPLUGIN_AARONIA_SDR_SUPPORT=OFF \
+          -DPLUGIN_OFFICIAL_PRODUCTS=ON \
           .. && \
     make -j$(nproc) && \
     sudo make install && \
