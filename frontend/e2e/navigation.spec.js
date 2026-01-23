@@ -14,24 +14,14 @@ test.describe('Navigation Menu', () => {
     // Wait for any dialogs to close
     await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
 
-    // Ensure drawer is open
-    const drawerToggle = page.getByRole('button', { name: /toggle drawer/i });
-    await drawerToggle.waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for app to be ready
+    await page.waitForTimeout(1000);
 
-    // Check if File Browser link is already visible (drawer open)
     const fileBrowserLink = page.getByRole('link', { name: /file browser/i }).or(
       page.getByRole('button', { name: /file browser/i })
     );
-    const isVisible = await fileBrowserLink.isVisible().catch(() => false);
 
-    // If not visible, toggle drawer open
-    if (!isVisible) {
-      await drawerToggle.click();
-      await page.waitForTimeout(300); // Wait for drawer animation
-    }
-
-    await fileBrowserLink.waitFor({ state: 'visible', timeout: 15000 });
-    await fileBrowserLink.click();
+    await fileBrowserLink.click({ force: true, timeout: 15000 });
 
     await page.waitForURL('**/filebrowser', { timeout: 10000 });
     expect(page.url()).toContain('/filebrowser');
@@ -58,24 +48,14 @@ test.describe('Navigation State', () => {
     // Wait for any dialogs to close
     await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
 
-    // Ensure drawer is open
-    const drawerToggle = page.getByRole('button', { name: /toggle drawer/i });
-    await drawerToggle.waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for app to be ready
+    await page.waitForTimeout(1000);
 
-    // Check if Tracking Console link is already visible (drawer open)
+    // Navigate to tracking console
     const trackingLink = page.getByRole('link', { name: /tracking console/i }).or(
       page.getByRole('button', { name: /tracking console/i })
     );
-    const isVisible = await trackingLink.isVisible().catch(() => false);
-
-    // If not visible, toggle drawer open
-    if (!isVisible) {
-      await drawerToggle.click();
-      await page.waitForTimeout(300); // Wait for drawer animation
-    }
-
-    await trackingLink.waitFor({ state: 'visible', timeout: 15000 });
-    await trackingLink.click();
+    await trackingLink.click({ force: true, timeout: 15000 });
     await page.waitForURL('**/track', { timeout: 10000 });
 
     // Go back

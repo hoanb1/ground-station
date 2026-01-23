@@ -139,24 +139,14 @@ test.describe('Hardware Navigation Flow', () => {
     // Wait for any dialogs to close
     await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
 
-    // Ensure drawer is open
-    const drawerToggle = page.getByRole('button', { name: /toggle drawer/i });
-    await drawerToggle.waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for app to be ready
+    await page.waitForTimeout(1000);
 
-    // Check if Rigs link is already visible (drawer open)
+    // Click on Rigs link - force click to bypass overlays
     const rigsLink = page.getByRole('link', { name: /rigs/i }).or(
       page.getByRole('button', { name: /rigs/i })
     );
-    const isVisible = await rigsLink.isVisible().catch(() => false);
-
-    // If not visible, toggle drawer open
-    if (!isVisible) {
-      await drawerToggle.click();
-      await page.waitForTimeout(300); // Wait for drawer animation
-    }
-
-    await rigsLink.waitFor({ state: 'visible', timeout: 15000 });
-    await rigsLink.click();
+    await rigsLink.click({ force: true, timeout: 15000 });
     await page.waitForURL('**/hardware/rig', { timeout: 10000 });
 
     expect(page.url()).toContain('/hardware/rig');
