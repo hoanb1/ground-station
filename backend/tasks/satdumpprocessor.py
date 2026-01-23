@@ -253,7 +253,18 @@ def satdump_process_recording(
         # Wait for process to complete
         return_code = process.wait()
 
-        if return_code == 0:
+        # Check if output directory has any decoded products (images, data files)
+        # SatDump v1.2.3 returns exit code 1 even when decoding succeeded
+        has_output = False
+        if output_path.exists():
+            # Check for any image files or data products
+            has_output = (
+                any(output_path.rglob("*.png"))
+                or any(output_path.rglob("*.jpg"))
+                or any(output_path.rglob("product.cbor"))
+            )
+
+        if return_code == 0 or (return_code == 1 and has_output):
             if _progress_queue:
                 _progress_queue.put(
                     {
@@ -263,13 +274,22 @@ def satdump_process_recording(
                         "progress": 100,
                     }
                 )
-                _progress_queue.put(
-                    {
-                        "type": "output",
-                        "output": "SatDump processing completed successfully!",
-                        "stream": "stdout",
-                    }
-                )
+                if return_code == 1:
+                    _progress_queue.put(
+                        {
+                            "type": "output",
+                            "output": "SatDump completed with exit code 1 but products were generated successfully",
+                            "stream": "stdout",
+                        }
+                    )
+                else:
+                    _progress_queue.put(
+                        {
+                            "type": "output",
+                            "output": "SatDump processing completed successfully!",
+                            "stream": "stdout",
+                        }
+                    )
                 _progress_queue.put(
                     {
                         "type": "output",
