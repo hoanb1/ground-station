@@ -227,6 +227,10 @@ def satdump_process_recording(
 
             line = line.rstrip()
             if line and _progress_queue:
+                # Filter out debug messages (D) from SatDump
+                if "(D)" in line:
+                    continue
+
                 # Parse progress from SatDump output
                 progress = None
                 if "Progress" in line or "%" in line:
