@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import numpy as np
+from scipy.signal import resample_poly
 
 logger = logging.getLogger("iq-recorder")
 
@@ -46,6 +47,7 @@ class IQRecorder(threading.Thread):
         target_satellite_name="",
         target_center_freq=None,
         enable_frequency_shift=False,
+        decimation_factor=1,
     ):
         super().__init__(daemon=True, name=f"IQRecorder-{session_id}")
         self.iq_queue = iq_queue
@@ -56,6 +58,10 @@ class IQRecorder(threading.Thread):
         self.target_satellite_name = target_satellite_name
         self.target_center_freq = target_center_freq
         self.enable_frequency_shift = enable_frequency_shift
+        self.decimation_factor = int(decimation_factor) if decimation_factor else 1
+        if self.decimation_factor < 1:
+            logger.warning(f"Invalid decimation factor {decimation_factor}, falling back to 1")
+            self.decimation_factor = 1
 
         # Frequency shift tracking
         self.shift_hz = 0
@@ -66,6 +72,7 @@ class IQRecorder(threading.Thread):
         self.captures = []
         self.annotations = []
         self.current_center_freq = None
+        self.current_input_sample_rate = None
         self.current_sample_rate = None
         self.start_datetime = None
 
@@ -125,7 +132,7 @@ class IQRecorder(threading.Thread):
                 # Check if parameters changed (new capture segment needed)
                 if (
                     self.current_center_freq != center_freq
-                    or self.current_sample_rate != sample_rate
+                    or self.current_input_sample_rate != sample_rate
                 ):
                     # Calculate frequency shift if needed
                     if self.enable_frequency_shift and self.target_center_freq is not None:
@@ -142,6 +149,8 @@ class IQRecorder(threading.Thread):
                         self.shift_hz = 0
                         output_center_freq = center_freq
 
+                    output_sample_rate = sample_rate / self.decimation_factor
+
                     # Add new capture segment with output center frequency
                     self.captures.append(
                         {
@@ -155,14 +164,16 @@ class IQRecorder(threading.Thread):
                     )
 
                     self.current_center_freq = center_freq
-                    self.current_sample_rate = sample_rate
+                    self.current_input_sample_rate = sample_rate
+                    self.current_sample_rate = output_sample_rate
 
                     if self.start_datetime is None:
                         self.start_datetime = timestamp
 
                     logger.info(
                         f"New capture segment at sample {self.total_samples}: "
-                        f"freq={output_center_freq/1e6:.3f} MHz, rate={sample_rate/1e6:.2f} MS/s"
+                        f"freq={output_center_freq/1e6:.3f} MHz, "
+                        f"rate={output_sample_rate/1e6:.2f} MS/s"
                     )
 
                 # Apply frequency shift if enabled
@@ -180,6 +191,18 @@ class IQRecorder(threading.Thread):
                     self.phase = (
                         self.phase + 2 * np.pi * self.shift_hz * len(samples) / sample_rate
                     ) % (2 * np.pi)
+
+                # Apply decimation if requested
+                if self.decimation_factor > 1:
+                    try:
+                        samples = resample_poly(samples, up=1, down=self.decimation_factor).astype(
+                            np.complex64
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to decimate IQ samples: {e}")
+                        with self.stats_lock:
+                            self.stats["errors"] += 1
+                        continue
 
                 # Write samples to file
                 samples.tofile(self.data_file)
@@ -291,6 +314,28 @@ class IQRecorder(threading.Thread):
                         f"Original center: {self.current_center_freq/1e6:.3f} MHz, "
                         f"Target center: {self.target_center_freq/1e6:.3f} MHz. "
                         f"Signal now centered at {self.target_center_freq/1e6:.3f} MHz.",
+                    }
+                )
+
+        # Add decimation metadata if applied
+        if self.decimation_factor > 1:
+            global_metadata["gs:decimation_factor"] = self.decimation_factor
+            global_metadata["gs:original_sample_rate"] = self.current_input_sample_rate
+            global_metadata["gs:decimated_sample_rate"] = self.current_sample_rate
+
+            if (
+                self.total_samples > 0
+                and self.current_input_sample_rate
+                and self.current_sample_rate
+            ):
+                self.annotations.append(
+                    {
+                        "core:sample_start": 0,
+                        "core:sample_count": self.total_samples,
+                        "core:comment": f"Real-time decimation applied: "
+                        f"{self.decimation_factor}x "
+                        f"(original {self.current_input_sample_rate/1e6:.3f} MS/s, "
+                        f"recorded {self.current_sample_rate/1e6:.3f} MS/s).",
                     }
                 )
 

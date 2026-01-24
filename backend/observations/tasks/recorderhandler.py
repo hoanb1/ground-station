@@ -87,12 +87,14 @@ class RecorderHandler:
             task_config = task_config or {}
             enable_frequency_shift = task_config.get("enable_frequency_shift", False)
             target_center_freq = task_config.get("target_center_freq")
+            decimation_factor = task_config.get("decimation_factor", 1)
 
             # Build recorder kwargs
             recorder_kwargs = {
                 "recording_path": recording_path,
                 "target_satellite_norad_id": str(satellite.get("norad_id", "")),
                 "target_satellite_name": satellite.get("name", ""),
+                "decimation_factor": decimation_factor,
             }
 
             # Add frequency shift parameters if enabled
@@ -102,6 +104,8 @@ class RecorderHandler:
                 logger.info(
                     f"IQ recording will use frequency shift: target={target_center_freq/1e6:.3f} MHz"
                 )
+            if decimation_factor and int(decimation_factor) > 1:
+                logger.info(f"IQ recording will use decimation: {decimation_factor}x")
 
             # Start IQ recorder
             success = self.process_manager.start_recorder(

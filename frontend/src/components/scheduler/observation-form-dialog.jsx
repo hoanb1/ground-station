@@ -121,6 +121,27 @@ const SAMPLE_RATES = [
     { value: 16000000, label: '16 MHz' },
 ];
 
+const formatSampleRate = (rate) => {
+    if (!rate) return '';
+    if (rate >= 1000000) {
+        const decimals = rate % 1000000 === 0 ? 0 : 1;
+        return `${(rate / 1000000).toFixed(decimals)} MHz`;
+    }
+    return `${(rate / 1000).toFixed(0)} kHz`;
+};
+
+const getDecimationOptions = (sampleRate) => {
+    if (!sampleRate || sampleRate <= 0) return [1];
+    const maxFactor = Math.min(40, Math.floor(sampleRate / 1000));
+    const options = [];
+    for (let factor = 1; factor <= maxFactor; factor += 1) {
+        if (sampleRate % factor === 0) {
+            options.push(factor);
+        }
+    }
+    return options.length > 0 ? options : [1];
+};
+
 // Helper function to determine band from frequency in Hz
 const getBand = (frequencyHz) => {
     const freqMHz = frequencyHz / 1000000;
@@ -209,6 +230,35 @@ const ObservationFormDialog = () => {
     // Determine if form should be disabled based on observation status
     const isFormDisabled = selectedObservation && 
         ['running', 'completed', 'failed', 'cancelled'].includes(selectedObservation.status?.toLowerCase());
+
+    useEffect(() => {
+        setFormData((prev) => {
+            const options = getDecimationOptions(prev.sdr.sample_rate);
+            let updated = false;
+            const newTasks = prev.tasks.map((task) => {
+                if (task.type !== 'iq_recording') return task;
+                const current = task.config.decimation_factor || 1;
+                if (!options.includes(current)) {
+                    updated = true;
+                    return {
+                        ...task,
+                        config: {
+                            ...task.config,
+                            decimation_factor: 1,
+                        },
+                    };
+                }
+                return task;
+            });
+            if (!updated) {
+                return prev;
+            }
+            return {
+                ...prev,
+                tasks: newTasks,
+            };
+        });
+    }, [formData.sdr.sample_rate]);
 
     // Sync selectedGroupId from Redux into formData.satellite.group_id
     useEffect(() => {
@@ -451,6 +501,7 @@ const ObservationFormDialog = () => {
                         enable_frequency_shift: false,
                         auto_fill_target_freq: false,
                         target_center_freq: '',
+                        decimation_factor: 1,
                     },
                 };
                 break;
@@ -553,6 +604,12 @@ const ObservationFormDialog = () => {
             if (task.config.enable_frequency_shift && task.config.target_center_freq) {
                 const targetMHz = (task.config.target_center_freq / 1000000).toFixed(3);
                 extraInfo.push(`Centered@${targetMHz}MHz`);
+            }
+            const decimationFactor = task.config.decimation_factor || 1;
+            if (decimationFactor > 1 && formData.sdr.sample_rate) {
+                extraInfo.push(
+                    `Decim x${decimationFactor} (${formatSampleRate(formData.sdr.sample_rate / decimationFactor)})`
+                );
             }
             const parts = [transmitterName, freqMHz, ...extraInfo, 'SigMF (cf32_le)'].filter(Boolean);
             return parts.join(' • ');
@@ -1925,6 +1982,49 @@ const ObservationFormDialog = () => {
 
                                             {task.type === 'iq_recording' && (
                                                 <>
+                                                    {(() => {
+                                                        const decimationOptions = getDecimationOptions(formData.sdr.sample_rate);
+                                                        const decimationFactor = task.config.decimation_factor || 1;
+                                                        const outputRate = formData.sdr.sample_rate
+                                                            ? formData.sdr.sample_rate / decimationFactor
+                                                            : null;
+
+                                                        return (
+                                                            <FormControl fullWidth size="small" disabled={isFormDisabled || !formData.sdr.sample_rate}>
+                                                                <InputLabel>Decimation</InputLabel>
+                                                                <Select
+                                                                    value={decimationFactor}
+                                                                    onChange={(e) =>
+                                                                        handleTaskConfigChange(
+                                                                            index,
+                                                                            'decimation_factor',
+                                                                            parseInt(e.target.value, 10)
+                                                                        )
+                                                                    }
+                                                                    label="Decimation"
+                                                                >
+                                                                    {decimationOptions.map((factor) => (
+                                                                        <MenuItem key={factor} value={factor}>
+                                                                            {factor === 1
+                                                                                ? `None (${formatSampleRate(formData.sdr.sample_rate)})`
+                                                                                : `x${factor} (${formatSampleRate(formData.sdr.sample_rate / factor)})`}
+                                                                        </MenuItem>
+                                                                    ))}
+                                                                </Select>
+                                                                {outputRate && (
+                                                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                                                                        Output sample rate: {formatSampleRate(outputRate)}
+                                                                    </Typography>
+                                                                )}
+                                                                {decimationFactor > 1 && !task.config.enable_frequency_shift && (
+                                                                    <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
+                                                                        Decimation assumes the target signal is centered. Enable Frequency Shift to center your signal before decimating.
+                                                                    </Typography>
+                                                                )}
+                                                            </FormControl>
+                                                        );
+                                                    })()}
+
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Transmitter</InputLabel>
                                                         <Select
@@ -2043,6 +2143,9 @@ const ObservationFormDialog = () => {
                                                         {task.config.enable_frequency_shift
                                                             ? ' Frequency shifting will center the signal at the target frequency, avoiding DC offset issues.'
                                                             : ' The recording uses the SDR sample rate configured above.'}
+                                                        {formData.sdr.sample_rate && (task.config.decimation_factor || 1) > 1
+                                                            ? ` Decimated to ${formatSampleRate(formData.sdr.sample_rate / (task.config.decimation_factor || 1))}.`
+                                                            : ''}
                                                     </Typography>
                                                 </>
                                             )}
