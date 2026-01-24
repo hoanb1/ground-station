@@ -60,6 +60,34 @@ export const fetchSoapySDRServers = createAsyncThunk(
     }
 );
 
+export const startSoapySDRDiscovery = createAsyncThunk(
+    'sdrs/startSoapySDRDiscovery',
+    async ({ socket, mode = 'single', refresh_interval = 120 }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit(
+                    'background_task:start',
+                    {
+                        task_name: 'soapysdr_discovery',
+                        args: [],
+                        kwargs: { mode, refresh_interval },
+                        name: 'SoapySDR Discovery',
+                    },
+                    (res) => {
+                        if (res?.success) {
+                            resolve(res);
+                        } else {
+                            reject(new Error(res?.error || 'Failed to start SoapySDR discovery'));
+                        }
+                    }
+                );
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 
 export const fetchSDRs = createAsyncThunk(
     'sdrs/fetchAll',
@@ -256,6 +284,20 @@ const sdrsSlice = createSlice({
                 state.soapyServers = action.payload;
             })
             .addCase(fetchSoapySDRServers.rejected, (state, action) => {
+                state.loading = false;
+                state.status = 'failed';
+                state.error = action.payload;
+            })
+            .addCase(startSoapySDRDiscovery.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+                state.status = 'loading';
+            })
+            .addCase(startSoapySDRDiscovery.fulfilled, (state) => {
+                state.loading = false;
+                state.status = 'succeeded';
+            })
+            .addCase(startSoapySDRDiscovery.rejected, (state, action) => {
                 state.loading = false;
                 state.status = 'failed';
                 state.error = action.payload;

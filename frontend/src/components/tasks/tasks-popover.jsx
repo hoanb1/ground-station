@@ -22,7 +22,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useSocket } from "../common/socket.jsx";
 import { useTranslation } from 'react-i18next';
-import { removeTask } from './tasks-slice.jsx';
+import { removeTask, stopBackgroundTask } from './tasks-slice.jsx';
 import {
     Box,
     IconButton,
@@ -231,12 +231,12 @@ const BackgroundTasksPopover = () => {
 
     const handleStopTask = useCallback((taskId) => {
         if (!socket) return;
-        socket.emit('background_task:stop', { task_id: taskId, timeout: 5.0 }, (response) => {
-            if (!response.success) {
-                console.error('Failed to stop task:', response.error);
-            }
-        });
-    }, [socket]);
+        dispatch(stopBackgroundTask({ socket, task_id: taskId, timeout: 5.0 }))
+            .unwrap()
+            .catch((error) => {
+                console.error('Failed to stop task:', error);
+            });
+    }, [socket, dispatch]);
 
     const handleClearCompleted = useCallback(() => {
         // Remove all completed tasks (completed, failed, stopped)

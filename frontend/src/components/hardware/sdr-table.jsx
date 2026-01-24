@@ -52,6 +52,7 @@ import {
     fetchSoapySDRServers,
     setSelectedSdrDevice,
     fetchLocalSoapySDRDevices,
+    startSoapySDRDiscovery,
 } from './sdr-slice.jsx';
 import Paper from "@mui/material/Paper";
 
@@ -574,17 +575,6 @@ export default function SDRsPage() {
             <Alert severity="info" sx={{mb: 2}}>
                 <AlertTitle>{t('sdr.title')}</AlertTitle>
                 {t('sdr.subtitle')}
-                <Box sx={{pl: 2, mt: 1}}>
-                    For RTL-SDR
-                    devices specifically, use these terminal commands to manage serial numbers:
-                    <Typography component="div" variant="body2" color="text.secondary">
-                        1. View current ID: <code>rtl_eeprom -d 0</code>
-                        <br/>
-                        2. Set new serial: <code>rtl_eeprom -d 0 -s NEWSERIAL</code>
-                        <br/>
-                        3. Verify changes: <code>rtl_test</code>
-                    </Typography>
-                </Box>
             </Alert>
             {soapyServers && Object.keys(soapyServers).length > 0 ? (
                 <Alert severity="success" sx={{mb: 2}}>
@@ -732,6 +722,21 @@ export default function SDRsPage() {
                             onClick={() => dispatch(setOpenDeleteConfirm(true))}
                         >
                             {t('sdr.delete')}
+                        </Button>
+                        <Box sx={{ flexGrow: 1 }} />
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => {
+                                if (!socket) return;
+                                dispatch(startSoapySDRDiscovery({ socket }))
+                                    .unwrap()
+                                    .catch((error) => {
+                                        console.error('Failed to start SoapySDR discovery:', error);
+                                    });
+                            }}
+                        >
+                            {t('sdr.discover_servers', 'Discover SoapySDR Servers')}
                         </Button>
                         <Dialog
                             open={openDeleteConfirm}

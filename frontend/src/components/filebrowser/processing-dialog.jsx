@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
     Dialog,
     DialogTitle,
@@ -47,6 +47,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useSocket } from '../common/socket.jsx';
+import { startBackgroundTask } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
 
 // Common SatDump satellite/pipeline configurations
@@ -75,6 +76,7 @@ const getRecordingBaseName = (recordingName) => {
 
 export default function ProcessingDialog({ open, onClose, recording }) {
     const { socket } = useSocket();
+    const dispatch = useDispatch();
     const { tasks, runningTaskIds, completedTaskIds } = useSelector(state => state.backgroundTasks);
 
     // Helper function to map SigMF data type to SatDump baseband format
@@ -176,24 +178,13 @@ export default function ProcessingDialog({ open, onClose, recording }) {
             };
 
             // Submit task via Socket.IO
-            const response = await new Promise((resolve, reject) => {
-                socket.emit(
-                    'background_task:start',
-                    {
-                        task_name: 'satdump_process',
-                        args: taskArgs,
-                        kwargs: taskKwargs,
-                        name: `SatDump: ${recording.name} (${selectedPipeline})`,
-                    },
-                    (response) => {
-                        if (response.success) {
-                            resolve(response);
-                        } else {
-                            reject(new Error(response.error || 'Unknown error'));
-                        }
-                    }
-                );
-            });
+            const response = await dispatch(startBackgroundTask({
+                socket,
+                task_name: 'satdump_process',
+                args: taskArgs,
+                kwargs: taskKwargs,
+                name: `SatDump: ${recording.name} (${selectedPipeline})`,
+            })).unwrap();
 
             toast.success(`Processing task started: ${response.task_id}`);
             setSubmittedTaskId(response.task_id);

@@ -17,7 +17,31 @@
  *
  */
 
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+
+export const stopBackgroundTask = createAsyncThunk(
+    'backgroundTasks/stopBackgroundTask',
+    async ({ socket, task_id, timeout = 5.0 }, { rejectWithValue }) => {
+        try {
+            const response = await new Promise((resolve, reject) => {
+                socket.emit(
+                    'background_task:stop',
+                    { task_id, timeout },
+                    (result) => {
+                        if (result?.success) {
+                            resolve(result);
+                        } else {
+                            reject(new Error(result?.error || 'Unknown error'));
+                        }
+                    }
+                );
+            });
+            return response;
+        } catch (error) {
+            return rejectWithValue(error.message || 'Failed to stop background task');
+        }
+    }
+);
 
 const initialState = {
     tasks: {}, // { task_id: TaskInfo }

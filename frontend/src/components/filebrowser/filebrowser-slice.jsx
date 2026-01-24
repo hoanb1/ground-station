@@ -139,6 +139,31 @@ export const deleteBatch = createAsyncThunk(
     }
 );
 
+// Async thunk to start a background task via Socket.IO
+export const startBackgroundTask = createAsyncThunk(
+    'filebrowser/startBackgroundTask',
+    async ({ socket, task_name, args = [], kwargs = {}, name, task_id }, { rejectWithValue }) => {
+        try {
+            const response = await new Promise((resolve, reject) => {
+                socket.emit(
+                    'background_task:start',
+                    { task_name, args, kwargs, name, task_id },
+                    (result) => {
+                        if (result?.success) {
+                            resolve(result);
+                        } else {
+                            reject(new Error(result?.error || 'Unknown error'));
+                        }
+                    }
+                );
+            });
+            return response;
+        } catch (error) {
+            return rejectWithValue(error.message || 'Failed to start background task');
+        }
+    }
+);
+
 const initialState = {
     // All files (recordings, snapshots, decoded, audio, and transcriptions)
     files: [],

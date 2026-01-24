@@ -87,6 +87,7 @@ import {
     deleteAudio,
     deleteTranscription,
     deleteBatch,
+    startBackgroundTask,
     setSortBy,
     toggleSortOrder,
     toggleFilter,
@@ -615,24 +616,13 @@ export default function FilebrowserMain() {
             const baseName = getRecordingBaseName(item.name);
             const recordingPath = `/recordings/${baseName}`;
 
-            const response = await new Promise((resolve, reject) => {
-                socket.emit(
-                    'background_task:start',
-                    {
-                        task_name: 'generate_waterfall',
-                        args: [recordingPath],
-                        kwargs: {},
-                        name: `Waterfall: ${item.name}`,
-                    },
-                    (response) => {
-                        if (response.success) {
-                            resolve(response);
-                        } else {
-                            reject(new Error(response.error || 'Unknown error'));
-                        }
-                    }
-                );
-            });
+            const response = await dispatch(startBackgroundTask({
+                socket,
+                task_name: 'generate_waterfall',
+                args: [recordingPath],
+                kwargs: {},
+                name: `Waterfall: ${item.name}`,
+            })).unwrap();
 
             toast.success(`Waterfall generation started: ${response.task_id}`);
         } catch (error) {
