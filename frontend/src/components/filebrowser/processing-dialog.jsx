@@ -17,7 +17,8 @@
  *
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import {
     Dialog,
     DialogTitle,
@@ -35,9 +36,16 @@ import {
     FormControlLabel,
     Switch,
     Divider,
+    Chip,
+    LinearProgress,
+    Stack,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import BuildIcon from '@mui/icons-material/Build';
+import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { useSocket } from '../common/socket.jsx';
 import { toast } from 'react-toastify';
 
@@ -54,8 +62,20 @@ const BASEBAND_FORMATS = [
     { value: 'w8', label: 'Complex Int8 WAV (w8)' },
 ];
 
+const getRecordingBaseName = (recordingName) => {
+    if (!recordingName) return '';
+    if (recordingName.endsWith('.sigmf-data')) {
+        return recordingName.slice(0, -12);
+    }
+    if (recordingName.endsWith('.sigmf-meta')) {
+        return recordingName.slice(0, -12);
+    }
+    return recordingName;
+};
+
 export default function ProcessingDialog({ open, onClose, recording }) {
     const { socket } = useSocket();
+    const { tasks, runningTaskIds, completedTaskIds } = useSelector(state => state.backgroundTasks);
 
     // Helper function to map SigMF data type to SatDump baseband format
     const getSatDumpFormat = (datatype) => {
@@ -79,6 +99,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
     const [samplerate, setSamplerate] = useState(0);
     const [finishProcessing, setFinishProcessing] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [submittedTaskId, setSubmittedTaskId] = useState(null);
 
     // Update format and sample rate when recording changes
     useEffect(() => {
@@ -99,6 +120,31 @@ export default function ProcessingDialog({ open, onClose, recording }) {
         }
     }, [recording]);
 
+    useEffect(() => {
+        if (!open) {
+            setSubmittedTaskId(null);
+        }
+    }, [open]);
+
+    const recordingBaseName = getRecordingBaseName(recording?.name);
+    const expectedRecordingPath = recordingBaseName
+        ? `/recordings/${recordingBaseName}.sigmf-data`
+        : '';
+
+    const matchingTask = useMemo(() => {
+        if (!expectedRecordingPath) return null;
+        const candidates = Object.values(tasks).filter(task => task?.args?.[0] === expectedRecordingPath);
+        if (candidates.length === 0) return null;
+        return candidates.reduce((latest, current) => {
+            if (!latest) return current;
+            return (current.start_time || 0) > (latest.start_time || 0) ? current : latest;
+        }, null);
+    }, [tasks, expectedRecordingPath]);
+
+    const selectedTask = (submittedTaskId && tasks[submittedTaskId]) || matchingTask;
+    const isTaskRunning = selectedTask?.status === 'running';
+    const hasTask = Boolean(selectedTask);
+
     if (!recording) return null;
 
     const handleSubmit = async () => {
@@ -111,12 +157,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
 
         try {
             // Extract base name without .sigmf-data or .sigmf-meta extensions
-            let baseName = recording.name;
-            if (baseName.endsWith('.sigmf-data')) {
-                baseName = baseName.slice(0, -12);
-            } else if (baseName.endsWith('.sigmf-meta')) {
-                baseName = baseName.slice(0, -12);
-            }
+            const baseName = getRecordingBaseName(recording.name);
 
             // Build recording path - use .sigmf-data file (the actual IQ data)
             const recordingPath = `/recordings/${baseName}.sigmf-data`;
@@ -155,13 +196,53 @@ export default function ProcessingDialog({ open, onClose, recording }) {
             });
 
             toast.success(`Processing task started: ${response.task_id}`);
-            onClose();
+            setSubmittedTaskId(response.task_id);
         } catch (error) {
             console.error('Error starting SatDump task:', error);
             toast.error(`Failed to start task: ${error.message}`);
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const getStatusChip = (status) => {
+        switch (status) {
+            case 'running':
+                return <Chip label="Running" size="small" color="info" icon={<PlaylistPlayIcon />} />;
+            case 'completed':
+                return <Chip label="Completed" size="small" color="success" icon={<CheckCircleIcon />} />;
+            case 'failed':
+                return <Chip label="Failed" size="small" color="error" icon={<ErrorIcon />} />;
+            case 'stopped':
+                return <Chip label="Stopped" size="small" color="warning" icon={<CancelIcon />} />;
+            default:
+                return <Chip label={status || 'Pending'} size="small" />;
+        }
+    };
+
+    const formatDuration = (ms) => {
+        if (!ms) return '';
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (hours > 0) {
+            return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+        }
+        if (minutes > 0) {
+            return `${minutes}m ${seconds % 60}s`;
+        }
+        return `${seconds}s`;
+    };
+
+    const getTaskDuration = (task) => {
+        if (!task?.start_time) return '';
+        const startTimeMs = task.start_time * 1000;
+        const endTimeMs = task.end_time ? task.end_time * 1000 : null;
+        const durationMs = endTimeMs
+            ? (task.duration ? task.duration * 1000 : endTimeMs - startTimeMs)
+            : Date.now() - startTimeMs;
+        return formatDuration(durationMs);
     };
 
     return (
@@ -197,7 +278,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                         Process this IQ recording using SatDump satellite decoder
                     </Typography>
 
-                    <FormControl fullWidth sx={{ mb: 2 }}>
+                    <FormControl fullWidth sx={{ mb: 2 }} disabled={isTaskRunning}>
                         <InputLabel>Satellite / Pipeline</InputLabel>
                         <Select
                             value={selectedPipeline}
@@ -256,6 +337,51 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                         label="Generate products after decoding"
                     />
 
+                    {(hasTask || submitting) && (
+                        <>
+                            <Divider sx={{ my: 2 }} />
+                            <Stack spacing={1.5}>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                                    <Box>
+                                        <Typography variant="subtitle2">
+                                            Background Task
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            This dialog stays open to show task updates. You can close it anytime.
+                                        </Typography>
+                                    </Box>
+                                    {hasTask ? getStatusChip(selectedTask.status) : <Chip label="Starting" size="small" />}
+                                </Stack>
+
+                                {hasTask && (
+                                    <>
+                                        <Typography variant="body2">
+                                            {selectedTask.name}
+                                        </Typography>
+                                        {selectedTask.status === 'running' ? (
+                                            selectedTask.progress !== undefined && selectedTask.progress !== null ? (
+                                                <Box>
+                                                    <LinearProgress variant="determinate" value={selectedTask.progress} />
+                                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                                                        Progress: {Math.round(selectedTask.progress)}%
+                                                    </Typography>
+                                                </Box>
+                                            ) : (
+                                                <LinearProgress />
+                                            )
+                                        ) : null}
+                                        {getTaskDuration(selectedTask) && (
+                                            <Typography variant="caption" color="text.secondary">
+                                                Duration: {getTaskDuration(selectedTask)}
+                                                {selectedTask.return_code !== null && ` | Exit code: ${selectedTask.return_code}`}
+                                            </Typography>
+                                        )}
+                                    </>
+                                )}
+                            </Stack>
+                        </>
+                    )}
+
                     <Divider sx={{ my: 2 }} />
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -270,11 +396,11 @@ export default function ProcessingDialog({ open, onClose, recording }) {
             </DialogContent>
 
             <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={onClose}>{hasTask ? 'Close' : 'Cancel'}</Button>
                 <Button
                     onClick={handleSubmit}
                     variant="contained"
-                    disabled={submitting}
+                    disabled={submitting || isTaskRunning}
                     startIcon={<BuildIcon />}
                 >
                     {submitting ? 'Starting...' : 'Start Processing'}

@@ -321,12 +321,15 @@ const fileBrowserSlice = createSlice({
             const itemsToDelete = action.payload.items;
             // Remove all items in the batch
             state.files = state.files.filter(f => {
-                const key = f.type === 'recording' ? f.name : f.filename;
+                const key = f.type === 'recording'
+                    ? f.name
+                    : (f.type === 'decoded_folder' ? f.foldername : f.filename);
                 return !itemsToDelete.find(item =>
                     item.type === f.type && (
                         (item.type === 'recording' && item.name === key) ||
                         (item.type === 'snapshot' && item.filename === key) ||
                         (item.type === 'decoded' && item.filename === key) ||
+                        (item.type === 'decoded_folder' && item.foldername === key) ||
                         (item.type === 'audio' && item.filename === key) ||
                         (item.type === 'transcription' && item.filename === key)
                     )
