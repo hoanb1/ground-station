@@ -17,7 +17,7 @@
  *
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -96,6 +96,12 @@ function getImageTitle(filename) {
 export default function MeteorFolderDialog({ open, onClose, folder }) {
     const [activeTab, setActiveTab] = useState(0);
     const [selectedImage, setSelectedImage] = useState(null);
+    const [zoom, setZoom] = useState(1);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const panStartRef = useRef({ x: 0, y: 0 });
+    const pointerStartRef = useRef({ x: 0, y: 0 });
+    const zoomContainerRef = useRef(null);
 
     // Reset activeTab when folder changes or dialog opens
     useEffect(() => {
@@ -104,6 +110,14 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
             setSelectedImage(null);
         }
     }, [open, folder?.foldername]);
+
+    useEffect(() => {
+        if (selectedImage) {
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+            setIsPanning(false);
+        }
+    }, [selectedImage]);
 
     if (!folder) return null;
 
@@ -138,6 +152,60 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
                 window.open(img.url, '_blank');
             }, idx * 100);
         });
+    };
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+    const getPanBounds = (zoomValue) => {
+        if (!zoomContainerRef.current) {
+            return { maxX: 0, maxY: 0 };
+        }
+        const rect = zoomContainerRef.current.getBoundingClientRect();
+        const maxX = Math.max(0, (zoomValue - 1) * rect.width / 2);
+        const maxY = Math.max(0, (zoomValue - 1) * rect.height / 2);
+        return { maxX, maxY };
+    };
+
+    const clampPan = (nextPan, zoomValue) => {
+        if (zoomValue <= 1) {
+            return { x: 0, y: 0 };
+        }
+        const { maxX, maxY } = getPanBounds(zoomValue);
+        return {
+            x: clamp(nextPan.x, -maxX, maxX),
+            y: clamp(nextPan.y, -maxY, maxY),
+        };
+    };
+
+    const handleZoom = (event) => {
+        event.preventDefault();
+        if (!selectedImage) return;
+        const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
+        const nextZoom = clamp(zoom * zoomFactor, 1, 6);
+        setZoom(nextZoom);
+        setPan((prev) => clampPan(prev, nextZoom));
+    };
+
+    const handlePointerDown = (event) => {
+        if (!selectedImage) return;
+        if (event.pointerType !== 'touch' && event.button !== 0) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setIsPanning(true);
+        pointerStartRef.current = { x: event.clientX, y: event.clientY };
+        panStartRef.current = { ...pan };
+    };
+
+    const handlePointerMove = (event) => {
+        if (!isPanning) return;
+        const dx = event.clientX - pointerStartRef.current.x;
+        const dy = event.clientY - pointerStartRef.current.y;
+        setPan(clampPan({ x: panStartRef.current.x + dx, y: panStartRef.current.y + dy }, zoom));
+    };
+
+    const handlePointerUp = (event) => {
+        if (!isPanning) return;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        setIsPanning(false);
     };
 
     return (
@@ -417,11 +485,42 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
                             </Box>
                         </Box>
                     </DialogTitle>
-                    <DialogContent sx={{ textAlign: 'center' }}>
+                    <DialogContent
+                        sx={{
+                            textAlign: 'center',
+                            overflow: 'hidden',
+                            backgroundColor: 'black',
+                            p: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: 400,
+                            height: '70vh',
+                            touchAction: 'none',
+                        }}
+                        ref={zoomContainerRef}
+                        onWheel={handleZoom}
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerCancel={handlePointerUp}
+                        onDoubleClick={() => {
+                            setZoom(1);
+                            setPan({ x: 0, y: 0 });
+                        }}
+                    >
                         <img
                             src={selectedImage.url}
                             alt={selectedImage.filename}
-                            style={{ width: '100%', height: 'auto' }}
+                            draggable={false}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                                transformOrigin: 'center center',
+                                cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default',
+                            }}
                         />
                     </DialogContent>
                     <DialogActions>
