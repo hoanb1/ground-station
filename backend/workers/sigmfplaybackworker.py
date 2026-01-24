@@ -26,6 +26,7 @@ import psutil
 
 # Configure logging for the worker process
 logger = logging.getLogger("sigmf-playback")
+SUPPORTED_DATATYPES = {"cf32_le", "ci16_le", "ci16", "ci8", "ci8_le", "cu8", "cu8_le"}
 
 
 def sigmf_playback_worker_process(
@@ -108,7 +109,7 @@ def sigmf_playback_worker_process(
         sample_rate = global_meta.get("core:sample_rate", 2.048e6)
         datatype = global_meta.get("core:datatype", "cf32_le")
 
-        if datatype != "cf32_le":
+        if datatype not in SUPPORTED_DATATYPES:
             logger.warning(f"Datatype {datatype} may not be fully supported")
 
         # Get captures
@@ -128,9 +129,13 @@ def sigmf_playback_worker_process(
         data_file = open(data_path, "rb")
 
         # Calculate total recording duration
-        # Each complex sample is 8 bytes (cf32_le = float32 I + float32 Q)
         file_size_bytes = data_path.stat().st_size
-        total_samples_in_file = file_size_bytes // 8
+        bytes_per_sample = get_bytes_per_sample(datatype)
+        if bytes_per_sample == 0:
+            raise ValueError(f"Unsupported SigMF datatype: {datatype}")
+        if file_size_bytes % bytes_per_sample != 0:
+            logger.warning("Data file size is not aligned to sample size for %s", datatype)
+        total_samples_in_file = file_size_bytes // bytes_per_sample
         total_recording_duration_seconds = total_samples_in_file / sample_rate
         logger.info(
             f"Recording duration: {total_recording_duration_seconds:.2f} seconds "
@@ -261,8 +266,7 @@ def sigmf_playback_worker_process(
 
             try:
                 # Read samples from file
-                # Each complex sample is 8 bytes (4 bytes I float32 + 4 bytes Q float32)
-                bytes_to_read = num_samples * 8
+                bytes_to_read = num_samples * bytes_per_sample
                 data = data_file.read(bytes_to_read)
 
                 # Check if we reached end of file
@@ -285,7 +289,7 @@ def sigmf_playback_worker_process(
                     continue
 
                 # Convert bytes to complex64 samples
-                samples = np.frombuffer(data, dtype=np.complex64)
+                samples = parse_iq_samples(data, datatype)
                 samples_read = len(samples)
                 total_samples_read += samples_read
                 stats["samples_read"] += samples_read
@@ -484,6 +488,51 @@ def calculate_samples_per_scan(sample_rate, fft_size):
     num_samples = min(num_samples, 1048576)
 
     return num_samples
+
+
+def get_bytes_per_sample(datatype: str) -> int:
+    if datatype == "cf32_le":
+        return 8
+    if datatype in ("ci16_le", "ci16"):
+        return 4
+    if datatype in ("ci8", "ci8_le", "cu8", "cu8_le"):
+        return 2
+    return 0
+
+
+def parse_iq_samples(data: bytes, datatype: str) -> np.ndarray:
+    """
+    Parse raw IQ bytes into complex64 samples based on SigMF datatype.
+    """
+    if datatype == "cf32_le":
+        return np.frombuffer(data, dtype=np.complex64)
+
+    if datatype in ("ci16_le", "ci16"):
+        iq = np.frombuffer(data, dtype="<i2")
+        if iq.size % 2:
+            iq = iq[:-1]
+        i = iq[0::2].astype(np.float32)
+        q = iq[1::2].astype(np.float32)
+        return (i + 1j * q) / 32768.0
+
+    if datatype in ("ci8", "ci8_le"):
+        iq = np.frombuffer(data, dtype=np.int8)
+        if iq.size % 2:
+            iq = iq[:-1]
+        i = iq[0::2].astype(np.float32)
+        q = iq[1::2].astype(np.float32)
+        return (i + 1j * q) / 128.0
+
+    if datatype in ("cu8", "cu8_le"):
+        iq = np.frombuffer(data, dtype=np.uint8)
+        if iq.size % 2:
+            iq = iq[:-1]
+        i = iq[0::2].astype(np.float32) - 128.0
+        q = iq[1::2].astype(np.float32) - 128.0
+        return (i + 1j * q) / 128.0
+
+    logger.warning("Unsupported datatype %s, falling back to cf32_le", datatype)
+    return np.frombuffer(data, dtype=np.complex64)
 
 
 def remove_dc_offset(samples):

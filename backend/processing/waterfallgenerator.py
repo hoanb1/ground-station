@@ -174,6 +174,75 @@ class WaterfallGenerator:
         self.config = config or WaterfallConfig()
         self.logger = logging.getLogger("waterfall-generator")
 
+    def _get_sigmf_dtype_info(self, datatype: str) -> Optional[dict]:
+        if not datatype:
+            return None
+
+        lower = datatype.lower()
+        if lower in {"cf32", "cf32_le"}:
+            return {"kind": "cf32", "numpy_dtype": np.complex64, "bytes_per_sample": 8}
+        if lower in {"ci16", "ci16_le"}:
+            return {"kind": "ci16", "numpy_dtype": np.int16, "bytes_per_sample": 4}
+        if lower in {"ci8", "ci8_le"}:
+            return {"kind": "ci8", "numpy_dtype": np.int8, "bytes_per_sample": 2}
+        if lower in {"cu8", "cu8_le"}:
+            return {"kind": "cu8", "numpy_dtype": np.uint8, "bytes_per_sample": 2}
+
+        return None
+
+    def _build_sample_reader(self, data_file: Path, dtype_info: dict):
+        kind = dtype_info["kind"]
+        if kind == "cf32":
+            iq_data = np.memmap(data_file, dtype=np.complex64, mode="r")
+
+            def read_samples(start_idx: int, count: int) -> np.ndarray:
+                return iq_data[start_idx : start_idx + count]
+
+            return read_samples
+
+        raw = np.memmap(data_file, dtype=dtype_info["numpy_dtype"], mode="r")
+
+        if kind == "ci16":
+
+            def read_samples(start_idx: int, count: int) -> np.ndarray:
+                offset = start_idx * 2
+                chunk = raw[offset : offset + count * 2]
+                if chunk.size < count * 2:
+                    count = chunk.size // 2
+                    chunk = chunk[: count * 2]
+                i_vals = chunk[0::2].astype(np.float32)
+                q_vals = chunk[1::2].astype(np.float32)
+                return i_vals + 1j * q_vals
+
+        elif kind == "ci8":
+
+            def read_samples(start_idx: int, count: int) -> np.ndarray:
+                offset = start_idx * 2
+                chunk = raw[offset : offset + count * 2]
+                if chunk.size < count * 2:
+                    count = chunk.size // 2
+                    chunk = chunk[: count * 2]
+                i_vals = chunk[0::2].astype(np.float32)
+                q_vals = chunk[1::2].astype(np.float32)
+                return i_vals + 1j * q_vals
+
+        elif kind == "cu8":
+
+            def read_samples(start_idx: int, count: int) -> np.ndarray:
+                offset = start_idx * 2
+                chunk = raw[offset : offset + count * 2]
+                if chunk.size < count * 2:
+                    count = chunk.size // 2
+                    chunk = chunk[: count * 2]
+                i_vals = chunk[0::2].astype(np.float32) - 128.0
+                q_vals = chunk[1::2].astype(np.float32) - 128.0
+                return i_vals + 1j * q_vals
+
+        else:
+            raise ValueError(f"Unsupported SigMF datatype kind: {kind}")
+
+        return read_samples
+
     def generate_from_sigmf(self, recording_path: Path) -> bool:
         """
         Generate waterfall images from a SigMF recording.
@@ -186,8 +255,9 @@ class WaterfallGenerator:
         """
         try:
             recording_path = Path(recording_path)
-            data_file = recording_path.with_suffix(".sigmf-data")
-            meta_file = recording_path.with_suffix(".sigmf-meta")
+            recording_base = str(recording_path)
+            data_file = Path(f"{recording_base}.sigmf-data")
+            meta_file = Path(f"{recording_base}.sigmf-meta")
 
             # Verify files exist
             if not data_file.exists():
@@ -202,14 +272,24 @@ class WaterfallGenerator:
             with open(meta_file, "r") as f:
                 metadata = json.load(f)
 
-            sample_rate = metadata["global"].get("core:sample_rate")
+            global_meta = metadata.get("global", {})
+            sample_rate = global_meta.get("core:sample_rate")
             if sample_rate is None:
                 self.logger.error("Missing sample_rate in metadata")
+                return False
+            datatype = global_meta.get("core:datatype", "cf32_le")
+
+            dtype_info = self._get_sigmf_dtype_info(datatype)
+            if not dtype_info:
+                self.logger.error(f"Unsupported SigMF datatype: {datatype}")
                 return False
 
             # Get file size to determine total samples
             file_size = data_file.stat().st_size
-            total_samples = file_size // 8  # cf32_le = 8 bytes per sample
+            bytes_per_sample = dtype_info["bytes_per_sample"]
+            total_samples = file_size // bytes_per_sample
+            if file_size % bytes_per_sample != 0:
+                self.logger.warning("Data file size is not aligned to sample size for %s", datatype)
             duration_sec = total_samples / sample_rate
 
             self.logger.info(
@@ -220,8 +300,7 @@ class WaterfallGenerator:
             # Calculate dimensions
             dimensions = self._calculate_dimensions(duration_sec, sample_rate, total_samples)
 
-            # Open IQ data file for auto-scaling and generation
-            iq_data = np.memmap(data_file, dtype=np.complex64, mode="r")
+            sample_reader = self._build_sample_reader(data_file, dtype_info)
 
             # Create window function for auto-scaling
             fft_size = dimensions["width"]
@@ -235,15 +314,15 @@ class WaterfallGenerator:
                 window = np.ones(fft_size)
 
             # Auto-scale dB range by sampling FFTs from the recording
-            self.config.db_range = self._auto_scale_db_range(iq_data, sample_rate, fft_size, window)
-
-            # Generate full waterfall
-            waterfall_data = self._generate_waterfall_data(
-                data_file, sample_rate, total_samples, dimensions
+            self.config.db_range = self._auto_scale_db_range(
+                sample_reader, total_samples, fft_size, window
             )
 
+            # Generate full waterfall
+            waterfall_data = self._generate_waterfall_data(sample_reader, total_samples, dimensions)
+
             # Apply colormap and save
-            output_path = recording_path.with_suffix(".png")
+            output_path = Path(f"{recording_base}.png")
             self._save_waterfall_image(waterfall_data, output_path, metadata)
 
             self.logger.info(
@@ -254,7 +333,7 @@ class WaterfallGenerator:
             # Generate thumbnail if requested
             if self.config.generate_thumbnail:
                 thumbnail_path = recording_path.with_name(
-                    f"{recording_path.stem}_waterfall_thumb.png"
+                    f"{recording_path.name}_waterfall_thumb.png"
                 )
                 self._generate_thumbnail(output_path, thumbnail_path)
                 self.logger.info(f"Thumbnail saved: {thumbnail_path.name}")
@@ -267,7 +346,11 @@ class WaterfallGenerator:
             return False
 
     def _auto_scale_db_range(
-        self, iq_data: np.ndarray, sample_rate: float, fft_size: int, window: np.ndarray
+        self,
+        sample_reader,
+        total_samples: int,
+        fft_size: int,
+        window: np.ndarray,
     ) -> Tuple[float, float]:
         """
         Auto-scale dB range by sampling FFT frames from the recording.
@@ -283,13 +366,16 @@ class WaterfallGenerator:
             Tuple of (min_db, max_db)
         """
         # Sample 50 FFT frames scattered throughout the recording to better capture signal dynamics
-        num_samples = min(50, len(iq_data) // fft_size)
+        num_samples = min(50, total_samples // fft_size)
         if num_samples < 3:
             self.logger.warning("Not enough samples for auto-scaling, using default range")
             return self.config.db_range
 
         # Calculate evenly spaced sample positions
-        total_possible_ffts = len(iq_data) - fft_size
+        total_possible_ffts = total_samples - fft_size
+        if total_possible_ffts <= 0:
+            self.logger.warning("Not enough samples for auto-scaling, using default range")
+            return self.config.db_range
         sample_positions = np.linspace(0, total_possible_ffts, num_samples, dtype=int)
 
         # Collect FFT power values from sampled frames
@@ -297,7 +383,9 @@ class WaterfallGenerator:
 
         for pos in sample_positions:
             # Extract samples
-            samples = iq_data[pos : pos + fft_size]
+            samples = sample_reader(pos, fft_size)
+            if len(samples) < fft_size:
+                continue
 
             # Apply window and FFT
             windowed = samples * window
@@ -384,7 +472,7 @@ class WaterfallGenerator:
         }
 
     def _generate_waterfall_data(
-        self, data_file: Path, sample_rate: float, total_samples: int, dimensions: dict
+        self, sample_reader, total_samples: int, dimensions: dict
     ) -> np.ndarray:
         """
         Generate waterfall data from IQ samples.
@@ -410,25 +498,20 @@ class WaterfallGenerator:
         # Allocate output array
         waterfall = np.zeros((height, fft_size), dtype=np.float32)
 
-        # Open IQ data file
-        iq_data = np.memmap(data_file, dtype=np.complex64, mode="r")
-
         self.logger.info(f"Processing {dimensions['total_frames']} FFT frames into {height} rows")
 
         # Process in chunks to save memory
         row_idx = 0
         frame_idx = 0
 
-        while frame_idx < len(iq_data) - fft_size and row_idx < height:
+        while frame_idx + fft_size <= total_samples and row_idx < height:
             # Accumulate frames_per_row FFT frames
             accumulated_spectrum = np.zeros(fft_size, dtype=np.float32)
 
             for _ in range(frames_per_row):
-                if frame_idx + fft_size > len(iq_data):
+                samples = sample_reader(frame_idx, fft_size)
+                if len(samples) < fft_size:
                     break
-
-                # Extract samples
-                samples = iq_data[frame_idx : frame_idx + fft_size]
 
                 # Apply window and FFT
                 windowed = samples * window

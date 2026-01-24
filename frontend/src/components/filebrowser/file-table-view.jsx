@@ -67,7 +67,7 @@ function getLanguageFlag(langCode) {
     return flagMap[langCode] || '🌐';
 }
 
-function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onShowDetails, onDownload, onDelete, onProcessing, timezone, t }) {
+function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onShowDetails, onDownload, onDelete, onProcessingMenu, timezone, t }) {
     const isRecording = item.type === 'recording';
 
     const formatTime = (isoDate) => {
@@ -561,12 +561,12 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                             <DownloadIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
-                    {item.type === 'recording' && onProcessing && (
-                        <Tooltip title="Process Recording">
+                    {item.type === 'recording' && onProcessingMenu && (
+                        <Tooltip title="Recording Actions">
                             <IconButton
                                 size="small"
                                 color="primary"
-                                onClick={() => onProcessing(item)}
+                                onClick={(event) => onProcessingMenu(event, item)}
                             >
                                 <BuildIcon fontSize="small" />
                             </IconButton>
@@ -595,7 +595,7 @@ export default function FileTableView({
     onShowDetails,
     onDownload,
     onDelete,
-    onProcessing,
+    onProcessingMenu,
     timezone,
 }) {
     const { t } = useTranslation('filebrowser');
@@ -652,7 +652,7 @@ export default function FileTableView({
                                                 onShowDetails={onShowDetails}
                                                 onDownload={onDownload}
                                                 onDelete={onDelete}
-                                                onProcessing={onProcessing}
+                                                onProcessingMenu={onProcessingMenu}
                                                 timezone={timezone}
                                                 t={t}
                                             />

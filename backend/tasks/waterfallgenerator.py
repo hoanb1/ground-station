@@ -44,6 +44,18 @@ def generate_waterfall_task(
 
     try:
         recording_path_obj = Path(recording_path)
+        if recording_path_obj.suffix in {".sigmf-data", ".sigmf-meta"}:
+            recording_path_obj = recording_path_obj.with_suffix("")
+
+        recording_path_str = str(recording_path_obj)
+        if recording_path_str.startswith("/recordings/") or recording_path_str.startswith(
+            "/decoded/"
+        ):
+            backend_dir = Path(__file__).parent.parent
+            recording_path_obj = backend_dir / "data" / recording_path_str.lstrip("/")
+        elif not recording_path_obj.is_absolute():
+            backend_dir = Path(__file__).parent.parent
+            recording_path_obj = backend_dir / "data" / recording_path_str.lstrip("/")
 
         if _progress_queue:
             _progress_queue.put(
@@ -110,7 +122,7 @@ def generate_waterfall_task(
             return {
                 "status": "completed",
                 "recording_path": str(recording_path_obj),
-                "waterfall_path": str(recording_path_obj.with_suffix(".png")),
+                "waterfall_path": f"{recording_path_obj}.png",
             }
         else:
             error_msg = f"Waterfall generation failed for {recording_path_obj.name}"

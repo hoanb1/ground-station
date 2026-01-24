@@ -37,12 +37,14 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Menu,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
     Checkbox,
     ListItemText,
+    ListItemIcon,
     OutlinedInput,
     Pagination,
     LinearProgress,
@@ -141,6 +143,17 @@ function formatDuration(startTime, endTime) {
 
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
+
+const getRecordingBaseName = (recordingName) => {
+    if (!recordingName) return '';
+    if (recordingName.endsWith('.sigmf-data')) {
+        return recordingName.slice(0, -12);
+    }
+    if (recordingName.endsWith('.sigmf-meta')) {
+        return recordingName.slice(0, -12);
+    }
+    return recordingName;
+};
 
 function getLanguageFlag(langCode) {
     // Map language codes to country flag emojis
@@ -251,6 +264,8 @@ export default function FilebrowserMain() {
     const [meteorFolder, setMeteorFolder] = useState(null);
     const [processingDialogOpen, setProcessingDialogOpen] = useState(false);
     const [processingRecording, setProcessingRecording] = useState(null);
+    const [processingMenuAnchorEl, setProcessingMenuAnchorEl] = useState(null);
+    const [processingMenuRecording, setProcessingMenuRecording] = useState(null);
 
     // Mark file browser as visited when component mounts
     useEffect(() => {
@@ -575,6 +590,55 @@ export default function FilebrowserMain() {
         // Open the processing dialog with the recording data
         setProcessingRecording(item);
         setProcessingDialogOpen(true);
+    };
+
+    const handleOpenProcessingMenu = (event, item) => {
+        if (item.type !== 'recording') return;
+        setProcessingMenuAnchorEl(event.currentTarget);
+        setProcessingMenuRecording(item);
+    };
+
+    const handleCloseProcessingMenu = () => {
+        setProcessingMenuAnchorEl(null);
+        setProcessingMenuRecording(null);
+    };
+
+    const handleGenerateWaterfall = async (item) => {
+        if (item.type !== 'recording') return;
+
+        if (!socket) {
+            toast.error('Not connected to server');
+            return;
+        }
+
+        try {
+            const baseName = getRecordingBaseName(item.name);
+            const recordingPath = `/recordings/${baseName}`;
+
+            const response = await new Promise((resolve, reject) => {
+                socket.emit(
+                    'background_task:start',
+                    {
+                        task_name: 'generate_waterfall',
+                        args: [recordingPath],
+                        kwargs: {},
+                        name: `Waterfall: ${item.name}`,
+                    },
+                    (response) => {
+                        if (response.success) {
+                            resolve(response);
+                        } else {
+                            reject(new Error(response.error || 'Unknown error'));
+                        }
+                    }
+                );
+            });
+
+            toast.success(`Waterfall generation started: ${response.task_id}`);
+        } catch (error) {
+            console.error('Error starting waterfall task:', error);
+            toast.error(`Failed to start waterfall task: ${error.message}`);
+        }
     };
 
     const handleToggleSelection = (item) => {
@@ -916,7 +980,7 @@ export default function FilebrowserMain() {
                     onShowDetails={handleShowDetails}
                     onDownload={handleDownload}
                     onDelete={handleDelete}
-                    onProcessing={handleOpenProcessing}
+                    onProcessingMenu={handleOpenProcessingMenu}
                     timezone={timezone}
                 />
             ) : (
@@ -1612,11 +1676,11 @@ export default function FilebrowserMain() {
                                             </IconButton>
                                         </Tooltip>
                                         {item.type === 'recording' && (
-                                            <Tooltip title="Process Recording">
+                                            <Tooltip title="Recording Actions">
                                                 <IconButton
                                                     size="small"
                                                     color="primary"
-                                                    onClick={() => handleOpenProcessing(item)}
+                                                    onClick={(event) => handleOpenProcessingMenu(event, item)}
                                                 >
                                                     <BuildIcon fontSize="small" />
                                                 </IconButton>
@@ -1651,6 +1715,43 @@ export default function FilebrowserMain() {
                     />
                 </Box>
             )}
+
+            <Menu
+                anchorEl={processingMenuAnchorEl}
+                open={Boolean(processingMenuAnchorEl)}
+                onClose={handleCloseProcessingMenu}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+                <MenuItem
+                    onClick={() => {
+                        const target = processingMenuRecording;
+                        handleCloseProcessingMenu();
+                        if (target) {
+                            handleGenerateWaterfall(target);
+                        }
+                    }}
+                >
+                    <ListItemIcon>
+                        <ImageIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Generate Waterfall Image" />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        const target = processingMenuRecording;
+                        handleCloseProcessingMenu();
+                        if (target) {
+                            handleOpenProcessing(target);
+                        }
+                    }}
+                >
+                    <ListItemIcon>
+                        <BuildIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Process IQ Recording" />
+                </MenuItem>
+            </Menu>
 
             {/* Recording Details Dialog */}
             {selectedItem?.type === 'recording' && (
