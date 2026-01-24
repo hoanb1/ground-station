@@ -180,10 +180,24 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
     const handleZoom = (event) => {
         event.preventDefault();
         if (!selectedImage) return;
+        if (!zoomContainerRef.current) return;
         const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
         const nextZoom = clamp(zoom * zoomFactor, 1, 6);
+        const rect = zoomContainerRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const cursorOffset = {
+            x: event.clientX - centerX,
+            y: event.clientY - centerY,
+        };
+        const ratio = nextZoom / zoom;
+        const nextPan = {
+            x: pan.x + (1 - ratio) * cursorOffset.x,
+            y: pan.y + (1 - ratio) * cursorOffset.y,
+        };
+
         setZoom(nextZoom);
-        setPan((prev) => clampPan(prev, nextZoom));
+        setPan(clampPan(nextPan, nextZoom));
     };
 
     const handlePointerDown = (event) => {
