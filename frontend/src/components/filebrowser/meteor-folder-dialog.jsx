@@ -64,6 +64,35 @@ function formatBytes(bytes) {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
+function getImageTitle(filename) {
+    const baseName = filename.replace(/\.png$/i, '');
+    const rawChannelMatch = baseName.match(/^MSU-MR-(\d)$/);
+    if (rawChannelMatch) {
+        return `Raw Channel ${rawChannelMatch[1]}`;
+    }
+
+    const isCorrected = baseName.includes('_corrected');
+    const isMap = baseName.includes('_map');
+    let label = baseName.replace(/_corrected/g, '').replace(/_map/g, '');
+
+    if (label.includes('3.9_um')) {
+        label = 'Shortwave IR 3.9um';
+    } else if (label.startsWith('msu_mr_rgb_')) {
+        label = label.replace(/^msu_mr_rgb_/, '').replace(/_/g, ' ');
+        if (!/false color/i.test(label)) {
+            label = `${label} Composite`;
+        }
+    } else {
+        label = label.replace(/_/g, ' ');
+    }
+
+    const suffixParts = [];
+    if (isCorrected) suffixParts.push('Corrected');
+    if (isMap) suffixParts.push('Map');
+
+    return suffixParts.length > 0 ? `${label} (${suffixParts.join(' ')})` : label;
+}
+
 export default function MeteorFolderDialog({ open, onClose, folder }) {
     const [activeTab, setActiveTab] = useState(0);
     const [selectedImage, setSelectedImage] = useState(null);
@@ -280,54 +309,65 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
                                     </Box>
                                 ) : (
                                     <Grid container spacing={2}>
-                                        {category.images.map((image, imgIdx) => (
-                                        <Grid item xs={12} sm={6} md={4} lg={3} key={imgIdx}>
-                                            <Card
-                                                sx={{
-                                                    cursor: 'pointer',
-                                                    '&:hover': { boxShadow: 4 },
-                                                    height: '100%',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                }}
-                                                onClick={() => setSelectedImage(image)}
-                                            >
-                                                <CardMedia
-                                                    component="img"
-                                                    height="200"
-                                                    image={image.url}
-                                                    alt={image.filename}
-                                                    sx={{ objectFit: 'cover' }}
-                                                />
-                                                <CardContent sx={{ pb: 1, flexGrow: 1 }}>
-                                                    <Typography
-                                                        variant="body2"
-                                                        noWrap
-                                                        title={image.filename}
-                                                        sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+                                        {category.images.map((image, imgIdx) => {
+                                            const title = getImageTitle(image.filename);
+
+                                            return (
+                                                <Grid item xs={12} sm={6} md={4} lg={3} key={imgIdx}>
+                                                    <Card
+                                                        sx={{
+                                                            cursor: 'pointer',
+                                                            '&:hover': { boxShadow: 4 },
+                                                            height: '100%',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                        }}
+                                                        onClick={() => setSelectedImage(image)}
                                                     >
-                                                        {image.filename}
-                                                    </Typography>
-                                                    <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
-                                                        {image.width && image.height && (
-                                                            <Chip
-                                                                label={`${image.width}×${image.height}`}
-                                                                size="small"
-                                                                variant="outlined"
-                                                                sx={{ height: '18px', fontSize: '0.65rem' }}
-                                                            />
-                                                        )}
-                                                        <Chip
-                                                            label={formatBytes(image.size)}
-                                                            size="small"
-                                                            variant="outlined"
-                                                            sx={{ height: '18px', fontSize: '0.65rem' }}
+                                                        <CardMedia
+                                                            component="img"
+                                                            height="200"
+                                                            image={image.url}
+                                                            alt={image.filename}
+                                                            sx={{ objectFit: 'cover' }}
                                                         />
-                                                    </Box>
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                        ))}
+                                                        <CardContent sx={{ pb: 1, flexGrow: 1 }}>
+                                                            <Typography
+                                                                variant="subtitle2"
+                                                                noWrap
+                                                                title={title}
+                                                            >
+                                                                {title}
+                                                            </Typography>
+                                                            <Typography
+                                                                variant="body2"
+                                                                noWrap
+                                                                title={image.filename}
+                                                                sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+                                                            >
+                                                                {image.filename}
+                                                            </Typography>
+                                                            <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
+                                                                {image.width && image.height && (
+                                                                    <Chip
+                                                                        label={`${image.width}×${image.height}`}
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        sx={{ height: '18px', fontSize: '0.65rem' }}
+                                                                    />
+                                                                )}
+                                                                <Chip
+                                                                    label={formatBytes(image.size)}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    sx={{ height: '18px', fontSize: '0.65rem' }}
+                                                                />
+                                                            </Box>
+                                                        </CardContent>
+                                                    </Card>
+                                                </Grid>
+                                            );
+                                        })}
                                     </Grid>
                                 )}
                             </TabPanel>
