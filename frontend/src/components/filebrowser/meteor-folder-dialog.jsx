@@ -456,7 +456,7 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
                 <DialogActions>
                     {folder.images && folder.images.length > 0 && (
                         <Button onClick={handleDownloadFolder} startIcon={<DownloadIcon />}>
-                            Download All ({folder.image_count})
+                            DOWNLOAD ZIP ({folder.image_count})
                         </Button>
                     )}
                     <Button onClick={onClose}>Close</Button>
