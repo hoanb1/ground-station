@@ -2,12 +2,15 @@ import asyncio
 import concurrent.futures
 import os
 import queue
+import tempfile
+import zipfile
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Set
 
 import socketio
 from engineio.payload import Payload
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -251,6 +254,43 @@ async def get_version():
         raise HTTPException(
             status_code=500, detail=f"Failed to retrieve version information: {str(e)}"
         )
+
+
+def _resolve_decoded_folder(decoded_root: Path, foldername: str) -> Path:
+    folder_path = (decoded_root / foldername).resolve()
+    try:
+        folder_path.relative_to(decoded_root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid folder path")
+    if not folder_path.exists() or not folder_path.is_dir():
+        raise HTTPException(status_code=404, detail="Decoded folder not found")
+    return folder_path
+
+
+@app.get("/api/decoded/{foldername}/download")
+async def download_decoded_folder(foldername: str, background_tasks: BackgroundTasks):
+    decoded_root = Path(decoded_dir).resolve()
+    folder_path = _resolve_decoded_folder(decoded_root, foldername)
+    temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    temp_zip.close()
+
+    try:
+        with zipfile.ZipFile(temp_zip.name, "w", zipfile.ZIP_DEFLATED) as archive:
+            for file_path in folder_path.rglob("*"):
+                if file_path.is_file():
+                    archive.write(file_path, file_path.relative_to(folder_path).as_posix())
+    except Exception as exc:
+        if os.path.exists(temp_zip.name):
+            os.remove(temp_zip.name)
+        raise HTTPException(status_code=500, detail=f"Failed to create archive: {exc}")
+
+    background_tasks.add_task(os.remove, temp_zip.name)
+    return FileResponse(
+        temp_zip.name,
+        media_type="application/zip",
+        filename=f"{foldername}.zip",
+        background=background_tasks,
+    )
 
 
 # This catch-all route comes AFTER specific API routes

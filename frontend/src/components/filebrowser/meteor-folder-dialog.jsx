@@ -146,12 +146,8 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
     ].filter(cat => cat.isMetadata || (cat.images && cat.images.length > 0));
 
     const handleDownloadFolder = () => {
-        // Download all images - open each in a new tab with slight delay
-        folder.images?.forEach((img, idx) => {
-            setTimeout(() => {
-                window.open(img.url, '_blank');
-            }, idx * 100);
-        });
+        const downloadUrl = `/api/decoded/${encodeURIComponent(folder.foldername)}/download`;
+        window.open(downloadUrl, '_blank');
     };
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
