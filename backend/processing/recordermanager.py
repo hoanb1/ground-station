@@ -41,7 +41,7 @@ class RecorderManager(ConsumerManager):
         config_path = Path("backend/data/configs/waterfall_config.json")
         return WaterfallConfig.load_from_file(config_path)
 
-    def start_recorder(self, sdr_id, session_id, recorder_class, **kwargs):
+    def start_recorder(self, sdr_id, session_id, recorder_class, recorder_id=None, **kwargs):
         """
         Start a recorder thread for a specific session.
 
@@ -55,7 +55,14 @@ class RecorderManager(ConsumerManager):
             bool: True if started successfully, False otherwise
         """
         return self._start_iq_consumer(
-            sdr_id, session_id, recorder_class, None, "recorders", "recorder", **kwargs
+            sdr_id,
+            session_id,
+            recorder_class,
+            None,
+            "recorders",
+            "recorder",
+            consumer_key_override=recorder_id,
+            **kwargs,
         )
 
     def stop_recorder(self, sdr_id, session_id, skip_auto_waterfall=False):
@@ -137,6 +144,43 @@ class RecorderManager(ConsumerManager):
         except Exception as e:
             self.logger.error(f"Error stopping recorder: {str(e)}")
             return False
+
+    def stop_all_recorders_for_session(self, sdr_id, session_id, skip_auto_waterfall=False):
+        """
+        Stop all recorder threads for a specific session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+            skip_auto_waterfall: If True, skip automatic waterfall generation
+
+        Returns:
+            int: Number of recorders stopped
+        """
+        if sdr_id not in self.processes:
+            return 0
+
+        process_info = self.processes[sdr_id]
+        recorders = process_info.get("recorders", {})
+        if not recorders:
+            return 0
+
+        stopped = 0
+        for recorder_key in list(recorders.keys()):
+            recorder_entry = recorders.get(recorder_key)
+            if isinstance(recorder_entry, dict):
+                recorder_instance = recorder_entry.get("instance")
+                recorder_session = getattr(recorder_instance, "session_id", None)
+            else:
+                recorder_session = getattr(recorder_entry, "session_id", None)
+
+            if recorder_session != session_id:
+                continue
+
+            if self.stop_recorder(sdr_id, recorder_key, skip_auto_waterfall=skip_auto_waterfall):
+                stopped += 1
+
+        return stopped
 
     async def _emit_recording_stopped_notification(self, recording_path):
         """

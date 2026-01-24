@@ -17,7 +17,7 @@
 
 import logging
 
-from vfos.state import VFOManager
+from vfos.state import INTERNAL_VFO_NUMBER, VFOManager
 
 logger = logging.getLogger("vfo-state")
 
@@ -56,10 +56,10 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
     if not internal_sessions:
         return
 
-    # For each internal session, check all VFOs (1-4)
+    # For each internal session, check all VFOs (1-INTERNAL_VFO_NUMBER)
     updates_applied = 0
     for session_id in internal_sessions:
-        for vfo_num in range(1, 5):  # VFOs numbered 1-4
+        for vfo_num in range(1, INTERNAL_VFO_NUMBER + 1):  # VFOs numbered 1-INTERNAL_VFO_NUMBER
             vfo_state = vfo_manager.get_vfo_state(session_id, vfo_num)
 
             # Skip if VFO doesn't exist or is not active

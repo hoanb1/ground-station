@@ -6,7 +6,8 @@ from typing import Dict, List, Optional
 logger = logging.getLogger("vfo-state")
 
 # How many VFOs
-VFO_NUMBER = 4
+USER_VFO_NUMBER = 4
+INTERNAL_VFO_NUMBER = 10
 
 
 @dataclass
@@ -47,8 +48,9 @@ class VFOManager:
         """Ensure VFOs exist for the given session_id."""
         if session_id not in self._session_vfo_states:
             self._session_vfo_states[session_id] = {}
-            # Initialize VFO_NUMBER VFOs with default values for this session
-            for i in range(VFO_NUMBER):
+            vfo_limit = self.get_session_vfo_limit(session_id)
+            # Initialize VFOs with default values for this session
+            for i in range(vfo_limit):
                 self._session_vfo_states[session_id][i + 1] = VFOState(vfo_number=i + 1)
 
     def get_all_session_ids(self) -> List[str]:
@@ -257,11 +259,22 @@ class VFOManager:
         """
         return session_id.startswith(VFOManager.INTERNAL_PREFIX)
 
+    @staticmethod
+    def get_session_vfo_limit(session_id: str) -> int:
+        """
+        Get the VFO limit for a session.
+
+        Internal observations use INTERNAL_VFO_NUMBER; user sessions use USER_VFO_NUMBER.
+        """
+        if VFOManager.is_internal_session(session_id):
+            return INTERNAL_VFO_NUMBER
+        return USER_VFO_NUMBER
+
     def create_internal_vfos(self, observation_id: str) -> str:
         """
         Initialize a new set of VFOs for an automated observation.
 
-        Creates 4 VFOs with default state, isolated from user VFOs.
+        Creates internal VFOs with default state, isolated from user VFOs.
 
         Args:
             observation_id: Unique observation identifier
@@ -326,7 +339,7 @@ class VFOManager:
 
         Args:
             observation_id: Unique observation identifier
-            vfo_number: VFO number (1-4)
+        vfo_number: VFO number (1-10)
             center_freq: Center frequency in Hz
             bandwidth: Bandwidth in Hz
             modulation: Modulation type (FM, AM, SSB, etc.)

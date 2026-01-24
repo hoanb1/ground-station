@@ -52,6 +52,7 @@ class RecorderHandler:
         sdr_id: str,
         satellite: Dict[str, Any],
         task_config: Optional[Dict[str, Any]] = None,
+        recorder_id: Optional[str] = None,
     ) -> bool:
         """
         Start an IQ recording task.
@@ -75,6 +76,10 @@ class RecorderHandler:
             # Build recording name: satellite_name_timestamp
             satellite_name = satellite.get("name", "unknown").replace(" ", "_")
             recording_name = f"{satellite_name}_{timestamp}"
+
+            if recorder_id:
+                safe_recorder_id = recorder_id.replace(":", "_")
+                recording_name = f"{recording_name}_{safe_recorder_id}"
 
             # Build recording path (directory creation handled by IQRecorder)
             backend_dir = os.path.dirname(
@@ -112,6 +117,7 @@ class RecorderHandler:
                 sdr_id,
                 session_id,
                 IQRecorder,
+                recorder_id=recorder_id,
                 **recorder_kwargs,
             )
 

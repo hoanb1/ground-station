@@ -400,9 +400,10 @@ class SessionTracker:
             vfo_int = self.get_session_vfo_int(sid)
             metadata = self.get_session_metadata(sid)
 
-            # Get VFO states for this session (VFOs 1-4)
+            # Get VFO states for this session
             vfos_state = {}
-            for vfo_num in range(1, 5):
+            vfo_limit = VFOManager.get_session_vfo_limit(sid)
+            for vfo_num in range(1, vfo_limit + 1):
                 vfo_state = vfo_manager.get_vfo_state(sid, vfo_num)
                 if vfo_state:
                     vfos_state[vfo_num] = {

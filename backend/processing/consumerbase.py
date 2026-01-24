@@ -48,6 +48,7 @@ class ConsumerManager:
         storage_key,
         subscription_prefix,
         vfo_number=None,
+        consumer_key_override=None,
         **kwargs,
     ):
         """
@@ -101,8 +102,8 @@ class ConsumerManager:
                 )
                 return False
         else:
-            # Recorders: use session_id as key
-            consumer_key = session_id
+            # Recorders: use session_id as key unless overridden
+            consumer_key = consumer_key_override or session_id
             consumer_storage = process_info.get(storage_key, {})
 
         # Check if consumer already exists
@@ -165,6 +166,8 @@ class ConsumerManager:
                 subscription_key = f"{subscription_prefix}:{session_id}:vfo{vfo_number}"
             else:
                 subscription_key = f"{subscription_prefix}:{session_id}"
+                if consumer_key_override:
+                    subscription_key = f"{subscription_key}:{consumer_key_override}"
 
             # Subscribe to the broadcaster to get a dedicated queue
             # Increased maxsize from 3 to 10 for better burst handling on slower CPUs (RPi5)
@@ -236,8 +239,8 @@ class ConsumerManager:
                     broadcaster_key = f"audio_{session_id}_vfo{vfo_number}"
                     process_info["broadcasters"][broadcaster_key] = audio_broadcaster_instance
             else:
-                # Recorders: store directly under session_id
-                process_info[storage_key][session_id] = {
+                # Recorders: store directly under consumer_key
+                process_info[storage_key][consumer_key] = {
                     "instance": consumer,
                     "subscription_key": subscription_key,
                     "class_name": consumer_class.__name__,

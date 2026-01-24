@@ -57,7 +57,7 @@ class DecoderHandler:
             sdr_id: The SDR ID
             sdr_config: SDR configuration dict
             task_config: Task configuration dict
-            vfo_number: VFO number to assign (1-4)
+            vfo_number: VFO number to assign (1-10)
 
         Returns:
             True if decoder started successfully

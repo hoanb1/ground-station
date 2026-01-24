@@ -42,7 +42,7 @@ from observations.tasks.trackerhandler import TrackerHandler
 from observations.tasks.transcriptionhandler import TranscriptionHandler
 from session.service import session_service
 from session.tracker import session_tracker
-from vfos.state import VFOManager
+from vfos.state import INTERNAL_VFO_NUMBER, VFOManager
 
 
 class ObservationExecutor:
@@ -415,37 +415,49 @@ class ObservationExecutor:
             logger.info(f"Internal session created: {session_id}")
 
             # 3. Process tasks
-            vfo_counter = 1  # Counter for assigning VFO numbers to decoders
+            vfo_counter = 1  # Counter for assigning VFO numbers to VFO-based tasks
 
-            for task in tasks:
+            for task_index, task in enumerate(tasks, start=1):
                 task_type = task.get("type")
                 task_config = task.get("config", {})
 
-                if task_type == "decoder":
-                    # Assign VFO number for this decoder (1-4)
-                    vfo_number = vfo_counter
-                    if vfo_counter >= 4:
+                if task_type in {"decoder", "audio_recording", "transcription"}:
+                    # Assign VFO number for this task (1-VFO_NUMBER)
+                    if vfo_counter > INTERNAL_VFO_NUMBER:
                         logger.warning(
-                            f"Maximum of 4 VFOs supported, skipping additional decoders in observation {observation_id}"
+                            f"Maximum of {INTERNAL_VFO_NUMBER} VFOs supported, skipping additional tasks in observation {observation_id}"
                         )
                         continue
-                    vfo_counter += 1  # Increment for next decoder
+                    vfo_number = vfo_counter
+                    vfo_counter += 1  # Increment for next VFO task
+                    task_config["vfo_number"] = vfo_number
+
+                if task_type == "decoder":
+                    vfo_number = task_config.get("vfo_number")
 
                     await self.decoder_handler.start_decoder_task(
                         observation_id, session_id, sdr_id, sdr_config, task_config, vfo_number
                     )
 
                 elif task_type == "iq_recording":
+                    recorder_id = f"{session_id}:iq:{task_index}"
                     await self.recorder_handler.start_iq_recording_task(
-                        observation_id, session_id, sdr_id, satellite, task_config
+                        observation_id,
+                        session_id,
+                        sdr_id,
+                        satellite,
+                        task_config,
+                        recorder_id=recorder_id,
                     )
 
                 elif task_type == "audio_recording":
+                    vfo_number = task_config.get("vfo_number")
                     await self.recorder_handler.start_audio_recording_task(
                         observation_id, session_id, sdr_id, sdr_config, satellite, task_config
                     )
 
                 elif task_type == "transcription":
+                    vfo_number = task_config.get("vfo_number")
                     await self.transcription_handler.start_transcription_task(
                         observation_id, session_id, sdr_id, sdr_config, satellite, task_config
                     )
@@ -496,30 +508,37 @@ class ObservationExecutor:
             if sdr_id:
                 # Stop all decoders and recorders for this observation
                 tasks = observation.get("tasks", [])
-                vfo_counter = 1
-                for task in tasks:
-                    task_type = task.get("type")
-                    task_config = task.get("config", {})
+                has_decoder_task = any(task.get("type") == "decoder" for task in tasks)
+                has_audio_task = any(task.get("type") == "audio_recording" for task in tasks)
+                has_transcription_task = any(task.get("type") == "transcription" for task in tasks)
+                has_iq_task = any(task.get("type") == "iq_recording" for task in tasks)
 
-                    if task_type == "decoder":
-                        vfo_number = vfo_counter
-                        vfo_counter += 1
+                vfo_manager = VFOManager()
+                active_vfos = vfo_manager.get_active_vfos(session_id)
+                vfo_numbers = [vfo.vfo_number for vfo in active_vfos]
+                if not vfo_numbers:
+                    vfo_numbers = list(range(1, INTERNAL_VFO_NUMBER + 1))
+
+                for vfo_number in vfo_numbers:
+                    if has_decoder_task:
                         self.decoder_handler.stop_decoder_task(sdr_id, session_id, vfo_number)
-
-                    elif task_type == "iq_recording":
-                        self.recorder_handler.stop_iq_recording_task(sdr_id, session_id)
-
-                    elif task_type == "audio_recording":
-                        audio_vfo_number = task_config.get("vfo_number", 1)
+                    if has_audio_task:
                         self.recorder_handler.stop_audio_recording_task(
-                            sdr_id, session_id, audio_vfo_number
+                            sdr_id, session_id, vfo_number
+                        )
+                    if has_transcription_task:
+                        self.transcription_handler.stop_transcription_task(
+                            sdr_id, session_id, vfo_number
                         )
 
-                    elif task_type == "transcription":
-                        transcription_vfo_number = task_config.get("vfo_number", 1)
-                        self.transcription_handler.stop_transcription_task(
-                            sdr_id, session_id, transcription_vfo_number
+                if has_iq_task:
+                    stopped_count = (
+                        self.process_manager.recorder_manager.stop_all_recorders_for_session(
+                            sdr_id, session_id
                         )
+                    )
+                    if stopped_count == 0:
+                        self.recorder_handler.stop_iq_recording_task(sdr_id, session_id)
 
             # 3. Cleanup internal observation session
             await session_service.cleanup_internal_observation(observation_id)
