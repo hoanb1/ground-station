@@ -96,8 +96,10 @@ const TaskOutputTerminal = ({ task }) => {
 const parseAnsiColors = (text) => {
     // Remove replacement characters (�) and other invalid UTF-8
     text = text.replace(/\uFFFD/g, '');
+    // Normalize ANSI escape sequences by stripping ESC so "[...m" can be parsed.
+    text = text.replace(/\u001b/g, '');
 
-    const ansiRegex = /\[(\d+)m/g;
+    const ansiRegex = /\[(\d*(?:;\d+)*)m/g;
     const parts = [];
     let lastIndex = 0;
     let currentColor = null;
@@ -117,21 +119,34 @@ const parseAnsiColors = (text) => {
         }
 
         // Parse color code
-        const code = match[1];
-        if (code === '0' || code === 'm') {
-            // Reset
-            currentColor = null;
-            currentBold = false;
-        } else if (code === '1') {
-            currentBold = true;
-        } else if (code === '30') currentColor = '#000000';
-        else if (code === '31') currentColor = '#ff4444';
-        else if (code === '32') currentColor = '#44ff44';
-        else if (code === '33') currentColor = '#ffff44';
-        else if (code === '34') currentColor = '#4444ff';
-        else if (code === '35') currentColor = '#ff44ff';
-        else if (code === '36') currentColor = '#44ffff';
-        else if (code === '37') currentColor = '#ffffff';
+        const codeString = match[1];
+        const codes = codeString ? codeString.split(';') : ['0'];
+        for (const code of codes) {
+            if (code === '0') {
+                // Reset
+                currentColor = null;
+                currentBold = false;
+            } else if (code === '1') {
+                currentBold = true;
+            } else if (code === '22') {
+                currentBold = false;
+            } else if (code === '30') currentColor = '#000000';
+            else if (code === '31') currentColor = '#ff4444';
+            else if (code === '32') currentColor = '#44ff44';
+            else if (code === '33') currentColor = '#ffff44';
+            else if (code === '34') currentColor = '#4444ff';
+            else if (code === '35') currentColor = '#ff44ff';
+            else if (code === '36') currentColor = '#44ffff';
+            else if (code === '37') currentColor = '#ffffff';
+            else if (code === '90') currentColor = '#666666';
+            else if (code === '91') currentColor = '#ff6666';
+            else if (code === '92') currentColor = '#66ff66';
+            else if (code === '93') currentColor = '#ffff66';
+            else if (code === '94') currentColor = '#6666ff';
+            else if (code === '95') currentColor = '#ff66ff';
+            else if (code === '96') currentColor = '#66ffff';
+            else if (code === '97') currentColor = '#ffffff';
+        }
 
         lastIndex = match.index + match[0].length;
     }
