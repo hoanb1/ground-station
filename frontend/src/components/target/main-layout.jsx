@@ -454,6 +454,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
                 satelliteName={satelliteName}
                 labelType="peak"
                 onRefresh={handleRefreshTimelinePasses}
+                showGeostationarySatellites={true}
             />
         </StyledIslandParentNoScrollbar>,
         // <StyledIslandParentScrollbar key="video">
