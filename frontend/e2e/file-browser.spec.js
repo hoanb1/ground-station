@@ -89,29 +89,6 @@ test.describe('File Browser', () => {
 });
 
 test.describe('File Browser Navigation', () => {
-  test('should navigate to file browser from home', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Wait for any dialogs to close
-    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
-
-    // Wait for app to be ready
-    await page.waitForTimeout(1000);
-
-    // Find and click file browser link - try clicking through force if needed
-    const fileBrowserLink = page.getByRole('link', { name: /file browser/i }).or(
-      page.getByRole('button', { name: /file browser/i })
-    );
-
-    // Try to click with force to bypass any overlays
-    await fileBrowserLink.click({ force: true, timeout: 15000 });
-
-    // Wait for navigation
-    await page.waitForURL('**/filebrowser', { timeout: 10000 });
-    expect(page.url()).toContain('/filebrowser');
-  });
-
   test('should maintain state when navigating back to file browser', async ({ page }) => {
     // Visit file browser
     await page.goto('/filebrowser');

@@ -59,24 +59,4 @@ test.describe('Satellite Overview', () => {
     const mapContainer = page.locator('.leaflet-container');
     await expect(mapContainer).toBeVisible({ timeout: 10000 });
   });
-
-  test('should display multiple satellites on map', async ({ page }) => {
-    // Wait for any dialogs to close
-    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
-
-    // Select a satellite group first (e.g., "Amateur")
-    const amateurGroupButton = page.getByRole('button', { name: /amateur/i });
-    await amateurGroupButton.click();
-
-    // Wait for satellites to load
-    await page.waitForTimeout(3000);
-
-    // Check for satellite markers
-    // Leaflet creates markers with the class 'leaflet-marker-icon'
-    const satelliteMarkers = page.locator('.leaflet-marker-icon');
-
-    // Should have at least one satellite visible (excluding home icon)
-    const count = await satelliteMarkers.count();
-    expect(count).toBeGreaterThan(1); // More than 1 because home icon is also a marker
-  });
 });

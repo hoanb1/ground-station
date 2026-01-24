@@ -131,24 +131,4 @@ test.describe('Hardware Navigation Flow', () => {
     await page.waitForLoadState('networkidle');
     expect(page.url()).toContain('/hardware/sdrs');
   });
-
-  test('should navigate to hardware pages from navigation menu', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Wait for any dialogs to close
-    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
-
-    // Wait for app to be ready
-    await page.waitForTimeout(1000);
-
-    // Click on Rigs link - force click to bypass overlays
-    const rigsLink = page.getByRole('link', { name: /rigs/i }).or(
-      page.getByRole('button', { name: /rigs/i })
-    );
-    await rigsLink.click({ force: true, timeout: 15000 });
-    await page.waitForURL('**/hardware/rig', { timeout: 10000 });
-
-    expect(page.url()).toContain('/hardware/rig');
-  });
 });

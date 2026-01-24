@@ -97,7 +97,7 @@ const parseAnsiColors = (text) => {
     // Remove replacement characters (�) and other invalid UTF-8
     text = text.replace(/\uFFFD/g, '');
     // Normalize ANSI escape sequences by stripping ESC so "[...m" can be parsed.
-    text = text.replace(/\u001b/g, '');
+    text = text.replaceAll('\u001b', '');
 
     const ansiRegex = /\[(\d*(?:;\d+)*)m/g;
     const parts = [];

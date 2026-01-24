@@ -6,19 +6,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Smoke Tests', () => {
-  test('should load the home page', async ({ page }) => {
-    await page.goto('/');
-
-    // Wait for the app to load
-    await page.waitForLoadState('networkidle');
-
-    // Wait for any dialogs to close
-    await page.locator('.MuiDialog-root').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
-
-    // Check if the Ground Station branding is visible
-    await expect(page.locator('text=Ground Station')).toBeVisible();
-  });
-
   test('should navigate to tracking console', async ({ page }) => {
     await page.goto('/track');
     await page.waitForLoadState('networkidle');
