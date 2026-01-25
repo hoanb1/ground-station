@@ -53,7 +53,7 @@ class RecorderHandler:
         satellite: Dict[str, Any],
         task_config: Optional[Dict[str, Any]] = None,
         recorder_id: Optional[str] = None,
-    ) -> bool:
+    ) -> Optional[str]:
         """
         Start an IQ recording task.
 
@@ -125,15 +125,15 @@ class RecorderHandler:
                 logger.info(
                     f"Started IQ recording for observation {observation_id}: {recording_path}"
                 )
-                return True
-            else:
-                logger.error(f"Failed to start IQ recording for observation {observation_id}")
-                return False
+                return recording_path
+
+            logger.error(f"Failed to start IQ recording for observation {observation_id}")
+            return None
 
         except Exception as e:
             logger.error(f"Error starting IQ recorder: {e}")
             logger.error(traceback.format_exc())
-            return False
+            return None
 
     async def start_audio_recording_task(
         self,

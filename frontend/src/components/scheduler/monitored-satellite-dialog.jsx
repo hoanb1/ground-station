@@ -59,7 +59,7 @@ import {
 } from './scheduler-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { SatelliteSelector } from './satellite-selector.jsx';
-import { getDecoderParameters, getDecoderDefaultParameters } from '../waterfall/decoder-parameters.js';
+import { SATDUMP_PIPELINES, getDecoderParameters, getDecoderDefaultParameters } from '../waterfall/decoder-parameters.js';
 import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 
 const DECODER_TYPES = [
@@ -124,6 +124,11 @@ const getDecimationOptions = (sampleRate) => {
         }
     }
     return options.length > 0 ? options : [1];
+};
+
+const getDefaultSatdumpPipeline = () => {
+    const group = Object.values(SATDUMP_PIPELINES).find((entry) => entry?.pipelines?.length);
+    return group?.pipelines?.[0]?.value || '';
 };
 
 // Helper function to determine band from frequency in Hz
@@ -396,6 +401,8 @@ export default function MonitoredSatelliteDialog() {
                         auto_fill_target_freq: false,
                         target_center_freq: '',
                         decimation_factor: 1,
+                        enable_post_processing: false,
+                        post_process_pipeline: getDefaultSatdumpPipeline(),
                     },
                 };
                 break;
@@ -1825,16 +1832,12 @@ export default function MonitoredSatelliteDialog() {
                                                                                 </MenuItem>
                                                                             ))}
                                                                         </Select>
-                                                                        {outputRate && (
-                                                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                                                                                Output sample rate: {formatSampleRate(outputRate)}
-                                                                            </Typography>
-                                                                        )}
-                                                                        {decimationFactor > 1 && !task.config.enable_frequency_shift && (
-                                                                            <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
-                                                                                Decimation assumes the target signal is centered. Enable Frequency Shift to center your signal before decimating.
-                                                                            </Typography>
-                                                                        )}
+                                                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                                                            Output sample rate: {outputRate ? formatSampleRate(outputRate) : 'N/A'}
+                                                                        </Typography>
+                                                                        <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
+                                                                            Decimation assumes the target signal is centered. Enable Frequency Shift to center your signal before decimating.
+                                                                        </Typography>
                                                                     </FormControl>
                                                                 );
                                                             })()}
@@ -1927,42 +1930,41 @@ export default function MonitoredSatelliteDialog() {
                                                                 </Typography>
                                                             </Box>
 
-                                                            {task.config.enable_frequency_shift && (
-                                                                <>
-                                                                    <FormControlLabel
-                                                                        control={
-                                                                            <Checkbox
-                                                                                checked={task.config.auto_fill_target_freq || false}
-                                                                                onChange={(e) => {
-                                                                                    const autoFill = e.target.checked;
-                                                                                    handleTaskConfigChange(index, 'auto_fill_target_freq', autoFill);
+                                                            <>
+                                                                <FormControlLabel
+                                                                    control={
+                                                                        <Checkbox
+                                                                            checked={task.config.auto_fill_target_freq || false}
+                                                                            onChange={(e) => {
+                                                                                const autoFill = e.target.checked;
+                                                                                handleTaskConfigChange(index, 'auto_fill_target_freq', autoFill);
 
-                                                                                    // Auto-fill immediately if enabled and transmitter is selected
-                                                                                    if (autoFill && task.config.transmitter_id) {
-                                                                                        const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-                                                                                        if (transmitter?.downlink_low) {
-                                                                                            handleTaskConfigChange(index, 'target_center_freq', transmitter.downlink_low);
-                                                                                        }
+                                                                                // Auto-fill immediately if enabled and transmitter is selected
+                                                                                if (autoFill && task.config.transmitter_id) {
+                                                                                    const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
+                                                                                    if (transmitter?.downlink_low) {
+                                                                                        handleTaskConfigChange(index, 'target_center_freq', transmitter.downlink_low);
                                                                                     }
-                                                                                }}
-                                                                            />
-                                                                        }
-                                                                        label="Auto-fill from Transmitter Frequency"
-                                                                    />
+                                                                                }
+                                                                            }}
+                                                                            disabled={!task.config.enable_frequency_shift}
+                                                                        />
+                                                                    }
+                                                                    label="Auto-fill from Transmitter Frequency"
+                                                                />
 
-                                                                    <TextField
-                                                                        fullWidth
-                                                                        size="small"
-                                                                        label="Target Center Frequency (Hz)"
-                                                                        type="number"
-                                                                        value={task.config.target_center_freq || ''}
-                                                                        onChange={(e) =>
-                                                                            handleTaskConfigChange(index, 'target_center_freq', parseFloat(e.target.value) || '')
-                                                                        }
-                                                                        disabled={task.config.auto_fill_target_freq}
-                                                                    />
-                                                                </>
-                                                            )}
+                                                                <TextField
+                                                                    fullWidth
+                                                                    size="small"
+                                                                    label="Target Center Frequency (Hz)"
+                                                                    type="number"
+                                                                    value={task.config.target_center_freq || ''}
+                                                                    onChange={(e) =>
+                                                                        handleTaskConfigChange(index, 'target_center_freq', parseFloat(e.target.value) || '')
+                                                                    }
+                                                                    disabled={!task.config.enable_frequency_shift || task.config.auto_fill_target_freq}
+                                                                />
+                                                            </>
 
                                                             <Typography variant="caption" color="text.secondary">
                                                                 IQ data will be recorded in SigMF format (cf32_le).
@@ -1973,6 +1975,54 @@ export default function MonitoredSatelliteDialog() {
                                                                     ? ` Decimated to ${formatSampleRate(formData.sdr.sample_rate / (task.config.decimation_factor || 1))}.`
                                                                     : ''}
                                                             </Typography>
+                                                            <Box sx={{ mt: 2 }}>
+                                                                <FormControlLabel
+                                                                    control={
+                                                                        <Checkbox
+                                                                            checked={task.config.enable_post_processing || false}
+                                                                            onChange={(e) => {
+                                                                                const enabled = e.target.checked;
+                                                                                handleTaskConfigChange(index, 'enable_post_processing', enabled);
+                                                                                if (enabled && !task.config.post_process_pipeline) {
+                                                                                    handleTaskConfigChange(index, 'post_process_pipeline', getDefaultSatdumpPipeline());
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    }
+                                                                    label="Run SatDump post-processing after IQ recording"
+                                                                />
+                                                                <FormControl
+                                                                    fullWidth
+                                                                    size="small"
+                                                                    disabled={!task.config.enable_post_processing}
+                                                                    sx={{ mt: 1 }}
+                                                                >
+                                                                    <InputLabel>SatDump Pipeline</InputLabel>
+                                                                    <Select
+                                                                        value={task.config.post_process_pipeline || getDefaultSatdumpPipeline()}
+                                                                        onChange={(e) =>
+                                                                            handleTaskConfigChange(index, 'post_process_pipeline', e.target.value)
+                                                                        }
+                                                                        label="SatDump Pipeline"
+                                                                    >
+                                                                        {Object.entries(SATDUMP_PIPELINES).map(([key, group]) => {
+                                                                            const pipelines = group?.pipelines || [];
+                                                                            if (pipelines.length === 0) return null;
+                                                                            const label = group.label || key;
+                                                                            return [
+                                                                                <MenuItem key={`satdump-header-${key}`} disabled sx={{ fontWeight: 'bold', fontSize: '0.875rem' }}>
+                                                                                    {label}
+                                                                                </MenuItem>,
+                                                                                ...pipelines.map((pipeline) => (
+                                                                                    <MenuItem key={pipeline.value} value={pipeline.value} sx={{ pl: 4 }}>
+                                                                                        {pipeline.label} ({pipeline.value})
+                                                                                    </MenuItem>
+                                                                                ))
+                                                                            ];
+                                                                        })}
+                                                                    </Select>
+                                                                </FormControl>
+                                                            </Box>
                                                         </>
                                                     )}
                                                 </Stack>

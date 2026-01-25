@@ -16,8 +16,11 @@
 """Observation execution service - handles lifecycle of scheduled observations."""
 
 import asyncio
+import json
 import traceback
-from typing import Any, Dict, Optional
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, Optional, cast
 
 from common.logger import logger
 from crud.hardware import fetch_sdr
@@ -74,6 +77,7 @@ class ObservationExecutor:
         # Track actively executing observations to prevent concurrent starts
         self._running_observations: set[str] = set()
         self._observations_lock: Optional[asyncio.Lock] = None  # Will be initialized lazily
+        self._iq_recording_info: Dict[str, Dict[int, Dict[str, Any]]] = {}
 
     @property
     def vfo_manager(self):
@@ -441,7 +445,7 @@ class ObservationExecutor:
 
                 elif task_type == "iq_recording":
                     recorder_id = f"{session_id}:iq:{task_index}"
-                    await self.recorder_handler.start_iq_recording_task(
+                    recording_path = await self.recorder_handler.start_iq_recording_task(
                         observation_id,
                         session_id,
                         sdr_id,
@@ -449,6 +453,11 @@ class ObservationExecutor:
                         task_config,
                         recorder_id=recorder_id,
                     )
+                    if recording_path:
+                        self._iq_recording_info.setdefault(observation_id, {})[task_index] = {
+                            "recording_path": recording_path,
+                            "task_config": task_config,
+                        }
 
                 elif task_type == "audio_recording":
                     vfo_number = task_config.get("vfo_number")
@@ -540,6 +549,8 @@ class ObservationExecutor:
                     if stopped_count == 0:
                         self.recorder_handler.stop_iq_recording_task(sdr_id, session_id)
 
+                    await self._start_satdump_postprocessing(observation_id, observation)
+
             # 3. Cleanup internal observation session
             await session_service.cleanup_internal_observation(observation_id)
 
@@ -555,3 +566,133 @@ class ObservationExecutor:
             logger.error(f"Failed to stop observation {observation_id}: {e}")
             logger.error(traceback.format_exc())
             raise
+
+    async def _start_satdump_postprocessing(
+        self, observation_id: str, observation: Dict[str, Any]
+    ) -> None:
+        tasks = observation.get("tasks", [])
+        sdr_config = observation.get("sdr", {}) or {}
+        task_info = self._iq_recording_info.get(observation_id, {})
+
+        if not task_info:
+            self._iq_recording_info.pop(observation_id, None)
+            return
+
+        try:
+            from server.startup import background_task_manager
+            from tasks.registry import get_task
+        except Exception as e:
+            logger.error(f"Failed to import background task manager for SatDump: {e}")
+            return
+
+        if not background_task_manager:
+            logger.error("Background task manager not available for SatDump post-processing")
+            return
+
+        for task_index, task in enumerate(tasks, start=1):
+            if task.get("type") != "iq_recording":
+                continue
+
+            task_config = task.get("config", {}) or {}
+            if not task_config.get("enable_post_processing"):
+                continue
+
+            pipeline = task_config.get("post_process_pipeline")
+            if not pipeline:
+                logger.warning(
+                    f"No SatDump pipeline configured for IQ task {task_index} in {observation_id}"
+                )
+                continue
+
+            recording_entry = task_info.get(task_index)
+            recording_path = recording_entry.get("recording_path") if recording_entry else None
+            if not recording_path:
+                logger.warning(
+                    f"No recording path available for IQ task {task_index} in {observation_id}"
+                )
+                continue
+
+            recording_file = f"{recording_path}.sigmf-data"
+            metadata = self._load_sigmf_metadata(recording_path)
+            samplerate = self._resolve_samplerate(metadata, sdr_config, task_config)
+            baseband_format = self._resolve_baseband_format(metadata)
+            start_timestamp = self._resolve_start_timestamp(metadata)
+
+            output_dir = self._build_satdump_output_dir(recording_path, pipeline)
+            recording_name = Path(recording_path).name
+
+            try:
+                task_id = await background_task_manager.start_task(
+                    func=get_task("satdump_process"),
+                    args=(recording_file, output_dir, pipeline),
+                    kwargs={
+                        "samplerate": samplerate,
+                        "baseband_format": baseband_format,
+                        "start_timestamp": start_timestamp,
+                        "finish_processing": True,
+                    },
+                    name=f"SatDump: {recording_name} ({pipeline})",
+                )
+                logger.info(f"Started SatDump post-processing task {task_id} for {recording_file}")
+            except Exception as e:
+                logger.error(f"Failed to start SatDump post-processing for {recording_file}: {e}")
+
+        self._iq_recording_info.pop(observation_id, None)
+
+    def _load_sigmf_metadata(self, recording_path: str) -> Dict[str, Any]:
+        meta_path = Path(f"{recording_path}.sigmf-meta")
+        if not meta_path.exists():
+            return {}
+        try:
+            with meta_path.open("r") as handle:
+                return cast(Dict[str, Any], json.load(handle))
+        except Exception as e:
+            logger.warning(f"Failed to load SigMF metadata from {meta_path}: {e}")
+            return {}
+
+    def _resolve_samplerate(
+        self, metadata: Dict[str, Any], sdr_config: Dict[str, Any], task_config: Dict[str, Any]
+    ) -> int:
+        sample_rate = metadata.get("global", {}).get("core:sample_rate")
+        if sample_rate:
+            return int(sample_rate)
+
+        sdr_rate = sdr_config.get("sample_rate")
+        decimation_factor = int(task_config.get("decimation_factor") or 1)
+        if sdr_rate:
+            try:
+                return int(float(sdr_rate) / max(decimation_factor, 1))
+            except Exception:
+                return int(float(sdr_rate))
+        return 0
+
+    def _resolve_baseband_format(self, metadata: Dict[str, Any]) -> str:
+        datatype = metadata.get("global", {}).get("core:datatype", "")
+        datatype = datatype.lower() if datatype else ""
+        if "cf32" in datatype or "c32" in datatype:
+            return "f32"
+        if "ci16" in datatype or "c16" in datatype:
+            return "i16"
+        if "ci8" in datatype or "c8" in datatype or "cu8" in datatype:
+            return "i8"
+        return "f32"
+
+    def _resolve_start_timestamp(self, metadata: Dict[str, Any]) -> Optional[int]:
+        start_time = metadata.get("global", {}).get("gs:start_time")
+        if not start_time:
+            return None
+        try:
+            if start_time.endswith("Z"):
+                start_time = start_time.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(start_time)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return int(dt.timestamp())
+        except Exception as e:
+            logger.warning(f"Failed to parse recording start time '{start_time}': {e}")
+            return None
+
+    def _build_satdump_output_dir(self, recording_path: str, pipeline: str) -> str:
+        recording_base = Path(recording_path).name
+        backend_dir = Path(__file__).resolve().parents[1]
+        return str(backend_dir / "data" / "decoded" / f"{recording_base}.satdump_{pipeline}")

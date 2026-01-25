@@ -48,12 +48,8 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useSocket } from '../common/socket.jsx';
 import { startBackgroundTask } from './filebrowser-slice.jsx';
+import { SATDUMP_PIPELINES } from '../waterfall/decoder-parameters.js';
 import { toast } from 'react-toastify';
-
-// Common SatDump satellite/pipeline configurations
-const SATDUMP_PIPELINES = [
-    { value: 'meteor_m2-x_lrpt', label: 'METEOR-M2 LRPT', category: 'METEOR' },
-];
 
 const BASEBAND_FORMATS = [
     { value: 'i16', label: 'Complex Int16 (i16)' },
@@ -276,16 +272,17 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                             label="Satellite / Pipeline"
                             onChange={(e) => setSelectedPipeline(e.target.value)}
                         >
-                            {['METEOR', 'NOAA', 'MetOp', 'FengYun', 'NASA EOS', 'JPSS', 'GOES', 'Elektro', 'PROBA'].map((category) => {
-                                const categoryPipelines = SATDUMP_PIPELINES.filter(p => p.category === category);
-                                if (categoryPipelines.length === 0) return null;
+                            {Object.entries(SATDUMP_PIPELINES).map(([key, group]) => {
+                                const pipelines = group?.pipelines || [];
+                                if (pipelines.length === 0) return null;
+                                const label = group.label || key;
                                 return [
-                                    <MenuItem key={`header-${category}`} disabled sx={{ fontWeight: 'bold', fontSize: '0.875rem' }}>
-                                        {category}
+                                    <MenuItem key={`header-${key}`} disabled sx={{ fontWeight: 'bold', fontSize: '0.875rem' }}>
+                                        {label}
                                     </MenuItem>,
-                                    ...categoryPipelines.map((pipeline) => (
+                                    ...pipelines.map((pipeline) => (
                                         <MenuItem key={pipeline.value} value={pipeline.value} sx={{ pl: 4 }}>
-                                            {pipeline.label}
+                                            {pipeline.label} ({pipeline.value})
                                         </MenuItem>
                                     ))
                                 ];

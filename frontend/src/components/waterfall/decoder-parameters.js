@@ -392,6 +392,21 @@ export const SSTV_PARAMETERS = {
 };
 
 /**
+ * SatDump Pipeline Definitions
+ * Defines supported SatDump pipelines by satellite family.
+ */
+export const SATDUMP_PIPELINES = {
+    meteor: {
+        label: 'METEOR',
+        description: 'SatDump pipelines for METEOR satellites',
+        pipelines: [
+            { value: 'meteor_m2-x_lrpt', label: 'METEOR-M2 LRPT' },
+            { value: 'meteor_m2-x_lrpt_80k', label: 'METEOR-M2 LRPT (80k)' }
+        ]
+    }
+};
+
+/**
  * Combined parameter definitions for all decoders
  */
 export const DECODER_PARAMETERS = {
