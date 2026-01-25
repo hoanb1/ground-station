@@ -859,11 +859,13 @@ export const useSocketEventHandlers = (socket) => {
             // Refresh the server list in Redux store
             dispatch(fetchSoapySDRServers({ socket }));
 
+            const sdrCount = data.sdr_count ?? data.active_count ?? 0;
+
             // Show notification
             toast.success(
                 <ToastMessage
                     title="SoapySDR Discovery Complete"
-                    body={`Found ${data.server_count} server(s), ${data.active_count} active with SDRs`}
+                    body={`Found ${data.server_count} server(s), ${sdrCount} SDR(s) active`}
                 />,
                 {
                     icon: () => <RadioIcon />,

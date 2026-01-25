@@ -453,6 +453,7 @@ class BackgroundTaskManager:
             servers_data = message.get("servers", {})
             server_count = message.get("server_count", 0)
             active_count = message.get("active_count", 0)
+            sdr_count = message.get("sdr_count", 0)
             refresh_count = message.get("refresh_count")
 
             logger.info(
@@ -474,6 +475,7 @@ class BackgroundTaskManager:
                         {
                             "refresh_count": refresh_count,
                             "active_count": active_count,
+                            "sdr_count": sdr_count,
                             "servers": servers_data,
                         },
                     )
@@ -484,6 +486,7 @@ class BackgroundTaskManager:
                         {
                             "server_count": server_count,
                             "active_count": active_count,
+                            "sdr_count": sdr_count,
                             "servers": servers_data,
                         },
                     )

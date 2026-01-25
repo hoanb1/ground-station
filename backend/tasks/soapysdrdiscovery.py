@@ -121,6 +121,11 @@ def soapysdr_discovery_task(
             server_count = len(discovered_servers)
             active_servers = get_active_servers_with_sdrs()
             active_count = len(active_servers)
+            active_sdr_count = sum(
+                len(server_info.get("sdrs", []))
+                for server_info in active_servers.values()
+                if isinstance(server_info.get("sdrs", []), list)
+            )
 
             # Serialize discovered servers for transmission to main process
             serialized_servers = {}
@@ -140,7 +145,10 @@ def soapysdr_discovery_task(
                 _progress_queue.put(
                     {
                         "type": "output",
-                        "output": f"Initial discovery complete: Found {server_count} server(s), {active_count} active with SDRs",
+                        "output": (
+                            "Initial discovery complete: "
+                            f"Found {server_count} server(s), {active_sdr_count} SDR(s) active"
+                        ),
                         "stream": "stdout",
                         "progress": 50,
                     }
@@ -153,6 +161,7 @@ def soapysdr_discovery_task(
                         "servers": serialized_servers,
                         "server_count": server_count,
                         "active_count": active_count,
+                        "sdr_count": active_sdr_count,
                     }
                 )
 
@@ -255,6 +264,11 @@ def soapysdr_discovery_task(
                 # Report refresh results
                 active_servers = get_active_servers_with_sdrs()
                 active_count = len(active_servers)
+                active_sdr_count = sum(
+                    len(server_info.get("sdrs", []))
+                    for server_info in active_servers.values()
+                    if isinstance(server_info.get("sdrs", []), list)
+                )
 
                 # Serialize discovered servers for transmission to main process
                 serialized_servers = {}
@@ -274,7 +288,10 @@ def soapysdr_discovery_task(
                     _progress_queue.put(
                         {
                             "type": "output",
-                            "output": f"Refresh #{refresh_count} complete: {active_count} active server(s) with SDRs",
+                            "output": (
+                                f"Refresh #{refresh_count} complete: "
+                                f"{active_sdr_count} SDR(s) active"
+                            ),
                             "stream": "stdout",
                         }
                     )
@@ -286,6 +303,7 @@ def soapysdr_discovery_task(
                             "servers": serialized_servers,
                             "server_count": len(discovered_servers),
                             "active_count": active_count,
+                            "sdr_count": active_sdr_count,
                             "refresh_count": refresh_count,
                         }
                     )
