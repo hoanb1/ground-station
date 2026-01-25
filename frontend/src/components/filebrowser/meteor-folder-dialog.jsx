@@ -101,6 +101,8 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef({ x: 0, y: 0 });
     const pointerStartRef = useRef({ x: 0, y: 0 });
+    const pointersRef = useRef(new Map());
+    const pinchStartRef = useRef({ distance: 0, zoom: 1, pan: { x: 0, y: 0 } });
     const zoomContainerRef = useRef(null);
 
     // Reset activeTab when folder changes or dialog opens
@@ -200,12 +202,58 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
         if (!selectedImage) return;
         if (event.pointerType !== 'touch' && event.button !== 0) return;
         event.currentTarget.setPointerCapture(event.pointerId);
-        setIsPanning(true);
-        pointerStartRef.current = { x: event.clientX, y: event.clientY };
-        panStartRef.current = { ...pan };
+        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (pointersRef.current.size === 2) {
+            const [p1, p2] = Array.from(pointersRef.current.values());
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            pinchStartRef.current = {
+                distance: Math.hypot(dx, dy),
+                zoom,
+                pan: { ...pan },
+            };
+            setIsPanning(false);
+            return;
+        }
+
+        if (pointersRef.current.size === 1) {
+            setIsPanning(true);
+            pointerStartRef.current = { x: event.clientX, y: event.clientY };
+            panStartRef.current = { ...pan };
+        }
     };
 
     const handlePointerMove = (event) => {
+        if (!selectedImage) return;
+        if (!pointersRef.current.has(event.pointerId)) return;
+        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (pointersRef.current.size === 2) {
+            const [p1, p2] = Array.from(pointersRef.current.values());
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const distance = Math.hypot(dx, dy);
+            const start = pinchStartRef.current;
+            if (!start.distance) return;
+
+            const ratio = distance / start.distance;
+            const nextZoom = clamp(start.zoom * ratio, 1, 6);
+            const rect = zoomContainerRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const centerX = (p1.x + p2.x) / 2 - (rect.left + rect.width / 2);
+            const centerY = (p1.y + p2.y) / 2 - (rect.top + rect.height / 2);
+            const zoomRatio = nextZoom / start.zoom;
+            const nextPan = {
+                x: start.pan.x + (1 - zoomRatio) * centerX,
+                y: start.pan.y + (1 - zoomRatio) * centerY,
+            };
+
+            setZoom(nextZoom);
+            setPan(clampPan(nextPan, nextZoom));
+            return;
+        }
+
         if (!isPanning) return;
         const dx = event.clientX - pointerStartRef.current.x;
         const dy = event.clientY - pointerStartRef.current.y;
@@ -213,8 +261,20 @@ export default function MeteorFolderDialog({ open, onClose, folder }) {
     };
 
     const handlePointerUp = (event) => {
-        if (!isPanning) return;
+        if (pointersRef.current.has(event.pointerId)) {
+            pointersRef.current.delete(event.pointerId);
+        }
         event.currentTarget.releasePointerCapture(event.pointerId);
+        if (pointersRef.current.size < 2) {
+            pinchStartRef.current = { distance: 0, zoom: 1, pan: { x: 0, y: 0 } };
+        }
+        if (pointersRef.current.size === 1) {
+            const [p1] = Array.from(pointersRef.current.values());
+            pointerStartRef.current = { x: p1.x, y: p1.y };
+            panStartRef.current = { ...pan };
+            setIsPanning(true);
+            return;
+        }
         setIsPanning(false);
     };
 
