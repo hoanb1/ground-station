@@ -51,7 +51,9 @@ import {
     Stack,
     ToggleButton,
     ToggleButtonGroup,
+    useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -177,6 +179,9 @@ export default function FilebrowserMain() {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { t } = useTranslation('filebrowser');
+    const theme = useTheme();
+    const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+    const isMediumScreen = useMediaQuery(theme.breakpoints.down('md'));
 
     // Get timezone preference
     const timezone = useSelector((state) => {
@@ -262,7 +267,12 @@ export default function FilebrowserMain() {
         viewMode,
     } = useSelector((state) => state.filebrowser);
 
-    const pageSize = 12; // Hardcoded - not persisted in Redux
+    const pageSize = useMemo(() => {
+        if (viewMode !== 'card') return 12;
+        if (isSmallScreen) return 6;
+        if (isMediumScreen) return 10;
+        return 10;
+    }, [viewMode, isSmallScreen, isMediumScreen]);
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
