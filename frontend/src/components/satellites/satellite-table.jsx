@@ -40,6 +40,7 @@ import {
     Stack,
     TextField,
     Checkbox,
+    Tooltip,
     Typography,
 } from "@mui/material";
 import {useEffect, useState, useCallback} from "react";
@@ -73,11 +74,16 @@ import {
     resetFormValues,
     setOpenDeleteConfirm,
     setOpenAddDialog,
+    setClickedSatellite,
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import { useTranslation } from 'react-i18next';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
+import { useNavigate } from "react-router-dom";
+import TransmittersTable from "./transmitters-table.jsx";
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 function Pagination({page, onPageChange, className}) {
     const apiRef = useGridApiContext();
@@ -103,6 +109,7 @@ function CustomPagination(props) {
 const SatelliteTable = React.memo(function SatelliteTable() {
     const dispatch = useDispatch();
     const {socket} = useSocket();
+    const navigate = useNavigate();
     const { t } = useTranslation('satellites');
     const {
         satellites,
@@ -114,15 +121,44 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         formValues,
         openDeleteConfirm,
         openAddDialog,
+        clickedSatellite,
     } = useSelector((state) => state.satellites);
 
     const [localSearchValue, setLocalSearchValue] = useState('');
+    const [transmittersDialogOpen, setTransmittersDialogOpen] = useState(false);
 
     // Get timezone preference
     const timezone = useSelector((state) => {
         const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
         return tzPref?.value || 'UTC';
     });
+
+    const handleEditRow = (satellite) => {
+        if (!satellite) {
+            return;
+        }
+        dispatch(setFormValues({...satellite, id: satellite.norad_id}));
+        dispatch(setOpenAddDialog(true));
+    };
+
+    const handleViewSatellite = (noradId) => {
+        if (!noradId) {
+            return;
+        }
+        navigate(`/satellite/${noradId}`);
+    };
+
+    const handleOpenTransmitters = (satellite) => {
+        if (!satellite) {
+            return;
+        }
+        dispatch(setClickedSatellite(satellite));
+        setTransmittersDialogOpen(true);
+    };
+
+    const handleCloseTransmitters = () => {
+        setTransmittersDialogOpen(false);
+    };
 
     const columns = [
         {
@@ -259,6 +295,53 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             width: 150,
             renderCell: (params) => {
                 return betterDateTimes(params.value, timezone);
+            },
+        },
+        {
+            field: 'actions',
+            headerName: t('satellite_database.actions'),
+            width: 120,
+            sortable: false,
+            filterable: false,
+            headerAlign: 'center',
+            align: 'center',
+            renderCell: (params) => {
+                const satellite = params.row;
+                return (
+                    <Stack
+                        direction="row"
+                        spacing={0.5}
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Tooltip title={t('satellite_database.edit')}>
+                            <IconButton
+                                size="small"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleEditRow(satellite);
+                                }}
+                            >
+                                <EditIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title={t('satellite_database.view')}>
+                            <IconButton
+                                size="small"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleViewSatellite(satellite.norad_id);
+                                }}
+                            >
+                                <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Stack>
+                );
             },
         },
     ];
@@ -544,6 +627,23 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     </Button>
                     <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
                         {t('satellite_database.edit')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        disabled={selected.length !== 1}
+                        onClick={() => {
+                            const selectedId = Number(selected[0]);
+                            if (Number.isNaN(selectedId)) {
+                                return;
+                            }
+                            const satellite = satellites.find((row) => row.norad_id === selectedId);
+                            if (!satellite) {
+                                return;
+                            }
+                            handleOpenTransmitters(satellite);
+                        }}
+                    >
+                        {t('satellite_database.edit_transmitters')}
                     </Button>
                     <Button
                         variant="contained"
@@ -871,6 +971,53 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                         disabled={isSubmitDisabled}
                     >
                         {formValues.id ? t('satellite_database.edit') : t('satellite_database.submit')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog
+                open={transmittersDialogOpen}
+                onClose={handleCloseTransmitters}
+                fullWidth
+                maxWidth="xl"
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    },
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                    }}
+                >
+                    {t('satellite_database.edit_transmitters_title', {
+                        name: clickedSatellite?.name || clickedSatellite?.norad_id || '',
+                    })}
+                </DialogTitle>
+                <DialogContent
+                    sx={{
+                        px: 3,
+                        py: 2.5,
+                        bgcolor: 'background.paper',
+                    }}
+                >
+                    <TransmittersTable satelliteData={clickedSatellite} inDialog />
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                    }}
+                >
+                    <Button variant="outlined" onClick={handleCloseTransmitters}>
+                        {t('satellite_database.close')}
                     </Button>
                 </DialogActions>
             </Dialog>
