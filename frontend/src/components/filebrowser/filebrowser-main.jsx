@@ -1793,18 +1793,45 @@ export default function FilebrowserMain() {
                     </DialogTitle>
                     <DialogContent>
                         {selectedItem && (
-                            <Box sx={{ textAlign: 'center' }}>
-                                <img
-                                    src={selectedItem.url}
-                                    alt={selectedItem.name}
-                                    style={{ maxWidth: '100%', height: 'auto' }}
-                                />
-                                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                                    Created: {formatDate(selectedItem.created)}
+                            <Box>
+                                <Box
+                                    sx={{
+                                        textAlign: 'center',
+                                        mb: 2.5,
+                                        p: 2,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: 1.5,
+                                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+                                    }}
+                                >
+                                    <img
+                                        src={selectedItem.url}
+                                        alt={selectedItem.name}
+                                        style={{ maxWidth: '100%', height: 'auto' }}
+                                    />
+                                </Box>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    Details
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Modified: {formatDate(selectedItem.modified)}
-                                </Typography>
+                                <Box sx={detailSectionSx}>
+                                    <Box sx={detailRowSx}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                            Created
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                            {formatDate(selectedItem.created)}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={detailRowSx}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                            Modified
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                            {formatDate(selectedItem.modified)}
+                                        </Typography>
+                                    </Box>
+                                </Box>
                             </Box>
                         )}
                     </DialogContent>
