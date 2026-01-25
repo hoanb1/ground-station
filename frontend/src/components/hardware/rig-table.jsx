@@ -263,6 +263,7 @@ export default function RigTable() {
                                     label={t('rig.name')}
                                     type="text"
                                     fullWidth
+                                    size="small"
                                     value={formValues.name}
                                     onChange={handleChange}
                                 />
@@ -271,6 +272,7 @@ export default function RigTable() {
                                     label={t('rig.host')}
                                     type="text"
                                     fullWidth
+                                    size="small"
                                     value={formValues.host}
                                     onChange={handleChange}
                                 />
@@ -279,36 +281,40 @@ export default function RigTable() {
                                     label={t('rig.port')}
                                     type="number"
                                     fullWidth
+                                    size="small"
                                     value={formValues.port}
                                     onChange={handleChange}
                                 />
-                                <FormControl fullWidth>
+                                <FormControl fullWidth size="small">
                                     <InputLabel>{t('rig.radio_type')}</InputLabel>
                                     <Select
                                         name="radiotype"
                                         label={t('rig.radio_type')}
+                                        size="small"
                                         value={formValues.radiotype}
                                         onChange={handleChange}
                                     >
                                         <MenuItem value="rx">{t('rig.rx')}</MenuItem>
                                     </Select>
                                 </FormControl>
-                                <FormControl fullWidth>
+                                <FormControl fullWidth size="small">
                                     <InputLabel>{t('rig.ptt_status')}</InputLabel>
                                     <Select
                                         name="pttstatus"
                                         label={t('rig.ptt_status')}
+                                        size="small"
                                         value={formValues.pttstatus}
                                         onChange={handleChange}
                                     >
                                         <MenuItem value="normal">{t('rig.normal')}</MenuItem>
                                     </Select>
                                 </FormControl>
-                                <FormControl fullWidth>
+                                <FormControl fullWidth size="small">
                                     <InputLabel>{t('rig.vfo_type')}</InputLabel>
                                     <Select
                                         name="vfotype"
                                         label={t('rig.vfo_type')}
+                                        size="small"
                                         value={formValues.vfotype}
                                         onChange={handleChange}
                                     >
@@ -320,6 +326,7 @@ export default function RigTable() {
                                     label={t('rig.lo_down')}
                                     type="number"
                                     fullWidth
+                                    size="small"
                                     value={formValues.lodown}
                                     onChange={handleChange}
                                 />
@@ -328,6 +335,7 @@ export default function RigTable() {
                                     label={t('rig.lo_up')}
                                     type="number"
                                     fullWidth
+                                    size="small"
                                     value={formValues.loup}
                                     onChange={handleChange}
                                 />

@@ -282,12 +282,13 @@ export default function SDRsPage() {
 
         // Define common fields that all SDR types have
         const fields = [
-            <FormControl key="type-select" fullWidth>
+            <FormControl key="type-select" fullWidth size="small">
                 <InputLabel id="sdr-type-label">{t('sdr.sdr_type')}</InputLabel>
                 <Select
                     name="type"
                     labelId="sdr-type-label"
                     label={t('sdr.sdr_type')}
+                    size="small"
                     value={formValues.type || ''}
                     onChange={(e) => {
                         handleChange({target: {name: "type", value: e.target.value}});
@@ -349,11 +350,12 @@ export default function SDRsPage() {
                     );
                 } else if (localSoapyDevices && localSoapyDevices.length > 0) {
                     fields.push(
-                        <FormControl key="local-sdr-device-select" fullWidth>
+                        <FormControl key="local-sdr-device-select" fullWidth size="small">
                             <InputLabel id="local-sdr-device-label">Local SDR Device</InputLabel>
                             <Select
                                 labelId="local-sdr-device-label"
                                 label="Local SDR Device"
+                                size="small"
                                 value={selectedSdrDevice}
                                 onChange={(e) => {
                                     const selectedSdrIndex = e.target.value;
@@ -400,12 +402,13 @@ export default function SDRsPage() {
                 if (selectedType === 'soapysdrremote' && soapyServers && Object.keys(soapyServers).length > 0) {
                     // For SoapySDRRemote, create a dropdown of available servers
                     fields.push(
-                        <FormControl key="host-select" fullWidth>
+                        <FormControl key="host-select" fullWidth size="small">
                             <InputLabel id="host-label">SoapySDR Server</InputLabel>
                             <Select
                                 name="host"
                                 labelId="host-label"
                                 label="SoapySDR Server"
+                                size="small"
                                 value={formValues.host || ''}
                                 onChange={(e) => {
                                     const serverIp = e.target.value;
@@ -439,11 +442,12 @@ export default function SDRsPage() {
                         
                         if (selectedServerInfo && selectedServerInfo.sdrs && selectedServerInfo.sdrs.length > 0) {
                             fields.push(
-                                <FormControl key="sdr-device-select" fullWidth>
+                                <FormControl key="sdr-device-select" fullWidth size="small">
                                     <InputLabel id="sdr-device-label">SDR Device</InputLabel>
                                     <Select
                                         labelId="sdr-device-label"
                                         label="SDR Device"
+                                        size="small"
                                         value={selectedSdrDevice}
                                         onChange={(e) => {
                                             const selectedSdrIndex = e.target.value;
@@ -485,7 +489,8 @@ export default function SDRsPage() {
                             name="host"
                             label="Host"
                             fullWidth
-                                                        onChange={handleChange}
+                            size="small"
+                            onChange={handleChange}
                             value={getFieldValue('host')}
                         />
                     );
@@ -500,7 +505,8 @@ export default function SDRsPage() {
                         name="port"
                         label="Port"
                         fullWidth
-                                                type="number"
+                        size="small"
+                        type="number"
                         onChange={handleChange}
                         value={getFieldValue('port')}
                     />
@@ -514,7 +520,8 @@ export default function SDRsPage() {
                     name="name"
                     label="Name"
                     fullWidth
-                                        onChange={handleChange}
+                    size="small"
+                    onChange={handleChange}
                     value={getFieldValue('name')}
                 />,
                 <TextField
@@ -522,7 +529,8 @@ export default function SDRsPage() {
                     name="frequency_min"
                     label="Minimum Frequency (MHz)"
                     fullWidth
-                                        type="number"
+                    size="small"
+                    type="number"
                     onChange={handleChange}
                     value={getFieldValue('frequency_min')}
                 />,
@@ -531,7 +539,8 @@ export default function SDRsPage() {
                     name="frequency_max"
                     label="Maximum Frequency (MHz)"
                     fullWidth
-                                        type="number"
+                    size="small"
+                    type="number"
                     onChange={handleChange}
                     value={getFieldValue('frequency_max')}
                 />,
@@ -545,7 +554,8 @@ export default function SDRsPage() {
                         name="driver"
                         label="Driver"
                         fullWidth
-                                                onChange={handleChange}
+                        size="small"
+                        onChange={handleChange}
                         value={getFieldValue('driver')}
                     />
                 );
@@ -559,7 +569,8 @@ export default function SDRsPage() {
                         name="serial"
                         label="Serial"
                         fullWidth
-                                                onChange={handleChange}
+                        size="small"
+                        onChange={handleChange}
                         value={getFieldValue('serial')}
                     />
                 );

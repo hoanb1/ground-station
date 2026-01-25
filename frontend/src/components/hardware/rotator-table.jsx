@@ -194,21 +194,21 @@ export default function AntennaRotatorTable() {
                             </DialogTitle>
                             <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
                                 <Stack spacing={2} sx={{ mt: 3 }}>
-                                    <TextField name="name" label={t('rotator.name')} fullWidth
+                                    <TextField name="name" label={t('rotator.name')} fullWidth size="small"
                                                onChange={handleChange}
                                                value={formValues.name}/>
-                                    <TextField name="host" label={t('rotator.host')} fullWidth
+                                    <TextField name="host" label={t('rotator.host')} fullWidth size="small"
                                                onChange={handleChange}
                                                value={formValues.host}/>
-                                    <TextField name="port" label={t('rotator.port')} type="number" fullWidth
+                                    <TextField name="port" label={t('rotator.port')} type="number" fullWidth size="small"
                                                onChange={handleChange} value={formValues.port}/>
-                                    <TextField name="minaz" label={t('rotator.min_az')} type="number" fullWidth
+                                    <TextField name="minaz" label={t('rotator.min_az')} type="number" fullWidth size="small"
                                                onChange={handleChange} value={formValues.minaz}/>
-                                    <TextField name="maxaz" label={t('rotator.max_az')} type="number" fullWidth
+                                    <TextField name="maxaz" label={t('rotator.max_az')} type="number" fullWidth size="small"
                                                onChange={handleChange} value={formValues.maxaz}/>
-                                    <TextField name="minel" label={t('rotator.min_el')} type="number" fullWidth
+                                    <TextField name="minel" label={t('rotator.min_el')} type="number" fullWidth size="small"
                                                onChange={handleChange} value={formValues.minel}/>
-                                    <TextField name="maxel" label={t('rotator.max_el')} type="number" fullWidth
+                                    <TextField name="maxel" label={t('rotator.max_el')} type="number" fullWidth size="small"
                                                onChange={handleChange} value={formValues.maxel}/>
                                 </Stack>
                             </DialogContent>
