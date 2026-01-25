@@ -19,7 +19,29 @@
 
 
 import * as React from 'react';
-import {Alert, AlertTitle, Box, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select, TextField, InputAdornment, IconButton} from "@mui/material";
+import {
+    Alert,
+    AlertTitle,
+    Box,
+    Button,
+    Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControl,
+    FormControlLabel,
+    InputAdornment,
+    IconButton,
+    InputLabel,
+    ListSubheader,
+    MenuItem,
+    Select,
+    Stack,
+    TextField,
+    Checkbox,
+    Typography,
+} from "@mui/material";
 import {useEffect, useState, useCallback} from "react";
 import {useDispatch, useSelector} from "react-redux";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
@@ -42,12 +64,17 @@ import {
     fetchSatelliteGroups,
     fetchSatellites,
     searchSatellites,
+    submitOrEditSatellite,
+    deleteSatellite,
     setSatGroupId,
     setSearchKeyword,
-    setClickedSatellite,
+    setSelected,
+    setFormValues,
+    resetFormValues,
+    setOpenDeleteConfirm,
+    setOpenAddDialog,
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
-import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -75,7 +102,6 @@ function CustomPagination(props) {
 
 const SatelliteTable = React.memo(function SatelliteTable() {
     const dispatch = useDispatch();
-    const navigate = useNavigate();
     const {socket} = useSocket();
     const { t } = useTranslation('satellites');
     const {
@@ -83,7 +109,11 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         satellitesGroups,
         satGroupId,
         searchKeyword,
+        selected,
         loading,
+        formValues,
+        openDeleteConfirm,
+        openAddDialog,
     } = useSelector((state) => state.satellites);
 
     const [localSearchValue, setLocalSearchValue] = useState('');
@@ -285,12 +315,95 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         dispatch(setSatGroupId(''));
     };
 
-    const handleRowClick = (params) => {
-        // Set the clicked satellite in Redux store
-        dispatch(setClickedSatellite(params.row));
-        // Navigate to the satellite detail page
-        navigate(`/satellite/${params.row.norad_id}`);
+
+    const handleAddClick = () => {
+        dispatch(resetFormValues());
+        dispatch(setOpenAddDialog(true));
     };
+
+    const handleEditClick = () => {
+        const selectedId = Number(selected[0]);
+        if (Number.isNaN(selectedId)) {
+            return;
+        }
+        const satellite = satellites.find((row) => row.norad_id === selectedId);
+        if (!satellite) {
+            return;
+        }
+        dispatch(setFormValues({...satellite, id: selectedId}));
+        dispatch(setOpenAddDialog(true));
+    };
+
+    const handleCloseDialog = () => {
+        dispatch(setOpenAddDialog(false));
+    };
+
+    const handleInputChange = (event) => {
+        const {name, value} = event.target;
+        dispatch(setFormValues({...formValues, [name]: value}));
+    };
+
+    const handleCheckboxChange = (event) => {
+        const {name, checked} = event.target;
+        dispatch(setFormValues({...formValues, [name]: checked}));
+    };
+
+    const refreshSatellites = () => {
+        if (searchKeyword && searchKeyword.length >= 3) {
+            dispatch(searchSatellites({socket, keyword: searchKeyword}));
+            return;
+        }
+        if (satGroupId) {
+            dispatch(fetchSatellites({socket, satGroupId}));
+        }
+    };
+
+    const handleSubmit = () => {
+        const payload = {
+            ...formValues,
+            norad_id: formValues.norad_id === '' ? '' : Number(formValues.norad_id),
+        };
+        dispatch(submitOrEditSatellite({socket, formValues: payload}))
+            .unwrap()
+            .then(() => {
+                if (formValues.id) {
+                    toast.success(t('satellite_database.updated_success'), {autoClose: 4000});
+                } else {
+                    toast.success(t('satellite_database.added_success'), {autoClose: 4000});
+                }
+                dispatch(setOpenAddDialog(false));
+                dispatch(resetFormValues());
+                refreshSatellites();
+            })
+            .catch((error) => {
+                const message = formValues.id
+                    ? t('satellite_database.failed_update')
+                    : t('satellite_database.failed_add');
+                toast.error(`${message}: ${error}`, {autoClose: 5000});
+            });
+    };
+
+    const handleDeleteClick = () => {
+        const deleteRequests = selected
+            .map((noradId) => Number(noradId))
+            .filter((noradId) => !Number.isNaN(noradId))
+            .map((noradId) => dispatch(deleteSatellite({socket, noradId})).unwrap());
+        Promise.all(deleteRequests)
+            .then(() => {
+                toast.success(t('satellite_database.deleted_success'), {autoClose: 4000});
+                dispatch(setSelected([]));
+                dispatch(setOpenDeleteConfirm(false));
+                refreshSatellites();
+            })
+            .catch((error) => {
+                toast.error(`${t('satellite_database.failed_delete')}: ${error}`, {autoClose: 5000});
+            });
+    };
+
+    const isSubmitDisabled = !formValues.name
+        || !formValues.norad_id
+        || !formValues.tle1
+        || !formValues.tle2;
 
     return (
         <Box elevation={3} sx={{width: '100%', marginTop: 0}}>
@@ -367,7 +480,6 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             </Box>
             <div>
                 <DataGrid
-                    onRowClick={handleRowClick}
                     getRowId={(satellite) => {
                         return satellite['norad_id'];
                     }}
@@ -375,7 +487,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     rows={satellites}
                     columns={columns}
                     pageSizeOptions={[5, 10, 20, 50, 100]}
-                    checkboxSelection={false}
+                    checkboxSelection={true}
                     initialState={{
                         pagination: {paginationModel: {pageSize: 10}},
                         sorting: {
@@ -384,6 +496,10 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     }}
                     slots={{
                         pagination: CustomPagination,
+                    }}
+                    onRowSelectionModelChange={(selection) => {
+                        const normalized = selection.map((value) => Number(value));
+                        dispatch(setSelected(normalized));
                     }}
                     localeText={{
                         noRowsLabel: t('satellite_database.no_satellites')
@@ -422,7 +538,342 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                         },
                     }}
                 />
+                <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
+                    <Button variant="contained" onClick={handleAddClick}>
+                        {t('satellite_database.add')}
+                    </Button>
+                    <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
+                        {t('satellite_database.edit')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        disabled={selected.length < 1}
+                        onClick={() => dispatch(setOpenDeleteConfirm(true))}
+                    >
+                        {t('satellite_database.delete')}
+                    </Button>
+                </Stack>
             </div>
+            <Dialog
+                open={openDeleteConfirm}
+                onClose={() => dispatch(setOpenDeleteConfirm(false))}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        borderRadius: 2,
+                    }
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        bgcolor: 'error.main',
+                        color: 'error.contrastText',
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        py: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                    }}
+                >
+                    <Box
+                        component="span"
+                        sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            bgcolor: 'error.contrastText',
+                            color: 'error.main',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                        }}
+                    >
+                        !
+                    </Box>
+                    {t('satellite_database.confirm_deletion')}
+                </DialogTitle>
+                <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                    <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
+                        {t('satellite_database.confirm_delete_intro')}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                        {selected.length === 1
+                            ? t('satellite_database.delete_single_label')
+                            : t('satellite_database.delete_multiple_label', {count: selected.length})}
+                    </Typography>
+                    <Box sx={{
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderRadius: 1,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                    }}>
+                        {selected.map((id, index) => {
+                            const satellite = satellites.find((row) => row.norad_id === Number(id));
+                            if (!satellite) return null;
+                            return (
+                                <Box
+                                    key={id}
+                                    sx={{
+                                        p: 2,
+                                        borderBottom: index < selected.length - 1 ? (theme) => `1px solid ${theme.palette.divider}` : 'none',
+                                    }}
+                                >
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                        {satellite.name}
+                                    </Typography>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            {t('satellite_database.norad_id')}:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {satellite.norad_id}
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                            {t('satellite_database.status')}:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                            {satellite.status || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                    <Box sx={{ mt: 2, p: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50', borderRadius: 1 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'warning.main', fontWeight: 500, mb: 1 }}>
+                            {t('satellite_database.cannot_undo')}
+                        </Typography>
+                        <Typography component="div" variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
+                            <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
+                                <li>{t('satellite_database.delete_item_1')}</li>
+                                <li>{t('satellite_database.delete_item_2')}</li>
+                            </ul>
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2,
+                        gap: 1.5,
+                    }}
+                >
+                    <Button
+                        onClick={() => dispatch(setOpenDeleteConfirm(false))}
+                        variant="outlined"
+                        color="inherit"
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                        }}
+                    >
+                        {t('satellite_database.cancel')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={handleDeleteClick}
+                        sx={{
+                            minWidth: 100,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                        }}
+                    >
+                        {t('satellite_database.delete')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog
+                open={openAddDialog}
+                onClose={handleCloseDialog}
+                fullWidth
+                maxWidth="md"
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'background.paper',
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                        borderRadius: 2,
+                    }
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                        fontSize: '1.25rem',
+                        fontWeight: 'bold',
+                        py: 2.5,
+                    }}
+                >
+                    {formValues.id
+                        ? t('satellite_database.dialog_title_edit_name', {
+                            name: formValues.name || formValues.norad_id || '',
+                        })
+                        : t('satellite_database.dialog_title_add')}
+                </DialogTitle>
+                <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
+                    <Stack spacing={2} sx={{ mt: 3 }}>
+                        <TextField
+                            label={t('satellite_database.name')}
+                            name="name"
+                            value={formValues.name || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            required
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.norad_id')}
+                            name="norad_id"
+                            value={formValues.norad_id || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            required
+                            type="number"
+                            disabled={Boolean(formValues.id)}
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.sat_id')}
+                            name="sat_id"
+                            value={formValues.sat_id || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.status')}
+                            name="status"
+                            value={formValues.status || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            size="small"
+                        />
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={Boolean(formValues.is_frequency_violator)}
+                                    onChange={handleCheckboxChange}
+                                    name="is_frequency_violator"
+                                    size="small"
+                                />
+                            }
+                            label={t('satellite_database.is_frequency_violator')}
+                        />
+                        <TextField
+                            label={t('satellite_database.tle1')}
+                            name="tle1"
+                            value={formValues.tle1 || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            required
+                            multiline
+                            minRows={2}
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.tle2')}
+                            name="tle2"
+                            value={formValues.tle2 || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            required
+                            multiline
+                            minRows={2}
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.operator')}
+                            name="operator"
+                            value={formValues.operator || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.countries')}
+                            name="countries"
+                            value={formValues.countries || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.name_other')}
+                            name="name_other"
+                            value={formValues.name_other || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.alternative_name')}
+                            name="alternative_name"
+                            value={formValues.alternative_name || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.website')}
+                            name="website"
+                            value={formValues.website || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            size="small"
+                        />
+                        <TextField
+                            label={t('satellite_database.image')}
+                            name="image"
+                            value={formValues.image || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                            size="small"
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        px: 3,
+                        py: 2.5,
+                        gap: 2,
+                    }}
+                >
+                    <Button
+                        onClick={handleCloseDialog}
+                        variant="outlined"
+                        sx={{
+                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                            '&:hover': {
+                                borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                            },
+                        }}
+                    >
+                        {t('satellite_database.cancel')}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        color="success"
+                        disabled={isSubmitDisabled}
+                    >
+                        {formValues.id ? t('satellite_database.edit') : t('satellite_database.submit')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 });

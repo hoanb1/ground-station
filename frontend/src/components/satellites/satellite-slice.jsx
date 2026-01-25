@@ -25,9 +25,17 @@ const defaultSatellite = {
     id: null,
     name: '',
     norad_id: '',
+    sat_id: '',
     status: '',
-    countries: [],
+    tle1: '',
+    tle2: '',
+    is_frequency_violator: false,
+    countries: '',
     operator: '',
+    name_other: '',
+    alternative_name: '',
+    website: '',
+    image: '',
     transmitters: [],
     decayed: null,
     launched: null,
@@ -188,6 +196,28 @@ export const searchSatellites = createAsyncThunk(
     }
 );
 
+export const submitOrEditSatellite = createAsyncThunk(
+    'satellites/submitOrEdit',
+    async ({ socket, formValues }, { rejectWithValue }) => {
+        const action = formValues.id ? 'edit-satellite' : 'submit-satellite';
+        const payload = {...formValues};
+        delete payload.id;
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', action, payload, (response) => {
+                    if (response.success) {
+                        resolve(response.data);
+                    } else {
+                        reject(new Error(`Failed to ${action === 'edit-satellite' ? 'edit' : 'add'} satellite`));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 const satellitesSlice = createSlice({
     name: 'satellites',
     initialState: {
@@ -202,6 +232,8 @@ const satellitesSlice = createSlice({
         pageSize: 10,
         formValues: defaultSatellite,
         openSatelliteInfoDialog: false,
+        openDeleteConfirm: false,
+        openAddDialog: false,
         clickedSatellite: defaultSatellite,
     },
     reducers: {
@@ -219,6 +251,9 @@ const satellitesSlice = createSlice({
         },
         setOpenSatelliteInfoDialog: (state, action) => {
             state.openSatelliteInfoDialog = action.payload;
+        },
+        setOpenAddDialog: (state, action) => {
+            state.openAddDialog = action.payload;
         },
         setSelected: (state, action) => {
             state.selected = action.payload;
@@ -354,6 +389,21 @@ const satellitesSlice = createSlice({
                 state.status = 'failed';
                 state.loading = false;
                 state.error = action.error?.message;
+            })
+            .addCase(submitOrEditSatellite.pending, (state) => {
+                state.status = 'loading';
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(submitOrEditSatellite.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.loading = false;
+                state.satellites = action.payload;
+            })
+            .addCase(submitOrEditSatellite.rejected, (state, action) => {
+                state.status = 'failed';
+                state.loading = false;
+                state.error = action.error?.message;
             });
     },
 });
@@ -366,6 +416,7 @@ export const {
     setPageSize,
     setOpenDeleteConfirm,
     setOpenSatelliteInfoDialog,
+    setOpenAddDialog,
     setClickedSatellite,
     setSelected,
     setFormValues,

@@ -172,8 +172,11 @@ async def add_satellite(session: AsyncSession, data: dict) -> dict:
     Create and add a new satellite record.
     """
     try:
+        allowed_fields = {column.name for column in Satellites.__table__.columns}
+        data = {key: value for key, value in data.items() if key in allowed_fields}
+
         # Validate required fields
-        required_fields = ["name", "sat_id", "norad_id", "status", "is_frequency_violator"]
+        required_fields = ["name", "norad_id", "tle1", "tle2"]
         for field in required_fields:
             if field not in data:
                 raise ValueError(f"Missing required field: {field}")
@@ -201,6 +204,9 @@ async def edit_satellite(session: AsyncSession, satellite_id: uuid.UUID, **kwarg
     Edit an existing satellite record by updating provided fields.
     """
     try:
+        allowed_fields = {column.name for column in Satellites.__table__.columns}
+        kwargs = {key: value for key, value in kwargs.items() if key in allowed_fields}
+
         # Check if the satellite exists
         stmt = select(Satellites).filter(Satellites.norad_id == satellite_id)
         result = await session.execute(stmt)

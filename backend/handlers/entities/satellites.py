@@ -158,6 +158,66 @@ async def delete_satellite(
         }
 
 
+async def submit_satellite(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, list, str]]:
+    """
+    Add a new satellite.
+
+    Args:
+        sio: Socket.IO server instance
+        data: Satellite details
+        logger: Logger instance
+        sid: Socket.IO session ID
+
+    Returns:
+        Dictionary with success status and updated satellites list
+    """
+    async with AsyncSessionLocal() as dbsession:
+        logger.debug(f"Adding satellite, data: {data}")
+        submit_reply = await crud.satellites.add_satellite(dbsession, data)
+
+        satellites = await crud.satellites.fetch_satellites(dbsession, None)
+        return {
+            "success": (satellites["success"] & submit_reply["success"]),
+            "data": satellites.get("data", []),
+            "error": submit_reply.get("error"),
+        }
+
+
+async def edit_satellite(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, list, str]]:
+    """
+    Edit an existing satellite.
+
+    Args:
+        sio: Socket.IO server instance
+        data: Satellite NORAD ID and updated details
+        logger: Logger instance
+        sid: Socket.IO session ID
+
+    Returns:
+        Dictionary with success status and updated satellites list
+    """
+    async with AsyncSessionLocal() as dbsession:
+        logger.debug(f"Editing satellite, data: {data}")
+        if not data or "norad_id" not in data:
+            return {"success": False, "data": [], "error": "Missing satellite NORAD ID"}
+
+        update_data = {key: value for key, value in data.items() if key != "norad_id"}
+        edit_reply = await crud.satellites.edit_satellite(
+            dbsession, data["norad_id"], **update_data
+        )
+
+        satellites = await crud.satellites.fetch_satellites(dbsession, None)
+        return {
+            "success": (satellites["success"] & edit_reply["success"]),
+            "data": satellites.get("data", []),
+            "error": edit_reply.get("error"),
+        }
+
+
 async def sync_satellite_data(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, None, str]]:
@@ -217,6 +277,8 @@ def register_handlers(registry):
             "get-satellite": (get_satellite, "data_request"),
             "get-satellites-for-group-id": (get_satellites_for_group_id, "data_request"),
             "get-satellite-search": (search_satellites, "data_request"),
+            "submit-satellite": (submit_satellite, "data_submission"),
+            "edit-satellite": (edit_satellite, "data_submission"),
             "delete-satellite": (delete_satellite, "data_submission"),
             "sync-satellite-data": (sync_satellite_data, "data_request"),
         }
