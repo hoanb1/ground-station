@@ -22,7 +22,7 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import Stack from "@mui/material/Stack";
-import {Alert, AlertTitle, Button, TextField, Typography} from "@mui/material";
+import {Alert, AlertTitle, Button, InputAdornment, TextField, Typography} from "@mui/material";
 import {useEffect, useState} from "react";
 import { useTranslation } from 'react-i18next';
 import DialogTitle from "@mui/material/DialogTitle";
@@ -103,6 +103,22 @@ export default function AntennaRotatorTable() {
                 toast.error(err.message);
             });
     }
+
+    const validationErrors = {};
+    if (!formValues.name?.trim()) validationErrors.name = 'Required';
+    if (!formValues.host?.trim()) validationErrors.host = 'Required';
+    if (!formValues.port && formValues.port !== 0) {
+        validationErrors.port = 'Required';
+    } else if (Number(formValues.port) <= 0 || Number(formValues.port) > 65535) {
+        validationErrors.port = 'Port must be 1-65535';
+    }
+    if (formValues.minaz !== '' && formValues.maxaz !== '' && Number(formValues.minaz) > Number(formValues.maxaz)) {
+        validationErrors.azimuth = 'Min azimuth must be <= max azimuth';
+    }
+    if (formValues.minel !== '' && formValues.maxel !== '' && Number(formValues.minel) > Number(formValues.maxel)) {
+        validationErrors.elevation = 'Min elevation must be <= max elevation';
+    }
+    const hasValidationErrors = Object.keys(validationErrors).length > 0;
 
     const handleDelete = () => {
         dispatch(deleteRotators({socket, selectedIds: selected}))
@@ -194,22 +210,85 @@ export default function AntennaRotatorTable() {
                             </DialogTitle>
                             <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
                                 <Stack spacing={2} sx={{ mt: 3 }}>
-                                    <TextField name="name" label={t('rotator.name')} fullWidth size="small"
-                                               onChange={handleChange}
-                                               value={formValues.name}/>
-                                    <TextField name="host" label={t('rotator.host')} fullWidth size="small"
-                                               onChange={handleChange}
-                                               value={formValues.host}/>
-                                    <TextField name="port" label={t('rotator.port')} type="number" fullWidth size="small"
-                                               onChange={handleChange} value={formValues.port}/>
-                                    <TextField name="minaz" label={t('rotator.min_az')} type="number" fullWidth size="small"
-                                               onChange={handleChange} value={formValues.minaz}/>
-                                    <TextField name="maxaz" label={t('rotator.max_az')} type="number" fullWidth size="small"
-                                               onChange={handleChange} value={formValues.maxaz}/>
-                                    <TextField name="minel" label={t('rotator.min_el')} type="number" fullWidth size="small"
-                                               onChange={handleChange} value={formValues.minel}/>
-                                    <TextField name="maxel" label={t('rotator.max_el')} type="number" fullWidth size="small"
-                                               onChange={handleChange} value={formValues.maxel}/>
+                                    <TextField
+                                        name="name"
+                                        label={t('rotator.name')}
+                                        fullWidth
+                                        size="small"
+                                        onChange={handleChange}
+                                        value={formValues.name}
+                                        error={Boolean(validationErrors.name)}
+                                        helperText={validationErrors.name}
+                                    />
+                                    <TextField
+                                        name="host"
+                                        label={t('rotator.host')}
+                                        fullWidth
+                                        size="small"
+                                        onChange={handleChange}
+                                        value={formValues.host}
+                                        error={Boolean(validationErrors.host)}
+                                        helperText={validationErrors.host}
+                                    />
+                                    <TextField
+                                        name="port"
+                                        label={t('rotator.port')}
+                                        type="number"
+                                        fullWidth
+                                        size="small"
+                                        onChange={handleChange}
+                                        value={formValues.port}
+                                        error={Boolean(validationErrors.port)}
+                                        helperText={validationErrors.port}
+                                    />
+                                    <TextField
+                                        name="minaz"
+                                        label={t('rotator.min_az')}
+                                        type="number"
+                                        fullWidth
+                                        size="small"
+                                        onChange={handleChange}
+                                        value={formValues.minaz}
+                                        error={Boolean(validationErrors.azimuth)}
+                                        helperText={validationErrors.azimuth}
+                                        InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }}
+                                    />
+                                    <TextField
+                                        name="maxaz"
+                                        label={t('rotator.max_az')}
+                                        type="number"
+                                        fullWidth
+                                        size="small"
+                                        onChange={handleChange}
+                                        value={formValues.maxaz}
+                                        error={Boolean(validationErrors.azimuth)}
+                                        helperText={validationErrors.azimuth}
+                                        InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }}
+                                    />
+                                    <TextField
+                                        name="minel"
+                                        label={t('rotator.min_el')}
+                                        type="number"
+                                        fullWidth
+                                        size="small"
+                                        onChange={handleChange}
+                                        value={formValues.minel}
+                                        error={Boolean(validationErrors.elevation)}
+                                        helperText={validationErrors.elevation}
+                                        InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }}
+                                    />
+                                    <TextField
+                                        name="maxel"
+                                        label={t('rotator.max_el')}
+                                        type="number"
+                                        fullWidth
+                                        size="small"
+                                        onChange={handleChange}
+                                        value={formValues.maxel}
+                                        error={Boolean(validationErrors.elevation)}
+                                        helperText={validationErrors.elevation}
+                                        InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }}
+                                    />
                                 </Stack>
                             </DialogContent>
                             <DialogActions
@@ -238,6 +317,7 @@ export default function AntennaRotatorTable() {
                                     color="success"
                                     variant="contained"
                                     onClick={handleSubmit}
+                                    disabled={hasValidationErrors}
                                 >
                                     {t('rotator.submit')}
                                 </Button>

@@ -27,6 +27,7 @@ import {
     AlertTitle,
     Button,
     FormControl,
+    InputAdornment,
     InputLabel,
     MenuItem,
     Select,
@@ -277,6 +278,45 @@ export default function SDRsPage() {
         return '';
     };
 
+    const getValidationErrors = () => {
+        const errors = {};
+        const selectedType = formValues.type || '';
+        const config = selectedType ? sdrTypeFields[selectedType] : null;
+
+        if (!selectedType || !config) return errors;
+
+        const nameValue = getFieldValue('name');
+        if (!String(nameValue || '').trim()) errors.name = 'Required';
+
+        if (!config.excludeFields.includes('host')) {
+            const hostValue = getFieldValue('host');
+            if (!String(hostValue || '').trim()) errors.host = 'Required';
+        }
+
+        if (!config.excludeFields.includes('port')) {
+            const portValue = getFieldValue('port');
+            if (portValue === '' || portValue === null || portValue === undefined) {
+                errors.port = 'Required';
+            } else if (Number(portValue) <= 0 || Number(portValue) > 65535) {
+                errors.port = 'Port must be 1-65535';
+            }
+        }
+
+        const minFreq = getFieldValue('frequency_min');
+        const maxFreq = getFieldValue('frequency_max');
+        if (minFreq !== '' && Number.isNaN(Number(minFreq))) errors.frequency_min = 'Must be a number';
+        if (maxFreq !== '' && Number.isNaN(Number(maxFreq))) errors.frequency_max = 'Must be a number';
+        if (minFreq !== '' && maxFreq !== '' && Number(minFreq) > Number(maxFreq)) {
+            errors.frequency_min = 'Min must be <= max';
+            errors.frequency_max = 'Min must be <= max';
+        }
+
+        return errors;
+    };
+
+    const validationErrors = getValidationErrors();
+    const hasValidationErrors = Object.keys(validationErrors).length > 0;
+
     const renderFormFields = () => {
         const selectedType = formValues.type || '';
 
@@ -492,6 +532,8 @@ export default function SDRsPage() {
                             size="small"
                             onChange={handleChange}
                             value={getFieldValue('host')}
+                            error={Boolean(validationErrors.host)}
+                            helperText={validationErrors.host}
                         />
                     );
                 }
@@ -509,6 +551,8 @@ export default function SDRsPage() {
                         type="number"
                         onChange={handleChange}
                         value={getFieldValue('port')}
+                        error={Boolean(validationErrors.port)}
+                        helperText={validationErrors.port}
                     />
                 );
             }
@@ -523,6 +567,8 @@ export default function SDRsPage() {
                     size="small"
                     onChange={handleChange}
                     value={getFieldValue('name')}
+                    error={Boolean(validationErrors.name)}
+                    helperText={validationErrors.name}
                 />,
                 <TextField
                     key="frequency_min"
@@ -533,6 +579,9 @@ export default function SDRsPage() {
                     type="number"
                     onChange={handleChange}
                     value={getFieldValue('frequency_min')}
+                    error={Boolean(validationErrors.frequency_min)}
+                    helperText={validationErrors.frequency_min || 'MHz'}
+                    InputProps={{ endAdornment: <InputAdornment position="end">MHz</InputAdornment> }}
                 />,
                 <TextField
                     key="frequency_max"
@@ -543,6 +592,9 @@ export default function SDRsPage() {
                     type="number"
                     onChange={handleChange}
                     value={getFieldValue('frequency_max')}
+                    error={Boolean(validationErrors.frequency_max)}
+                    helperText={validationErrors.frequency_max || 'MHz'}
+                    InputProps={{ endAdornment: <InputAdornment position="end">MHz</InputAdornment> }}
                 />,
             );
 
@@ -708,6 +760,7 @@ export default function SDRsPage() {
                                     color="success"
                                     variant="contained"
                                     onClick={handleSubmit}
+                                    disabled={hasValidationErrors}
                                 >
                                     {t('sdr.submit')}
                                 </Button>

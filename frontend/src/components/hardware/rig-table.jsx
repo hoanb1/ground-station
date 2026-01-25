@@ -26,6 +26,7 @@ import {
     Button,
     DialogContentText,
     FormControl,
+    InputAdornment,
     InputLabel,
     MenuItem,
     Select,
@@ -157,6 +158,22 @@ export default function RigTable() {
 
     };
 
+    const validationErrors = {};
+    if (!formValues.name?.trim()) validationErrors.name = 'Required';
+    if (!formValues.host?.trim()) validationErrors.host = 'Required';
+    if (!formValues.port && formValues.port !== 0) {
+        validationErrors.port = 'Required';
+    } else if (Number(formValues.port) <= 0 || Number(formValues.port) > 65535) {
+        validationErrors.port = 'Port must be 1-65535';
+    }
+    if (formValues.lodown !== '' && Number.isNaN(Number(formValues.lodown))) {
+        validationErrors.lodown = 'Must be a number';
+    }
+    if (formValues.loup !== '' && Number.isNaN(Number(formValues.loup))) {
+        validationErrors.loup = 'Must be a number';
+    }
+    const hasValidationErrors = Object.keys(validationErrors).length > 0;
+
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info">
@@ -266,6 +283,8 @@ export default function RigTable() {
                                     size="small"
                                     value={formValues.name}
                                     onChange={handleChange}
+                                    error={Boolean(validationErrors.name)}
+                                    helperText={validationErrors.name}
                                 />
                                 <TextField
                                     name="host"
@@ -275,6 +294,8 @@ export default function RigTable() {
                                     size="small"
                                     value={formValues.host}
                                     onChange={handleChange}
+                                    error={Boolean(validationErrors.host)}
+                                    helperText={validationErrors.host}
                                 />
                                 <TextField
                                     name="port"
@@ -284,6 +305,8 @@ export default function RigTable() {
                                     size="small"
                                     value={formValues.port}
                                     onChange={handleChange}
+                                    error={Boolean(validationErrors.port)}
+                                    helperText={validationErrors.port}
                                 />
                                 <FormControl fullWidth size="small">
                                     <InputLabel>{t('rig.radio_type')}</InputLabel>
@@ -329,6 +352,9 @@ export default function RigTable() {
                                     size="small"
                                     value={formValues.lodown}
                                     onChange={handleChange}
+                                    error={Boolean(validationErrors.lodown)}
+                                    helperText={validationErrors.lodown || 'Hz'}
+                                    InputProps={{ endAdornment: <InputAdornment position="end">Hz</InputAdornment> }}
                                 />
                                 <TextField
                                     name="loup"
@@ -338,6 +364,9 @@ export default function RigTable() {
                                     size="small"
                                     value={formValues.loup}
                                     onChange={handleChange}
+                                    error={Boolean(validationErrors.loup)}
+                                    helperText={validationErrors.loup || 'Hz'}
+                                    InputProps={{ endAdornment: <InputAdornment position="end">Hz</InputAdornment> }}
                                 />
                             </Stack>
                         </DialogContent>
@@ -363,7 +392,7 @@ export default function RigTable() {
                             >
                                 {t('rig.cancel')}
                             </Button>
-                            <Button onClick={() => handleFormSubmit()} color="success" variant="contained">
+                            <Button onClick={() => handleFormSubmit()} color="success" variant="contained" disabled={hasValidationErrors}>
                                 {t('rig.submit')}
                             </Button>
                         </DialogActions>
