@@ -294,15 +294,21 @@ export const humanizeFutureDateInMinutes = (isoString, zeroPadding = 2) => {
     const now = new Date();
     const futureDate = new Date(isoString);
     const diffInSeconds = Math.floor((futureDate - now) / 1000);
+    const absSeconds = Math.abs(diffInSeconds);
 
-    if (diffInSeconds < 0) {
-        const diffInMinutes = Math.floor(Math.abs(diffInSeconds) / 60);
-        const remainingSeconds = Math.abs(diffInSeconds) % 60;
-        return `${formatWithZeros(diffInMinutes, zeroPadding)}m ${formatWithZeros(remainingSeconds, zeroPadding)}s ago`;
+    if (absSeconds >= 60 * 60) {
+        const hours = Math.floor(absSeconds / (60 * 60));
+        const minutes = Math.floor((absSeconds % (60 * 60)) / 60);
+        const timeLabel = `${hours}h ${minutes}m`;
+        return diffInSeconds < 0 ? `${timeLabel} ago` : `in ${timeLabel}`;
     }
 
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    const remainingSeconds = diffInSeconds % 60;
+    const diffInMinutes = Math.floor(absSeconds / 60);
+    const remainingSeconds = absSeconds % 60;
+
+    if (diffInSeconds < 0) {
+        return `${formatWithZeros(diffInMinutes, zeroPadding)}m ${formatWithZeros(remainingSeconds, zeroPadding)}s ago`;
+    }
 
     return `in ${formatWithZeros(diffInMinutes, zeroPadding)}m ${formatWithZeros(remainingSeconds, zeroPadding)}s`;
 };
