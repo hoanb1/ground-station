@@ -326,32 +326,45 @@ const BackgroundTasksPopover = () => {
             ? (task.duration ? task.duration * 1000 : endTimeMs - startTimeMs)
             : Date.now() - startTimeMs;
 
-        return (
-            <ListItem key={taskId} divider>
-                <Stack direction="column" spacing={1} sx={{ width: '100%' }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="subtitle2" fontWeight="bold">
-                            {task.name}
-                        </Typography>
-                        {getStatusChip(task.status)}
-                    </Stack>
+        const taskCommandLine = [task.command, ...(task.args || [])].filter(Boolean).join(' ');
+        const taskCommandPreview = taskCommandLine.length > 48
+            ? `${taskCommandLine.slice(0, 48)}...`
+            : taskCommandLine;
 
-                    <Typography variant="caption" color="text.secondary">
-                        {task.command} {task.args?.join(' ').substring(0, 50)}
-                        {task.args?.join(' ').length > 50 ? '...' : ''}
-                    </Typography>
+        return (
+            <ListItem key={taskId} divider sx={{ px: 1.5, py: 1.5 }}>
+                <Stack direction="column" spacing={1} sx={{ width: '100%' }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                {task.name}
+                            </Typography>
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                noWrap
+                                title={taskCommandLine}
+                                sx={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                            >
+                                {taskCommandPreview}
+                            </Typography>
+                        </Box>
+                        <Box sx={{ ml: 2 }}>
+                            {getStatusChip(task.status)}
+                        </Box>
+                    </Stack>
 
                     {isRunning && (
                         <>
                             {task.progress !== undefined && task.progress !== null ? (
                                 <Box>
-                                    <LinearProgress variant="determinate" value={task.progress} />
-                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                                    <LinearProgress variant="determinate" value={task.progress} sx={{ height: 6, borderRadius: 999 }} />
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                                         Progress: {Math.round(task.progress)}%
                                     </Typography>
                                 </Box>
                             ) : (
-                                <LinearProgress />
+                                <LinearProgress sx={{ height: 6, borderRadius: 999 }} />
                             )}
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                                 <Typography variant="caption" color="text.secondary">
@@ -360,6 +373,7 @@ const BackgroundTasksPopover = () => {
                                 <Button
                                     size="small"
                                     color="error"
+                                    variant="outlined"
                                     startIcon={<StopIcon />}
                                     onClick={() => handleStopTask(taskId)}
                                 >
@@ -434,10 +448,26 @@ const BackgroundTasksPopover = () => {
                     vertical: 'top',
                     horizontal: 'right',
                 }}
+                PaperProps={{
+                    sx: {
+                        borderRadius: 0,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
+                        overflow: 'hidden',
+                    },
+                }}
             >
-                <Box sx={{ width: 500, maxHeight: 600, display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ width: 520, maxHeight: 600, display: 'flex', flexDirection: 'column' }}>
                     {/* Sticky Header */}
-                    <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                    <Box
+                        sx={{
+                            p: 1.5,
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+                        }}
+                    >
                         <Stack direction="row" justifyContent="space-between" alignItems="center">
                             <Typography variant="h6">
                                 {t('tasks_popover.title', 'Background Tasks')}
@@ -447,6 +477,7 @@ const BackgroundTasksPopover = () => {
                                     size="small"
                                     startIcon={<DeleteSweepIcon />}
                                     onClick={handleClearCompleted}
+                                    variant="outlined"
                                 >
                                     {t('tasks_popover.clear_completed', 'Clear Completed')}
                                 </Button>
@@ -457,7 +488,7 @@ const BackgroundTasksPopover = () => {
                     {/* Scrollable Body */}
                     <Box sx={{ overflow: 'auto', flex: 1 }}>
                         {runningTaskIds.length === 0 && completedTaskIds.length === 0 && (
-                            <Box sx={{ p: 3, textAlign: 'center' }}>
+                            <Box sx={{ p: 2.5, textAlign: 'center' }}>
                                 <Typography color="text.secondary">
                                     {t('tasks_popover.no_tasks_message', 'No background tasks')}
                                 </Typography>
@@ -466,8 +497,8 @@ const BackgroundTasksPopover = () => {
 
                         {runningTaskIds.length > 0 && (
                             <>
-                                <Box sx={{ p: 2 }}>
-                                    <Typography variant="subtitle2" color="text.secondary">
+                                <Box sx={{ p: 1.5 }}>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                                         {t('tasks_popover.running_section', 'Running')} ({runningTaskIds.length})
                                     </Typography>
                                 </Box>
@@ -480,8 +511,8 @@ const BackgroundTasksPopover = () => {
                         {completedTaskIds.length > 0 && (
                             <>
                                 {runningTaskIds.length > 0 && <Divider />}
-                                <Box sx={{ p: 2 }}>
-                                    <Typography variant="subtitle2" color="text.secondary">
+                                <Box sx={{ p: 1.5 }}>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                                         {t('tasks_popover.completed_section', 'Recent')} ({completedTaskIds.length})
                                     </Typography>
                                 </Box>

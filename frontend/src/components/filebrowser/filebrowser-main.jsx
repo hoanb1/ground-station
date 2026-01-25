@@ -231,6 +231,22 @@ export default function FilebrowserMain() {
         return t('humanize.date.years_ago', { ns: 'common', count: years, defaultValue: `${years} years ago` });
     };
 
+    const detailSectionSx = {
+        p: 2,
+        mb: 2,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1.5,
+        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+    };
+
+    const detailRowSx = {
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: '160px 1fr' },
+        gap: { xs: 0.5, sm: 2 },
+        py: 0.5,
+    };
+
     const {
         files,
         filesLoading,
@@ -1836,7 +1852,17 @@ export default function FilebrowserMain() {
                         {selectedItem && (
                             <Box>
                                 {/* Image */}
-                                <Box sx={{ textAlign: 'center', mb: 3 }}>
+                                <Box
+                                    sx={{
+                                        textAlign: 'center',
+                                        mb: 3,
+                                        p: 2,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        borderRadius: 1.5,
+                                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+                                    }}
+                                >
                                     <img
                                         src={selectedItem.url}
                                         alt={selectedItem.displayName || selectedItem.filename}
@@ -1850,42 +1876,66 @@ export default function FilebrowserMain() {
                                         <Typography variant="subtitle2" color="text.primary" gutterBottom>
                                             Metadata
                                         </Typography>
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
+                                        <Box sx={detailSectionSx}>
                                             {telemetryMetadata.decoder?.type && (
-                                                <>
-                                                    <Typography variant="body2" color="text.secondary">Decoder Type:</Typography>
-                                                    <Typography variant="body2">{telemetryMetadata.decoder.type.toUpperCase()}</Typography>
-                                                </>
+                                                <Box sx={detailRowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Decoder Type
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {telemetryMetadata.decoder.type.toUpperCase()}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {telemetryMetadata.decoder?.mode && (
-                                                <>
-                                                    <Typography variant="body2" color="text.secondary">SSTV Mode:</Typography>
-                                                    <Typography variant="body2">{telemetryMetadata.decoder.mode}</Typography>
-                                                </>
+                                                <Box sx={detailRowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        SSTV Mode
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {telemetryMetadata.decoder.mode}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {telemetryMetadata.signal?.frequency_mhz && (
-                                                <>
-                                                    <Typography variant="body2" color="text.secondary">Frequency:</Typography>
-                                                    <Typography variant="body2">{telemetryMetadata.signal.frequency_mhz.toFixed(6)} MHz</Typography>
-                                                </>
+                                                <Box sx={detailRowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Frequency
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {telemetryMetadata.signal.frequency_mhz.toFixed(6)} MHz
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {telemetryMetadata.signal?.sample_rate_hz && (
-                                                <>
-                                                    <Typography variant="body2" color="text.secondary">Sample Rate:</Typography>
-                                                    <Typography variant="body2">{telemetryMetadata.signal.sample_rate_hz} Hz</Typography>
-                                                </>
+                                                <Box sx={detailRowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Sample Rate
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {telemetryMetadata.signal.sample_rate_hz} Hz
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {telemetryMetadata.vfo?.bandwidth_khz && (
-                                                <>
-                                                    <Typography variant="body2" color="text.secondary">VFO Bandwidth:</Typography>
-                                                    <Typography variant="body2">{telemetryMetadata.vfo.bandwidth_khz.toFixed(1)} kHz</Typography>
-                                                </>
+                                                <Box sx={detailRowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        VFO Bandwidth
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {telemetryMetadata.vfo.bandwidth_khz.toFixed(1)} kHz
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {telemetryMetadata.image?.timestamp_iso && (
-                                                <>
-                                                    <Typography variant="body2" color="text.secondary">Decoded:</Typography>
-                                                    <Typography variant="body2">{telemetryMetadata.image.timestamp_iso}</Typography>
-                                                </>
+                                                <Box sx={detailRowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Decoded
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {telemetryMetadata.image.timestamp_iso}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                         </Box>
                                     </Box>

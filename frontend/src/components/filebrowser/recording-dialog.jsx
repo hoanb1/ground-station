@@ -58,6 +58,22 @@ export default function RecordingDialog({ open, onClose, recording }) {
 
     if (!recording) return null;
 
+    const sectionSx = {
+        p: 2,
+        mb: 2,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1.5,
+        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+    };
+
+    const rowSx = {
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: '160px 1fr' },
+        gap: { xs: 0.5, sm: 2 },
+        py: 0.5,
+    };
+
     return (
         <Dialog
             open={open}
@@ -94,26 +110,36 @@ export default function RecordingDialog({ open, onClose, recording }) {
                         )}
 
                         <Typography variant="subtitle2" gutterBottom>
-                            Name
+                            Recording
                         </Typography>
-                        <Typography variant="body2" sx={{ mb: 2, fontFamily: 'monospace' }}>
-                            {recording.name}
-                        </Typography>
-
-                        <Typography variant="subtitle2" gutterBottom>
-                            Files
-                        </Typography>
-                        <Typography variant="body2" sx={{ mb: 2, fontFamily: 'monospace' }}>
-                            {recording.data_file} ({formatBytes(recording.data_size)})
-                            <br />
-                            {recording.meta_file}
-                            {recording.snapshot && (
-                                <>
-                                    <br />
-                                    {recording.snapshot.filename} ({recording.snapshot.width}×{recording.snapshot.height})
-                                </>
-                            )}
-                        </Typography>
+                        <Box sx={sectionSx}>
+                            <Box sx={rowSx}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                    Name
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
+                                    {recording.name}
+                                </Typography>
+                            </Box>
+                            <Box sx={rowSx}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                    Files
+                                </Typography>
+                                <Box sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                    <Box sx={{ mb: 0.5 }}>
+                                        {recording.data_file} ({formatBytes(recording.data_size)})
+                                    </Box>
+                                    <Box sx={{ mb: recording.snapshot ? 0.5 : 0 }}>
+                                        {recording.meta_file}
+                                    </Box>
+                                    {recording.snapshot && (
+                                        <Box>
+                                            {recording.snapshot.filename} ({recording.snapshot.width}×{recording.snapshot.height})
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Box>
+                        </Box>
 
                         {recording.metadata && (
                             <>
@@ -122,12 +148,26 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                         <Typography variant="subtitle2" gutterBottom>
                                             Target Satellite
                                         </Typography>
-                                        <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                        <Box sx={sectionSx}>
                                             {recording.metadata.target_satellite_name && (
-                                                <div>Name: {recording.metadata.target_satellite_name}</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Name
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {recording.metadata.target_satellite_name}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {recording.metadata.target_satellite_norad_id && (
-                                                <div>NORAD ID: {recording.metadata.target_satellite_norad_id}</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        NORAD ID
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {recording.metadata.target_satellite_norad_id}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                         </Box>
                                     </>
@@ -136,27 +176,76 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                 <Typography variant="subtitle2" gutterBottom>
                                     Metadata
                                 </Typography>
-                                <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                <Box sx={sectionSx}>
                                     {recording.metadata.datatype && (
-                                        <div>Data Type: {recording.metadata.datatype}</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Data Type
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {recording.metadata.datatype}
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {recording.metadata.sample_rate && (
-                                        <div>Sample Rate: {recording.metadata.sample_rate} Hz</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Sample Rate
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {recording.metadata.sample_rate} Hz
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {recording.metadata.start_time && (
-                                        <div>Start Time: {formatDate(recording.metadata.start_time)}</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Start Time
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {formatDate(recording.metadata.start_time)}
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {recording.metadata.finalized_time && (
-                                        <div>End Time: {formatDate(recording.metadata.finalized_time)}</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                End Time
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {formatDate(recording.metadata.finalized_time)}
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {recording.metadata.version && (
-                                        <div>SigMF Version: {recording.metadata.version}</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                SigMF Version
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {recording.metadata.version}
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {recording.metadata.recorder && (
-                                        <div>Recorder: {recording.metadata.recorder}</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Recorder
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {recording.metadata.recorder}
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {recording.metadata.description && (
-                                        <div>Description: {recording.metadata.description}</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Description
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                                                {recording.metadata.description}
+                                            </Typography>
+                                        </Box>
                                     )}
                                 </Box>
 
@@ -170,25 +259,33 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                                 <Box
                                                     key={index}
                                                     sx={{
-                                                        p: 1.5,
+                                                        p: 2,
                                                         border: '1px solid',
                                                         borderColor: 'divider',
-                                                        borderRadius: 1,
-                                                        backgroundColor: 'background.paper',
+                                                        borderRadius: 1.5,
+                                                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'common.white'),
+                                                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
                                                     }}
                                                 >
-                                                    <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 0.5, display: 'block' }}>
-                                                        Segment {index + 1}
-                                                    </Typography>
-                                                    <Box sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                                            Segment {index + 1}
+                                                        </Typography>
+                                                        <Chip
+                                                            label={`${Object.keys(capture).length} fields`}
+                                                            size="small"
+                                                            sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                        />
+                                                    </Box>
+                                                    <Box sx={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>
                                                         {Object.entries(capture).map(([key, value]) => (
-                                                            <Box key={key} sx={{ display: 'flex', gap: 1, py: 0.25 }}>
-                                                                <Box component="span" sx={{ color: 'text.secondary', minWidth: '140px' }}>
-                                                                    {key}:
-                                                                </Box>
-                                                                <Box component="span" sx={{ wordBreak: 'break-word' }}>
+                                                            <Box key={key} sx={rowSx}>
+                                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                                    {key}
+                                                                </Typography>
+                                                                <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
                                                                     {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                                                </Box>
+                                                                </Typography>
                                                             </Box>
                                                         ))}
                                                     </Box>

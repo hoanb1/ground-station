@@ -372,6 +372,22 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
 
     if (!audio) return null;
 
+    const sectionSx = {
+        p: 2,
+        mb: 2,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1.5,
+        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+    };
+
+    const rowSx = {
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: '160px 1fr' },
+        gap: { xs: 0.5, sm: 2 },
+        py: 0.5,
+    };
+
     return (
         <Dialog
             open={open}
@@ -436,8 +452,10 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                             gap: 2,
                             mb: 3,
                             p: 2,
-                            backgroundColor: 'background.default',
-                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1.5,
+                            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
                         }}>
                             <Button
                                 variant="contained"
@@ -469,38 +487,85 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                             </Typography>
                         </Box>
 
-                        {/* File Information */}
                         <Typography variant="subtitle2" gutterBottom>
-                            Filename
+                            File
                         </Typography>
-                        <Typography variant="body2" sx={{ mb: 2, fontFamily: 'monospace' }}>
-                            {audio.filename}
-                        </Typography>
+                        <Box sx={sectionSx}>
+                            <Box sx={rowSx}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                    Filename
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
+                                    {audio.filename}
+                                </Typography>
+                            </Box>
+                        </Box>
 
-                        {/* Metadata */}
                         {metadata && (
                             <>
                                 <Typography variant="subtitle2" gutterBottom>
                                     Audio Properties
                                 </Typography>
-                                <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                <Box sx={sectionSx}>
                                     {metadata.format && (
-                                        <div>Format: {metadata.format.toUpperCase()}</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Format
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {metadata.format.toUpperCase()}
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {metadata.sample_rate && (
-                                        <div>Sample Rate: {metadata.sample_rate} Hz</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Sample Rate
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {metadata.sample_rate} Hz
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {metadata.channels && (
-                                        <div>Channels: {metadata.channels} ({metadata.channels === 1 ? 'Mono' : 'Stereo'})</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Channels
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {metadata.channels} ({metadata.channels === 1 ? 'Mono' : 'Stereo'})
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {metadata.bit_depth && (
-                                        <div>Bit Depth: {metadata.bit_depth} bits</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Bit Depth
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {metadata.bit_depth} bits
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {metadata.duration_seconds !== undefined && (
-                                        <div>Duration: {formatDuration(metadata.duration_seconds)} ({metadata.duration_seconds.toFixed(2)}s)</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Duration
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {formatDuration(metadata.duration_seconds)} ({metadata.duration_seconds.toFixed(2)}s)
+                                            </Typography>
+                                        </Box>
                                     )}
                                     {metadata.total_samples && (
-                                        <div>Total Samples: {metadata.total_samples.toLocaleString()}</div>
+                                        <Box sx={rowSx}>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                Total Samples
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                {metadata.total_samples.toLocaleString()}
+                                            </Typography>
+                                        </Box>
                                     )}
                                 </Box>
 
@@ -509,18 +574,46 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                         <Typography variant="subtitle2" gutterBottom>
                                             Radio Configuration
                                         </Typography>
-                                        <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                        <Box sx={sectionSx}>
                                             {metadata.vfo_number && (
-                                                <div>VFO: {metadata.vfo_number}</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        VFO
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {metadata.vfo_number}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {metadata.demodulator_type && (
-                                                <div>Demodulator: {metadata.demodulator_type}</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Demodulator
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {metadata.demodulator_type}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {metadata.center_frequency && (
-                                                <div>Center Frequency: {(metadata.center_frequency / 1e6).toFixed(6)} MHz</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Center Frequency
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {(metadata.center_frequency / 1e6).toFixed(6)} MHz
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {metadata.vfo_frequency && (
-                                                <div>VFO Frequency: {(metadata.vfo_frequency / 1e6).toFixed(6)} MHz</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        VFO Frequency
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {(metadata.vfo_frequency / 1e6).toFixed(6)} MHz
+                                                    </Typography>
+                                                </Box>
                                             )}
                                         </Box>
                                     </>
@@ -531,12 +624,26 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                         <Typography variant="subtitle2" gutterBottom>
                                             Target Satellite
                                         </Typography>
-                                        <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                        <Box sx={sectionSx}>
                                             {metadata.target_satellite_name && (
-                                                <div>Name: {metadata.target_satellite_name}</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Name
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {metadata.target_satellite_name}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {metadata.target_satellite_norad_id && (
-                                                <div>NORAD ID: {metadata.target_satellite_norad_id}</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        NORAD ID
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {metadata.target_satellite_norad_id}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                         </Box>
                                     </>
@@ -547,12 +654,26 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                         <Typography variant="subtitle2" gutterBottom>
                                             Recording Times
                                         </Typography>
-                                        <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                        <Box sx={sectionSx}>
                                             {metadata.start_time && (
-                                                <div>Start: {formatDate(metadata.start_time)}</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        Start
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {formatDate(metadata.start_time)}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                             {metadata.end_time && (
-                                                <div>End: {formatDate(metadata.end_time)}</div>
+                                                <Box sx={rowSx}>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                        End
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                        {formatDate(metadata.end_time)}
+                                                    </Typography>
+                                                </Box>
                                             )}
                                         </Box>
                                     </>

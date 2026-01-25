@@ -99,6 +99,22 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
 
     if (!transcription) return null;
 
+    const sectionSx = {
+        p: 2,
+        mb: 2,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1.5,
+        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+    };
+
+    const rowSx = {
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: '160px 1fr' },
+        gap: { xs: 0.5, sm: 2 },
+        py: 0.5,
+    };
+
     return (
         <Dialog
             open={open}
@@ -130,35 +146,75 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
             </DialogTitle>
             <DialogContent>
                 <Box sx={{ mt: 1 }}>
-                    {/* File Information */}
                     <Typography variant="subtitle2" gutterBottom>
-                        Filename
+                        File
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 2, fontFamily: 'monospace' }}>
-                        {transcription.filename}
-                    </Typography>
+                    <Box sx={sectionSx}>
+                        <Box sx={rowSx}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                Filename
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
+                                {transcription.filename}
+                            </Typography>
+                        </Box>
+                    </Box>
 
-                    {/* Transcription Metadata */}
                     {transcription.metadata && (
                         <>
                             <Typography variant="subtitle2" gutterBottom>
                                 Transcription Properties
                             </Typography>
-                            <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                            <Box sx={sectionSx}>
                                 {transcription.provider && (
-                                    <div>Provider: {transcription.provider}</div>
+                                    <Box sx={rowSx}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                            Provider
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                            {transcription.provider}
+                                        </Typography>
+                                    </Box>
                                 )}
                                 {transcription.session_id && (
-                                    <div>Session ID: {transcription.session_id}</div>
+                                    <Box sx={rowSx}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                            Session ID
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
+                                            {transcription.session_id}
+                                        </Typography>
+                                    </Box>
                                 )}
                                 {transcription.vfo_number && (
-                                    <div>VFO: {transcription.vfo_number}</div>
+                                    <Box sx={rowSx}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                            VFO
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                            {transcription.vfo_number}
+                                        </Typography>
+                                    </Box>
                                 )}
                                 {transcription.language && (
-                                    <div>Language: {transcription.language}</div>
+                                    <Box sx={rowSx}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                            Language
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                            {transcription.language}
+                                        </Typography>
+                                    </Box>
                                 )}
                                 {transcription.translate_to && (
-                                    <div>Translated To: {transcription.translate_to}</div>
+                                    <Box sx={rowSx}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                            Translated To
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                            {transcription.translate_to}
+                                        </Typography>
+                                    </Box>
                                 )}
                             </Box>
 
@@ -167,12 +223,26 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                                     <Typography variant="subtitle2" gutterBottom>
                                         Transcription Times
                                     </Typography>
-                                    <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                    <Box sx={sectionSx}>
                                         {transcription.started && (
-                                            <div>Started: {formatDate(transcription.started)}</div>
+                                            <Box sx={rowSx}>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                    Started
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                    {formatDate(transcription.started)}
+                                                </Typography>
+                                            </Box>
                                         )}
                                         {transcription.ended && (
-                                            <div>Ended: {formatDate(transcription.ended)}</div>
+                                            <Box sx={rowSx}>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                    Ended
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                    {formatDate(transcription.ended)}
+                                                </Typography>
+                                            </Box>
                                         )}
                                     </Box>
                                 </>
@@ -182,13 +252,23 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
 
                     <Divider sx={{ my: 2 }} />
 
-                    {/* Transcription Text */}
                     <Typography variant="subtitle2" gutterBottom>
                         Transcription Text
                     </Typography>
 
                     {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                        <Box
+                            sx={{
+                                minHeight: 220,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 1.5,
+                                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+                            }}
+                        >
                             <CircularProgress />
                         </Box>
                     ) : error ? (
@@ -199,17 +279,18 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                         <Box
                             sx={{
                                 p: 2,
-                                backgroundColor: 'background.default',
-                                borderRadius: 1,
+                                borderRadius: 1.5,
                                 border: '1px solid',
                                 borderColor: 'divider',
                                 maxHeight: 400,
                                 overflowY: 'auto',
+                                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'common.white'),
                                 fontFamily: 'monospace',
                                 fontSize: '0.875rem',
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
-                                lineHeight: 1.6,
+                                lineHeight: 1.65,
+                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
                             }}
                         >
                             {transcriptionText || 'No transcription text available'}

@@ -343,7 +343,12 @@ export default function ProcessingDialog({ open, onClose, recording }) {
 
                                 {hasTask && (
                                     <>
-                                        <Typography variant="body2">
+                                        <Typography
+                                            variant="body2"
+                                            noWrap
+                                            title={selectedTask.name}
+                                            sx={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}
+                                        >
                                             {selectedTask.name}
                                         </Typography>
                                         {selectedTask.status === 'running' ? (
