@@ -495,14 +495,14 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                 {t('satellite_database.subtitle')}
             </Alert>
             <Box sx={{ display: 'flex', gap: 2, marginTop: 2, marginBottom: 1 }}>
-                <FormControl sx={{minWidth: 200, flex: 1}} variant={"filled"}>
+                <FormControl sx={{minWidth: 200, flex: 1}} variant={"outlined"}>
                     <InputLabel htmlFor="grouped-select">{t('satellite_database.select_group')}</InputLabel>
                     <Select
                         disabled={loading}
                         value={satGroupId}
                         id="grouped-select"
                         label="Grouping"
-                        variant={"filled"}
+                        variant={"outlined"}
                         onChange={handleOnGroupChange}
                     >
                         <ListSubheader>{t('satellite_database.user_groups')}</ListSubheader>
@@ -533,7 +533,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                 </FormControl>
                 <TextField
                     sx={{ minWidth: 200, flex: 1 }}
-                    variant="filled"
+                    variant="outlined"
                     label={t('satellite_database.search_satellites')}
                     value={localSearchValue}
                     onChange={handleSearchChange}
