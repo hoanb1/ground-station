@@ -188,7 +188,7 @@ const initialState = {
     packetsDrawerHeight: 250,
     // Neighboring transmitters (doppler-shifted transmitters within bandwidth)
     neighboringTransmitters: [],
-    showNeighboringTransmitters: false,
+    showNeighboringTransmitters: true,
 };
 
 // Add these new reducers to your createSlice
