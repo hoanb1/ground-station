@@ -45,35 +45,58 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import PlayDisabledIcon from '@mui/icons-material/PlayDisabled';
 
 // Terminal output component with auto-scroll
-const TaskOutputTerminal = ({ task }) => {
+const TaskOutputTerminal = ({ task, compact = false, onToggleCompact }) => {
     const terminalRef = useRef(null);
 
     // Auto-scroll to bottom when new output arrives
     useEffect(() => {
-        if (terminalRef.current) {
+        if (terminalRef.current && !compact) {
             terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
         }
-    }, [task.output_lines]);
+    }, [task.output_lines, compact]);
+
+    const outputLines = compact
+        ? task.output_lines.slice(-1)
+        : task.output_lines.slice(-1000);
 
     return (
         <Paper
             ref={terminalRef}
             variant="outlined"
+            onClick={compact ? onToggleCompact : undefined}
             sx={{
                 p: 1,
-                maxHeight: 100,
-                overflow: 'auto',
-                bgcolor: 'background.default',
-                fontSize: '0.75rem',
+                maxHeight: compact ? 32 : 140,
+                overflow: compact ? 'hidden' : 'auto',
+                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.2)'),
+                borderColor: 'divider',
+                borderRadius: 1,
+                fontSize: '0.72rem',
+                lineHeight: compact ? 1.1 : 1.35,
                 fontFamily: 'monospace',
+                whiteSpace: compact ? 'nowrap' : 'normal',
+                display: compact ? 'flex' : 'block',
+                alignItems: compact ? 'center' : 'stretch',
+                cursor: compact ? 'pointer' : 'default',
             }}
         >
-            {task.output_lines.slice(-1000).map((line, idx) => {
+            {outputLines.map((line, idx) => {
                 const parts = parseAnsiColors(line.output);
                 return (
-                    <Typography key={idx} variant="caption" component="div" sx={{ fontFamily: 'monospace' }}>
+                    <Typography
+                        key={idx}
+                        variant="caption"
+                        component="div"
+                        sx={{
+                            fontFamily: 'monospace',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            lineHeight: compact ? 1.1 : 1.35,
+                        }}
+                    >
                         {parts.map((part, partIdx) => (
                             <span
                                 key={partIdx}
@@ -171,6 +194,9 @@ const BackgroundTasksPopover = () => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [connected, setConnected] = useState(false);
     const [hideIcon, setHideIcon] = useState(false);
+    const [expandedOutputs, setExpandedOutputs] = useState({});
+    const [expandedTasks, setExpandedTasks] = useState({});
+    const previousStatusesRef = useRef({});
 
     // Get tasks from Redux store
     const { tasks, runningTaskIds, completedTaskIds } = useSelector(state => state.backgroundTasks);
@@ -220,6 +246,48 @@ const BackgroundTasksPopover = () => {
         }
     }, [hasTasks]);
 
+    // Collapse output when tasks finish and default completed outputs to collapsed
+    useEffect(() => {
+        const previousStatuses = previousStatusesRef.current;
+        let hasUpdates = false;
+
+        setExpandedOutputs((current) => {
+            const next = { ...current };
+            Object.entries(tasks).forEach(([taskId, task]) => {
+                const prevStatus = previousStatuses[taskId];
+                if (prevStatus === 'running' && task.status !== 'running' && next[taskId]) {
+                    next[taskId] = false;
+                    hasUpdates = true;
+                }
+                if (task.status !== 'running' && next[taskId] === undefined) {
+                    next[taskId] = false;
+                    hasUpdates = true;
+                }
+            });
+            return hasUpdates ? next : current;
+        });
+
+        setExpandedTasks((current) => {
+            const next = { ...current };
+            Object.entries(tasks).forEach(([taskId, task]) => {
+                const prevStatus = previousStatuses[taskId];
+                if (prevStatus === 'running' && task.status !== 'running' && next[taskId]) {
+                    next[taskId] = false;
+                    hasUpdates = true;
+                }
+                if (task.status !== 'running' && next[taskId] === undefined) {
+                    next[taskId] = false;
+                    hasUpdates = true;
+                }
+            });
+            return hasUpdates ? next : current;
+        });
+
+        previousStatusesRef.current = Object.fromEntries(
+            Object.entries(tasks).map(([taskId, task]) => [taskId, task.status])
+        );
+    }, [tasks]);
+
     const handleClick = (event) => {
         if (!connected) return;
         setAnchorEl(event.currentTarget);
@@ -255,6 +323,20 @@ const BackgroundTasksPopover = () => {
         }
     }, [completedTaskIds, runningTaskIds, dispatch]);
 
+    const handleToggleOutput = useCallback((taskId) => {
+        setExpandedOutputs((current) => ({
+            ...current,
+            [taskId]: !current[taskId],
+        }));
+    }, []);
+
+    const handleToggleTask = useCallback((taskId) => {
+        setExpandedTasks((current) => ({
+            ...current,
+            [taskId]: !current[taskId],
+        }));
+    }, []);
+
     const open = Boolean(anchorEl);
 
     // Determine icon color based on task states
@@ -281,6 +363,22 @@ const BackgroundTasksPopover = () => {
             return t('tasks_popover.running_tasks', { count: runningCount }, `${runningCount} task(s) running`);
         }
         return t('tasks_popover.no_tasks', 'No background tasks');
+    };
+
+    const getSummaryText = () => {
+        const runningCount = runningTaskIds.length;
+        const failedCount = completedTaskIds.filter(taskId => tasks[taskId]?.status === 'failed').length;
+        const stoppedCount = completedTaskIds.filter(taskId => tasks[taskId]?.status === 'stopped').length;
+        const completedCount = completedTaskIds.length;
+        const parts = [];
+
+        if (runningCount > 0) parts.push(`${runningCount} running`);
+        if (completedCount > 0) parts.push(`${completedCount} completed`);
+        if (failedCount > 0) parts.push(`${failedCount} failed`);
+        if (stoppedCount > 0) parts.push(`${stoppedCount} stopped`);
+
+        if (parts.length === 0) return t('tasks_popover.summary_empty', 'No tasks');
+        return parts.join(' • ');
     };
 
     const getStatusChip = (status) => {
@@ -330,29 +428,58 @@ const BackgroundTasksPopover = () => {
         const taskCommandPreview = taskCommandLine.length > 48
             ? `${taskCommandLine.slice(0, 48)}...`
             : taskCommandLine;
+        const isOutputExpanded = expandedOutputs[taskId] ?? false;
+        const isExpanded = isRunning || expandedTasks[taskId];
 
         return (
-            <ListItem key={taskId} divider sx={{ px: 1.5, py: 1.5 }}>
+            <ListItem
+                key={taskId}
+                sx={{
+                    px: 1,
+                    py: 1,
+                    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'),
+                    borderRadius: 1,
+                    mb: 1,
+                }}
+            >
                 <Stack direction="column" spacing={1} sx={{ width: '100%' }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+                    <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        spacing={2}
+                        onClick={!isRunning ? () => handleToggleTask(taskId) : undefined}
+                        sx={{
+                            cursor: !isRunning ? 'pointer' : 'default',
+                            '&:hover': !isRunning ? { color: 'text.primary' } : undefined,
+                        }}
+                    >
                         <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                                {task.name}
-                            </Typography>
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                noWrap
-                                title={taskCommandLine}
-                                sx={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                            >
-                                {taskCommandPreview}
-                            </Typography>
-                        </Box>
-                        <Box sx={{ ml: 2 }}>
-                            {getStatusChip(task.status)}
+                            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ minWidth: 0 }}>
+                                <Typography
+                                    variant="subtitle2"
+                                    fontWeight={700}
+                                    noWrap
+                                    sx={{ textOverflow: 'ellipsis', overflow: 'hidden', flex: 1, minWidth: 0 }}
+                                >
+                                    {task.name}
+                                </Typography>
+                                {getStatusChip(task.status)}
+                            </Stack>
                         </Box>
                     </Stack>
+
+                    {isExpanded && (
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            noWrap
+                            title={taskCommandLine}
+                            sx={{ fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                        >
+                            {taskCommandPreview}
+                        </Typography>
+                    )}
 
                     {isRunning && (
                         <>
@@ -383,15 +510,44 @@ const BackgroundTasksPopover = () => {
                         </>
                     )}
 
-                    {!isRunning && (
+                    {!isRunning && isExpanded && (
                         <Typography variant="caption" color="text.secondary">
                             Duration: {formatDuration(duration)}
                             {task.return_code !== null && ` | Exit code: ${task.return_code}`}
                         </Typography>
                     )}
 
-                    {task.output_lines && task.output_lines.length > 0 && (
-                        <TaskOutputTerminal task={task} />
+                    {isExpanded && task.output_lines && task.output_lines.length > 0 && (
+                        <>
+                            <Box
+                                onClick={() => handleToggleOutput(taskId)}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1,
+                                    cursor: 'pointer',
+                                    color: 'text.secondary',
+                                    fontSize: '0.7rem',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.08em',
+                                    fontWeight: 700,
+                                    userSelect: 'none',
+                                    '&:hover': {
+                                        color: 'text.primary',
+                                    },
+                                }}
+                            >
+                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'text.disabled' }} />
+                                {isOutputExpanded
+                                    ? t('tasks_popover.show_last_line', 'Show last line')
+                                    : t('tasks_popover.show_full_output', 'Show full output')}
+                            </Box>
+                            <TaskOutputTerminal
+                                task={task}
+                                compact={!isOutputExpanded}
+                                onToggleCompact={() => handleToggleOutput(taskId)}
+                            />
+                        </>
                     )}
                 </Stack>
             </ListItem>
@@ -455,72 +611,86 @@ const BackgroundTasksPopover = () => {
                         borderColor: 'divider',
                         boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
                         overflow: 'hidden',
+                        backgroundColor: 'background.default',
                     },
                 }}
             >
-                <Box sx={{ width: 520, maxHeight: 600, display: 'flex', flexDirection: 'column' }}>
-                    {/* Sticky Header */}
+                <Box sx={{ width: 460, maxHeight: 600, display: 'flex', flexDirection: 'column' }}>
                     <Box
                         sx={{
-                            p: 1.5,
-                            borderBottom: 1,
-                            borderColor: 'divider',
-                            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            pt: 0.5,
+                            pl: 1,
+                            pr: 0.5,
+                            pb: 0.5,
                         }}
                     >
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Typography variant="h6">
-                                {t('tasks_popover.title', 'Background Tasks')}
-                            </Typography>
-                            {completedTaskIds.length > 0 && (
-                                <Button
-                                    size="small"
-                                    startIcon={<DeleteSweepIcon />}
-                                    onClick={handleClearCompleted}
-                                    variant="outlined"
-                                >
-                                    {t('tasks_popover.clear_completed', 'Clear Completed')}
-                                </Button>
-                            )}
-                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                            {getSummaryText()}
+                        </Typography>
+                        <Button
+                            size="small"
+                            onClick={handleClearCompleted}
+                            variant="text"
+                            sx={{ color: 'text.secondary', textTransform: 'none' }}
+                            disabled={completedTaskIds.length === 0}
+                        >
+                            {t('tasks_popover.clear_completed', 'Clear Completed')}
+                        </Button>
                     </Box>
-
                     {/* Scrollable Body */}
-                    <Box sx={{ overflow: 'auto', flex: 1 }}>
-                        {runningTaskIds.length === 0 && completedTaskIds.length === 0 && (
-                            <Box sx={{ p: 2.5, textAlign: 'center' }}>
-                                <Typography color="text.secondary">
-                                    {t('tasks_popover.no_tasks_message', 'No background tasks')}
-                                </Typography>
-                            </Box>
-                        )}
-
-                        {runningTaskIds.length > 0 && (
-                            <>
-                                <Box sx={{ p: 1.5 }}>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                                        {t('tasks_popover.running_section', 'Running')} ({runningTaskIds.length})
-                                    </Typography>
-                                </Box>
+                    <Box sx={{ overflow: 'auto', flex: 1, bgcolor: 'background.default' }}>
+                        <Box sx={{ px: 1, py: 0.5 }}>
+                            {runningTaskIds.length === 0 && completedTaskIds.length === 0 && (
                                 <List disablePadding>
-                                    {runningTaskIds.map(taskId => renderTaskItem(taskId))}
+                                    <ListItem
+                                        sx={{
+                                            px: 1,
+                                            py: 2,
+                                            bgcolor: 'action.hover',
+                                            borderRadius: 1,
+                                            mt: 1,
+                                            mb: 1,
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" sx={{ width: '100%' }}>
+                                            <PlayDisabledIcon sx={{ color: 'text.disabled' }} />
+                                            <Typography variant="subtitle1" color="text.secondary">
+                                                {t('tasks_popover.no_tasks_message', 'No tasks running')}
+                                            </Typography>
+                                        </Stack>
+                                    </ListItem>
                                 </List>
-                            </>
-                        )}
+                            )}
 
-                        {completedTaskIds.length > 0 && (
-                            <>
-                                {runningTaskIds.length > 0 && <Divider />}
-                                <Box sx={{ p: 1.5 }}>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                                        {t('tasks_popover.completed_section', 'Recent')} ({completedTaskIds.length})
-                                    </Typography>
-                                </Box>
-                                <List disablePadding>
-                                    {completedTaskIds.slice(0, 10).map(taskId => renderTaskItem(taskId))}
-                                </List>
-                            </>
-                        )}
+                            {runningTaskIds.length > 0 && (
+                                <>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                                            {t('tasks_popover.running_section', 'Running')} ({runningTaskIds.length})
+                                        </Typography>
+                                    </Box>
+                                    <List disablePadding>
+                                        {runningTaskIds.map(taskId => renderTaskItem(taskId))}
+                                    </List>
+                                </>
+                            )}
+
+                            {completedTaskIds.length > 0 && (
+                                <>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                                            {t('tasks_popover.completed_section', 'Completed')} ({completedTaskIds.length})
+                                        </Typography>
+                                    </Box>
+                                    <List disablePadding>
+                                        {completedTaskIds.slice(0, 10).map(taskId => renderTaskItem(taskId))}
+                                    </List>
+                                </>
+                            )}
+                        </Box>
                     </Box>
                 </Box>
             </Popover>
