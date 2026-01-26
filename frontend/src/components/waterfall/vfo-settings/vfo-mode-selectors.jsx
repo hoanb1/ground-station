@@ -10,7 +10,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { useTranslation } from 'react-i18next';
 import { BANDWIDTHS, STEP_SIZES } from './vfo-constants.js';
 import { formatDecoderParamsSummary } from './vfo-formatters.js';
-import { isLockedBandwidth, getDecoderConfig } from '../vfo-marker/vfo-config.js';
+import { isLockedBandwidth } from '../vfo-marker/vfo-config.js';
 
 // Common toggle button styles
 const toggleButtonStyles = {
@@ -298,16 +298,6 @@ export const DataDecoderSelector = ({
                     } else {
                         updates.bandwidth = 30000;
                     }
-                } else if (newValue === 'weather') {
-                    const lockedTransmitter = vfo?.lockedTransmitterId
-                        ? transmitters.find(tx => tx.id === vfo.lockedTransmitterId)
-                        : null;
-                    if (lockedTransmitter) {
-                        const decoderConfig = getDecoderConfig('weather');
-                        updates.bandwidth = decoderConfig?.calculateBandwidth?.(lockedTransmitter) || 40000;
-                    } else {
-                        updates.bandwidth = 40000;
-                    }
                 }
 
                 onVFOPropertyChange(vfoIndex, updates);
@@ -341,7 +331,6 @@ export const DataDecoderSelector = ({
                 <ToggleButton value="gfsk">{t('vfo.decoders_modes.gfsk', 'GFSK')}</ToggleButton>
                 <ToggleButton value="bpsk">{t('vfo.decoders_modes.bpsk', 'BPSK')}</ToggleButton>
                 <ToggleButton value="afsk">{t('vfo.decoders_modes.afsk', 'AFSK')}</ToggleButton>
-                <ToggleButton value="weather">{t('vfo.decoders_modes.weather', 'Weather')}</ToggleButton>
             </ToggleButtonGroup>
 
             {/* Decoder Parameters Link */}

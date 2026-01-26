@@ -26,7 +26,7 @@ from enum import Enum
 from typing import Any, Dict
 
 import numpy as np
-import pmt
+import pmt  # noqa: F401
 import psutil
 import setproctitle
 
@@ -34,7 +34,7 @@ import setproctitle
 # This prevents shared memory segment exhaustion
 os.environ.setdefault("GR_BUFFER_TYPE", "vmcirc_mmap_tmpfile")
 
-from gnuradio import blocks, gr, lora_sdr  # noqa: E402
+from gnuradio import blocks, gr, lora_sdr  # noqa: E402,F401
 from scipy import signal  # noqa: E402
 
 from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
@@ -70,165 +70,8 @@ class LoRaMessageSink(gr.sync_block):
 
     def handle_msg(self, msg):
         """Handle incoming LoRa message"""
-        logger.debug(
-            f"LoRa message received: type={type(msg)}, pmt_type={gr.pmt.write_string(msg)[:100]}"
-        )
-        try:
-            # The crc_verif block sends payload as a string PMT containing raw bytes
-            if gr.pmt.is_symbol(msg) or gr.pmt.is_string(msg):
-                # Extract raw bytes from PMT
-                # Problem: C++ sends std::string with raw bytes, Python's symbol_to_string() validates UTF-8
-                # Solution: Serialize PMT and extract raw bytes from serialized format
-                try:
-                    # Method 1: Try to serialize the PMT to get raw bytes
-                    # PMT serialization format includes the data without UTF-8 validation
-                    serialized = pmt.serialize_str(msg)
-
-                    # Debug: log the serialized format to understand the structure
-                    logger.debug(
-                        f"Serialized PMT length: {len(serialized)}, first 10 bytes: {serialized[:10].hex()}"
-                    )
-
-                    # Parse PMT serialization format
-                    # Common formats observed:
-                    # Type 0x02 (symbol): 1 byte type + 2 bytes length (big-endian) + data
-                    # Type 0x70-0x73: 1 byte type + 4 bytes length + data
-
-                    if len(serialized) < 3:
-                        raise ValueError(f"Serialized PMT too short: {len(serialized)} bytes")
-
-                    type_tag = serialized[0]
-
-                    if type_tag == 0x02:
-                        # Symbol with 2-byte length header
-                        if len(serialized) < 3:
-                            raise ValueError("Invalid symbol format - too short")
-                        length = int.from_bytes(serialized[1:3], byteorder="big")
-                        payload = serialized[3 : 3 + length]
-
-                        # Validate payload length (LoRa max is 255 bytes, typical range 1-255)
-                        if length < 1 or length > 255:
-                            logger.warning(
-                                f"Invalid payload length: {length} bytes (expected 1-255), discarding packet"
-                            )
-                            return
-                        if len(payload) != length:
-                            logger.warning(
-                                f"Payload size mismatch: expected {length}, got {len(payload)}, discarding packet"
-                            )
-                            return
-
-                        logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
-                        self.callback(payload)
-                    elif type_tag in [0x70, 0x71, 0x72, 0x73]:
-                        # Symbol with 4-byte length header
-                        if len(serialized) < 5:
-                            raise ValueError("Invalid symbol format - too short")
-                        length = int.from_bytes(serialized[1:5], byteorder="big")
-                        payload = serialized[5 : 5 + length]
-
-                        # Validate payload length (LoRa max is 255 bytes, typical range 1-255)
-                        if length < 1 or length > 255:
-                            logger.warning(
-                                f"Invalid payload length: {length} bytes (expected 1-255), discarding packet"
-                            )
-                            return
-                        if len(payload) != length:
-                            logger.warning(
-                                f"Payload size mismatch: expected {length}, got {len(payload)}, discarding packet"
-                            )
-                            return
-
-                        logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
-                        self.callback(payload)
-                    else:
-                        raise ValueError(f"Unknown PMT type tag: 0x{type_tag:02x}")
-
-                except Exception as e:
-                    logger.debug(f"Failed to extract using serialize_str: {e}")
-                    # Method 2: Try alternative PMT types
-                    try:
-                        # Try blob extraction
-                        if gr.pmt.is_blob(msg):
-                            payload = bytes(gr.pmt.blob_data(msg))
-                            logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
-                            self.callback(payload)
-                        # Try u8vector extraction
-                        elif gr.pmt.is_u8vector(msg):
-                            payload = bytes(gr.pmt.u8vector_elements(msg))
-                            logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
-                            self.callback(payload)
-                        # Try pair (header + payload)
-                        elif gr.pmt.is_pair(msg):
-                            car = gr.pmt.car(msg)
-                            cdr = gr.pmt.cdr(msg)
-
-                            # Try to extract payload from cdr
-                            if gr.pmt.is_u8vector(cdr):
-                                payload = bytes(gr.pmt.u8vector_elements(cdr))
-                                logger.info(
-                                    f"LoRa packet decoded: {len(payload)} bytes - {payload!r}"
-                                )
-                                self.callback(payload)
-                            else:
-                                logger.debug("Cannot extract payload from pair cdr")
-                                return
-                        else:
-                            logger.warning(
-                                f"Unable to extract payload - PMT type cannot be decoded. Serialized (first 50 bytes): {serialized[:50].hex() if 'serialized' in locals() else 'N/A'}"
-                            )
-                            return
-                    except Exception as e2:
-                        logger.error(f"Could not extract data from PMT: {e2}")
-                        import traceback
-
-                        logger.debug(traceback.format_exc())
-                        return
-            elif gr.pmt.is_pair(msg):
-                # Check if this is a pair with header metadata
-                meta = gr.pmt.car(msg)
-                data = gr.pmt.cdr(msg)
-
-                if gr.pmt.is_dict(meta):
-                    # Extract header info from metadata
-                    try:
-                        pay_len = gr.pmt.to_long(
-                            gr.pmt.dict_ref(meta, gr.pmt.intern("pay_len"), gr.pmt.from_long(0))
-                        )
-                        has_crc = gr.pmt.to_bool(
-                            gr.pmt.dict_ref(meta, gr.pmt.intern("crc"), gr.pmt.PMT_F)
-                        )
-                        cr = gr.pmt.to_long(
-                            gr.pmt.dict_ref(meta, gr.pmt.intern("cr"), gr.pmt.from_long(0))
-                        )
-                        logger.info(
-                            f"LoRa valid header detected: payload_len={pay_len} bytes, CRC={has_crc}, coding_rate=4/{cr+4}"
-                        )
-                    except Exception:
-                        pass
-
-                # Check if data part is payload
-                if gr.pmt.is_u8vector(data):
-                    payload = bytes(gr.pmt.u8vector_elements(data))
-                    logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload[:50]!r}")
-                    self.callback(payload)
-                elif gr.pmt.is_symbol(data) or gr.pmt.is_string(data):
-                    payload_str = gr.pmt.symbol_to_string(data)
-                    payload = payload_str.encode("latin-1")
-                    logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload!r}")
-                    self.callback(payload)
-            elif gr.pmt.is_u8vector(msg):
-                # Direct u8vector (no metadata)
-                payload = bytes(gr.pmt.u8vector_elements(msg))
-                logger.info(f"LoRa packet decoded: {len(payload)} bytes - {payload[:50]!r}")
-                self.callback(payload)
-            else:
-                logger.debug(f"Unhandled PMT message type: {gr.pmt.write_string(msg)}")
-        except Exception as e:
-            logger.error(f"Error handling LoRa message: {e}")
-            import traceback
-
-            traceback.print_exc()
+        logger.debug("LoRa decoder disabled; ignoring message.")
+        return
 
 
 class LoRaFlowgraph(gr.top_block):
@@ -267,109 +110,10 @@ class LoRaFlowgraph(gr.top_block):
         """
 
         super().__init__("LoRa Decoder")
-
         self.sample_rate = sample_rate
         self.center_freq = center_freq
         self.callback = callback
-        self.soft_decoding = False  # Match gr-lora_sdr examples
-
-        # Use GNU Radio's built-in vector source (handles backpressure correctly)
-        # repeat=False means it will output all samples once and then signal done
-        self.vector_source = blocks.vector_source_c(samples.tolist(), repeat=False)
-        self.num_samples = len(samples)  # Store for timing calculation
-
-        # Set larger buffer size for vector_source to avoid underruns
-        # frame_sync needs 8200 samples, default buffer is 8192
-        self.vector_source.set_output_multiple(8200)
-
-        # Set sync word: empty list [] for auto-detection, or specific value like [0x12]
-        if sync_word is None:
-            sync_word = []  # Auto-detect all sync words (empty list = accept all)
-        elif isinstance(sync_word, int):
-            sync_word = [sync_word]  # Convert single int to list
-
-        # LoRa receiver chain (as per gr-lora_sdr examples)
-        # 1. Frame synchronization
-        self.frame_sync = lora_sdr.frame_sync(
-            center_freq=int(center_freq),
-            bandwidth=int(bw),
-            sf=int(sf),
-            impl_head=impl_head,
-            sync_word=sync_word,
-            os_factor=int(sample_rate / bw),  # Oversampling factor
-            preamble_len=preamble_len,
-        )
-
-        # 2. FFT demodulation
-        self.fft_demod = lora_sdr.fft_demod(
-            soft_decoding=self.soft_decoding,
-            max_log_approx=True,
-        )
-
-        # 3. Gray mapping
-        self.gray_mapping = lora_sdr.gray_mapping(self.soft_decoding)
-
-        # 4. Deinterleaving
-        self.deinterleaver = lora_sdr.deinterleaver(self.soft_decoding)
-
-        # 5. Hamming decoder
-        self.hamming_dec = lora_sdr.hamming_dec(self.soft_decoding)
-
-        # 6. Header decoder
-        # Parameters: (impl_head, cr, pay_len, has_crc, ldro, print_header)
-        self.header_decoder = lora_sdr.header_decoder(
-            impl_head,  # impl_head: use implicit header mode
-            int(cr),  # cr: coding rate
-            255,  # pay_len: maximum payload length
-            has_crc,  # has_crc: payload has CRC
-            fldro,  # ldro: low data rate optimization
-            False,  # print_header: disable C++ stdout (we log in Python)
-        )
-
-        # 7. Dewhitening
-        self.dewhitening = lora_sdr.dewhitening()
-
-        # 8. CRC verification
-        # Parameters: (print_rx_msg, output_crc_check)
-        # print_rx_msg: 0=NONE, 1=ASCII, 2=HEX - MUST be non-zero to publish messages!
-        # output_crc_check: True=only output valid CRC packets, False=output all
-        # TEMPORARILY DISABLED for debugging - output all packets regardless of CRC
-        self.crc_verif = lora_sdr.crc_verif(
-            0,  # print_rx_msg: 0=NONE (disable C++ stdout, we handle logging in Python)
-            False,  # output_crc_check: False=output all packets for debugging
-        )
-
-        # Message sink to receive decoded packets
-        self.msg_sink = LoRaMessageSink(self._on_packet_decoded)
-
-        # File sink to capture stream output (for debugging)
-        import tempfile
-
-        self.temp_file = tempfile.NamedTemporaryFile(delete=False)
-        self.file_sink = blocks.file_sink(gr.sizeof_char, self.temp_file.name)
-        self.file_sink.set_unbuffered(True)
-
-        # Connect the receiver chain (stream connections)
-        # Set larger buffer between vector_source and frame_sync to prevent underruns
-        self.connect((self.vector_source, 0), (self.frame_sync, 0))
-        # Set larger buffer on vector_source output port 0
-        self.vector_source.set_max_output_buffer(0, 32768)  # Increase from default 8192
-        self.connect((self.frame_sync, 0), (self.fft_demod, 0))
-        self.connect((self.fft_demod, 0), (self.gray_mapping, 0))
-        self.connect((self.gray_mapping, 0), (self.deinterleaver, 0))
-        self.connect((self.deinterleaver, 0), (self.hamming_dec, 0))
-        self.connect((self.hamming_dec, 0), (self.header_decoder, 0))
-        self.connect((self.header_decoder, 0), (self.dewhitening, 0))
-        self.connect((self.dewhitening, 0), (self.crc_verif, 0))
-        self.connect((self.crc_verif, 0), (self.file_sink, 0))
-
-        # Connect message ports
-        # CRITICAL: header_decoder must send frame_info back to frame_sync!
-        # This feedback tells frame_sync the header parameters for payload processing
-        self.msg_connect((self.header_decoder, "frame_info"), (self.frame_sync, "frame_info"))
-
-        # Connect crc_verif output messages to our handler
-        self.msg_connect((self.crc_verif, "msg"), (self.msg_sink, "in"))
+        self.num_samples = len(samples) if samples is not None else 0
 
     def process_batch_async(self):
         """
@@ -378,29 +122,7 @@ class LoRaFlowgraph(gr.top_block):
         """
 
         def _process():
-            try:
-                # Start the flowgraph
-                self.start()
-
-                # Calculate expected processing time
-                processing_time = self.num_samples / self.sample_rate  # Signal duration in seconds
-                max_wait_time = processing_time + 0.5  # Add 500ms margin for processing overhead
-
-                # Wait for processing to complete
-                time.sleep(max_wait_time)
-
-                # Stop the flowgraph
-                self.stop()
-                self.wait()
-
-                # Give message thread time to deliver any pending messages
-                time.sleep(0.1)  # 100ms is sufficient for message delivery
-
-            except Exception as e:
-                logger.error(f"Error during flowgraph processing: {e}")
-                import traceback
-
-                traceback.print_exc()
+            return
 
         # Start processing in background thread
         thread = threading.Thread(target=_process, daemon=True)

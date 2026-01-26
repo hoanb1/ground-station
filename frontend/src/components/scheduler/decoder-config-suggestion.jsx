@@ -137,7 +137,7 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
         }
 
         // Framing protocol (common to most decoders)
-        if (config.framing && config.framing !== 'weather') {
+        if (config.framing) {
             parts.push(`${config.framing.toUpperCase()} framing`);
 
             // Add framing-specific parameters (e.g., GEOSCAN frame_size)
@@ -159,14 +159,6 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
         // Differential mode (BPSK specific)
         if (config.differential) {
             parts.push('Differential');
-        }
-
-        // Weather satellite specific
-        if (config.pipeline) {
-            parts.push(`Pipeline: ${config.pipeline}`);
-        }
-        if (config.target_sample_rate) {
-            parts.push(`${(config.target_sample_rate / 1000).toFixed(0)} kHz`);
         }
 
         // LoRa specific
@@ -192,8 +184,6 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                 return 'Configuration detected from transmitter metadata (mode, description, baud rate)';
             case 'smart_default':
                 return 'Configuration estimated using smart defaults based on decoder type and baud rate';
-            case 'weather_satellite':
-                return 'Weather satellite pipeline auto-detected from mode and frequency';
             case 'manual':
                 return 'Manual configuration specified by user';
             default:

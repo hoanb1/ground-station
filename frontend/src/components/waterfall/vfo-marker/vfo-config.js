@@ -324,51 +324,6 @@ export const DECODERS = {
         bandwidthLabel: (bw) => `±${(bw / 2000).toFixed(1)}kHz`,
         lockedBandwidth: false, // allows user adjustment (FM carrier bandwidth)
     },
-    weather: {
-        internalName: 'weather',
-        displayName: 'Weather',
-        description: 'Weather satellite decoder (SatDump: NOAA, Meteor, GOES, etc.)',
-        hasStatusDisplay: true, // shows decoder status (sync, locked, etc.)
-        hasProgressDisplay: true, // shows frame count progress
-        hasTextOutput: false, // outputs images, not text
-        hasModeDisplay: true, // shows pipeline name (e.g., "NOAA APT", "Meteor LRPT")
-        defaultBandwidth: 40000, // 40 kHz default (suitable for APT)
-        bandwidthType: 'center-only', // no sidebands shown
-        showBothEdges: false, // no sidebands
-        allowLeftEdgeDrag: false, // bandwidth locked (determined by pipeline)
-        allowRightEdgeDrag: false,
-        bandwidthLabel: (bw) => '', // no bandwidth label
-        lockedBandwidth: true, // bandwidth determined by satellite/pipeline
-        calculateBandwidth: (transmitter) => {
-            // Auto-calculate bandwidth based on transmitter mode
-            const mode = transmitter?.mode?.toUpperCase() || '';
-
-            // APT (NOAA analog) - 40 kHz
-            if (mode === 'APT' || mode.includes('APT')) {
-                return 40000;
-            }
-            // LRPT (Meteor digital) - 120-150 kHz
-            else if (mode === 'LRPT' || mode.includes('LRPT')) {
-                return 150000;
-            }
-            // GGAK (Elektro-L GMDSS) - 100 kHz
-            // 5 ksym/s BPSK with RRC filtering needs ~50-100 kHz
-            else if (mode === 'GGAK' || mode === 'GMDSS' || mode.includes('GGAK')) {
-                return 100000;
-            }
-            // HRPT (high-res) - 2.5-3 MHz
-            else if (mode === 'HRPT' || mode === 'AHRPT' || mode.includes('HRPT')) {
-                return 3000000;
-            }
-            // HRIT/LRIT (geostationary) - 1-2 MHz
-            else if (mode === 'HRIT' || mode === 'LRIT' || mode.includes('HRIT') || mode.includes('LRIT')) {
-                return 2000000;
-            }
-
-            // Fallback to 40 kHz (APT)
-            return 40000;
-        },
-    },
 };
 
 /**
@@ -733,9 +688,6 @@ export const getDefaultVFOConfig = () => {
             // bpsk_differential: false,
             // bpsk_framing: 'ax25',
 
-            // Weather parameters (future - TODO)
-            // weather_pipeline: 'noaa_apt',
-            // weather_sample_rate: 48000,
         }
     };
 };

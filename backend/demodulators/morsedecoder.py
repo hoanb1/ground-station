@@ -269,6 +269,9 @@ class MorseDecoder(threading.Thread):
 
     def _process_audio(self, audio_chunk):
         """Process incoming audio and extract envelope"""
+        logger.debug("Morse decoder disabled; ignoring audio chunk.")
+        return None
+
         # Add to buffer
         if isinstance(audio_chunk, np.ndarray):
             self.audio_buffer.extend(audio_chunk.flatten())
@@ -334,6 +337,8 @@ class MorseDecoder(threading.Thread):
         - Negative counter: tone is OFF, decrement (silence)
         - Thresholds determine dit/dash and character/word breaks
         """
+        return
+
         threshold = self._calculate_adaptive_threshold()
         if threshold is None:
             return

@@ -343,7 +343,7 @@ class VFOManager:
             center_freq: Center frequency in Hz
             bandwidth: Bandwidth in Hz
             modulation: Modulation type (FM, AM, SSB, etc.)
-            decoder: Decoder type (afsk, bpsk, gmsk, lora, sstv, morse, satdump_weather, none)
+            decoder: Decoder type (afsk, bpsk, gmsk, lora, sstv, morse, none)
             locked_transmitter_id: Transmitter ID for doppler tracking (default: "none")
             squelch: Squelch level in dB (default: -150, wide open)
             volume: Audio volume 0-100 (default: 50)
@@ -355,7 +355,7 @@ class VFOManager:
             ...     center_freq=137_500_000,  # 137.5 MHz
             ...     bandwidth=40_000,          # 40 kHz
             ...     modulation="FM",
-            ...     decoder="satdump_weather",
+            ...     decoder="none",
             ...     locked_transmitter_id="noaa-18-apt"
             ... )
         """

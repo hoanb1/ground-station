@@ -25,7 +25,6 @@ from demodulators.gfskdecoder import GFSKDecoder
 from demodulators.gmskdecoder import GMSKDecoder
 from demodulators.loradecoder import LoRaDecoder
 from demodulators.morsedecoder import MorseDecoder
-from demodulators.satdumpweatherdecoder import SatDumpWeatherDecoder
 from demodulators.sstvdecoder import SSTVDecoder  # noqa: F401 - kept for backward compatibility
 from demodulators.sstvdecoderv2 import SSTVDecoderV2
 
@@ -153,17 +152,6 @@ class DecoderRegistry:
                 supports_transmitter_config=True,
                 restart_on_params=["baudrate", "differential", "framing", "framing_params"],
                 description="Binary Phase Shift Keying decoder",
-            ),
-            "weather": DecoderCapabilities(
-                name="weather",
-                decoder_class=SatDumpWeatherDecoder,
-                needs_raw_iq=True,  # Works on raw IQ samples
-                required_demodulator=None,  # No demodulator needed
-                demodulator_mode=None,
-                default_bandwidth=40000,  # 40 kHz default (APT)
-                supports_transmitter_config=True,
-                restart_on_params=[],  # TODO: Add weather-specific parameters (pipeline, target_sample_rate)
-                description="Weather satellite decoder using SatDump (NOAA, Meteor, GOES, etc.)",
             ),
             "lora": DecoderCapabilities(
                 name="lora",

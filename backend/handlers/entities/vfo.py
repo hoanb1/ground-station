@@ -611,7 +611,6 @@ async def check_decoder_params_changed(sdr_id, session_id, vfo_state, logger):
         decoder_type=decoder_name,
         satellite=satellite_info,
         transmitter=transmitter_info,
-        vfo_freq=vfo_state.center_freq,
         overrides=decoder_param_overrides,  # UI parameter overrides
     )
 

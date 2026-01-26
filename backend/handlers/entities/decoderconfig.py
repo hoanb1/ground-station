@@ -35,11 +35,10 @@ async def get_decoder_config(
     Args:
         sio: Socket.IO server instance
         data: Configuration request containing:
-            - decoder_type (required): 'gmsk', 'bpsk', 'afsk', 'gfsk', 'fsk', 'weather', 'lora'
+            - decoder_type (required): 'gmsk', 'bpsk', 'afsk', 'gfsk', 'fsk', 'lora'
             - satellite (optional): {'norad_id': int, 'name': str, ...}
             - transmitter (optional): {'baud': int, 'deviation': int, 'mode': str, 'description': str, ...}
             - overrides (optional): Manual parameter overrides dict
-            - vfo_freq (optional): VFO center frequency in Hz
         logger: Logger instance
         sid: Socket.IO session ID
 
@@ -54,8 +53,6 @@ async def get_decoder_config(
                 "deviation": int,
                 "af_carrier": int,
                 "differential": bool,
-                "pipeline": str,
-                "target_sample_rate": int,
                 ...
             },
             "error": str  # Only present on failure
@@ -78,14 +75,6 @@ async def get_decoder_config(
         }
         → Returns config with manual overrides applied
 
-        # Weather satellite request
-        {
-            "decoder_type": "weather",
-            "satellite": {"norad_id": 33591},
-            "transmitter": {"mode": "APT"},
-            "vfo_freq": 137620000
-        }
-        → Returns SatDump pipeline config (noaa_apt, 48000 Hz)
     """
     logger.debug(f"Getting decoder config, data: {data}")
 
@@ -104,7 +93,7 @@ async def get_decoder_config(
         }
 
     # Validate decoder type
-    valid_types = ["gmsk", "bpsk", "afsk", "gfsk", "fsk", "weather", "lora"]
+    valid_types = ["gmsk", "bpsk", "afsk", "gfsk", "fsk", "lora"]
     if decoder_type not in valid_types:
         return {
             "success": False,
@@ -116,15 +105,12 @@ async def get_decoder_config(
         satellite = data.get("satellite")
         transmitter = data.get("transmitter")
         overrides = data.get("overrides")
-        vfo_freq = data.get("vfo_freq")
-
         # Get configuration from service
         config = decoder_config_service.get_config(
             decoder_type=decoder_type,
             satellite=satellite,
             transmitter=transmitter,
             overrides=overrides,
-            vfo_freq=vfo_freq,
         )
 
         # Convert to dict for JSON serialization

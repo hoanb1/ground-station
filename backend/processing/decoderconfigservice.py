@@ -59,18 +59,15 @@ class DecoderConfigService:
         satellite: Optional[Dict] = None,
         transmitter: Optional[Dict] = None,
         overrides: Optional[Dict] = None,
-        vfo_freq: Optional[float] = None,
     ) -> DecoderConfig:
         """
         Resolve decoder configuration from multiple sources.
 
         Args:
-            decoder_type: Decoder type ('gmsk', 'bpsk', 'afsk', 'gfsk', 'weather')
+            decoder_type: Decoder type ('gmsk', 'bpsk', 'afsk', 'gfsk')
             satellite: Satellite dict with 'norad_id', 'name', etc.
             transmitter: Transmitter dict with 'baud', 'deviation', 'mode', 'description', etc.
             overrides: Manual parameter overrides (highest priority)
-            vfo_freq: VFO center frequency in Hz (for pipeline detection)
-
         Returns:
             DecoderConfig: Resolved configuration with all parameters determined
 
@@ -94,12 +91,6 @@ class DecoderConfigService:
         norad_id = satellite.get("norad_id")
         baudrate = self._resolve_baudrate(transmitter, overrides)
         downlink_freq = transmitter.get("downlink_low")
-
-        # Weather satellite decoder (SatDump)
-        if decoder_type == "weather":
-            return self._get_weather_config(
-                satellite, transmitter, overrides, vfo_freq or downlink_freq
-            )
 
         # Try satellite-specific configuration first (highest priority after overrides)
         if norad_id and self.satconfig_service and not overrides:
@@ -373,221 +364,6 @@ class DecoderConfigService:
 
         config.config_source = "manual"
         return config
-
-    def _get_weather_config(
-        self, satellite: Dict, transmitter: Dict, overrides: Dict, frequency: Optional[float]
-    ) -> DecoderConfig:
-        """
-        Get configuration for weather satellite decoder (SatDump).
-
-        Auto-detects SatDump pipeline based on transmitter mode and frequency.
-        """
-        mode = transmitter.get("mode", "").upper()
-        norad_id = satellite.get("norad_id")
-        baudrate = transmitter.get("baud", 0)
-
-        # Detect pipeline and target sample rate
-        pipeline, target_sample_rate = self._detect_weather_pipeline(
-            mode, frequency, norad_id, baudrate
-        )
-
-        config = DecoderConfig(
-            baudrate=baudrate if baudrate else 0,  # Weather sats may not have baudrate
-            framing="weather",  # Special framing type for weather sats
-            config_source="weather_satellite",
-            pipeline=pipeline,
-            target_sample_rate=target_sample_rate,
-        )
-
-        # Apply overrides
-        if overrides:
-            if "pipeline" in overrides:
-                config.pipeline = overrides["pipeline"]
-            if "target_sample_rate" in overrides:
-                config.target_sample_rate = overrides["target_sample_rate"]
-            config.config_source = "manual"
-
-        # Populate metadata
-        config.satellite = satellite
-        config.transmitter = transmitter
-
-        self.logger.debug(
-            f"Resolved weather satellite config: pipeline={config.pipeline}, "
-            f"sample_rate={config.target_sample_rate}Hz"
-        )
-
-        return config
-
-    def _detect_weather_pipeline(
-        self, mode: str, frequency: Optional[float], norad_id: Optional[int], baudrate: int
-    ) -> tuple:
-        """
-        Detect SatDump pipeline and target sample rate from transmitter metadata.
-
-        Priority:
-        1. Explicit mode string matching (APT, LRPT, HRPT, HRIT, LRIT, GGAK, etc.)
-        2. Frequency range + NORAD ID combination
-        3. NORAD ID alone (for satellites with multiple modes)
-        4. Frequency range alone
-        5. Fallback to common default
-
-        Returns:
-            tuple: (pipeline_name, target_sample_rate)
-        """
-        if not frequency:
-            frequency = 0
-
-        mode_upper = mode.upper() if mode else ""
-
-        # Log detection inputs for debugging
-        self.logger.info(
-            f"Weather pipeline detection: mode='{mode}', freq={frequency/1e6 if frequency else 0:.3f}MHz, "
-            f"NORAD={norad_id}, baud={baudrate}"
-        )
-
-        # === Mode-based detection (highest priority) ===
-
-        # APT (NOAA analog)
-        if "APT" in mode_upper:
-            return ("noaa_apt", 48000)
-
-        # LRPT (Meteor digital)
-        if "LRPT" in mode_upper:
-            # Distinguish between LRPT (72k) and older 80k by baudrate
-            if baudrate and baudrate >= 80000:
-                self.logger.info(f"Detected LRPT 80k (baudrate={baudrate})")
-            return ("meteor_m2-x_lrpt", 288000)
-
-        # GGAK (Elektro-L/Arktika-M geostationary)
-        if "GGAK" in mode_upper or "GMDSS" in mode_upper:
-            # Distinguish between Elektro-L and Arktika-M by NORAD ID
-            if norad_id in [47719, 58584]:  # Arktika-M 1, M2
-                self.logger.info("Detected Arktika-M GGAK/GMDSS mode")
-                return ("arktika_ggak", 3000000)
-            else:
-                self.logger.info("Detected Elektro-L GGAK/GMDSS mode")
-                return ("elektro_ggak", 3000000)
-
-        # HRPT (high-resolution picture transmission)
-        if "HRPT" in mode_upper or "AHRPT" in mode_upper:
-            # Distinguish by NORAD or default to NOAA
-            if norad_id in [40069, 44387, 57166]:  # Meteor-M N2, N2-2, N2-3
-                return ("meteor_hrpt", 3000000)
-            elif norad_id in [38771, 43689]:  # MetOp-B, C
-                return ("metop_ahrpt", 3000000)
-            elif norad_id in [27431, 33463, 39260]:  # FengYun-3A, 3B, 3C
-                return ("fengyun3_ahrpt", 2800000)
-            else:
-                return ("noaa_hrpt", 2500000)
-
-        # HRIT/LRIT (geostationary high/low-rate)
-        if "HRIT" in mode_upper:
-            if norad_id in [41866, 51850]:  # GOES-16, 18
-                return ("goes_hrit", 2000000)
-            elif norad_id in [37344, 43050, 49683]:  # Elektro-L N2, N3, N4
-                return ("elektro_hrit", 2500000)
-            elif norad_id in [41882, 45680]:  # FengYun-4A, 4B
-                return ("fengyun4_hrit", 2000000)
-            elif norad_id in [40267, 41836]:  # Himawari-8, 9
-                return ("himawari_hrit", 2000000)
-            elif norad_id in [28912, 38552, 40732]:  # Meteosat-9, 10, 11
-                return ("meteosat_msg_hrit", 1000000)
-            else:
-                return ("goes_hrit", 2000000)
-
-        if "LRIT" in mode_upper:
-            if norad_id in [37344, 43050, 49683]:  # Elektro-L
-                return ("elektro_lrit", 1000000)
-            elif norad_id in [41882, 45680]:  # FengYun-4
-                return ("fengyun4_lrit", 1000000)
-            else:
-                return ("goes_lrit", 1000000)
-
-        # === Frequency + NORAD based detection ===
-
-        # HRPT (high-resolution) - detect by frequency range
-        if 1690e6 <= frequency <= 1710e6:
-            # NOAA HRPT
-            if norad_id in [25338, 28654, 33591]:  # NOAA-15, 18, 19
-                return ("noaa_hrpt", 2500000)
-            # Meteor HRPT
-            elif norad_id in [40069, 44387, 57166]:  # Meteor-M N2, N2-2, N2-3
-                return ("meteor_m2-x_hrpt", 3000000)
-            # MetOp AHRPT
-            elif norad_id in [38771, 43689]:  # MetOp-B, C
-                return ("metop_ahrpt", 3000000)
-            # FengYun AHRPT
-            elif norad_id in [27431, 33463, 39260]:  # FengYun-3A, 3B, 3C
-                return ("fengyun3_ahrpt", 2800000)
-            # Generic HRPT fallback
-            return ("noaa_hrpt", 2500000)
-
-        # HRIT/LRIT (geostationary) - detect by frequency range
-        if 1680e6 <= frequency <= 1700e6:
-            # GOES HRIT
-            if norad_id in [41866, 51850]:  # GOES-16, 18
-                return ("goes_hrit", 2000000)
-            # Elektro-L
-            elif norad_id in [37344, 43050, 49683]:  # Elektro-L N2, N3, N4
-                # Detect LRIT vs HRIT by frequency
-                if 1690e6 <= frequency <= 1692e6:
-                    return ("elektro_lrit", 1000000)
-                else:
-                    return ("elektro_hrit", 2500000)
-            # FengYun-4
-            elif norad_id in [41882, 45680]:  # FengYun-4A, 4B
-                # Assume HRIT (higher rate)
-                return ("fengyun4_hrit", 2000000)
-            # Himawari
-            elif norad_id in [40267, 41836]:  # Himawari-8, 9
-                return ("himawari_hrit", 2000000)
-            # Meteosat MSG
-            elif norad_id in [28912, 38552, 40732]:  # Meteosat-9, 10, 11
-                return ("meteosat_msg_hrit", 1000000)
-            # Generic HRIT fallback
-            return ("goes_hrit", 2000000)
-
-        # S-band (GAC, dumps)
-        if 2200e6 <= frequency <= 2300e6:
-            if norad_id in [25338, 28654, 33591]:  # NOAA GAC
-                return ("noaa_gac", 4000000)
-
-        # X-band (high-rate dumps) - 7-8 GHz
-        if 7000e6 <= frequency <= 8200e6:
-            # JPSS
-            if norad_id in [43013, 54234]:  # NOAA-20, 21 (JPSS)
-                return ("jpss_jpssplus", 15000000)
-            # MetOp X-band
-            elif norad_id in [38771, 43689]:
-                return ("metop_xband", 15000000)
-            # FengYun-3 X-band
-            elif norad_id in [39260, 43010, 44885]:  # FY-3C, 3D, 3E
-                return ("fengyun3_x_dump", 15000000)
-
-        # Fallback: Try NORAD-only detection as last resort
-        if norad_id:
-            # Elektro-L (if not caught by mode)
-            if norad_id in [37344, 43050, 49683]:
-                self.logger.warning(
-                    f"Detected Elektro-L by NORAD={norad_id} but mode='{mode}' not recognized. "
-                    f"Defaulting to GGAK."
-                )
-                return ("elektro_ggak", 3000000)
-            # GOES (if not caught by frequency)
-            if norad_id in [41866, 51850]:
-                self.logger.warning(f"Detected GOES by NORAD={norad_id}, defaulting to HRIT")
-                return ("goes_hrit", 2000000)
-            # Meteosat
-            if norad_id in [28912, 38552, 40732]:
-                self.logger.warning(f"Detected Meteosat by NORAD={norad_id}, defaulting to HRIT")
-                return ("meteosat_msg_hrit", 1000000)
-
-        # Final fallback to APT (most common/easiest)
-        self.logger.warning(
-            f"Could not detect weather pipeline for mode='{mode}', freq={frequency/1e6 if frequency else 0:.3f}MHz, "
-            f"NORAD={norad_id}. Falling back to NOAA APT."
-        )
-        return ("noaa_apt", 48000)
 
 
 # Singleton instance for convenience
