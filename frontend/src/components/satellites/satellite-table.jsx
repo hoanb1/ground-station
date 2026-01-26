@@ -592,18 +592,8 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                         marginTop: 2,
                         minHeight: '429px',
                         width: '100%',
-                        overflowX: 'auto',
-                        '& .MuiDataGrid-main': {
-                            // Add horizontal scrolling for table content
-                            overflow: 'auto !important',
-                        },
                         '& .MuiDataGrid-virtualScroller': {
-                            // Ensure content doesn't get cut off
-                            overflow: 'visible !important',
-                        },
-                        '& .MuiDataGrid-virtualScrollerContent': {
-                            // Ensure wide content is accommodated
-                            minWidth: 'auto !important',
+                            overflowX: 'auto',
                         },
                         [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                             outline: 'none',
