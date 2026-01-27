@@ -2122,7 +2122,7 @@ const ObservationFormDialog = () => {
                                                             label="Enable Frequency Shift"
                                                         />
                                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4, mt: -0.5 }}>
-                                                            Centers the signal at the target frequency. Avoids DC spike issues and required by some decoders.
+                                                            Centers the signal at the target frequency. Some SDRs have center spikes that can contaminate a centered signal, so shifting will move the target transmitter signal to the center to improve decoding. Some applications require the target to be centered.
                                                         </Typography>
                                                     </Box>
 
@@ -2174,45 +2174,6 @@ const ObservationFormDialog = () => {
 
                                             {task.type === 'iq_recording' && (
                                                 <>
-                                                    {(() => {
-                                                        const decimationOptions = getDecimationOptions(formData.sdr.sample_rate);
-                                                        const decimationFactor = task.config.decimation_factor || 1;
-                                                        const outputRate = formData.sdr.sample_rate
-                                                            ? formData.sdr.sample_rate / decimationFactor
-                                                            : null;
-
-                                                        return (
-                                                            <FormControl fullWidth size="small" disabled={isFormDisabled || !formData.sdr.sample_rate}>
-                                                                <InputLabel>Decimation</InputLabel>
-                                                                <Select
-                                                                    value={decimationFactor}
-                                                                    onChange={(e) =>
-                                                                        handleTaskConfigChange(
-                                                                            index,
-                                                                            'decimation_factor',
-                                                                            parseInt(e.target.value, 10)
-                                                                        )
-                                                                    }
-                                                                    label="Decimation"
-                                                                >
-                                                                    {decimationOptions.map((factor) => (
-                                                                        <MenuItem key={factor} value={factor}>
-                                                                            {factor === 1
-                                                                                ? `None (${formatSampleRate(formData.sdr.sample_rate)})`
-                                                                                : `x${factor} (${formatSampleRate(formData.sdr.sample_rate / factor)})`}
-                                                                        </MenuItem>
-                                                                    ))}
-                                                                </Select>
-                                                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                                                    Output sample rate: {outputRate ? formatSampleRate(outputRate) : 'N/A'}
-                                                                </Typography>
-                                                                <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
-                                                                    Decimation assumes the target signal is centered. Enable Frequency Shift to center your signal before decimating.
-                                                                </Typography>
-                                                            </FormControl>
-                                                        );
-                                                    })()}
-
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
                                                         <InputLabel>Transmitter</InputLabel>
                                                         <Select
@@ -2284,7 +2245,7 @@ const ObservationFormDialog = () => {
                                                             label="Enable Frequency Shift"
                                                         />
                                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4, mt: -0.5 }}>
-                                                            Centers the signal at the target frequency. Avoids DC spike issues and required by some decoders.
+                                                            Centers the signal at the target frequency. Some SDRs have center spikes that can contaminate a centered signal, so shifting will move the target transmitter signal to the center to improve decoding. Some applications require the target to be centered.
                                                         </Typography>
                                                     </Box>
 
@@ -2335,6 +2296,44 @@ const ObservationFormDialog = () => {
                                                             ? ` Decimated to ${formatSampleRate(formData.sdr.sample_rate / (task.config.decimation_factor || 1))}.`
                                                             : ''}
                                                     </Typography>
+                                                    {(() => {
+                                                        const decimationOptions = getDecimationOptions(formData.sdr.sample_rate);
+                                                        const decimationFactor = task.config.decimation_factor || 1;
+                                                        const outputRate = formData.sdr.sample_rate
+                                                            ? formData.sdr.sample_rate / decimationFactor
+                                                            : null;
+
+                                                        return (
+                                                            <FormControl fullWidth size="small" disabled={isFormDisabled || !formData.sdr.sample_rate}>
+                                                                <InputLabel>Decimation</InputLabel>
+                                                                <Select
+                                                                    value={decimationFactor}
+                                                                    onChange={(e) =>
+                                                                        handleTaskConfigChange(
+                                                                            index,
+                                                                            'decimation_factor',
+                                                                            parseInt(e.target.value, 10)
+                                                                        )
+                                                                    }
+                                                                    label="Decimation"
+                                                                >
+                                                                    {decimationOptions.map((factor) => (
+                                                                        <MenuItem key={factor} value={factor}>
+                                                                            {factor === 1
+                                                                                ? `None (${formatSampleRate(formData.sdr.sample_rate)})`
+                                                                                : `x${factor} (${formatSampleRate(formData.sdr.sample_rate / factor)})`}
+                                                                        </MenuItem>
+                                                                    ))}
+                                                                </Select>
+                                                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                                                    Output sample rate: {outputRate ? formatSampleRate(outputRate) : 'N/A'}
+                                                                </Typography>
+                                                                <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
+                                                                    Decimation assumes the target signal is centered. Enable Frequency Shift to center your signal before decimating.
+                                                                </Typography>
+                                                            </FormControl>
+                                                        );
+                                                    })()}
                                                     <Box sx={{ mt: 2 }}>
                                                         <FormControlLabel
                                                             control={
