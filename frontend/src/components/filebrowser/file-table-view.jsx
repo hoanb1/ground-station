@@ -224,7 +224,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
 
         // Decoded folder chips
         if (item.type === 'decoded_folder') {
-            if (item.image_count) {
+            if (Number(item.image_count) > 0) {
                 chips.push(
                     <Chip
                         key="image-count"

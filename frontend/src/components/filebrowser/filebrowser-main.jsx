@@ -1576,7 +1576,7 @@ export default function FilebrowserMain() {
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
-                                            {item.type === 'decoded_folder' && item.image_count && (
+                                            {item.type === 'decoded_folder' && Number(item.image_count) > 0 && (
                                                 <Chip
                                                     label={`${item.image_count} images`}
                                                     size="small"

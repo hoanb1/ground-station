@@ -157,6 +157,13 @@ export const ToastContainerWithStyles = () => {
                     text-align: right;
                 }
 
+                .observation-countdown-toast__line {
+                    font-size: 14px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
             `}</style>
             <ToastContainer
                 position={position}

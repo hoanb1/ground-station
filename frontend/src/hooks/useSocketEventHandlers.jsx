@@ -41,7 +41,7 @@ const formatCountdown = (seconds) => {
     return `${String(minutes).padStart(2, '0')}:${String(remaining).padStart(2, '0')}`;
 };
 
-const ObservationCountdownToast = ({ title, startTime, details, isStarted = false, toastId, totalDurationMs }) => {
+const ObservationCountdownToast = ({ title, startTime, isStarted = false, toastId, totalDurationMs }) => {
     const [secondsRemaining, setSecondsRemaining] = useState(() => {
         return Math.ceil((new Date(startTime) - new Date()) / 1000);
     });
@@ -65,12 +65,8 @@ const ObservationCountdownToast = ({ title, startTime, details, isStarted = fals
     }, [startTime, isStarted, toastId, totalDurationMs]);
 
     return (
-        <div className="observation-countdown-toast__content">
-            <div className="observation-countdown-toast__title">{title}</div>
-            <div className="observation-countdown-toast__countdown">
-                {isStarted ? 'Observation started' : `Starts in ${formatCountdown(secondsRemaining)}`}
-            </div>
-            {details && <div className="observation-countdown-toast__details">{details}</div>}
+        <div className="observation-countdown-toast__line">
+            {title} — {isStarted ? 'Observation started' : `Starts in ${formatCountdown(secondsRemaining)}`}
         </div>
     );
 };
@@ -625,7 +621,6 @@ export const useSocketEventHandlers = (socket) => {
                             <ObservationCountdownToast
                                 title={`Observation Started: ${obsName}`}
                                 startTime={observation.task_start || observation.pass?.event_start}
-                                details={details}
                                 isStarted={true}
                                 toastId={toastId}
                                 totalDurationMs={0}
@@ -745,7 +740,6 @@ export const useSocketEventHandlers = (socket) => {
                         <ObservationCountdownToast
                             title={`Observation Starting Soon: ${obsName}`}
                             startTime={taskStart}
-                            details={details}
                             toastId={null}
                             totalDurationMs={totalDurationMs}
                         />,
@@ -764,7 +758,6 @@ export const useSocketEventHandlers = (socket) => {
                         <ObservationCountdownToast
                             title={`Observation Starting Soon: ${obsName}`}
                             startTime={taskStart}
-                            details={details}
                             toastId={toastId}
                             totalDurationMs={totalDurationMs}
                         />,

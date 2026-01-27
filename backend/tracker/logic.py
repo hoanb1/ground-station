@@ -259,9 +259,8 @@ class SatelliteTracker:
 
                     if not tracking_state_reply["data"]["value"].get("group_id"):
                         logger.warning(
-                            "No group id found in satellite tracking state, skipping iteration"
+                            "No group id found in satellite tracking state, continuing without group context"
                         )
-                        continue
 
                     if not tracking_state_reply["data"]["value"].get("norad_id"):
                         logger.warning(
