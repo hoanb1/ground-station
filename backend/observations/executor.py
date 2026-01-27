@@ -212,6 +212,8 @@ class ObservationExecutor:
                     observation_id, session_key, observation, session
                 )
                 started_sessions.append((session_key, session))
+                if session_index < len(sessions):
+                    await asyncio.sleep(0.5)
 
             # 5. Start tracker once using combined tasks
             combined_tasks: list[Dict[str, Any]] = []
