@@ -93,7 +93,7 @@ function getImageTitle(filename) {
     return suffixParts.length > 0 ? `${label} (${suffixParts.join(' ')})` : label;
 }
 
-export default function MeteorFolderDialog({ open, onClose, folder }) {
+export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
     const [activeTab, setActiveTab] = useState(0);
     const [selectedImage, setSelectedImage] = useState(null);
     const [zoom, setZoom] = useState(1);

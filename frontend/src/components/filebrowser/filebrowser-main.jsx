@@ -108,7 +108,7 @@ import TelemetryViewerDialog from './telemetry-viewer-dialog.jsx';
 import AudioDialog from './audio-dialog.jsx';
 import TranscriptionDialog from './transcription-dialog.jsx';
 import FileTableView from './file-table-view.jsx';
-import MeteorFolderDialog from './meteor-folder-dialog.jsx';
+import MeteorM2xLrptFolderDialog from './meteor-m2x-lrpt-folder-dialog.jsx';
 import ProcessingDialog from './processing-dialog.jsx';
 
 function formatBytes(bytes) {
@@ -287,8 +287,8 @@ export default function FilebrowserMain() {
     const [audioMetadata, setAudioMetadata] = useState(null);
     const [transcriptionDialogOpen, setTranscriptionDialogOpen] = useState(false);
     const [transcriptionFile, setTranscriptionFile] = useState(null);
-    const [meteorFolderDialogOpen, setMeteorFolderDialogOpen] = useState(false);
-    const [meteorFolder, setMeteorFolder] = useState(null);
+    const [meteorM2xLrptFolderDialogOpen, setMeteorM2xLrptFolderDialogOpen] = useState(false);
+    const [meteorM2xLrptFolder, setMeteorM2xLrptFolder] = useState(null);
     const [processingDialogOpen, setProcessingDialogOpen] = useState(false);
     const [processingRecording, setProcessingRecording] = useState(null);
     const [processingMenuAnchorEl, setProcessingMenuAnchorEl] = useState(null);
@@ -489,7 +489,7 @@ export default function FilebrowserMain() {
     const handleShowDetails = async (item) => {
         // Route to appropriate dialog based on item type
         if (item.type === 'decoded_folder') {
-            handleViewMeteorFolder(item);
+            handleViewMeteorM2xLrptFolder(item);
         } else if (item.type === 'decoded') {
             await handleViewTelemetry(item);
         } else if (item.type === 'audio') {
@@ -603,12 +603,12 @@ export default function FilebrowserMain() {
         setTranscriptionDialogOpen(true);
     };
 
-    const handleViewMeteorFolder = (item) => {
+    const handleViewMeteorM2xLrptFolder = (item) => {
         if (item.type !== 'decoded_folder') return;
 
-        // Open the METEOR folder dialog with the item data
-        setMeteorFolder(item);
-        setMeteorFolderDialogOpen(true);
+        // Open the METEOR M2-X LRPT folder dialog with the item data
+        setMeteorM2xLrptFolder(item);
+        setMeteorM2xLrptFolderDialogOpen(true);
     };
 
     const handleOpenProcessing = (item) => {
@@ -2296,11 +2296,11 @@ export default function FilebrowserMain() {
                 transcription={transcriptionFile}
             />
 
-            {/* METEOR Folder Dialog */}
-            <MeteorFolderDialog
-                open={meteorFolderDialogOpen}
-                onClose={() => setMeteorFolderDialogOpen(false)}
-                folder={meteorFolder}
+            {/* METEOR M2-X LRPT Folder Dialog */}
+            <MeteorM2xLrptFolderDialog
+                open={meteorM2xLrptFolderDialogOpen}
+                onClose={() => setMeteorM2xLrptFolderDialogOpen(false)}
+                folder={meteorM2xLrptFolder}
             />
 
             {/* Processing Dialog */}
