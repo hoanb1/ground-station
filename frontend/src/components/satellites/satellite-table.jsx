@@ -31,6 +31,7 @@ import {
     DialogTitle,
     FormControl,
     FormControlLabel,
+    OutlinedInput,
     InputAdornment,
     IconButton,
     InputLabel,
@@ -496,12 +497,21 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             </Alert>
             <Box sx={{ display: 'flex', gap: 2, marginTop: 2, marginBottom: 1 }}>
                 <FormControl sx={{minWidth: 200, flex: 1}} variant={"outlined"}>
-                    <InputLabel htmlFor="grouped-select">{t('satellite_database.select_group')}</InputLabel>
+                    <InputLabel id="sat-group-select-label">{t('satellite_database.select_group')}</InputLabel>
                     <Select
                         disabled={loading}
                         value={satGroupId}
                         id="grouped-select"
-                        label="Grouping"
+                        labelId="sat-group-select-label"
+                        input={
+                            <OutlinedInput
+                                label={t('satellite_database.select_group')}
+                                sx={{
+                                    backgroundColor: (theme) =>
+                                        theme.palette.mode === 'dark' ? '#121212' : '#ffffff',
+                                }}
+                            />
+                        }
                         variant={"outlined"}
                         onChange={handleOnGroupChange}
                     >

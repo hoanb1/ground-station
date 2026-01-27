@@ -71,13 +71,14 @@ const GroupDropdown = React.memo(function GroupDropdown() {
             fullWidth
             size="small"
         >
-            <InputLabel htmlFor="grouped-select">{t('group_dropdown.label')}</InputLabel>
+            <InputLabel id="grouped-select-label">{t('group_dropdown.label')}</InputLabel>
             <Select
                 onClose={handleSelectCloseEvent}
                 onOpen={handleSelectOpenEvent}
                 onChange={handleGroupChange}
                 value={satGroups.length > 0 ? groupId : ""}
                 id="grouped-select"
+                labelId="grouped-select-label"
                 label={t('group_dropdown.label')}
                 size="small"
             >
