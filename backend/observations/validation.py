@@ -20,13 +20,12 @@ from typing import Any, Dict
 
 def validate_transmitter_frequencies(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Validate that all transmitter frequencies in tasks are within the SDR's
+    Validate that all transmitter frequencies in session tasks are within the SDR's
     sample rate and center frequency range.
 
     Args:
         data: Observation or monitored satellite data containing:
-            - sdr: SDR configuration with center_frequency and sample_rate
-            - tasks: List of tasks with transmitter frequencies
+            - sessions: List of session objects with sdr config and tasks
 
     Returns:
         Dictionary with:
@@ -34,48 +33,53 @@ def validate_transmitter_frequencies(data: Dict[str, Any]) -> Dict[str, Any]:
             - error: Error message if validation fails, None otherwise
             - invalid_frequencies: List of invalid frequency details if validation fails
     """
-    # Extract SDR configuration
-    sdr_config = data.get("sdr", {})
-    center_frequency = sdr_config.get("center_frequency")
-    sample_rate = sdr_config.get("sample_rate")
-
-    # If no SDR config, skip validation (will be caught by other validations)
-    if not center_frequency or not sample_rate:
-        return {"success": True, "error": None}
-
-    # Calculate the frequency range the SDR can receive
-    nyquist_bandwidth = sample_rate / 2
-    min_freq = center_frequency - nyquist_bandwidth
-    max_freq = center_frequency + nyquist_bandwidth
-
-    # Extract tasks and validate each frequency
-    tasks = data.get("tasks", [])
+    sessions = data.get("sessions", []) or []
+    if not sessions:
+        return {"success": False, "error": "At least one SDR session is required."}
     invalid_frequencies = []
 
-    for i, task in enumerate(tasks):
-        task_type = task.get("type")
-        if task_type != "decoder":
+    for session_index, session in enumerate(sessions):
+        if not isinstance(session, dict):
+            continue
+        sdr_config = session.get("sdr", {}) or {}
+        center_frequency = sdr_config.get("center_frequency")
+        sample_rate = sdr_config.get("sample_rate")
+
+        # If no SDR config, skip validation (will be caught by other validations)
+        if not center_frequency or not sample_rate:
             continue
 
-        task_config = task.get("config", {})
-        frequency = task_config.get("frequency")
+        # Calculate the frequency range the SDR can receive
+        nyquist_bandwidth = sample_rate / 2
+        min_freq = center_frequency - nyquist_bandwidth
+        max_freq = center_frequency + nyquist_bandwidth
 
-        # Skip if no frequency is specified (might use center_frequency as default)
-        if not frequency:
-            continue
+        tasks = session.get("tasks", []) or []
+        for task_index, task in enumerate(tasks):
+            task_type = task.get("type")
+            if task_type != "decoder":
+                continue
 
-        # Check if frequency is within range
-        if frequency < min_freq or frequency > max_freq:
-            transmitter_id = task_config.get("transmitter_id", "unknown")
-            invalid_frequencies.append(
-                {
-                    "task_index": i,
-                    "transmitter_id": transmitter_id,
-                    "frequency": frequency,
-                    "min_allowed": min_freq,
-                    "max_allowed": max_freq,
-                }
-            )
+            task_config = task.get("config", {})
+            frequency = task_config.get("frequency")
+
+            # Skip if no frequency is specified (might use center_frequency as default)
+            if not frequency:
+                continue
+
+            # Check if frequency is within range
+            if frequency < min_freq or frequency > max_freq:
+                transmitter_id = task_config.get("transmitter_id", "unknown")
+                invalid_frequencies.append(
+                    {
+                        "session_index": session_index,
+                        "task_index": task_index,
+                        "transmitter_id": transmitter_id,
+                        "frequency": frequency,
+                        "min_allowed": min_freq,
+                        "max_allowed": max_freq,
+                    }
+                )
 
     # If there are invalid frequencies, return error
     if invalid_frequencies:
@@ -91,9 +95,7 @@ def validate_transmitter_frequencies(data: Dict[str, Any]) -> Dict[str, Any]:
         error_msg = (
             f"Transmitter frequency validation failed: "
             f"{len(invalid_frequencies)} frequency(ies) outside SDR range. "
-            f"Invalid frequencies: {', '.join(freq_details)}. "
-            f"SDR center frequency: {center_frequency / 1_000_000:.3f} MHz, "
-            f"sample rate: {sample_rate / 1_000_000:.3f} MHz"
+            f"Invalid frequencies: {', '.join(freq_details)}."
         )
 
         return {

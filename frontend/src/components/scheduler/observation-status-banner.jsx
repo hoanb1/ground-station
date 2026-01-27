@@ -23,6 +23,7 @@ import { Box, Paper, Typography, Chip, Stack, Button, Tooltip, Dialog, DialogTit
 import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility, Cancel, Stop } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
 import { cancelRunningObservation } from './scheduler-slice.jsx';
+import { getFlattenedTasks, getSessionSdrs } from './session-utils.js';
 
 /**
  * Compact banner showing either:
@@ -184,10 +185,12 @@ export default function ObservationStatusBanner() {
     const endTime = formatTime(observation.task_end || observation.pass?.event_end);
 
     // Get task count
-    const taskCount = observation.tasks?.length || 0;
-    const decoderTasks = observation.tasks?.filter((t) => t.type === 'decoder').length || 0;
-    const recordingTasks = observation.tasks?.filter((t) => t.type === 'iq_recording' || t.type === 'audio_recording').length || 0;
-    const transcriptionTasks = observation.tasks?.filter((t) => t.type === 'transcription').length || 0;
+    const tasks = getFlattenedTasks(observation);
+    const sdrs = getSessionSdrs(observation);
+    const taskCount = tasks.length;
+    const decoderTasks = tasks.filter((t) => t.type === 'decoder').length;
+    const recordingTasks = tasks.filter((t) => t.type === 'iq_recording' || t.type === 'audio_recording').length;
+    const transcriptionTasks = tasks.filter((t) => t.type === 'transcription').length;
 
     return (
         <Paper
@@ -267,11 +270,11 @@ export default function ObservationStatusBanner() {
                 )}
 
                 {/* SDR info */}
-                {observation.sdr?.name && (
+                {sdrs.length > 0 && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <Router sx={{ fontSize: 16, color: 'text.secondary' }} />
                         <Typography variant="body2" color="text.secondary">
-                            {observation.sdr.name}
+                            {sdrs.length === 1 ? sdrs[0]?.name : `${sdrs.length} SDRs`}
                         </Typography>
                     </Box>
                 )}

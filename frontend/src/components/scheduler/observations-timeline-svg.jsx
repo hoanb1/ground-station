@@ -35,6 +35,7 @@ import {
 } from '@mui/material';
 import SunCalc from 'suncalc';
 import { setTimelineDuration, setSelectedObservation, setDialogOpen } from './scheduler-slice.jsx';
+import { getFlattenedTasks } from './session-utils.js';
 
 const ObservationsTimeline = () => {
     const dispatch = useDispatch();
@@ -506,7 +507,7 @@ const ObservationsTimeline = () => {
                                 Peak: {hoveredObservation.pass.peak_altitude}°
                             </Typography>
                             <Box mt={1}>
-                                {hoveredObservation.tasks.map((task, idx) => (
+                                {getFlattenedTasks(hoveredObservation).map((task, idx) => (
                                     <Chip
                                         key={idx}
                                         label={

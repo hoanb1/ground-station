@@ -29,7 +29,9 @@ from observations.constants import STATUS_SCHEDULED
 def _transform_to_db_format(data: dict) -> dict:
     """Transform handler format to database format."""
     # Extract hardware IDs and convert to UUID
-    sdr_id = data.get("sdr", {}).get("id") if data.get("sdr") else None
+    sessions = data.get("sessions", []) or []
+    primary_session = sessions[0] if sessions else {}
+    sdr_id = primary_session.get("sdr", {}).get("id") if isinstance(primary_session, dict) else None
     if sdr_id and isinstance(sdr_id, str):
         sdr_id = uuid.UUID(sdr_id)
 
@@ -64,7 +66,6 @@ def _transform_to_db_format(data: dict) -> dict:
     }
 
     hardware_config = {
-        "sdr": data.get("sdr", {}),
         "rotator": data.get("rotator", {}),
         "rig": data.get("rig", {}),
         "transmitter": data.get("transmitter", {}),
@@ -92,7 +93,7 @@ def _transform_to_db_format(data: dict) -> dict:
         "satellite_config": satellite_config,
         "pass_config": pass_config,
         "hardware_config": hardware_config,
-        "tasks": data.get("tasks", []),
+        "sessions": sessions,
         "created_at": (
             datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
             if "created_at" in data
@@ -111,6 +112,7 @@ def _transform_from_db_format(db_obj: dict) -> dict:
     hardware_config = db_obj.get("hardware_config", {})
     satellite_config = db_obj.get("satellite_config", {})
     pass_config = db_obj.get("pass_config", {})
+    sessions = db_obj.get("sessions", []) or []
 
     # Helper function to convert datetime to ISO format
     def to_iso(dt):
@@ -134,11 +136,10 @@ def _transform_from_db_format(db_obj: dict) -> dict:
         "task_start": to_iso(db_obj.get("task_start")),
         "task_end": to_iso(db_obj.get("task_end")),
         "task_start_elevation": pass_config.get("task_start_elevation", 10),
-        "sdr": hardware_config.get("sdr", {}),
         "rotator": hardware_config.get("rotator", {}),
         "rig": hardware_config.get("rig", {}),
         "transmitter": hardware_config.get("transmitter", {}),
-        "tasks": db_obj.get("tasks", []),
+        "sessions": sessions,
         "created_at": to_iso(db_obj.get("created_at")),
         "updated_at": to_iso(db_obj.get("updated_at")),
         # Error tracking fields

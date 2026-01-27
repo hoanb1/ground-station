@@ -34,7 +34,9 @@ FOREIGN_KEY_PATTERN = re.compile(r"FOREIGN KEY constraint failed")
 def _transform_to_db_format(data: dict) -> dict:
     """Transform handler format to database format."""
     # Extract hardware IDs and convert to UUID
-    sdr_id = data.get("sdr", {}).get("id") if data.get("sdr") else None
+    sessions = data.get("sessions", []) or []
+    primary_session = sessions[0] if sessions else {}
+    sdr_id = primary_session.get("sdr", {}).get("id") if isinstance(primary_session, dict) else None
     if sdr_id and isinstance(sdr_id, str):
         sdr_id = uuid.UUID(sdr_id)
 
@@ -57,7 +59,6 @@ def _transform_to_db_format(data: dict) -> dict:
     }
 
     hardware_config = {
-        "sdr": data.get("sdr", {}),
         "rotator": data.get("rotator", {}),
         "rig": data.get("rig", {}),
     }
@@ -78,7 +79,7 @@ def _transform_to_db_format(data: dict) -> dict:
         "satellite_config": satellite_config,
         "hardware_config": hardware_config,
         "generation_config": generation_config,
-        "tasks": data.get("tasks", []),
+        "sessions": sessions,
         "created_at": (
             datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
             if "created_at" in data
@@ -97,6 +98,7 @@ def _transform_from_db_format(db_obj: dict) -> dict:
     hardware_config = db_obj.get("hardware_config", {})
     satellite_config = db_obj.get("satellite_config", {})
     generation_config = db_obj.get("generation_config", {})
+    sessions = db_obj.get("sessions", []) or []
 
     # Handle datetime fields - they may already be strings after serialize_object
     created_at = db_obj.get("created_at")
@@ -115,13 +117,12 @@ def _transform_from_db_format(db_obj: dict) -> dict:
             "name": satellite_config.get("name"),
             "group_id": satellite_config.get("group_id"),
         },
-        "sdr": hardware_config.get("sdr", {}),
         "rotator": hardware_config.get("rotator", {}),
         "rig": hardware_config.get("rig", {}),
         "min_elevation": generation_config.get("min_elevation", 20),
         "task_start_elevation": generation_config.get("task_start_elevation", 10),
         "lookahead_hours": generation_config.get("lookahead_hours", 24),
-        "tasks": db_obj.get("tasks", []),
+        "sessions": sessions,
         "created_at": created_at,
         "updated_at": updated_at,
     }

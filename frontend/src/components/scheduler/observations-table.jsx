@@ -70,6 +70,7 @@ import {
 import { TitleBar, getTimeFromISO, humanizeFutureDateInMinutes } from '../common/common.jsx';
 import Button from '@mui/material/Button';
 import ObservationsTimeline from './observations-timeline-svg.jsx';
+import { getFlattenedTasks, getSessionSdrs } from './session-utils.js';
 import ObservationsTableSettingsDialog from './observations-table-settings-dialog.jsx';
 import ObservationDataDialog from './observation-data-dialog.jsx';
 
@@ -356,17 +357,32 @@ const ObservationsTable = () => {
             flex: 1.8,
             minWidth: 220,
             renderCell: (params) => {
-                const sdr = params.row.sdr;
-                if (!sdr?.name) return '-';
+                const sdrs = getSessionSdrs(params.row);
+                if (!sdrs.length) return '-';
 
-                const freqMHz = sdr.center_frequency ? (sdr.center_frequency / 1000000).toFixed(2) : '?';
-                const gain = (sdr.gain !== undefined && sdr.gain !== null && sdr.gain !== '') ? sdr.gain : '?';
-                const antenna = sdr.antenna_port || '?';
+                const formatSdr = (sdr) => {
+                    const freqMHz = sdr.center_frequency ? (sdr.center_frequency / 1000000).toFixed(2) : '?';
+                    const gain = (sdr.gain !== undefined && sdr.gain !== null && sdr.gain !== '') ? sdr.gain : '?';
+                    const antenna = sdr.antenna_port || '?';
+                    return `${sdr.name || 'SDR'} • ${freqMHz}MHz • ${gain}dB • ${antenna}`;
+                };
+
+                if (sdrs.length === 1) {
+                    return (
+                        <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                            {formatSdr(sdrs[0])}
+                        </Typography>
+                    );
+                }
 
                 return (
-                    <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
-                        {sdr.name} • {freqMHz}MHz • {gain}dB • {antenna}
-                    </Typography>
+                    <Stack spacing={0.5} sx={{ py: 0.5 }}>
+                        {sdrs.map((sdr, idx) => (
+                            <Typography key={idx} variant="body2" sx={{ fontSize: '0.75rem' }}>
+                                {formatSdr(sdr)}
+                            </Typography>
+                        ))}
+                    </Stack>
                 );
             },
         },
@@ -376,10 +392,11 @@ const ObservationsTable = () => {
             flex: 1.2,
             minWidth: 180,
             renderCell: (params) => {
-                if (!params.value || params.value.length === 0) return '-';
+                const tasks = getFlattenedTasks(params.row);
+                if (tasks.length === 0) return '-';
                 return (
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ py: 0.5 }}>
-                        {params.value.map((task, idx) => {
+                        {tasks.map((task, idx) => {
                             let label = '';
                             let color = 'default';
 

@@ -36,8 +36,7 @@ class TestInternalSessionTracking:
         yield
         # Clean up any leftover internal sessions
         for session_id in list(session_tracker.get_all_internal_sessions()):
-            obs_id = session_id.replace(VFOManager.INTERNAL_PREFIX, "")
-            session_tracker.unregister_internal_session(obs_id)
+            session_tracker.unregister_internal_session(session_id)
 
     def test_register_internal_session(self):
         """Test registering an internal observation session."""
@@ -186,8 +185,7 @@ class TestInternalSessionIsolation:
         yield
         # Clean up internal sessions
         for session_id in list(session_tracker.get_all_internal_sessions()):
-            obs_id = session_id.replace(VFOManager.INTERNAL_PREFIX, "")
-            session_tracker.unregister_internal_session(obs_id)
+            session_tracker.unregister_internal_session(session_id)
         # Clean up any test user sessions
         for session_id in ["test-user-session-1", "test-user-session-2"]:
             session_tracker.clear_session(session_id)

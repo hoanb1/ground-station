@@ -45,6 +45,8 @@ import {
     List,
     ListItemButton,
     ListItemText,
+    Tabs,
+    Tab,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon, ErrorOutline as ErrorOutlineIcon } from '@mui/icons-material';
 import {
@@ -104,6 +106,19 @@ const SAMPLE_RATES = [
     { value: 12000000, label: '12 MHz' },
     { value: 16000000, label: '16 MHz' },
 ];
+
+const createEmptySession = () => ({
+    sdr: {
+        id: '',
+        name: '',
+        sample_rate: 1000000,
+        gain: '',
+        antenna_port: '',
+        center_frequency: 0,
+        auto_center_frequency: true,
+    },
+    tasks: [],
+});
 
 const formatSampleRate = (rate) => {
     if (!rate) return '';
@@ -185,20 +200,27 @@ export default function MonitoredSatelliteDialog() {
     const isSaving = useSelector((state) => state.scheduler?.isSavingMonitoredSatellite || false);
     const saveError = useSelector((state) => state.scheduler?.monitoredSatelliteError);
 
-    const [formData, setFormData] = useState({
-        enabled: true,
-        satellite: { norad_id: '', name: '', group_id: '' },
-        sdr: { id: '', name: '', sample_rate: 1000000, gain: '', antenna_port: '', center_frequency: 0, auto_center_frequency: true },
-        tasks: [],
-        rotator: { id: null, tracking_enabled: false },
-        rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
-        min_elevation: 20,
-        task_start_elevation: 10,
-        lookahead_hours: 24,
+    const [activeSessionIndex, setActiveSessionIndex] = useState(0);
+    const [formData, setFormData] = useState(() => {
+        const initialSession = createEmptySession();
+        return {
+            enabled: true,
+            satellite: { norad_id: '', name: '', group_id: '' },
+            sdr: initialSession.sdr,
+            tasks: initialSession.tasks,
+            sessions: [initialSession],
+            rotator: { id: null, tracking_enabled: false },
+            rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
+            min_elevation: 20,
+            task_start_elevation: 10,
+            lookahead_hours: 24,
+        };
     });
 
     const [expandedTasks, setExpandedTasks] = useState({});
     const [transmitterMenuAnchor, setTransmitterMenuAnchor] = useState(null);
+    const [pendingRemoveSessionIndex, setPendingRemoveSessionIndex] = useState(null);
+    const [openRemoveSessionConfirm, setOpenRemoveSessionConfirm] = useState(false);
 
     const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
     const availableTransmitters = selectedSatellite?.transmitters || [];
@@ -317,27 +339,58 @@ export default function MonitoredSatelliteDialog() {
     }, [formData.tasks, formData.sdr.sample_rate, formData.sdr.auto_center_frequency, availableTransmitters]);
 
     useEffect(() => {
+        setFormData((prev) => {
+            const sessions = Array.isArray(prev.sessions) ? [...prev.sessions] : [];
+            const current = sessions[activeSessionIndex] || createEmptySession();
+            if (current.sdr === prev.sdr && current.tasks === prev.tasks) {
+                return prev;
+            }
+            sessions[activeSessionIndex] = {
+                ...current,
+                sdr: prev.sdr,
+                tasks: prev.tasks,
+            };
+            return { ...prev, sessions };
+        });
+    }, [formData.sdr, formData.tasks, activeSessionIndex]);
+
+    useEffect(() => {
         if (selectedMonitoredSatellite) {
-            // Ensure auto_center_frequency exists for backward compatibility
+            const sessions = Array.isArray(selectedMonitoredSatellite.sessions) && selectedMonitoredSatellite.sessions.length
+                ? selectedMonitoredSatellite.sessions
+                : [createEmptySession()];
+            const normalizedSessions = sessions.map((session) => ({
+                ...session,
+                sdr: {
+                    ...session.sdr,
+                    auto_center_frequency: session.sdr?.auto_center_frequency ?? true,
+                },
+                tasks: session.tasks || [],
+            }));
+            const primarySession = normalizedSessions[0] || createEmptySession();
             setFormData({
                 ...selectedMonitoredSatellite,
-                sdr: {
-                    ...selectedMonitoredSatellite.sdr,
-                    auto_center_frequency: selectedMonitoredSatellite.sdr?.auto_center_frequency ?? true,
-                },
+                sessions: normalizedSessions,
+                sdr: primarySession.sdr,
+                tasks: primarySession.tasks,
             });
+            setActiveSessionIndex(0);
         } else {
+            const initialSession = createEmptySession();
             setFormData({
                 enabled: true,
                 satellite: { norad_id: '', name: '', group_id: '' },
-                sdr: { id: '', name: '', sample_rate: 1000000, gain: '', antenna_port: '', center_frequency: 0, auto_center_frequency: true },
-                tasks: [],
+                sdr: initialSession.sdr,
+                tasks: initialSession.tasks,
+                sessions: [initialSession],
                 rotator: { id: null, tracking_enabled: false },
                 rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
                 min_elevation: 20,
                 task_start_elevation: 10,
                 lookahead_hours: 24,
             });
+            setActiveSessionIndex(0);
+            setExpandedTasks({});
         }
     }, [selectedMonitoredSatellite, open]);
 
@@ -366,6 +419,61 @@ export default function MonitoredSatelliteDialog() {
                 group_id: satellite.group_id || selectedGroupId || '',
             },
         }));
+    };
+
+    const handleSelectSession = (index) => {
+        setActiveSessionIndex(index);
+        setFormData((prev) => {
+            const session = prev.sessions?.[index] || createEmptySession();
+            return {
+                ...prev,
+                sdr: session.sdr || createEmptySession().sdr,
+                tasks: session.tasks || [],
+            };
+        });
+        setExpandedTasks({});
+    };
+
+    const handleAddSession = () => {
+        const newSession = createEmptySession();
+        setFormData((prev) => ({
+            ...prev,
+            sessions: [...(prev.sessions || []), newSession],
+            sdr: newSession.sdr,
+            tasks: newSession.tasks,
+        }));
+        setActiveSessionIndex((prev) => prev + 1);
+        setExpandedTasks({});
+    };
+
+    const handleRemoveSession = (index) => {
+        setFormData((prev) => {
+            const sessions = [...(prev.sessions || [])];
+            if (sessions.length <= 1) return prev;
+            sessions.splice(index, 1);
+            const nextIndex = Math.max(0, index - 1);
+            const nextSession = sessions[nextIndex] || createEmptySession();
+            setActiveSessionIndex(nextIndex);
+            setExpandedTasks({});
+            return {
+                ...prev,
+                sessions,
+                sdr: nextSession.sdr,
+                tasks: nextSession.tasks || [],
+            };
+        });
+    };
+
+    const requestRemoveSession = (index) => {
+        setPendingRemoveSessionIndex(index);
+        setOpenRemoveSessionConfirm(true);
+    };
+
+    const handleRemoveSessionConfirm = () => {
+        if (pendingRemoveSessionIndex == null) return;
+        handleRemoveSession(pendingRemoveSessionIndex);
+        setOpenRemoveSessionConfirm(false);
+        setPendingRemoveSessionIndex(null);
     };
 
     const handleAddTask = (taskType) => {
@@ -423,9 +531,10 @@ export default function MonitoredSatelliteDialog() {
         }
         setFormData((prev) => {
             const newTasks = [...prev.tasks, newTask];
+            const taskKey = `${activeSessionIndex}-${newTasks.length - 1}`;
             setExpandedTasks((prevExpanded) => ({
                 ...prevExpanded,
-                [newTasks.length - 1]: false
+                [taskKey]: false
             }));
             return {
                 ...prev,
@@ -486,9 +595,10 @@ export default function MonitoredSatelliteDialog() {
     };
 
     const toggleTaskExpanded = (index) => {
+        const taskKey = `${activeSessionIndex}-${index}`;
         setExpandedTasks((prev) => ({
             ...prev,
-            [index]: !prev[index]
+            [taskKey]: !prev[taskKey]
         }));
     };
 
@@ -597,15 +707,16 @@ export default function MonitoredSatelliteDialog() {
         return '';
     };
 
-    const validateTasksWithinBandwidth = () => {
-        const sampleRate = formData.sdr.sample_rate;
+    const validateTasksWithinBandwidth = (session) => {
+        const sampleRate = session?.sdr?.sample_rate;
+        const sessionTasks = session?.tasks || [];
         if (!sampleRate) return { valid: true, message: '', details: [] };
 
         // Collect all transmitter frequencies from tasks
         const frequencies = [];
         const details = [];
 
-        formData.tasks.forEach((task, index) => {
+        sessionTasks.forEach((task, index) => {
             if (task.config.transmitter_id) {
                 const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
                 if (transmitter && transmitter.downlink_low) {
@@ -653,14 +764,27 @@ export default function MonitoredSatelliteDialog() {
         };
     };
 
-    const bandwidthValidation = validateTasksWithinBandwidth();
+    const bandwidthValidation = validateTasksWithinBandwidth({
+        sdr: formData.sdr,
+        tasks: formData.tasks,
+    });
 
     const isFormValid = () => {
+        const sessions = Array.isArray(formData.sessions) && formData.sessions.length
+            ? formData.sessions
+            : [{ sdr: formData.sdr, tasks: formData.tasks }];
+        const sessionsValid = sessions.every((session) => {
+            const sdr = session?.sdr || {};
+            return (
+                sdr.id &&
+                sdr.gain !== '' &&
+                sdr.antenna_port !== '' &&
+                validateTasksWithinBandwidth(session).valid
+            );
+        });
         return (
             formData.satellite.norad_id !== '' &&
-            formData.sdr.id !== '' &&
-            formData.sdr.gain !== '' &&
-            formData.sdr.antenna_port !== '' &&
+            sessionsValid &&
             formData.min_elevation >= 0 &&
             formData.task_start_elevation >= 0 &&
             formData.task_start_elevation <= formData.min_elevation &&
@@ -671,18 +795,25 @@ export default function MonitoredSatelliteDialog() {
 
     const handleSubmit = () => {
         if (!isFormValid()) return;
+        const sessions = Array.isArray(formData.sessions) && formData.sessions.length
+            ? formData.sessions
+            : [{ sdr: formData.sdr, tasks: formData.tasks }];
 
         if (selectedMonitoredSatellite) {
             // Update existing monitored satellite
             dispatch(updateMonitoredSatelliteAsync({
                 socket,
                 id: selectedMonitoredSatellite.id,
-                satellite: formData,
+                satellite: {
+                    ...formData,
+                    sessions,
+                },
             }));
         } else {
             // Add new monitored satellite
             const newSatellite = {
                 ...formData,
+                sessions,
                 id: `monitored-${Date.now()}`,
             };
             dispatch(createMonitoredSatellite({
@@ -905,6 +1036,56 @@ export default function MonitoredSatelliteDialog() {
                                     ))}
                                 </Select>
                             </FormControl>
+                        </Stack>
+                    </Box>
+
+                    <Divider />
+
+                    {/* Sessions */}
+                    <Box>
+                        <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                            SDR Sessions
+                        </Typography>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                            <Tabs
+                                value={activeSessionIndex}
+                                onChange={(event, value) => handleSelectSession(value)}
+                                variant="scrollable"
+                                scrollButtons="auto"
+                                sx={{ flex: 1 }}
+                            >
+                                {(formData.sessions || []).map((session, index) => (
+                                    <Tab
+                                        key={index}
+                                        label={
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Typography variant="body2">
+                                                    {session?.sdr?.name || `SDR ${index + 1}`}
+                                                </Typography>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        requestRemoveSession(index);
+                                                    }}
+                                                    disabled={(formData.sessions || []).length <= 1}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Box>
+                                        }
+                                        value={index}
+                                    />
+                                ))}
+                            </Tabs>
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<AddIcon />}
+                                onClick={handleAddSession}
+                            >
+                                Add SDR
+                            </Button>
                         </Stack>
                     </Box>
 
@@ -1285,52 +1466,54 @@ export default function MonitoredSatelliteDialog() {
                             </Typography>
                         ) : (
                             <Stack spacing={2}>
-                                {formData.tasks.map((task, index) => (
-                                    <Box
-                                        key={index}
-                                        sx={{
-                                            p: 2,
-                                            border: '1px solid',
-                                            borderColor: 'divider',
-                                            borderRadius: 1,
-                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
-                                            transition: 'background-color 0.2s',
-                                            cursor: !expandedTasks[index] ? 'pointer' : 'default',
-                                            ...(!expandedTasks[index] && {
-                                                '&:hover': {
-                                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
-                                                },
-                                            }),
-                                        }}
-                                        onClick={(e) => {
-                                            if (!expandedTasks[index] && !e.target.closest('button')) {
-                                                toggleTaskExpanded(index);
-                                            }
-                                        }}
-                                    >
-                                        <Box>
-                                            <Box
-                                                display="flex"
-                                                justifyContent="space-between"
-                                                alignItems="center"
-                                                mb={expandedTasks[index] ? 2 : 0}
-                                            >
+                                {formData.tasks.map((task, index) => {
+                                    const taskKey = `${activeSessionIndex}-${index}`;
+                                    return (
+                                        <Box
+                                            key={index}
+                                            sx={{
+                                                p: 2,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 1,
+                                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                                                transition: 'background-color 0.2s',
+                                                cursor: !expandedTasks[taskKey] ? 'pointer' : 'default',
+                                                ...(!expandedTasks[taskKey] && {
+                                                    '&:hover': {
+                                                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
+                                                    },
+                                                }),
+                                            }}
+                                            onClick={(e) => {
+                                                if (!expandedTasks[taskKey] && !e.target.closest('button')) {
+                                                    toggleTaskExpanded(index);
+                                                }
+                                            }}
+                                        >
+                                            <Box>
                                                 <Box
                                                     display="flex"
+                                                    justifyContent="space-between"
                                                     alignItems="center"
-                                                    gap={1}
-                                                    sx={{ flex: 1 }}
-                                                    onClick={() => expandedTasks[index] && toggleTaskExpanded(index)}
+                                                    mb={expandedTasks[taskKey] ? 2 : 0}
                                                 >
-                                                    <IconButton
-                                                        size="small"
-                                                        sx={{
-                                                            transform: expandedTasks[index] ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                            transition: 'transform 0.2s'
-                                                        }}
+                                                    <Box
+                                                        display="flex"
+                                                        alignItems="center"
+                                                        gap={1}
+                                                        sx={{ flex: 1 }}
+                                                        onClick={() => expandedTasks[taskKey] && toggleTaskExpanded(index)}
                                                     >
-                                                        <ExpandMoreIcon fontSize="small" />
-                                                    </IconButton>
+                                                        <IconButton
+                                                            size="small"
+                                                            sx={{
+                                                                transform: expandedTasks[taskKey] ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                                transition: 'transform 0.2s'
+                                                            }}
+                                                        >
+                                                            <ExpandMoreIcon fontSize="small" />
+                                                        </IconButton>
                                                     <Chip
                                                         label={
                                                             task.type === 'decoder' ? 'Decoder' :
@@ -1348,7 +1531,7 @@ export default function MonitoredSatelliteDialog() {
                                                         variant="filled"
                                                         sx={{ minWidth: 130 }}
                                                     />
-                                                    {!expandedTasks[index] && (
+                                                    {!expandedTasks[taskKey] && (
                                                         <Typography
                                                             variant="body2"
                                                             color="text.secondary"
@@ -1365,7 +1548,7 @@ export default function MonitoredSatelliteDialog() {
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
                                             </Box>
-                                            {expandedTasks[index] && (
+                                            {expandedTasks[taskKey] && (
                                                 <Stack spacing={2}>
                                                     {task.type === 'decoder' && (() => {
                                                         const decoderType = task.config.decoder_type;
@@ -2029,7 +2212,8 @@ export default function MonitoredSatelliteDialog() {
                                             )}
                                         </Box>
                                     </Box>
-                                ))}
+                                    );
+                                })}
                             </Stack>
                         )}
                     </Box>
@@ -2074,6 +2258,22 @@ export default function MonitoredSatelliteDialog() {
                     {isSaving ? 'Saving...' : (selectedMonitoredSatellite ? 'Update' : 'Save')}
                 </Button>
             </DialogActions>
+
+            {/* Remove Session Confirmation Dialog */}
+            <Dialog open={openRemoveSessionConfirm} onClose={() => setOpenRemoveSessionConfirm(false)}>
+                <DialogTitle>Remove SDR Session</DialogTitle>
+                <DialogContent>
+                    Are you sure you want to remove this SDR session?
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenRemoveSessionConfirm(false)} variant="outlined">
+                        Cancel
+                    </Button>
+                    <Button onClick={handleRemoveSessionConfirm} variant="contained" color="error">
+                        Remove
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Dialog>
     );
 }

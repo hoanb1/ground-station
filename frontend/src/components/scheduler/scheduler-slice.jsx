@@ -37,37 +37,35 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
  *     azimuth_at_peak: number,
  *     azimuth_at_end: number
  *   } | null (null for geostationary),
- *   sdr: {
- *     id: string,
- *     name: string
- *   },
- *   transmitter: {
- *     id: string,
- *     frequency: number,
- *     mode: string,
- *     bandwidth: number
- *   },
- *   tasks: [
+ *   sessions: [
  *     {
- *       type: 'decoder',
- *       config: {
- *         decoder_type: string (e.g., 'afsk', 'gmsk', 'sstv'),
- *         vfo: number | null
- *       }
- *     },
- *     {
- *       type: 'audio_recording',
- *       config: {
- *         format: string ('wav', 'mp3'),
- *         vfo: number | null
- *       }
- *     },
- *     {
- *       type: 'iq_recording',
- *       config: {
- *         sample_rate: number,
- *         format: string ('complex_int16', 'complex_float32')
- *       }
+ *       sdr: {
+ *         id: string,
+ *         name: string
+ *       },
+ *       tasks: [
+ *         {
+ *           type: 'decoder',
+ *           config: {
+ *             decoder_type: string (e.g., 'afsk', 'gmsk', 'sstv'),
+ *             vfo: number | null
+ *           }
+ *         },
+ *         {
+ *           type: 'audio_recording',
+ *           config: {
+ *             format: string ('wav', 'mp3'),
+ *             vfo: number | null
+ *           }
+ *         },
+ *         {
+ *           type: 'iq_recording',
+ *           config: {
+ *             sample_rate: number,
+ *             format: string ('complex_int16', 'complex_float32')
+ *           }
+ *         }
+ *       ]
  *     }
  *   ],
  *   rotator: {

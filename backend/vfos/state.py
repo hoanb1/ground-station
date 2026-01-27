@@ -224,20 +224,23 @@ class VFOManager:
     # ============================================================
 
     @staticmethod
-    def make_internal_session_id(observation_id: str) -> str:
+    def make_internal_session_id(observation_id: str, session_key: Optional[str] = None) -> str:
         """
         Generate internal session ID for an automated observation.
 
         Args:
             observation_id: Unique observation identifier (UUID)
+            session_key: Optional suffix to distinguish multiple sessions
 
         Returns:
-            Internal session ID (e.g., "internal:obs-abc-123")
+            Internal session ID (e.g., "internal:obs-abc-123" or "internal:obs-abc-123:rx1")
 
         Example:
             >>> VFOManager.make_internal_session_id("550e8400-e29b-41d4-a716-446655440000")
             "internal:550e8400-e29b-41d4-a716-446655440000"
         """
+        if session_key:
+            return f"{VFOManager.INTERNAL_PREFIX}{observation_id}:{session_key}"
         return f"{VFOManager.INTERNAL_PREFIX}{observation_id}"
 
     @staticmethod
@@ -270,7 +273,7 @@ class VFOManager:
             return INTERNAL_VFO_NUMBER
         return USER_VFO_NUMBER
 
-    def create_internal_vfos(self, observation_id: str) -> str:
+    def create_internal_vfos(self, observation_id: str, session_key: Optional[str] = None) -> str:
         """
         Initialize a new set of VFOs for an automated observation.
 
@@ -288,14 +291,14 @@ class VFOManager:
             >>> print(session_id)
             "internal:obs-123"
         """
-        session_id = self.make_internal_session_id(observation_id)
+        session_id = self.make_internal_session_id(observation_id, session_key)
         self._ensure_session_vfos(session_id)
         logger.info(
             f"Created internal VFOs for observation {observation_id} (session: {session_id})"
         )
         return session_id
 
-    def cleanup_internal_vfos(self, observation_id: str) -> bool:
+    def cleanup_internal_vfos(self, observation_id: str, session_key: Optional[str] = None) -> bool:
         """
         Remove VFOs when automated observation completes.
 
@@ -309,7 +312,7 @@ class VFOManager:
             >>> vfo_mgr.cleanup_internal_vfos("obs-123")
             True
         """
-        session_id = self.make_internal_session_id(observation_id)
+        session_id = self.make_internal_session_id(observation_id, session_key)
 
         if session_id in self._session_vfo_states:
             del self._session_vfo_states[session_id]
@@ -330,6 +333,7 @@ class VFOManager:
         locked_transmitter_id: str = "none",
         squelch: int = -150,
         volume: int = 50,
+        session_key: Optional[str] = None,
     ) -> None:
         """
         Configure a VFO for automated observation with sensible defaults.
@@ -359,7 +363,7 @@ class VFOManager:
             ...     locked_transmitter_id="noaa-18-apt"
             ... )
         """
-        session_id = self.make_internal_session_id(observation_id)
+        session_id = self.make_internal_session_id(observation_id, session_key)
 
         # Ensure VFOs exist for this observation
         self._ensure_session_vfos(session_id)

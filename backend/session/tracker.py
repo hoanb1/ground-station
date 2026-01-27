@@ -604,6 +604,7 @@ class SessionTracker:
         sdr_id: str,
         vfo_number: int,
         metadata: Optional[Dict[str, Any]] = None,
+        session_key: Optional[str] = None,
     ) -> str:
         """
         Register an internal observation session.
@@ -619,7 +620,7 @@ class SessionTracker:
         """
         from vfos.state import VFOManager
 
-        session_id = VFOManager.make_internal_session_id(observation_id)
+        session_id = VFOManager.make_internal_session_id(observation_id, session_key)
 
         # Mark as internal
         self._internal_sessions.add(session_id)
@@ -644,7 +645,9 @@ class SessionTracker:
         logger.info(f"Registered internal session {session_id} for observation {observation_id}")
         return str(session_id)
 
-    def unregister_internal_session(self, observation_id: str) -> bool:
+    def unregister_internal_session(
+        self, observation_id: str, session_key: Optional[str] = None
+    ) -> bool:
         """
         Unregister an internal observation session.
 
@@ -656,16 +659,30 @@ class SessionTracker:
         """
         from vfos.state import VFOManager
 
-        session_id = VFOManager.make_internal_session_id(observation_id)
+        if observation_id.startswith(VFOManager.INTERNAL_PREFIX):
+            target_ids = [observation_id]
+        else:
+            base_prefix = VFOManager.make_internal_session_id(observation_id, None)
+            if session_key:
+                target_ids = [VFOManager.make_internal_session_id(observation_id, session_key)]
+            else:
+                target_ids = [
+                    session_id
+                    for session_id in self._internal_sessions
+                    if session_id.startswith(base_prefix)
+                ]
 
-        if session_id in self._internal_sessions:
-            self._internal_sessions.remove(session_id)
-            self.clear_session(session_id)
-            logger.debug(f"Unregistered internal session {session_id}")
-            return True
+        removed = False
+        for session_id in target_ids:
+            if session_id in self._internal_sessions:
+                self._internal_sessions.remove(session_id)
+                self.clear_session(session_id)
+                logger.debug(f"Unregistered internal session {session_id}")
+                removed = True
 
-        logger.warning(f"No internal session found for observation {observation_id}")
-        return False
+        if not removed:
+            logger.warning(f"No internal session found for observation {observation_id}")
+        return removed
 
     def is_internal_session(self, session_id: str) -> bool:
         """

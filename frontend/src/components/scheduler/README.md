@@ -38,11 +38,44 @@ Each scheduled observation is defined by the following structure:
     azimuth_at_end: number       // Degrees (0-360)
   } | null,
   
-  // SDR Configuration
-  sdr: {
-    id: string,                  // SDR device ID from hardware configuration
-    name: string                 // SDR device name
-  },
+  // SDR Sessions (one per SDR)
+  sessions: [
+    {
+      sdr: {
+        id: string,              // SDR device ID from hardware configuration
+        name: string             // SDR device name
+      },
+      // Tasks - Array of recording/decoding tasks to perform on this SDR
+      tasks: [
+        // Decoder task
+        {
+          type: 'decoder',
+          config: {
+            decoder_type: string,// 'afsk', 'gmsk', 'fsk', 'sstv', 'aprs', 'morse'
+            vfo: number | null   // VFO marker number, or null for main signal
+          }
+        },
+        
+        // Audio recording task
+        {
+          type: 'audio_recording',
+          config: {
+            format: string,      // 'wav', 'mp3', 'flac'
+            vfo: number | null   // VFO marker number, or null for main signal
+          }
+        },
+        
+        // IQ recording task
+        {
+          type: 'iq_recording',
+          config: {
+            sample_rate: number, // Sample rate in Hz (e.g., 250000)
+            format: string       // 'complex_int16', 'complex_float32'
+          }
+        }
+      ]
+    }
+  ],
   
   // Transmitter/Frequency Configuration
   transmitter: {
@@ -52,35 +85,6 @@ Each scheduled observation is defined by the following structure:
     bandwidth: number            // Bandwidth in Hz
   },
   
-  // Tasks - Array of recording/decoding tasks to perform
-  tasks: [
-    // Decoder task
-    {
-      type: 'decoder',
-      config: {
-        decoder_type: string,    // 'afsk', 'gmsk', 'fsk', 'sstv', 'aprs', 'morse'
-        vfo: number | null       // VFO marker number, or null for main signal
-      }
-    },
-    
-    // Audio recording task
-    {
-      type: 'audio_recording',
-      config: {
-        format: string,          // 'wav', 'mp3', 'flac'
-        vfo: number | null       // VFO marker number, or null for main signal
-      }
-    },
-    
-    // IQ recording task
-    {
-      type: 'iq_recording',
-      config: {
-        sample_rate: number,     // Sample rate in Hz (e.g., 250000)
-        format: string           // 'complex_int16', 'complex_float32'
-      }
-    }
-  ],
   
   // Optional Hardware Control
   rotator: {
@@ -145,10 +149,14 @@ The backend should implement the following socket.io event handlers:
   enabled: true,
   satellite: { norad_id: "25544", name: "ISS" },
   pass: { event_start: "2025-01-15T08:30:00Z", event_end: "2025-01-15T08:40:00Z", ... },
-  sdr: { id: "rtlsdr_01", name: "RTL-SDR #1" },
   transmitter: { frequency: 145800000, mode: "FM", bandwidth: 12500 },
-  tasks: [
-    { type: 'decoder', config: { decoder_type: 'aprs', vfo: null } }
+  sessions: [
+    {
+      sdr: { id: "rtlsdr_01", name: "RTL-SDR #1" },
+      tasks: [
+        { type: 'decoder', config: { decoder_type: 'aprs', vfo: null } }
+      ]
+    }
   ],
   rotator: { id: "rotator_01", tracking_enabled: true },
   rig: { id: null, doppler_correction: false, vfo: 'VFO_A' }
@@ -162,15 +170,19 @@ The backend should implement the following socket.io event handlers:
   enabled: true,
   satellite: { norad_id: "33591", name: "NOAA 19" },
   pass: { event_start: "2025-01-15T14:20:00Z", event_end: "2025-01-15T14:35:00Z", ... },
-  sdr: { id: "sdrplay_01", name: "SDRPlay RSPdx" },
   transmitter: { frequency: 137100000, mode: "APT", bandwidth: 40000 },
-  tasks: [
-    // Record IQ for the main APT signal
-    { type: 'iq_recording', config: { sample_rate: 250000, format: 'complex_int16' } },
-    // Decode audio from VFO marker #1
-    { type: 'audio_recording', config: { format: 'wav', vfo: 1 } },
-    // Also decode a digital signal on VFO marker #2
-    { type: 'decoder', config: { decoder_type: 'gmsk', vfo: 2 } }
+  sessions: [
+    {
+      sdr: { id: "sdrplay_01", name: "SDRPlay RSPdx" },
+      tasks: [
+        // Record IQ for the main APT signal
+        { type: 'iq_recording', config: { sample_rate: 250000, format: 'complex_int16' } },
+        // Decode audio from VFO marker #1
+        { type: 'audio_recording', config: { format: 'wav', vfo: 1 } },
+        // Also decode a digital signal on VFO marker #2
+        { type: 'decoder', config: { decoder_type: 'gmsk', vfo: 2 } }
+      ]
+    }
   ],
   rotator: { id: "rotator_01", tracking_enabled: true },
   rig: { id: "ic9700", doppler_correction: true, vfo: 'VFO_A' }
@@ -184,11 +196,15 @@ The backend should implement the following socket.io event handlers:
   enabled: true,
   satellite: { norad_id: "43700", name: "Es'hail-2" },
   pass: null,  // Null indicates always visible (geostationary)
-  sdr: { id: "sdrplay_02", name: "SDRPlay RSP1A" },
   transmitter: { frequency: 2400025000, mode: "USB", bandwidth: 3000 },
-  tasks: [
-    { type: 'decoder', config: { decoder_type: 'sstv', vfo: null } },
-    { type: 'audio_recording', config: { format: 'mp3', vfo: null } }
+  sessions: [
+    {
+      sdr: { id: "sdrplay_02", name: "SDRPlay RSP1A" },
+      tasks: [
+        { type: 'decoder', config: { decoder_type: 'sstv', vfo: null } },
+        { type: 'audio_recording', config: { format: 'mp3', vfo: null } }
+      ]
+    }
   ],
   rotator: { id: null, tracking_enabled: false },  // No rotator needed
   rig: { id: null, doppler_correction: false, vfo: 'VFO_A' }
@@ -197,7 +213,7 @@ The backend should implement the following socket.io event handlers:
 
 ## Implementation Notes
 
-1. **Task Execution**: All tasks in the `tasks` array should run concurrently during the observation period
+1. **Task Execution**: All tasks inside each session run concurrently during the observation period
 2. **VFO Markers**: Tasks can reference VFO markers for processing specific signals within the SDR bandwidth
 3. **Hardware Control**: Rotator tracking and rig Doppler correction are optional and independent
 4. **Status Lifecycle**: scheduled → running → completed/failed/cancelled

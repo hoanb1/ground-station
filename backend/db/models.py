@@ -369,9 +369,11 @@ class MonitoredSatellites(Base):
 
     # Grouped config as JSON (flexible, maps to frontend structure)
     satellite_config = Column(JSON, nullable=False)  # {"name": "ISS (ZARYA)", "group_id": "..."}
-    hardware_config = Column(JSON, nullable=False)  # {"sdr": {...}, "rotator": {...}, "rig": {...}}
+    hardware_config = Column(JSON, nullable=False)  # {"rotator": {...}, "rig": {...}}
     generation_config = Column(JSON, nullable=False)  # {"min_elevation": 20, "lookahead_hours": 24}
-    tasks = Column(JSON, nullable=False)  # [{"type": "iq_recording", "config": {}}]
+    sessions = Column(
+        JSON, nullable=False
+    )  # [{"sdr": {...}, "tasks": [{"type": "iq_recording", "config": {}}]}]
 
     # Metadata
     created_at = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
@@ -423,8 +425,10 @@ class ScheduledObservations(Base):
     pass_config = Column(JSON, nullable=False)  # {"peak_altitude": 22.268358}
     hardware_config = Column(
         JSON, nullable=False
-    )  # {"sdr": {...}, "rotator": {...}, "rig": {...}, "transmitter": {...}}
-    tasks = Column(JSON, nullable=False)  # [{"type": "iq_recording", "config": {}}]
+    )  # {"rotator": {...}, "rig": {...}, "transmitter": {...}}
+    sessions = Column(
+        JSON, nullable=False
+    )  # [{"sdr": {...}, "tasks": [{"type": "iq_recording", "config": {}}]}]
 
     # Auto-generation tracking (nullable if manually created)
     monitored_satellite_id = Column(

@@ -117,6 +117,7 @@ class SessionService:
         sdr_config: Dict[str, Any],
         vfo_number: int,
         metadata: Optional[Dict[str, Any]] = None,
+        session_key: Optional[str] = None,
     ) -> str:
         """
         Register and start an internal observation session.
@@ -133,11 +134,11 @@ class SessionService:
         Returns:
             Internal session ID (e.g., "internal:obs-abc-123")
         """
-        session_id = VFOManager.make_internal_session_id(observation_id)
+        session_id = VFOManager.make_internal_session_id(observation_id, session_key)
 
         # Register in tracker
         session_tracker.register_internal_session(
-            observation_id, sdr_config["sdr_id"], vfo_number, metadata
+            observation_id, sdr_config["sdr_id"], vfo_number, metadata, session_key=session_key
         )
 
         # Configure SDR
@@ -148,7 +149,9 @@ class SessionService:
 
         return str(session_id)
 
-    async def cleanup_internal_observation(self, observation_id: str) -> None:
+    async def cleanup_internal_observation(
+        self, observation_id: str, session_key: Optional[str] = None
+    ) -> None:
         """
         Cleanup internal observation session.
 
@@ -157,13 +160,13 @@ class SessionService:
         Args:
             observation_id: Unique observation identifier
         """
-        session_id = VFOManager.make_internal_session_id(observation_id)
+        session_id = VFOManager.make_internal_session_id(observation_id, session_key)
 
         # Full cleanup (stops SDR, clears tracker, removes config)
         await self.cleanup_session(session_id)
 
         # Unregister from internal session set
-        session_tracker.unregister_internal_session(observation_id)
+        session_tracker.unregister_internal_session(observation_id, session_key=session_key)
 
 
 # Singleton instance
