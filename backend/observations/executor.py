@@ -47,6 +47,12 @@ from session.service import session_service
 from session.tracker import session_tracker
 from vfos.state import INTERNAL_VFO_NUMBER, VFOManager
 
+KNOWN_SATDUMP_PIPELINES = {
+    "meteor_m2-x_lrpt",
+    "meteor_m2-x_lrpt_80k",
+    "meteor_hrpt",
+}
+
 
 class ObservationExecutor:
     """
@@ -671,6 +677,10 @@ class ObservationExecutor:
                     f"No SatDump pipeline configured for IQ task {task_index} in {observation_id}"
                 )
                 continue
+            if pipeline not in KNOWN_SATDUMP_PIPELINES:
+                logger.warning(
+                    f"SatDump pipeline '{pipeline}' is not in the known list; continuing anyway"
+                )
 
             recording_entry = task_info.get(task_index)
             recording_path = recording_entry.get("recording_path") if recording_entry else None

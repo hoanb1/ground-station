@@ -401,7 +401,8 @@ export const SATDUMP_PIPELINES = {
         description: 'SatDump pipelines for METEOR satellites',
         pipelines: [
             { value: 'meteor_m2-x_lrpt', label: 'METEOR-M2 LRPT' },
-            { value: 'meteor_m2-x_lrpt_80k', label: 'METEOR-M2 LRPT (80k)' }
+            { value: 'meteor_m2-x_lrpt_80k', label: 'METEOR-M2 LRPT (80k)' },
+            { value: 'meteor_hrpt', label: 'METEOR HRPT' }
         ]
     }
 };

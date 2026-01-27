@@ -109,6 +109,7 @@ import AudioDialog from './audio-dialog.jsx';
 import TranscriptionDialog from './transcription-dialog.jsx';
 import FileTableView from './file-table-view.jsx';
 import MeteorM2xLrptFolderDialog from './meteor-m2x-lrpt-folder-dialog.jsx';
+import MeteorHrptFolderDialog from './meteor-hrpt-folder-dialog.jsx';
 import ProcessingDialog from './processing-dialog.jsx';
 
 function formatBytes(bytes) {
@@ -289,6 +290,8 @@ export default function FilebrowserMain() {
     const [transcriptionFile, setTranscriptionFile] = useState(null);
     const [meteorM2xLrptFolderDialogOpen, setMeteorM2xLrptFolderDialogOpen] = useState(false);
     const [meteorM2xLrptFolder, setMeteorM2xLrptFolder] = useState(null);
+    const [meteorHrptFolderDialogOpen, setMeteorHrptFolderDialogOpen] = useState(false);
+    const [meteorHrptFolder, setMeteorHrptFolder] = useState(null);
     const [processingDialogOpen, setProcessingDialogOpen] = useState(false);
     const [processingRecording, setProcessingRecording] = useState(null);
     const [processingMenuAnchorEl, setProcessingMenuAnchorEl] = useState(null);
@@ -489,7 +492,11 @@ export default function FilebrowserMain() {
     const handleShowDetails = async (item) => {
         // Route to appropriate dialog based on item type
         if (item.type === 'decoded_folder') {
-            handleViewMeteorM2xLrptFolder(item);
+            if (item.pipeline === 'meteor_hrpt') {
+                handleViewMeteorHrptFolder(item);
+            } else {
+                handleViewMeteorM2xLrptFolder(item);
+            }
         } else if (item.type === 'decoded') {
             await handleViewTelemetry(item);
         } else if (item.type === 'audio') {
@@ -609,6 +616,14 @@ export default function FilebrowserMain() {
         // Open the METEOR M2-X LRPT folder dialog with the item data
         setMeteorM2xLrptFolder(item);
         setMeteorM2xLrptFolderDialogOpen(true);
+    };
+
+    const handleViewMeteorHrptFolder = (item) => {
+        if (item.type !== 'decoded_folder') return;
+
+        // Open the METEOR HRPT folder dialog with the item data
+        setMeteorHrptFolder(item);
+        setMeteorHrptFolderDialogOpen(true);
     };
 
     const handleOpenProcessing = (item) => {
@@ -2301,6 +2316,13 @@ export default function FilebrowserMain() {
                 open={meteorM2xLrptFolderDialogOpen}
                 onClose={() => setMeteorM2xLrptFolderDialogOpen(false)}
                 folder={meteorM2xLrptFolder}
+            />
+
+            {/* METEOR HRPT Folder Dialog */}
+            <MeteorHrptFolderDialog
+                open={meteorHrptFolderDialogOpen}
+                onClose={() => setMeteorHrptFolderDialogOpen(false)}
+                folder={meteorHrptFolder}
             />
 
             {/* Processing Dialog */}
