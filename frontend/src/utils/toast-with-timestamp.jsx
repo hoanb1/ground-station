@@ -57,13 +57,17 @@ const wrapWithTimestamp = (message) => {
 };
 
 const createToastWithClickHandler = (toastFn) => (message, options = {}) => {
+    const { disablePauseOnClick, onClick, ...restOptions } = options;
     const toastId = toastFn(wrapWithTimestamp(message), {
         closeOnClick: false,
-        onClick: () => {
-            // Pause the toast by setting autoClose to false
-            originalToast.update(toastId, { autoClose: false });
-        },
-        ...options,
+        onClick: disablePauseOnClick
+            ? onClick
+            : () => {
+                // Pause the toast by setting autoClose to false
+                originalToast.update(toastId, { autoClose: false });
+                if (onClick) onClick();
+            },
+        ...restOptions,
     });
 
     return toastId;
@@ -75,4 +79,13 @@ export const toast = {
     info: createToastWithClickHandler(originalToast.info),
     warning: createToastWithClickHandler(originalToast.warning),
     warn: createToastWithClickHandler(originalToast.warn),
+    update: (toastId, message, options = {}) => {
+        const { disablePauseOnClick, onClick, ...restOptions } = options;
+        originalToast.update(toastId, {
+            render: wrapWithTimestamp(message),
+            closeOnClick: false,
+            onClick: disablePauseOnClick ? onClick : undefined,
+            ...restOptions,
+        });
+    },
 };

@@ -151,6 +151,7 @@ export const ToastContainerWithStyles = () => {
                 .Toastify__toast-body {
                     white-space: pre-line !important;
                 }
+
             `}</style>
             <ToastContainer
                 position={position}
