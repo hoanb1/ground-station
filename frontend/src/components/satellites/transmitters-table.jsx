@@ -21,6 +21,7 @@ import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Tool
 import Button from "@mui/material/Button";
 import * as React from "react";
 import {useState, useEffect} from "react";
+import { createPortal } from "react-dom";
 import {
     DataGrid,
     gridClasses,
@@ -75,7 +76,7 @@ const formatFrequency = (frequency) => {
 
 const paginationModel = {page: 0, pageSize: 10};
 
-const TransmittersTable = ({ satelliteData, inDialog = false }) => {
+const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarget = null }) => {
     const { t } = useTranslation('satellites');
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -297,191 +298,215 @@ const TransmittersTable = ({ satelliteData, inDialog = false }) => {
                             },
                         }}
                     />
-                    <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
-                        <Button variant="contained" onClick={handleAddClick}>
-                            {t('satellite_info.transmitters.add')}
-                        </Button>
-                        <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
-                            {t('satellite_info.transmitters.edit')}
-                        </Button>
-                        <Button variant="contained" color="error" disabled={selected.length < 1}
-                                onClick={handleDeleteClick}>
-                            {t('satellite_info.transmitters.delete')}
-                        </Button>
-                        <Dialog
-                            open={deleteConfirmOpen}
-                            onClose={() => setDeleteConfirmOpen(false)}
-                            maxWidth="sm"
-                            fullWidth
-                            PaperProps={{
-                                sx: {
-                                    bgcolor: 'background.paper',
-                                    borderRadius: 2,
-                                }
-                            }}
-                        >
-                            <DialogTitle
-                                sx={{
-                                    bgcolor: 'error.main',
-                                    color: 'error.contrastText',
-                                    fontSize: '1.125rem',
-                                    fontWeight: 600,
-                                    py: 2,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1.5,
-                                }}
-                            >
-                                <Box
-                                    component="span"
-                                    sx={{
-                                        width: 24,
-                                        height: 24,
-                                        borderRadius: '50%',
-                                        bgcolor: 'error.contrastText',
-                                        color: 'error.main',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontWeight: 'bold',
-                                        fontSize: '1rem',
-                                    }}
-                                >
-                                    !
-                                </Box>
-                                {t('satellite_info.transmitters.delete_confirm_title')}
-                            </DialogTitle>
-                            <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
-                                <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
-                                    {t('satellite_info.transmitters.delete_confirm_message')}
-                                </Typography>
-                                <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-                                    {selected.length === 1 ? 'Transmitter to be deleted:' : `${selected.length} Transmitters to be deleted:`}
-                                </Typography>
-                                <Box sx={{
-                                    maxHeight: 300,
-                                    overflowY: 'auto',
-                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
-                                    borderRadius: 1,
-                                    border: (theme) => `1px solid ${theme.palette.divider}`,
-                                }}>
-                                    {selected.map((id, index) => {
-                                        const transmitter = rows.find(row => row.id === id);
-                                        if (!transmitter) return null;
-                                        return (
-                                            <Box
-                                                key={id}
-                                                sx={{
-                                                    p: 2,
-                                                    borderBottom: index < selected.length - 1 ? (theme) => `1px solid ${theme.palette.divider}` : 'none',
-                                                }}
-                                            >
-                                                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
-                                                    {transmitter.description !== '-' ? transmitter.description : 'Unnamed Transmitter'}
-                                                </Typography>
-                                                <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
-                                                    {transmitter.type !== '-' && (
-                                                        <>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                                Type:
-                                                            </Typography>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                                                {transmitter.type}
-                                                            </Typography>
-                                                        </>
-                                                    )}
-
-                                                    {transmitter.mode !== '-' && (
-                                                        <>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                                Mode:
-                                                            </Typography>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                                                {transmitter.mode}
-                                                            </Typography>
-                                                        </>
-                                                    )}
-
-                                                    {transmitter.downlinkLow !== '-' && (
-                                                        <>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                                Downlink:
-                                                            </Typography>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                                                {transmitter.downlinkLow === transmitter.downlinkHigh || transmitter.downlinkHigh === '-'
-                                                                    ? formatFrequency(transmitter.downlinkLow)
-                                                                    : `${formatFrequency(transmitter.downlinkLow)} - ${formatFrequency(transmitter.downlinkHigh)}`
-                                                                }
-                                                            </Typography>
-                                                        </>
-                                                    )}
-
-                                                    {transmitter.uplinkLow !== '-' && (
-                                                        <>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                                Uplink:
-                                                            </Typography>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                                                {transmitter.uplinkLow === transmitter.uplinkHigh || transmitter.uplinkHigh === '-'
-                                                                    ? formatFrequency(transmitter.uplinkLow)
-                                                                    : `${formatFrequency(transmitter.uplinkLow)} - ${formatFrequency(transmitter.uplinkHigh)}`
-                                                                }
-                                                            </Typography>
-                                                        </>
-                                                    )}
-
-                                                    {transmitter.status !== '-' && (
-                                                        <>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                                Status:
-                                                            </Typography>
-                                                            <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                                                {transmitter.status}
-                                                            </Typography>
-                                                        </>
-                                                    )}
-                                                </Box>
-                                            </Box>
-                                        );
-                                    })}
-                                </Box>
-                            </DialogContent>
-                            <DialogActions
-                                sx={{
-                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
-                                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                                    px: 3,
-                                    py: 2,
-                                    gap: 1.5,
-                                }}
-                            >
-                                <Button
-                                    onClick={() => setDeleteConfirmOpen(false)}
-                                    variant="outlined"
-                                    color="inherit"
-                                    sx={{
-                                        minWidth: 100,
-                                        textTransform: 'none',
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    {t('satellite_info.transmitters.cancel')}
+                    {actionsPortalTarget
+                        ? createPortal(
+                            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                                <Button variant="contained" size="small" onClick={handleAddClick}>
+                                    {t('satellite_info.transmitters.add')}
+                                </Button>
+                                <Button variant="contained" size="small" disabled={selected.length !== 1} onClick={handleEditClick}>
+                                    {t('satellite_info.transmitters.edit')}
                                 </Button>
                                 <Button
                                     variant="contained"
+                                    size="small"
                                     color="error"
-                                    onClick={handleDeleteConfirm}
-                                    sx={{
-                                        minWidth: 100,
-                                        textTransform: 'none',
-                                        fontWeight: 600,
-                                    }}
+                                    disabled={selected.length < 1}
+                                    onClick={handleDeleteClick}
                                 >
                                     {t('satellite_info.transmitters.delete')}
                                 </Button>
-                            </DialogActions>
-                        </Dialog>
-                    </Stack>
+                            </Stack>,
+                            actionsPortalTarget
+                        )
+                        : (
+                            <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
+                                <Button variant="contained" onClick={handleAddClick}>
+                                    {t('satellite_info.transmitters.add')}
+                                </Button>
+                                <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
+                                    {t('satellite_info.transmitters.edit')}
+                                </Button>
+                                <Button variant="contained" color="error" disabled={selected.length < 1}
+                                        onClick={handleDeleteClick}>
+                                    {t('satellite_info.transmitters.delete')}
+                                </Button>
+                            </Stack>
+                        )
+                    }
+                    <Dialog
+                        open={deleteConfirmOpen}
+                        onClose={() => setDeleteConfirmOpen(false)}
+                        maxWidth="sm"
+                        fullWidth
+                        PaperProps={{
+                            sx: {
+                                bgcolor: 'background.paper',
+                                borderRadius: 2,
+                            }
+                        }}
+                    >
+                        <DialogTitle
+                            sx={{
+                                bgcolor: 'error.main',
+                                color: 'error.contrastText',
+                                fontSize: '1.125rem',
+                                fontWeight: 600,
+                                py: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                            }}
+                        >
+                            <Box
+                                component="span"
+                                sx={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    bgcolor: 'error.contrastText',
+                                    color: 'error.main',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: 'bold',
+                                    fontSize: '1rem',
+                                }}
+                            >
+                                !
+                            </Box>
+                            {t('satellite_info.transmitters.delete_confirm_title')}
+                        </DialogTitle>
+                        <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
+                            <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
+                                {t('satellite_info.transmitters.delete_confirm_message')}
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                                {selected.length === 1 ? 'Transmitter to be deleted:' : `${selected.length} Transmitters to be deleted:`}
+                            </Typography>
+                            <Box sx={{
+                                maxHeight: 300,
+                                overflowY: 'auto',
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                                borderRadius: 1,
+                                border: (theme) => `1px solid ${theme.palette.divider}`,
+                            }}>
+                                {selected.map((id, index) => {
+                                    const transmitter = rows.find(row => row.id === id);
+                                    if (!transmitter) return null;
+                                    return (
+                                        <Box
+                                            key={id}
+                                            sx={{
+                                                p: 2,
+                                                borderBottom: index < selected.length - 1 ? (theme) => `1px solid ${theme.palette.divider}` : 'none',
+                                            }}
+                                        >
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
+                                                {transmitter.description !== '-' ? transmitter.description : 'Unnamed Transmitter'}
+                                            </Typography>
+                                            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
+                                                {transmitter.type !== '-' && (
+                                                    <>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                            Type:
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                            {transmitter.type}
+                                                        </Typography>
+                                                    </>
+                                                )}
+
+                                                {transmitter.mode !== '-' && (
+                                                    <>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                            Mode:
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                            {transmitter.mode}
+                                                        </Typography>
+                                                    </>
+                                                )}
+
+                                                {transmitter.downlinkLow !== '-' && (
+                                                    <>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                            Downlink:
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                            {transmitter.downlinkLow === transmitter.downlinkHigh || transmitter.downlinkHigh === '-'
+                                                                ? formatFrequency(transmitter.downlinkLow)
+                                                                : `${formatFrequency(transmitter.downlinkLow)} - ${formatFrequency(transmitter.downlinkHigh)}`
+                                                            }
+                                                        </Typography>
+                                                    </>
+                                                )}
+
+                                                {transmitter.uplinkLow !== '-' && (
+                                                    <>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                            Uplink:
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                            {transmitter.uplinkLow === transmitter.uplinkHigh || transmitter.uplinkHigh === '-'
+                                                                ? formatFrequency(transmitter.uplinkLow)
+                                                                : `${formatFrequency(transmitter.uplinkLow)} - ${formatFrequency(transmitter.uplinkHigh)}`
+                                                            }
+                                                        </Typography>
+                                                    </>
+                                                )}
+
+                                                {transmitter.status !== '-' && (
+                                                    <>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
+                                                            Status:
+                                                        </Typography>
+                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
+                                                            {transmitter.status}
+                                                        </Typography>
+                                                    </>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        </DialogContent>
+                        <DialogActions
+                            sx={{
+                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
+                                borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                                px: 3,
+                                py: 2,
+                                gap: 1.5,
+                            }}
+                        >
+                            <Button
+                                onClick={() => setDeleteConfirmOpen(false)}
+                                variant="outlined"
+                                color="inherit"
+                                sx={{
+                                    minWidth: 100,
+                                    textTransform: 'none',
+                                    fontWeight: 500,
+                                }}
+                            >
+                                {t('satellite_info.transmitters.cancel')}
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                onClick={handleDeleteConfirm}
+                                sx={{
+                                    minWidth: 100,
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                {t('satellite_info.transmitters.delete')}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
                 </Box>
             ) : (
                 <div style={{textAlign: 'center'}}>

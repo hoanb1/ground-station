@@ -29,9 +29,6 @@ import {
     Grid,
     Button,
     Card,
-    Dialog,
-    DialogTitle,
-    DialogContent,
     Link,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -44,7 +41,6 @@ import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import InfoIcon from '@mui/icons-material/Info';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import EditIcon from '@mui/icons-material/Edit';
-import CloseIcon from '@mui/icons-material/Close';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -52,7 +48,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { humanizeFrequency, formatLegibleDateTime, betterStatusValue } from "../common/common.jsx";
 import SatSelectorIsland from "../target/satellite-selector.jsx";
 import { SatellitePassTimeline } from "../target/timeline-main.jsx";
-import TransmittersTable from "../satellites/transmitters-table.jsx";
+import TransmittersDialog from "../satellites/transmitters-dialog.jsx";
 import { calculateElevationCurve } from "../../utils/elevation-curve-calculator.js";
 
 const SatelliteInfoPopover = () => {
@@ -714,33 +710,13 @@ const SatelliteInfoPopover = () => {
             </Popover>
 
             {/* Transmitters Dialog */}
-            <Dialog
+            <TransmittersDialog
                 open={transmittersDialogOpen}
                 onClose={() => setTransmittersDialogOpen(false)}
-                maxWidth="xl"
-                fullWidth
-                PaperProps={{
-                    sx: {
-                        backgroundColor: 'background.elevated',
-                    }
-                }}
-            >
-                <DialogTitle sx={{ backgroundColor: 'background.elevated', color: 'text.primary' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6">
-                            {satelliteData.details?.name} - Transmitters
-                        </Typography>
-                        <IconButton onClick={() => setTransmittersDialogOpen(false)} size="small">
-                            <CloseIcon />
-                        </IconButton>
-                    </Box>
-                </DialogTitle>
-                <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.elevated' }}>
-                    {targetSatelliteData && (
-                        <TransmittersTable satelliteData={targetSatelliteData} inDialog={true} />
-                    )}
-                </DialogContent>
-            </Dialog>
+                title={`${satelliteData.details?.name || ''} - Transmitters`}
+                satelliteData={targetSatelliteData}
+                variant="elevated"
+            />
         </>
     );
 };

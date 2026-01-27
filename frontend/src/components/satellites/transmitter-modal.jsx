@@ -345,6 +345,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     </Typography>
 
                     <TextField
+                        size="small"
                         fullWidth
                         label="Description"
                         value={formData.description}
@@ -357,7 +358,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     />
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
-                        <FormControl fullWidth variant="outlined" error={validationErrors.type}>
+                        <FormControl fullWidth variant="outlined" error={validationErrors.type} size="small">
                             <InputLabel sx={getInputLabelSx('type')}>Type *</InputLabel>
                             <Select
                                 value={formData.type}
@@ -372,7 +373,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                             </Select>
                         </FormControl>
 
-                        <FormControl fullWidth variant="outlined" error={validationErrors.status}>
+                        <FormControl fullWidth variant="outlined" error={validationErrors.status} size="small">
                             <InputLabel sx={getInputLabelSx('status')}>Status *</InputLabel>
                             <Select
                                 value={formData.status}
@@ -388,7 +389,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         </FormControl>
                     </Box>
 
-                    <FormControl fullWidth variant="outlined" sx={{ mb: 3 }} error={validationErrors.alive}>
+                    <FormControl fullWidth variant="outlined" sx={{ mb: 3 }} error={validationErrors.alive} size="small">
                         <InputLabel sx={getInputLabelSx('alive')}>Alive *</InputLabel>
                         <Select
                             value={formData.alive}
@@ -409,6 +410,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     </Typography>
 
                     <TextField
+                        size="small"
                         fullWidth
                         label="Uplink Low (Hz)"
                         value={formData.uplinkLow}
@@ -421,6 +423,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     />
 
                     <TextField
+                        size="small"
                         fullWidth
                         label="Uplink High (Hz)"
                         value={formData.uplinkHigh}
@@ -433,6 +436,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     />
 
                     <TextField
+                        size="small"
                         fullWidth
                         label="Uplink Drift (Hz)"
                         value={formData.uplinkDrift}
@@ -449,6 +453,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     </Typography>
 
                     <TextField
+                        size="small"
                         fullWidth
                         label="Downlink Low (Hz)"
                         value={formData.downlinkLow}
@@ -461,6 +466,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     />
 
                     <TextField
+                        size="small"
                         fullWidth
                         label="Downlink High (Hz)"
                         value={formData.downlinkHigh}
@@ -473,6 +479,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     />
 
                     <TextField
+                        size="small"
                         fullWidth
                         label="Downlink Drift (Hz)"
                         value={formData.downlinkDrift}
@@ -489,7 +496,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     </Typography>
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
-                        <FormControl fullWidth variant="outlined">
+                        <FormControl fullWidth variant="outlined" size="small">
                             <InputLabel sx={getInputLabelSx('mode')}>Downlink mode</InputLabel>
                             <Select
                                 value={formData.mode}
@@ -504,7 +511,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                             </Select>
                         </FormControl>
 
-                        <FormControl fullWidth variant="outlined">
+                        <FormControl fullWidth variant="outlined" size="small">
                             <InputLabel sx={getInputLabelSx('uplinkMode')}>Uplink mode</InputLabel>
                             <Select
                                 value={formData.uplinkMode}
@@ -521,7 +528,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     </Box>
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 0 }}>
-                        <FormControl fullWidth variant="outlined">
+                        <FormControl fullWidth variant="outlined" size="small">
                             <InputLabel sx={getInputLabelSx('invert')}>Invert</InputLabel>
                             <Select
                                 value={formData.invert}
@@ -537,6 +544,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         </FormControl>
 
                         <TextField
+                            size="small"
                             fullWidth
                             label="Baud Rate"
                             value={formData.baud}

@@ -20,40 +20,20 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
-import TransmittersTable from '../../satellites/transmitters-table.jsx';
+import SharedTransmittersDialog from '../../satellites/transmitters-dialog.jsx';
 
 /**
  * Transmitters Dialog Component
  */
 export const TransmittersDialog = ({ open, onClose, targetSatelliteName, targetSatelliteData }) => {
     return (
-        <Dialog
+        <SharedTransmittersDialog
             open={open}
             onClose={onClose}
-            maxWidth="xl"
-            fullWidth
-            PaperProps={{
-                sx: {
-                    backgroundColor: 'background.elevated',
-                }
-            }}
-        >
-            <DialogTitle sx={{ backgroundColor: 'background.elevated', color: 'text.primary' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">
-                        {targetSatelliteName} - Transmitters
-                    </Typography>
-                    <IconButton onClick={onClose} size="small">
-                        <CloseIcon />
-                    </IconButton>
-                </Box>
-            </DialogTitle>
-            <DialogContent dividers sx={{ p: 3, backgroundColor: 'background.elevated' }}>
-                {targetSatelliteData && (
-                    <TransmittersTable satelliteData={targetSatelliteData} inDialog={true} />
-                )}
-            </DialogContent>
-        </Dialog>
+            title={`${targetSatelliteName || ''} - Transmitters`}
+            satelliteData={targetSatelliteData}
+            variant="elevated"
+        />
     );
 };
 

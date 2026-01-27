@@ -81,7 +81,7 @@ import { useTranslation } from 'react-i18next';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { useNavigate } from "react-router-dom";
-import TransmittersTable from "./transmitters-table.jsx";
+import TransmittersDialog from "./transmitters-dialog.jsx";
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 
@@ -964,53 +964,15 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     </Button>
                 </DialogActions>
             </Dialog>
-            <Dialog
+            <TransmittersDialog
                 open={transmittersDialogOpen}
                 onClose={handleCloseTransmitters}
-                fullWidth
-                maxWidth="xl"
-                PaperProps={{
-                    sx: {
-                        bgcolor: 'background.paper',
-                        borderRadius: 2,
-                    },
-                }}
-            >
-                <DialogTitle
-                    sx={{
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
-                        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                        fontSize: '1.125rem',
-                        fontWeight: 600,
-                        py: 2,
-                    }}
-                >
-                    {t('satellite_database.edit_transmitters_title', {
-                        name: clickedSatellite?.name || clickedSatellite?.norad_id || '',
-                    })}
-                </DialogTitle>
-                <DialogContent
-                    sx={{
-                        px: 3,
-                        py: 2.5,
-                        bgcolor: 'background.paper',
-                    }}
-                >
-                    <TransmittersTable satelliteData={clickedSatellite} inDialog />
-                </DialogContent>
-                <DialogActions
-                    sx={{
-                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
-                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                        px: 3,
-                        py: 2,
-                    }}
-                >
-                    <Button variant="outlined" onClick={handleCloseTransmitters}>
-                        {t('satellite_database.close')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                title={t('satellite_database.edit_transmitters_title', {
+                    name: clickedSatellite?.name || clickedSatellite?.norad_id || '',
+                })}
+                satelliteData={clickedSatellite}
+                variant="paper"
+            />
         </Box>
     );
 });
