@@ -152,6 +152,11 @@ export const ToastContainerWithStyles = () => {
                     white-space: pre-line !important;
                 }
 
+                .observation-countdown-toast__countdown {
+                    font-size: 18px;
+                    text-align: right;
+                }
+
             `}</style>
             <ToastContainer
                 position={position}
