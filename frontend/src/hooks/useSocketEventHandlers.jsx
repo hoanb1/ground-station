@@ -246,42 +246,11 @@ export const useSocketEventHandlers = (socket) => {
             }
 
             if (data.status === 'complete' && data.success) {
-                const newSats = data.newly_added?.satellites?.length || 0;
-                const newTransmitters = data.newly_added?.transmitters?.length || 0;
-                const modifiedSats = data.modified?.satellites?.length || 0;
-                const modifiedTransmitters = data.modified?.transmitters?.length || 0;
-                const removedSats = data.removed?.satellites?.length || 0;
-                const removedTransmitters = data.removed?.transmitters?.length || 0;
-
-                let details = [];
-                if (newSats > 0 || newTransmitters > 0) {
-                    details.push(t('notifications.sync.new_items', { satellites: newSats, transmitters: newTransmitters }));
-                }
-                if (modifiedSats > 0 || modifiedTransmitters > 0) {
-                    details.push(t('notifications.sync.modified_items', { satellites: modifiedSats, transmitters: modifiedTransmitters }));
-                }
-                if (removedSats > 0 || removedTransmitters > 0) {
-                    details.push(t('notifications.sync.removed_items', { satellites: removedSats, transmitters: removedTransmitters }));
-                }
-
-                const body = details.length > 0 ? details.join('\n') : t('notifications.sync.no_changes');
-
-                toast.success(
-                    <ToastMessage
-                        title={t('notifications.sync.tle_sync_complete')}
-                        body={body}
-                    />,
-                    {
-                        icon: () => <SatelliteAltIcon />,
-                        autoClose: 6000,
-                    }
-                );
-                dispatch(setSynchronizing(false));
-
                 // Refresh satellite groups in Redux store so all components get updated
                 if (socket && socket.connected) {
                     store.dispatch(fetchSatelliteGroups({ socket }));
                 }
+                dispatch(setSynchronizing(false));
             }
         });
 
@@ -323,8 +292,6 @@ export const useSocketEventHandlers = (socket) => {
                 case 'decoded-saved':
                 case 'waterfall-generated':
                 case 'satdump-completed':
-                    // Set new files indicator when files are created/modified
-                    store.dispatch({ type: 'filebrowser/setHasNewFiles', payload: true });
                     // Trigger global file list refresh
                     store.dispatch(fetchFiles({
                         socket,

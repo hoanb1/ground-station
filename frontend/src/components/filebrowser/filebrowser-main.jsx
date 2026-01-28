@@ -297,10 +297,12 @@ export default function FilebrowserMain() {
     const [processingMenuAnchorEl, setProcessingMenuAnchorEl] = useState(null);
     const [processingMenuRecording, setProcessingMenuRecording] = useState(null);
 
-    // Mark file browser as visited when component mounts
+    // Mark file browser as visited after list refreshes while on the page
     useEffect(() => {
-        dispatch(markFileBrowserVisited());
-    }, [dispatch]);
+        if (!filesLoading) {
+            dispatch(markFileBrowserVisited());
+        }
+    }, [dispatch, filesLoading, files.length]);
 
     // Fetch data when filters change (not pagination/sorting - those are handled in UI)
     useEffect(() => {

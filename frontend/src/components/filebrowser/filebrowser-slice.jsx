@@ -286,8 +286,10 @@ const fileBrowserSlice = createSlice({
             if (state.lastVisitedTimestamp && state.files.length > 0) {
                 const lastVisited = new Date(state.lastVisitedTimestamp);
                 const hasNew = state.files.some(file => {
-                    const fileCreated = new Date(file.created || file.start_time);
-                    return fileCreated > lastVisited;
+                    const fileTimestamp = file.modified || file.created || file.start_time;
+                    if (!fileTimestamp) return false;
+                    const fileDate = new Date(fileTimestamp);
+                    return !Number.isNaN(fileDate.getTime()) && fileDate > lastVisited;
                 });
                 state.hasNewFiles = hasNew;
             }
