@@ -145,6 +145,7 @@ export const useSocketEventHandlers = (socket) => {
     const notifiedVisibility = useRef(new Set());
     const notifiedStarts = useRef(new Set());
     const countdownToastIds = useRef(new Map());
+    const startNotificationTimeouts = useRef(new Map());
 
     useEffect(() => {
         if (!socket) return;
@@ -572,9 +573,17 @@ export const useSocketEventHandlers = (socket) => {
             if (observation && observation.enabled) {
                 const satName = observation.satellite?.name || 'Unknown';
                 const obsName = observation.name || satName;
+                const startKey = `${observation.id}:${observation.task_start || observation.pass?.event_start}`;
+
+                if (data.status !== 'scheduled') {
+                    const timeoutId = startNotificationTimeouts.current.get(startKey);
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                        startNotificationTimeouts.current.delete(startKey);
+                    }
+                }
 
                 if (data.status === 'running') {
-                    const startKey = `${observation.id}:${observation.task_start || observation.pass?.event_start}`;
                     const toastId = countdownToastIds.current.get(startKey);
                     if (toastId) {
                         const details = [
@@ -659,7 +668,6 @@ export const useSocketEventHandlers = (socket) => {
                     );
                 }
                 if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
-                    const startKey = `${observation.id}:${observation.task_start || observation.pass?.event_start}`;
                     countdownToastIds.current.delete(startKey);
                 }
             }
@@ -670,7 +678,93 @@ export const useSocketEventHandlers = (socket) => {
             store.dispatch(fetchScheduledObservations({ socket }));
         });
 
-        // Monitor observation timing events (satellite visibility and observation starts)
+        const showObservationStartToast = (obs, taskStart) => {
+            const startKey = `${obs.id}:${obs.task_start || obs.pass?.event_start}`;
+            if (notifiedStarts.current.has(startKey)) return;
+            notifiedStarts.current.add(startKey);
+
+            const satName = obs.satellite?.name || 'Unknown';
+            const obsName = obs.name || satName;
+
+            const totalDurationMs = Math.max(0, taskStart - new Date());
+            const toastId = toast.info(
+                <ObservationCountdownToast
+                    title={`Observation Starting Soon: ${obsName}`}
+                    startTime={taskStart}
+                    toastId={null}
+                    totalDurationMs={totalDurationMs}
+                />,
+                {
+                    icon: () => <RadioButtonCheckedIcon />,
+                    autoClose: Math.max(0, taskStart - new Date()),
+                    progress: 1,
+                    position: 'top-center',
+                    onClose: () => countdownToastIds.current.delete(startKey),
+                    disablePauseOnClick: true,
+                }
+            );
+            rawToast.update(toastId, { progress: 1 });
+            toast.update(
+                toastId,
+                <ObservationCountdownToast
+                    title={`Observation Starting Soon: ${obsName}`}
+                    startTime={taskStart}
+                    toastId={toastId}
+                    totalDurationMs={totalDurationMs}
+                />,
+                { disablePauseOnClick: true }
+            );
+            countdownToastIds.current.set(startKey, toastId);
+        };
+
+        const scheduleObservationStartNotifications = (observations) => {
+            const now = new Date();
+            const nextKeys = new Set();
+
+            observations.forEach((obs) => {
+                if (!obs.enabled || obs.status !== 'scheduled' || !obs.pass) return;
+
+                const taskStartValue = obs.task_start || obs.pass.event_start;
+                if (!taskStartValue) return;
+
+                const taskStart = new Date(taskStartValue);
+                const startKey = `${obs.id}:${taskStartValue}`;
+                nextKeys.add(startKey);
+
+                if (notifiedStarts.current.has(startKey)) return;
+
+                const timeUntilStart = taskStart - now;
+                if (timeUntilStart <= 0) return;
+
+                if (timeUntilStart <= 60000) {
+                    const existingTimeout = startNotificationTimeouts.current.get(startKey);
+                    if (existingTimeout) {
+                        clearTimeout(existingTimeout);
+                        startNotificationTimeouts.current.delete(startKey);
+                    }
+                    showObservationStartToast(obs, taskStart);
+                    return;
+                }
+
+                if (!startNotificationTimeouts.current.has(startKey)) {
+                    const timeoutId = setTimeout(() => {
+                        startNotificationTimeouts.current.delete(startKey);
+                        showObservationStartToast(obs, taskStart);
+                    }, timeUntilStart - 60000);
+                    startNotificationTimeouts.current.set(startKey, timeoutId);
+                }
+            });
+
+            for (const [key, timeoutId] of startNotificationTimeouts.current.entries()) {
+                if (!nextKeys.has(key)) {
+                    clearTimeout(timeoutId);
+                    startNotificationTimeouts.current.delete(key);
+                    notifiedStarts.current.delete(key);
+                }
+            }
+        };
+
+        // Monitor observation timing events (satellite visibility)
         const checkObservationTiming = () => {
             const state = store.getState();
             const observations = state.scheduler?.observations || [];
@@ -680,7 +774,6 @@ export const useSocketEventHandlers = (socket) => {
                 if (!obs.enabled || obs.status !== 'scheduled' || !obs.pass) return;
 
                 const satName = obs.satellite?.name || 'Unknown';
-                const obsName = obs.name || satName;
                 const eventStart = new Date(obs.pass.event_start); // AOS
                 const taskStart = new Date(obs.task_start || obs.pass.event_start);
 
@@ -690,48 +783,6 @@ export const useSocketEventHandlers = (socket) => {
                 // Check for satellite visibility (AOS reached but task not started)
                 const timeUntilAOS = eventStart - now;
                 const timeUntilStart = taskStart - now;
-
-                // Notify 1 minute before observation starts
-                const startKey = `${obs.id}:${obs.task_start || obs.pass.event_start}`;
-                if (timeUntilStart > 0 && timeUntilStart <= 60000 && !notifiedStarts.current.has(startKey)) {
-                    notifiedStarts.current.add(startKey);
-
-                    const details = [
-                        `Satellite: ${satName} (${obs.satellite?.norad_id || 'N/A'})`,
-                        obs.sdr?.name ? `SDR: ${obs.sdr.name}` : null,
-                        obs.transmitter?.frequency ? `Frequency: ${(obs.transmitter.frequency / 1e6).toFixed(3)} MHz` : null,
-                    ].filter(Boolean).join('\n');
-
-                    const totalDurationMs = timeUntilStart;
-                    const toastId = toast.info(
-                        <ObservationCountdownToast
-                            title={`Observation Starting Soon: ${obsName}`}
-                            startTime={taskStart}
-                            toastId={null}
-                            totalDurationMs={totalDurationMs}
-                        />,
-                        {
-                            icon: () => <RadioButtonCheckedIcon />,
-                            autoClose: timeUntilStart,
-                            progress: 1,
-                            position: 'top-center',
-                            onClose: () => countdownToastIds.current.delete(startKey),
-                            disablePauseOnClick: true,
-                        }
-                    );
-                    rawToast.update(toastId, { progress: 1 });
-                    toast.update(
-                        toastId,
-                        <ObservationCountdownToast
-                            title={`Observation Starting Soon: ${obsName}`}
-                            startTime={taskStart}
-                            toastId={toastId}
-                            totalDurationMs={totalDurationMs}
-                        />,
-                        { disablePauseOnClick: true }
-                    );
-                    countdownToastIds.current.set(startKey, toastId);
-                }
 
                 // Only notify about satellite visibility if event_start and task_start are different
                 if (!eventAndTaskSame && timeUntilAOS > -30000 && timeUntilAOS <= 0 && !notifiedVisibility.current.has(obs.id)) {
@@ -772,6 +823,20 @@ export const useSocketEventHandlers = (socket) => {
         const timingInterval = setInterval(checkObservationTiming, 5000);
         // Run immediately on mount
         checkObservationTiming();
+
+        let previousStartSignature = '';
+        const unsubscribe = store.subscribe(() => {
+            const state = store.getState();
+            const observations = state.scheduler?.observations || [];
+            const nextSignature = observations
+                .map(obs => `${obs.id}:${obs.task_start || obs.pass?.event_start || ''}:${obs.enabled}:${obs.status}`)
+                .join('|');
+            if (nextSignature !== previousStartSignature) {
+                previousStartSignature = nextSignature;
+                scheduleObservationStartNotifications(observations);
+            }
+        });
+        scheduleObservationStartNotifications(store.getState().scheduler?.observations || []);
 
         // Decoder data events (SSTV, AFSK, Morse, GMSK, Transcription, etc.)
         socket.on('decoder-data', (data) => {
@@ -946,6 +1011,11 @@ export const useSocketEventHandlers = (socket) => {
 
         // Cleanup function
         return () => {
+            unsubscribe();
+            for (const timeoutId of startNotificationTimeouts.current.values()) {
+                clearTimeout(timeoutId);
+            }
+            startNotificationTimeouts.current.clear();
             clearInterval(timingInterval);
             socket.off('connect');
             socket.off('reconnect_attempt');
