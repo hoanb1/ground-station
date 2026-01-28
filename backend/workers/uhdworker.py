@@ -3,9 +3,7 @@
 # type: ignore
 
 import logging
-import math
 import time
-from collections import deque
 from typing import Any, Dict
 
 import numpy as np
@@ -87,9 +85,6 @@ def uhd_worker_process(
 
         # Track whether we have IQ consumers
         has_iq_consumers = iq_queue_fft is not None or iq_queue_demod is not None
-
-        # Sample accumulation mode: 'accumulate', 'zero-pad', or 'drop'
-        insufficient_samples_mode = config.get("insufficient_samples_mode", "drop")
 
         # Connect to the UHD device
         logger.info(f"Connecting to UHD device with serial: {serial_number}...")
@@ -190,12 +185,9 @@ def uhd_worker_process(
         # Calculate the number of samples based on sample rate
         num_samples = calculate_samples_per_scan(actual_rate, fft_size)
 
-        # Create receive buffer
-        recv_buffer = np.zeros((1, num_samples), dtype=np.complex64)
-
-        # Initialize sample accumulation buffer
-        accumulated_samples = deque()
-        max_accumulation_size = fft_size * 4  # Prevent excessive memory usage
+        # Create receive buffer for smaller reads to build fixed-size chunks
+        read_size = min(num_samples, 8192)
+        recv_buffer = np.zeros((1, read_size), dtype=np.complex64)
 
         # Start streaming
         stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
@@ -277,10 +269,8 @@ def uhd_worker_process(
 
                             # Calculate a new number of samples
                             num_samples = calculate_samples_per_scan(actual_rate, fft_size)
-                            recv_buffer = np.zeros((1, num_samples), dtype=np.complex64)
-
-                            # Clear accumulated samples when sample rate changes
-                            accumulated_samples.clear()
+                            read_size = min(num_samples, 8192)
+                            recv_buffer = np.zeros((1, read_size), dtype=np.complex64)
 
                             # Restart streaming
                             stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
@@ -311,9 +301,6 @@ def uhd_worker_process(
                                 UHD.set_rx_freq(uhd.types.TuneRequest(center_freq), channel)
 
                             actual_freq = UHD.get_rx_freq(channel)
-
-                            # Clear accumulated samples to prevent mixing old/new frequency data
-                            accumulated_samples.clear()
 
                             # Restart streaming
                             stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
@@ -347,9 +334,6 @@ def uhd_worker_process(
 
                             actual_freq = UHD.get_rx_freq(channel)
 
-                            # Clear accumulated samples to prevent mixing old/new frequency data
-                            accumulated_samples.clear()
-
                             # Restart streaming
                             stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
                             stream_cmd.stream_now = True
@@ -364,16 +348,13 @@ def uhd_worker_process(
                     if "fft_size" in new_config:
                         if old_config.get("fft_size", 0) != new_config["fft_size"]:
                             fft_size = new_config["fft_size"]
-                            max_accumulation_size = fft_size * 4
-
-                            # Clear accumulated samples when FFT size changes
-                            accumulated_samples.clear()
 
                             # Update num_samples when FFT size changes
                             num_samples = calculate_samples_per_scan(actual_rate, fft_size)
 
                             # Create receive buffer
-                            recv_buffer = np.zeros((1, num_samples), dtype=np.complex64)
+                            read_size = min(num_samples, 8192)
+                            recv_buffer = np.zeros((1, read_size), dtype=np.complex64)
 
                             logger.info(f"Updated FFT size: {fft_size}")
 
@@ -398,18 +379,6 @@ def uhd_worker_process(
                             UHD.set_rx_antenna(new_config["antenna"], channel)
                             logger.info(f"Updated antenna: {new_config['antenna']}")
 
-                    if "insufficient_samples_mode" in new_config:
-                        if (
-                            old_config.get("insufficient_samples_mode", None)
-                            != new_config["insufficient_samples_mode"]
-                        ):
-                            insufficient_samples_mode = new_config["insufficient_samples_mode"]
-                            # Clear accumulated samples when mode changes to avoid mixed behavior
-                            accumulated_samples.clear()
-                            logger.info(
-                                f"Updated insufficient samples mode: {insufficient_samples_mode}"
-                            )
-
                     old_config = new_config
 
             except Exception as e:
@@ -429,98 +398,45 @@ def uhd_worker_process(
                     )
 
             try:
-                # Read samples from UHD with a shorter timeout
-                metadata = uhd.types.RXMetadata()
-                num_rx_samples = streamer.recv(recv_buffer, metadata, 0.05)
+                # Accumulate samples until we have a full chunk
+                samples_buffer = np.zeros(num_samples, dtype=np.complex64)
+                buffer_position = 0
 
-                if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
-                    stats["read_errors"] += 1
-                    if metadata.error_code == uhd.types.RXMetadataErrorCode.overflow:
-                        logger.warning("Receiver overflow - skipping frame")
-                        # Skip this frame and continue to prevent accumulation
-                        continue
-                    else:
+                while buffer_position < num_samples and not stop_event.is_set():
+                    metadata = uhd.types.RXMetadata()
+                    num_rx_samples = streamer.recv(recv_buffer, metadata, 0.05)
+
+                    if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
+                        stats["read_errors"] += 1
+                        if metadata.error_code == uhd.types.RXMetadataErrorCode.overflow:
+                            logger.warning("Receiver overflow - skipping frame")
+                            continue
                         logger.warning(f"Receiver error: {metadata.strerror()} - skipping frame")
+                        buffer_position = 0
+                        break
+
+                    if num_rx_samples < 256:
                         continue
 
-                # Skip very small reads
-                if num_rx_samples < 256:
+                    samples_remaining = num_samples - buffer_position
+                    samples_to_add = min(num_rx_samples, samples_remaining)
+
+                    samples_buffer[buffer_position : buffer_position + samples_to_add] = (
+                        recv_buffer[0][:samples_to_add]
+                    )
+                    buffer_position += samples_to_add
+
+                    stats["samples_read"] += samples_to_add
+                    stats["last_activity"] = time.time()
+
+                if buffer_position < num_samples:
+                    logger.warning(
+                        f"Not enough samples accumulated: {buffer_position}/{num_samples}"
+                    )
+                    time.sleep(0.005)
                     continue
 
-                # Get the samples from the buffer
-                new_samples = recv_buffer[0][:num_rx_samples].copy()
-                stats["samples_read"] += num_rx_samples
-                stats["last_activity"] = time.time()
-
-                # Handle samples based on mode
-                if insufficient_samples_mode == "accumulate":
-                    # Add new samples to the accumulation buffer
-                    accumulated_samples.extend(new_samples)
-
-                    # Prevent excessive memory usage
-                    while len(accumulated_samples) > max_accumulation_size:
-                        accumulated_samples.popleft()
-
-                    # Check if we have enough samples for processing
-                    if len(accumulated_samples) >= fft_size:
-                        # Extract samples for processing
-                        samples_array = np.array(list(accumulated_samples))
-
-                        # Use samples for FFT processing
-                        samples = samples_array[: len(samples_array)]
-
-                        # Keep overlap for the next iteration (50% overlap)
-                        overlap_size = min(fft_size // 2, len(accumulated_samples) // 2)
-
-                        # Remove processed samples but keep overlap
-                        samples_to_remove = len(accumulated_samples) - overlap_size
-                        for _ in range(samples_to_remove):
-                            if accumulated_samples:
-                                accumulated_samples.popleft()
-
-                        logger.debug(
-                            f"Processing {len(samples)} accumulated samples, keeping "
-                            f"{len(accumulated_samples)} for overlap"
-                        )
-                    else:
-                        # Not enough samples yet, continue accumulating
-                        logger.debug(f"Accumulating samples: {len(accumulated_samples)}/{fft_size}")
-                        continue
-
-                elif insufficient_samples_mode == "drop":
-                    if num_rx_samples < fft_size:
-                        logger.debug(
-                            f"Dropping frame: received {num_rx_samples} samples, need {fft_size}"
-                        )
-                        continue
-                    samples = new_samples
-
-                elif insufficient_samples_mode == "zero-pad":
-                    if num_rx_samples < fft_size:
-                        # Pad with zeros to reach FFT size
-                        logger.debug(
-                            f"Zero-padding frame: received {num_rx_samples} samples, padding to {fft_size}"
-                        )
-                        padded_samples = np.zeros(fft_size, dtype=np.complex64)
-                        padded_samples[:num_rx_samples] = new_samples
-                        samples = padded_samples
-                    else:
-                        samples = new_samples
-
-                else:
-                    logger.warning(
-                        f"Unknown insufficient_samples_mode: {insufficient_samples_mode}, defaulting to 'accumulate'"
-                    )
-                    # Fall back to accumulate mode
-                    accumulated_samples.extend(new_samples)
-                    if len(accumulated_samples) >= fft_size:
-                        samples = np.array(list(accumulated_samples)[:fft_size])
-                        # Clear processed samples
-                        for _ in range(fft_size // 2):
-                            if accumulated_samples:
-                                accumulated_samples.popleft()
-                    else:
-                        continue
+                samples = samples_buffer[:buffer_position]
 
                 # Stream IQ data to consumers (FFT processor, demodulators, etc.)
                 # Broadcast to both queues so FFT and demodulation can work independently

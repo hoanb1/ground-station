@@ -5,6 +5,7 @@ This task processes IQ recordings using SatDump with various satellite pipelines
 Supports progress tracking and graceful interruption.
 """
 
+import re
 import shutil
 import signal
 import subprocess
@@ -226,6 +227,7 @@ def satdump_process_recording(
                 break
 
             line = line.rstrip()
+            line = re.sub(r"^\[\d{2}:\d{2}:\d{2}\s+-\s+\d{2}/\d{2}/\d{4}\]\s*", "", line)
             if line and _progress_queue:
                 # Filter out debug (D) and trace (T) messages from SatDump
                 if "(D)" in line or "(T)" in line:
@@ -241,8 +243,6 @@ def satdump_process_recording(
                     # Try to extract percentage
                     try:
                         # Look for patterns like "Progress: 45.2%" or "[45%]"
-                        import re
-
                         match = re.search(r"(\d+(?:\.\d+)?)\s*%", line)
                         if match:
                             progress = float(match.group(1))
