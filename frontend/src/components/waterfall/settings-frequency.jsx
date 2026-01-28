@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
-import { humanizeFrequency, getFrequencyBand } from "../common/common.jsx";
+import { humanizeFrequency, preciseHumanizeFrequency, getFrequencyBand } from "../common/common.jsx";
 import FrequencyDisplay from "./frequency-dial.jsx";
 import { useTranslation } from 'react-i18next';
 
@@ -153,7 +153,7 @@ const FrequencyControlAccordion = ({
                                             {selectedTransmitter.description}
                                         </Box>
                                         <Box sx={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                                            {humanizeFrequency(selectedTransmitter.downlink_low)}
+                                            {preciseHumanizeFrequency(selectedTransmitter.downlink_low)}
                                         </Box>
                                     </Box>
                                 </Box>
@@ -232,7 +232,7 @@ const FrequencyControlAccordion = ({
                                         <Box>
                                             <Box sx={{ fontWeight: 600 }}>{transmitter.description}</Box>
                                             <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                                {humanizeFrequency(transmitter.downlink_low)}
+                                                {preciseHumanizeFrequency(transmitter.downlink_low)}
                                             </Box>
                                         </Box>
                                     </Box>
@@ -282,7 +282,7 @@ const FrequencyControlAccordion = ({
                                     <Box>
                                         <Box sx={{ fontWeight: 600 }}>{transmitter['description']}</Box>
                                         <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                            {humanizeFrequency(transmitter['downlink_low'])}
+                                            {preciseHumanizeFrequency(transmitter['downlink_low'])}
                                         </Box>
                                     </Box>
                                 </Box>
