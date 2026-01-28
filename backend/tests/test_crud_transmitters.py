@@ -551,6 +551,7 @@ class TestTransmittersCRUD:
             "status": "active",
             "citation": "Test Citation",
             "service": "Amateur",
+            "source": "satnogs",
             "iaru_coordination": "Coordinated",
             "iaru_coordination_url": "http://example.com",
             "frequency_violation": False,
@@ -565,3 +566,4 @@ class TestTransmittersCRUD:
         assert result["data"]["invert"] is True
         assert result["data"]["baud"] == 9600
         assert result["data"]["service"] == "Amateur"
+        assert result["data"]["source"] == "satnogs"

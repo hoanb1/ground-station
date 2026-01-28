@@ -292,6 +292,7 @@ async def query_existing_data(dbsession, logger):
                 "mode": row.mode,
                 "status": row.status,
                 "frequency_violation": row.frequency_violation,
+                "source": row.source,
             }
 
         logger.info(
@@ -462,6 +463,7 @@ def create_transmitter_from_satnogs_data(transmitter_info):
         "mode": transmitter_info.get("mode", None),
         "status": transmitter_info.get("status", None),
         "frequency_violation": transmitter_info.get("frequency_violation", None),
+        "source": "satnogs",
     }
 
     transmitter = Transmitters(
@@ -486,6 +488,7 @@ def create_transmitter_from_satnogs_data(transmitter_info):
         status=transmitter_info.get("status", None),
         citation=transmitter_info.get("citation", None),
         service=transmitter_info.get("service", None),
+        source="satnogs",
         iaru_coordination=transmitter_info.get("iaru_coordination", None),
         iaru_coordination_url=transmitter_info.get("iaru_coordination_url", None),
         itu_notification=transmitter_info.get("itu_notification", None),

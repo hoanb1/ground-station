@@ -169,6 +169,7 @@ class Transmitters(Base):
     status = Column(String, nullable=False)
     citation = Column(String, nullable=True)
     service = Column(String, nullable=True)
+    source = Column(String, nullable=True)
     iaru_coordination = Column(String, nullable=True)
     iaru_coordination_url = Column(String, nullable=True)
     itu_notification = Column(JSON, nullable=True)
