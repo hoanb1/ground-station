@@ -279,6 +279,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
     const hasFrequencyErrors = validationErrors.uplinkLow || validationErrors.uplinkHigh ||
         validationErrors.downlinkLow || validationErrors.downlinkHigh;
+    const sourceValue = transmitter?._original?.source || transmitter?.source || "-";
 
     return (
         <Dialog
@@ -356,6 +357,17 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         error={validationErrors.description}
                         required
                     />
+
+                    {!isNew && (
+                        <TextField
+                            size="small"
+                            fullWidth
+                            label="Source"
+                            value={sourceValue}
+                            sx={getFieldSx('source')}
+                            disabled
+                        />
+                    )}
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
                         <FormControl fullWidth variant="outlined" error={validationErrors.type} size="small">

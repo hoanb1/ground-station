@@ -90,13 +90,14 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
     // Update rows when satelliteData changes
     useEffect(() => {
         if (satelliteData && satelliteData.transmitters) {
-            const mappedRows = satelliteData.transmitters.map((transmitter, index) => ({
-                id: transmitter.id || `existing-${index}`,
-                description: transmitter.description || "-",
-                type: transmitter.type || "-",
-                status: transmitter.status || "-",
-                alive: transmitter.alive || "-",
-                uplinkLow: transmitter.uplink_low || "-",
+                const mappedRows = satelliteData.transmitters.map((transmitter, index) => ({
+                    id: transmitter.id || `existing-${index}`,
+                    description: transmitter.description || "-",
+                    source: transmitter.source || "-",
+                    type: transmitter.type || "-",
+                    status: transmitter.status || "-",
+                    alive: transmitter.alive || "-",
+                    uplinkLow: transmitter.uplink_low || "-",
                 uplinkHigh: transmitter.uplink_high || "-",
                 uplinkDrift: transmitter.uplink_drift || "-",
                 downlinkLow: transmitter.downlink_low || "-",
