@@ -258,7 +258,7 @@ class SatelliteTracker:
                         continue
 
                     if not tracking_state_reply["data"]["value"].get("group_id"):
-                        logger.warning(
+                        logger.debug(
                             "No group id found in satellite tracking state, continuing without group context"
                         )
 
