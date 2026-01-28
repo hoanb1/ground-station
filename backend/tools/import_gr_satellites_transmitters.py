@@ -5,6 +5,7 @@ import sqlite3
 import sys
 import uuid
 from pathlib import Path
+from typing import Optional
 
 import yaml
 
@@ -207,6 +208,35 @@ def build_rows(yaml_dir: Path, satellites_in_db: set[int], args: argparse.Namesp
     return rows, skipped_missing_sat, skipped_no_frequency
 
 
+def resolve_yaml_dir(yaml_dir: Path) -> Optional[Path]:
+    if yaml_dir.exists():
+        return yaml_dir
+
+    try:
+        import importlib.util
+
+        satyaml_spec = importlib.util.find_spec("satyaml")
+        if satyaml_spec and satyaml_spec.submodule_search_locations:
+            for location in satyaml_spec.submodule_search_locations:
+                candidate = Path(location)
+                if candidate.exists():
+                    return candidate
+
+        spec = importlib.util.find_spec("gr_satellites")
+        if spec and spec.submodule_search_locations:
+            for location in spec.submodule_search_locations:
+                base = Path(location)
+                candidate = base / "satyaml"
+                if candidate.exists():
+                    return candidate
+                for nested in base.rglob("satyaml"):
+                    return nested
+    except Exception:
+        return None
+
+    return None
+
+
 def upsert_transmitters(conn: sqlite3.Connection, rows: list[dict], dry_run: bool):
     if not rows:
         return 0
@@ -281,8 +311,14 @@ def main() -> int:
     if not args.db.exists():
         print(f"Database not found: {args.db}", file=sys.stderr)
         return 1
-    if not args.yaml_dir.exists():
-        print(f"YAML directory not found: {args.yaml_dir}", file=sys.stderr)
+
+    yaml_dir = resolve_yaml_dir(args.yaml_dir)
+    if not yaml_dir:
+        print(
+            f"YAML directory not found: {args.yaml_dir}. "
+            "Install the gr-satellites package or provide --yaml-dir.",
+            file=sys.stderr,
+        )
         return 1
 
     conn = sqlite3.connect(args.db)
@@ -291,7 +327,7 @@ def main() -> int:
     try:
         satellites_in_db = {row[0] for row in conn.execute("SELECT norad_id FROM satellites")}
         rows, skipped_missing_sat, skipped_no_frequency = build_rows(
-            args.yaml_dir, satellites_in_db, args
+            yaml_dir, satellites_in_db, args
         )
 
         purged_source = 0
