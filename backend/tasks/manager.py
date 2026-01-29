@@ -64,6 +64,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from common.logger import logger
+from tlesync.state import sync_state_manager
 
 
 class TaskStatus(Enum):
@@ -498,6 +499,12 @@ class BackgroundTaskManager:
             # TLE synchronization state update from background task
             state = message.get("state", {})
             progress = message.get("progress", 0)
+
+            # Keep main-process sync state in sync for fetch-sync-state requests
+            try:
+                sync_state_manager.set_state(state)
+            except Exception as e:
+                logger.error(f"Failed to update main sync state: {e}")
 
             # Forward the complete sync state to the frontend
             # This maintains compatibility with existing UI expectations
