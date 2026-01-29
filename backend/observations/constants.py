@@ -21,7 +21,7 @@
 PASS_OVERLAP_TOLERANCE_MINUTES = 5
 
 # Default auto-generation interval (in hours)
-DEFAULT_AUTO_GENERATE_INTERVAL_HOURS = 12
+DEFAULT_AUTO_GENERATE_INTERVAL_HOURS = 6
 
 # Preference key for auto-generation interval
 AUTO_GENERATE_INTERVAL_PREFERENCE = "scheduler.auto_generate_interval_hours"
