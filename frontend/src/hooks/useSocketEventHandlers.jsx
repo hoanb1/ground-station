@@ -24,7 +24,6 @@ import { toast as rawToast } from 'react-toastify';
 import CableIcon from '@mui/icons-material/Cable';
 import { Box } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { fetchPreferences } from '../components/settings/preferences-slice.jsx';
 
 // Toast message component with title and body
 const ToastMessage = ({ title, body }) => (
@@ -104,7 +103,13 @@ import {
 } from '../components/waterfall/waterfall-slice.jsx';
 import { updateAllVFOStates, setVFOProperty } from '../components/waterfall/vfo-marker/vfo-slice.jsx';
 import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
-import { setConnected, setConnecting, setReConnectAttempt } from '../components/dashboard/dashboard-slice.jsx';
+import {
+    setConnected,
+    setConnecting,
+    setInitialDataLoading,
+    setInitialDataProgress,
+    setReConnectAttempt,
+} from '../components/dashboard/dashboard-slice.jsx';
 import {
     decoderStatusChanged,
     decoderProgressUpdated,
@@ -157,6 +162,8 @@ export const useSocketEventHandlers = (socket) => {
             // Update connection state
             dispatch(setConnecting(false));
             dispatch(setConnected(true));
+            dispatch(setInitialDataLoading(true));
+            dispatch(setInitialDataProgress({ completed: 0, total: 0 }));
 
             // Update current session ID and clean up stale decoders from previous sessions
             store.dispatch(setCurrentSessionId(socket.id));
@@ -166,9 +173,6 @@ export const useSocketEventHandlers = (socket) => {
             setTimeout(() => {
                 store.dispatch(cleanupStaleDecoders());
             }, 1000);
-
-            // Load preferences first to ensure toast position is correct
-            await store.dispatch(fetchPreferences({socket}));
 
             // Request current background tasks list (in case tasks started before we connected)
             socket.emit('background_task:list', { filter: 'all' });
@@ -182,7 +186,7 @@ export const useSocketEventHandlers = (socket) => {
             //         icon: () => <CableIcon/>,
             //     }
             // );
-            initializeAppData(socket);
+            await initializeAppData(socket);
         });
 
         // Reconnection attempt event
@@ -235,6 +239,7 @@ export const useSocketEventHandlers = (socket) => {
             // Update connection state
             dispatch(setConnecting(true));
             dispatch(setConnected(false));
+            dispatch(setInitialDataLoading(false));
         });
 
         // Satellite sync events

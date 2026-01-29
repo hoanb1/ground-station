@@ -30,43 +30,81 @@ import { fetchSatelliteGroups } from '../components/satellites/groups-slice.jsx'
 import { getTrackingStateFromBackend, getTargetMapSettings } from '../components/target/target-slice.jsx';
 import { getOverviewMapSettings } from '../components/overview/overview-slice.jsx';
 import { fetchScheduledObservations, fetchMonitoredSatellites } from '../components/scheduler/scheduler-slice.jsx';
-import { setShowLocationSetupDialog } from '../components/dashboard/dashboard-slice.jsx';
+import {
+    setInitialDataLoading,
+    setInitialDataProgress,
+    setShowLocationSetupDialog,
+} from '../components/dashboard/dashboard-slice.jsx';
 
 /**
  * Initialize all application data from backend when connection is established
  * @param {Object} socket - Socket.IO connection instance
  */
-export function initializeAppData(socket) {
-    store.dispatch(fetchVersionInfo());
-    store.dispatch(fetchPreferences({socket}));
+export async function initializeAppData(socket) {
+    const tasks = [
+        {
+            name: 'preferences',
+            run: () => store.dispatch(fetchPreferences({ socket })),
+        },
+        {
+            name: 'version',
+            run: () => store.dispatch(fetchVersionInfo()),
+        },
+        {
+            name: 'location',
+            run: async () => {
+                try {
+                    const location = await store.dispatch(fetchLocationForUserId({ socket })).unwrap();
+                    console.log('Location fetched from backend:', location);
+                    if (!location) {
+                        console.log('Location is not set - showing dialog');
+                        store.dispatch(setShowLocationSetupDialog(true));
+                    } else {
+                        console.log('Location is set:', location);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch location:', error);
+                }
+            },
+        },
+        { name: 'rigs', run: () => store.dispatch(fetchRigs({ socket })) },
+        { name: 'rotators', run: () => store.dispatch(fetchRotators({ socket })) },
+        { name: 'cameras', run: () => store.dispatch(fetchCameras({ socket })) },
+        { name: 'sdrs', run: () => store.dispatch(fetchSDRs({ socket })) },
+        { name: 'tle_sources', run: () => store.dispatch(fetchTLESources({ socket })) },
+        { name: 'satellite_groups', run: () => store.dispatch(fetchSatelliteGroups({ socket })) },
+        { name: 'tracking_state', run: () => store.dispatch(getTrackingStateFromBackend({ socket })) },
+        { name: 'overview_map', run: () => store.dispatch(getOverviewMapSettings({ socket })) },
+        { name: 'target_map', run: () => store.dispatch(getTargetMapSettings({ socket })) },
+        { name: 'scheduled_observations', run: () => store.dispatch(fetchScheduledObservations({ socket })) },
+        { name: 'monitored_satellites', run: () => store.dispatch(fetchMonitoredSatellites({ socket })) },
+    ];
 
-    // Fetch location and check if it's set
-    store.dispatch(fetchLocationForUserId({socket}))
-        .unwrap()
-        .then((location) => {
-            console.log('Location fetched from backend:', location);
-            // Check if location is not set (null or undefined)
-            if (!location) {
-                console.log('Location is not set - showing dialog');
-                // Location is not set - trigger dialog
-                store.dispatch(setShowLocationSetupDialog(true));
-            } else {
-                console.log('Location is set:', location);
-            }
-        })
-        .catch((error) => {
-            console.error('Failed to fetch location:', error);
-        });
+    let completed = 0;
+    const total = tasks.length;
+    store.dispatch(setInitialDataLoading(true));
+    store.dispatch(setInitialDataProgress({ completed, total }));
 
-    store.dispatch(fetchRigs({socket}));
-    store.dispatch(fetchRotators({socket}));
-    store.dispatch(fetchCameras({socket}));
-    store.dispatch(fetchSDRs({socket}));
-    store.dispatch(fetchTLESources({socket}));
-    store.dispatch(fetchSatelliteGroups({socket}));
-    store.dispatch(getTrackingStateFromBackend({socket}));
-    store.dispatch(getOverviewMapSettings({socket}));
-    store.dispatch(getTargetMapSettings({socket}));
-    store.dispatch(fetchScheduledObservations({socket}));
-    store.dispatch(fetchMonitoredSatellites({socket}));
+    const incrementProgress = () => {
+        completed += 1;
+        store.dispatch(setInitialDataProgress({ completed, total }));
+    };
+
+    const runTask = async (task) => {
+        try {
+            await task.run();
+        } catch (error) {
+            console.error(`Failed to fetch initial app data: ${task.name}`, error);
+        } finally {
+            incrementProgress();
+        }
+    };
+
+    // Load preferences first so UI/notifications are aligned before other requests.
+    const [preferencesTask, ...remainingTasks] = tasks;
+    await runTask(preferencesTask);
+
+    await Promise.allSettled(remainingTasks.map((task) => runTask(task)));
+
+    store.dispatch(setInitialDataLoading(false));
 }

@@ -444,6 +444,7 @@ export default function Layout() {
         disconnected,
         reConnectAttempt,
         connectionError,
+        initialDataLoading,
         showLocationSetupDialog,
     } = useSelector((state) => state.dashboard);
     const {
@@ -808,7 +809,7 @@ export default function Layout() {
                     minWidth: 0,
                 }}
             >
-                {connected ? <Outlet /> : <ConnectionOverlay />}
+                {connected && !initialDataLoading ? <Outlet /> : <ConnectionOverlay />}
                 {hasVersionChanged && <VersionUpdateOverlay />}
                 <PerformanceMetricsDialog />
             </Box>

@@ -29,6 +29,11 @@ const rigsSlice = createSlice({
         reconnecting: false,
         reConnectAttempt: 0,
         connectionError: null,
+        initialDataLoading: false,
+        initialDataProgress: {
+            completed: 0,
+            total: 0,
+        },
         showLocationSetupDialog: false,
     },
     reducers: {
@@ -50,6 +55,12 @@ const rigsSlice = createSlice({
         setConnectionError: (state, action) => {
             state.connectionError = action.payload;
         },
+        setInitialDataLoading: (state, action) => {
+            state.initialDataLoading = action.payload;
+        },
+        setInitialDataProgress: (state, action) => {
+            state.initialDataProgress = action.payload;
+        },
         setShowLocationSetupDialog: (state, action) => {
             state.showLocationSetupDialog = action.payload;
         },
@@ -63,6 +74,8 @@ export const {
     setReconnecting,
     setReConnectAttempt,
     setConnectionError,
+    setInitialDataLoading,
+    setInitialDataProgress,
     setShowLocationSetupDialog,
 } = rigsSlice.actions;
 

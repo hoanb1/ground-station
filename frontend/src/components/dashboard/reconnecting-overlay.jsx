@@ -3,7 +3,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SyncProblemIcon from '@mui/icons-material/SyncProblem';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { keyframes } from '@emotion/react';
-import { Backdrop, Box, Typography } from "@mui/material";
+import { Backdrop, Box, LinearProgress, Typography } from "@mui/material";
 import { useSelector } from "react-redux";
 import { useTranslation } from 'react-i18next';
 
@@ -27,10 +27,12 @@ function ConnectionOverlay() {
         disconnected,
         reConnectAttempt,
         connectionError,
+        initialDataLoading,
+        initialDataProgress,
     } = useSelector((state) => state.dashboard);
 
     // Don't show overlay if connected
-    if (connected && !connecting) {
+    if (connected && !connecting && !initialDataLoading) {
         return null;
     }
 
@@ -44,6 +46,17 @@ function ConnectionOverlay() {
                 color: '#d32f2f',
                 bgColor: '#2a2a2a',
                 borderColor: '#d32f2f'
+            };
+        }
+
+        if (initialDataLoading) {
+            return {
+                icon: <SyncProblemIcon sx={{ fontSize: 24, color: '#4caf50' }} />,
+                title: t('connection.syncing_data', 'Syncing data'),
+                message: t('connection.loading_initial_state', 'Loading initial application data'),
+                color: '#4caf50',
+                bgColor: '#2a2a2a',
+                borderColor: '#4caf50'
             };
         }
 
@@ -132,29 +145,61 @@ function ConnectionOverlay() {
                 </Box>
 
                 {/* Progress indicator */}
-                <Box
-                    sx={{
-                        width: '100%',
-                        height: 2,
-                        backgroundColor: '#424242',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        position: 'relative'
-                    }}
-                >
+                {initialDataLoading && initialDataProgress.total > 0 ? (
+                    <>
+                        <LinearProgress
+                            variant="determinate"
+                            value={(initialDataProgress.completed / initialDataProgress.total) * 100}
+                            sx={{
+                                height: 4,
+                                borderRadius: 1,
+                                backgroundColor: '#424242',
+                                '& .MuiLinearProgress-bar': {
+                                    backgroundColor: status.color,
+                                },
+                            }}
+                        />
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color: '#b0b0b0',
+                                fontSize: '0.75rem',
+                                display: 'block',
+                                textAlign: 'center',
+                                mt: 1,
+                            }}
+                        >
+                            {t('connection.loading_progress', 'Loaded {{completed}} of {{total}}', {
+                                completed: initialDataProgress.completed,
+                                total: initialDataProgress.total,
+                            })}
+                        </Typography>
+                    </>
+                ) : (
                     <Box
                         sx={{
-                            height: '100%',
-                            width: '30%',
-                            backgroundColor: status.color,
+                            width: '100%',
+                            height: 2,
+                            backgroundColor: '#424242',
                             borderRadius: 1,
-                            animation: `${keyframes`
-                                0% { transform: translateX(-100%); }
-                                100% { transform: translateX(333%); }
-                            `} 2s infinite ease-in-out`,
+                            overflow: 'hidden',
+                            position: 'relative'
                         }}
-                    />
-                </Box>
+                    >
+                        <Box
+                            sx={{
+                                height: '100%',
+                                width: '30%',
+                                backgroundColor: status.color,
+                                borderRadius: 1,
+                                animation: `${keyframes`
+                                    0% { transform: translateX(-100%); }
+                                    100% { transform: translateX(333%); }
+                                `} 2s infinite ease-in-out`,
+                            }}
+                        />
+                    </Box>
+                )}
 
                 {/* Status text */}
                 <Typography
