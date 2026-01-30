@@ -304,6 +304,7 @@ class RigHandler:
                     "description": transmitter.get("description"),
                     "type": transmitter.get("type"),
                     "mode": transmitter.get("mode"),
+                    "source": transmitter.get("source"),
                     "alive": transmitter.get("alive"),
                     "downlink_low": downlink_freq,
                     "downlink_high": transmitter.get("downlink_high"),

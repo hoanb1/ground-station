@@ -100,6 +100,9 @@ async def add_transmitter(session: AsyncSession, data: dict) -> dict:
 
         data["uplink_mode"] = data.pop("uplinkMode")
 
+        if not data.get("source"):
+            data["source"] = "manual"
+
         stmt = insert(Transmitters).values(**data).returning(Transmitters)
 
         result = await session.execute(stmt)

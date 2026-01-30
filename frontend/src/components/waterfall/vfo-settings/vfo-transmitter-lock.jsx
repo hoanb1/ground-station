@@ -189,7 +189,10 @@ export const TransmitterLockSelect = ({
                                         <Box sx={{ flex: 1 }}>
                                             <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
                                             <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                                {(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
+                                                {[
+                                                    `Source: ${tx.source || 'Unknown'}`,
+                                                    `${(tx.downlink_observed_freq / 1e6).toFixed(6)} MHz (${tx.mode})`,
+                                                ].join(' • ')}
                                             </Box>
                                         </Box>
                                     </Box>

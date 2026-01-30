@@ -1535,8 +1535,8 @@ const ObservationFormDialog = () => {
                                                                     <Typography variant="body2">
                                                                         {transmitter.description || 'Unknown'}
                                                                     </Typography>
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        {freqMHz} MHz
+                                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                                                        {`Source: ${transmitter.source || 'Unknown'} • ${freqMHz} MHz`}
                                                                     </Typography>
                                                                 </Box>
                                                             </Box>
@@ -1739,8 +1739,9 @@ const ObservationFormDialog = () => {
                                                                                             <Typography variant="body2">
                                                                                                 {transmitter.description || 'Unknown'} - {freqMHz} MHz
                                                                                             </Typography>
-                                                                                            <Typography variant="caption" color="text.secondary">
+                                                                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                                 {[
+                                                                                                    `Source: ${transmitter.source || 'Unknown'}`,
                                                                                                     transmitter.mode ? `Mode: ${transmitter.mode}` : null,
                                                                                                     transmitter.baud ? `Baud: ${transmitter.baud}` : null,
                                                                                                     transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
@@ -1902,8 +1903,9 @@ const ObservationFormDialog = () => {
                                                                                         <Typography variant="body2">
                                                                                             {transmitter.description || 'Unknown'} - {freqMHz} MHz
                                                                                         </Typography>
-                                                                                        <Typography variant="caption" color="text.secondary">
+                                                                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                             {[
+                                                                                                `Source: ${transmitter.source || 'Unknown'}`,
                                                                                                 transmitter.mode ? `Mode: ${transmitter.mode}` : null,
                                                                                                 transmitter.baud ? `Baud: ${transmitter.baud}` : null,
                                                                                                 transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
@@ -1979,8 +1981,9 @@ const ObservationFormDialog = () => {
                                                                                     <Typography variant="body2">
                                                                                         {transmitter.description || 'Unknown'} - {freqMHz} MHz
                                                                                     </Typography>
-                                                                                    <Typography variant="caption" color="text.secondary">
+                                                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                         {[
+                                                                                            `Source: ${transmitter.source || 'Unknown'}`,
                                                                                             transmitter.mode ? `Mode: ${transmitter.mode}` : null,
                                                                                             transmitter.baud ? `Baud: ${transmitter.baud}` : null,
                                                                                             transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
@@ -2209,8 +2212,9 @@ const ObservationFormDialog = () => {
                                                                                     <Typography variant="body2">
                                                                                         {transmitter.description || 'Unknown'} - {freqMHz} MHz
                                                                                     </Typography>
-                                                                                    <Typography variant="caption" color="text.secondary">
+                                                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                         {[
+                                                                                            `Source: ${transmitter.source || 'Unknown'}`,
                                                                                             transmitter.mode ? `Mode: ${transmitter.mode}` : null,
                                                                                             transmitter.baud ? `Baud: ${transmitter.baud}` : null,
                                                                                             transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,

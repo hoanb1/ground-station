@@ -232,7 +232,7 @@ const FrequencyControlAccordion = ({
                                         <Box>
                                             <Box sx={{ fontWeight: 600 }}>{transmitter.description}</Box>
                                             <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                                                {preciseHumanizeFrequency(transmitter.downlink_low)}
+                                                {`Source: ${transmitter.source || 'Unknown'} • ${preciseHumanizeFrequency(transmitter.downlink_low)}`}
                                             </Box>
                                         </Box>
                                     </Box>

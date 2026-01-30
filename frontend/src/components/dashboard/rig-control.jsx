@@ -440,9 +440,14 @@ const RigControl = React.memo(function RigControl() {
                                                     : `0 0 6px ${theme.palette.error.main}99`,
                                             }}
                                         />
-                                        <span>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                            <Typography variant="body2">
                                                 {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
-                                            </span>
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Source: {transmitter.source || 'Unknown'}
+                                            </Typography>
+                                        </Box>
                                     </Box>
                                 </MenuItem>;
                             })}

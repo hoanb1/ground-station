@@ -1400,8 +1400,8 @@ export default function MonitoredSatelliteDialog() {
                                                                     <Typography variant="body2">
                                                                         {transmitter.description || 'Unknown'}
                                                                     </Typography>
-                                                                    <Typography variant="caption" color="text.secondary">
-                                                                        {freqMHz} MHz
+                                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                                                        {`Source: ${transmitter.source || 'Unknown'} • ${freqMHz} MHz`}
                                                                     </Typography>
                                                                 </Box>
                                                             </Box>
@@ -1601,8 +1601,9 @@ export default function MonitoredSatelliteDialog() {
                                                                                                     <Typography variant="body2">
                                                                                                         {transmitter.description || 'Unknown'} - {freqMHz} MHz
                                                                                                     </Typography>
-                                                                                                    <Typography variant="caption" color="text.secondary">
+                                                                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                                         {[
+                                                                                                            `Source: ${transmitter.source || 'Unknown'}`,
                                                                                                             transmitter.mode ? `Mode: ${transmitter.mode}` : null,
                                                                                                             transmitter.baud ? `Baud: ${transmitter.baud}` : null,
                                                                                                             transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
@@ -1764,8 +1765,9 @@ export default function MonitoredSatelliteDialog() {
                                                                                                 <Typography variant="body2">
                                                                                                     {transmitter.description || 'Unknown'} - {freqMHz} MHz
                                                                                                 </Typography>
-                                                                                                <Typography variant="caption" color="text.secondary">
+                                                                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                                     {[
+                                                                                                        `Source: ${transmitter.source || 'Unknown'}`,
                                                                                                         transmitter.mode ? `Mode: ${transmitter.mode}` : null,
                                                                                                         transmitter.baud ? `Baud: ${transmitter.baud}` : null,
                                                                                                         transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
@@ -1851,20 +1853,21 @@ export default function MonitoredSatelliteDialog() {
                                                                                                 }}
                                                                                             />
                                                                                             <Box sx={{ flexGrow: 1 }}>
-                                                                                                <Typography variant="body2">
-                                                                                                    {transmitter.description || 'Unknown'} - {freqMHz} MHz
-                                                                                                </Typography>
-                                                                                                <Typography variant="caption" color="text.secondary">
-                                                                                                    {[
-                                                                                                        transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                        transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                        transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
-                                                                                                </Typography>
-                                                                                            </Box>
+                                                                                            <Typography variant="body2">
+                                                                                                {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                            </Typography>
+                                                                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                                                                                {[
+                                                                                                    `Source: ${transmitter.source || 'Unknown'}`,
+                                                                                                    transmitter.mode ? `Mode: ${transmitter.mode}` : null,
+                                                                                                    transmitter.baud ? `Baud: ${transmitter.baud}` : null,
+                                                                                                    transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
+                                                                                                ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                            </Typography>
                                                                                         </Box>
-                                                                                    </MenuItem>
-                                                                                );
+                                                                                    </Box>
+                                                                                </MenuItem>
+                                                                            );
                                                                             })
                                                                         ])
                                                                     )}
@@ -2035,8 +2038,9 @@ export default function MonitoredSatelliteDialog() {
                                                                                                 <Typography variant="body2">
                                                                                                     {transmitter.description || 'Unknown'} - {freqMHz} MHz
                                                                                                 </Typography>
-                                                                                                <Typography variant="caption" color="text.secondary">
+                                                                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                                     {[
+                                                                                                        `Source: ${transmitter.source || 'Unknown'}`,
                                                                                                         transmitter.mode ? `Mode: ${transmitter.mode}` : null,
                                                                                                         transmitter.baud ? `Baud: ${transmitter.baud}` : null,
                                                                                                         transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
