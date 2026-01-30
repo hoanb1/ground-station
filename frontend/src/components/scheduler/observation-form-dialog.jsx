@@ -625,6 +625,7 @@ const ObservationFormDialog = () => {
                         decimation_factor: 1,
                         enable_post_processing: false,
                         post_process_pipeline: getDefaultSatdumpPipeline(),
+                        delete_after_post_processing: false,
                     },
                 };
                 break;
@@ -2349,6 +2350,9 @@ const ObservationFormDialog = () => {
                                                                         if (enabled && !task.config.post_process_pipeline) {
                                                                             handleTaskConfigChange(index, 'post_process_pipeline', getDefaultSatdumpPipeline());
                                                                         }
+                                                                        if (!enabled) {
+                                                                            handleTaskConfigChange(index, 'delete_after_post_processing', false);
+                                                                        }
                                                                     }}
                                                                     disabled={isFormDisabled}
                                                                 />
@@ -2386,6 +2390,22 @@ const ObservationFormDialog = () => {
                                                                 })}
                                                             </Select>
                                                         </FormControl>
+                                                        <FormControlLabel
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={task.config.delete_after_post_processing || false}
+                                                                    onChange={(e) =>
+                                                                        handleTaskConfigChange(index, 'delete_after_post_processing', e.target.checked)
+                                                                    }
+                                                                    disabled={
+                                                                        isFormDisabled ||
+                                                                        !task.config.enable_post_processing ||
+                                                                        !task.config.post_process_pipeline
+                                                                    }
+                                                                />
+                                                            }
+                                                            label="Delete IQ recording after SatDump completes"
+                                                        />
                                                     </Box>
                                                 </>
                                             )}

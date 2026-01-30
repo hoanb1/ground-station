@@ -710,6 +710,9 @@ class ObservationExecutor:
                         "baseband_format": baseband_format,
                         "start_timestamp": start_timestamp,
                         "finish_processing": True,
+                        "delete_input_after": task_config.get(
+                            "delete_after_post_processing", False
+                        ),
                     },
                     name=f"SatDump: {recording_name} ({pipeline})",
                 )

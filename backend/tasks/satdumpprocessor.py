@@ -92,6 +92,7 @@ def satdump_process_recording(
     baseband_format: str = "i16",
     start_timestamp: Optional[int] = None,
     finish_processing: bool = True,
+    delete_input_after: bool = False,
     _progress_queue: Optional[Queue] = None,
 ):
     """
@@ -273,6 +274,37 @@ def satdump_process_recording(
                 or any(output_path.rglob("*.jpg"))
                 or any(output_path.rglob("product.cbor"))
             )
+
+        if delete_input_after:
+            try:
+                base_path = recording_file
+                if base_path.name.endswith(".sigmf-data"):
+                    base_path = base_path.with_suffix("")
+
+                data_path = base_path.with_suffix(".sigmf-data")
+                meta_path = base_path.with_suffix(".sigmf-meta")
+
+                for path in (data_path, meta_path):
+                    if path.exists():
+                        path.unlink()
+
+                if _progress_queue:
+                    _progress_queue.put(
+                        {
+                            "type": "output",
+                            "output": f"Deleted IQ recording: {data_path} (+.sigmf-meta)",
+                            "stream": "stdout",
+                        }
+                    )
+            except Exception as e:
+                if _progress_queue:
+                    _progress_queue.put(
+                        {
+                            "type": "output",
+                            "output": f"Warning: Failed to delete IQ recording: {e}",
+                            "stream": "stderr",
+                        }
+                    )
 
         if return_code == 0 or (return_code == 1 and has_output):
             if _progress_queue:
