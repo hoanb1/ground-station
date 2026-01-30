@@ -145,6 +145,8 @@ def satdump_process_recording(
         str(samplerate),
         "--baseband_format",
         baseband_format,
+        "--fill_missing",
+        "--dc_block",
     ]
 
     if start_timestamp:

@@ -39,7 +39,10 @@ const formatTimestamp = () => {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${timezone}`;
 };
 
-const wrapWithTimestamp = (message) => {
+const wrapWithTimestamp = (message, disableTimestamp) => {
+    if (disableTimestamp) {
+        return message;
+    }
     const timestamp = formatTimestamp();
     return (
         <div style={{ width: '100%' }}>
@@ -57,8 +60,8 @@ const wrapWithTimestamp = (message) => {
 };
 
 const createToastWithClickHandler = (toastFn) => (message, options = {}) => {
-    const { disablePauseOnClick, onClick, ...restOptions } = options;
-    const toastId = toastFn(wrapWithTimestamp(message), {
+    const { disablePauseOnClick, disableTimestamp, onClick, ...restOptions } = options;
+    const toastId = toastFn(wrapWithTimestamp(message, disableTimestamp), {
         closeOnClick: false,
         onClick: disablePauseOnClick
             ? onClick
@@ -80,9 +83,9 @@ export const toast = {
     warning: createToastWithClickHandler(originalToast.warning),
     warn: createToastWithClickHandler(originalToast.warn),
     update: (toastId, message, options = {}) => {
-        const { disablePauseOnClick, onClick, ...restOptions } = options;
+        const { disablePauseOnClick, disableTimestamp, onClick, ...restOptions } = options;
         originalToast.update(toastId, {
-            render: wrapWithTimestamp(message),
+            render: wrapWithTimestamp(message, disableTimestamp),
             closeOnClick: false,
             onClick: disablePauseOnClick ? onClick : undefined,
             ...restOptions,

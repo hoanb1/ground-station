@@ -706,6 +706,7 @@ export const useSocketEventHandlers = (socket) => {
                     position: 'top-center',
                     onClose: () => countdownToastIds.current.delete(startKey),
                     disablePauseOnClick: true,
+                    disableTimestamp: true,
                 }
             );
             rawToast.update(toastId, { progress: 1 });
@@ -717,7 +718,7 @@ export const useSocketEventHandlers = (socket) => {
                     toastId={toastId}
                     totalDurationMs={totalDurationMs}
                 />,
-                { disablePauseOnClick: true }
+                { disablePauseOnClick: true, disableTimestamp: true }
             );
             countdownToastIds.current.set(startKey, toastId);
         };
