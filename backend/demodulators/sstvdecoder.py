@@ -713,7 +713,15 @@ class SSTVDecoder(BaseDecoderProcess):
                 )
                 chan_pixel_window = uv_pixel_window if (is_robot and chan == 1) else pixel_window
 
+                guard_pixels = 0
+                if is_robot and chan == 1:
+                    guard_time = 0.001
+                    guard_pixels = int(round(guard_time / chan_pixel_time))
+
                 for px in range(chan_width):
+                    if guard_pixels > 0 and px >= chan_width - guard_pixels:
+                        image_data[line][chan][px] = 128
+                        continue
                     chan_offset = chan_offsets[chan]
                     px_pos = round(
                         seq_start
@@ -740,6 +748,7 @@ class SSTVDecoder(BaseDecoderProcess):
         width = mode["width"]
         height = mode["height"]
         color_mode = mode.get("color_mode", "GBR")
+        uv_width = width // 2 if color_mode == "YUV" else width
 
         image = Image.new("RGB", (width, height))
         pixel_data = image.load()
@@ -754,6 +763,8 @@ class SSTVDecoder(BaseDecoderProcess):
                         if len(image_data[y]) > 1 and uv_x < len(image_data[y][1])
                         else 128
                     )
+                    if uv_x >= uv_width - 3:
+                        chroma_val = 128
 
                     if y % 2 == 0:
                         r_y = chroma_val - 128
