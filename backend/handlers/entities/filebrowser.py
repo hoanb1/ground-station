@@ -676,8 +676,13 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                         try:
                             with open(metadata_file, "r") as f:
                                 metadata = json.load(f)
+                                if not isinstance(metadata, dict):
+                                    logger.warning(
+                                        f"Decoded metadata for {decoded_file.name} is not an object; skipping details."
+                                    )
+                                    metadata = {}
                                 # Extract decoder type and session_id
-                                decoder_info = metadata.get("decoder", {})
+                                decoder_info = metadata.get("decoder") or {}
                                 decoder_type = decoder_info.get("type", "").upper()
                                 decoder_mode = decoder_info.get("mode")  # SSTV mode like "Robot 36"
                                 baudrate = decoder_info.get("baudrate")  # For FSK/BPSK
@@ -686,23 +691,23 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                                 )  # Session ID for linking to observations
 
                                 # Extract satellite info from satellite metadata (preferred)
-                                satellite_info = metadata.get("satellite", {})
+                                satellite_info = metadata.get("satellite") or {}
                                 satellite_name = satellite_info.get("name")
                                 satellite_norad_id = satellite_info.get("norad_id")
 
                                 # Extract transmitter info
-                                transmitter_info = metadata.get("transmitter", {})
+                                transmitter_info = metadata.get("transmitter") or {}
                                 transmitter_description = transmitter_info.get("description")
                                 transmitter_mode = transmitter_info.get("mode")
 
                                 # Extract frequency from signal metadata
-                                signal_info = metadata.get("signal", {})
+                                signal_info = metadata.get("signal") or {}
                                 frequency_hz = signal_info.get("frequency_hz")
                                 frequency_mhz = signal_info.get("frequency_mhz")
 
                                 # Fallback: Extract satellite name from AX.25 source callsign if not in metadata
                                 if not satellite_name:
-                                    ax25_info = metadata.get("ax25", {})
+                                    ax25_info = metadata.get("ax25") or {}
                                     source_callsign = ax25_info.get("from_callsign", "")
                                     if source_callsign:
                                         # Extract base satellite name (e.g., "TVL2-6-1" -> "TEVEL-2-6")
