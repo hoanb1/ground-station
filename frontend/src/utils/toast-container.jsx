@@ -35,6 +35,7 @@ export const ToastContainerWithStyles = () => {
             <style>{`
                 .Toastify__toast-container {
                     z-index: 1299 !important;
+                    box-sizing: border-box;
                 }
 
                 .Toastify__toast-container--top-left,
@@ -47,13 +48,14 @@ export const ToastContainerWithStyles = () => {
                     left: 50% !important;
                     transform: translateX(-50%) !important;
                     width: auto !important;
-                    min-width: 500px !important;
+                    min-width: 0 !important;
+                    width: min(500px, calc(100vw - 24px)) !important;
                     max-width: 90vw !important;
                 }
 
                 .Toastify__toast-container--top-center .Toastify__toast {
                     width: 100% !important;
-                    min-width: 500px !important;
+                    min-width: 0 !important;
                 }
 
                 .Toastify__toast-container--bottom-center {
@@ -61,13 +63,20 @@ export const ToastContainerWithStyles = () => {
                     left: 50% !important;
                     transform: translateX(-50%) !important;
                     width: auto !important;
-                    min-width: 500px !important;
+                    min-width: 0 !important;
+                    width: min(500px, calc(100vw - 24px)) !important;
                     max-width: 90vw !important;
                 }
 
                 .Toastify__toast-container--bottom-center .Toastify__toast {
                     width: 100% !important;
-                    min-width: 500px !important;
+                    min-width: 0 !important;
+                }
+                
+                @media (max-width: 600px) {
+                    .Toastify__toast-container {
+                        padding: 0 12px;
+                    }
                 }
 
                 .Toastify__toast-container,
