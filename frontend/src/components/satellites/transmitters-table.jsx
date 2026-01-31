@@ -27,7 +27,8 @@ import {
     gridClasses,
 } from "@mui/x-data-grid";
 import {useDispatch} from "react-redux";
-import {deleteTransmitter} from "./satellite-slice.jsx";
+import { deleteTransmitter } from "./satellite-slice.jsx";
+import { setTargetTransmitters } from "../target/target-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import TransmitterModal from "./transmitter-modal.jsx";
 import { useTranslation } from 'react-i18next';
@@ -135,21 +136,55 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
 
     const handleDeleteConfirm = async () => {
         try {
+            let latestTransmitters = null;
             // Delete all selected transmitters
             for (const selectedId of selected) {
                 const transmitter = rows.find(row => row.id === selectedId);
                 if (transmitter && transmitter._original?.id) {
-                    await dispatch(deleteTransmitter({
+                    const result = await dispatch(deleteTransmitter({
                         socket,
                         transmitterId: transmitter._original.id,
                         satelliteId: satelliteData.norad_id,
                     })).unwrap();
+                    if (Array.isArray(result)) {
+                        latestTransmitters = result;
+                    }
                 }
             }
 
             // Refresh the transmitters list
-            const updatedTransmitters = rows.filter(row => !selected.includes(row.id));
-            setRows(updatedTransmitters);
+            if (latestTransmitters) {
+                dispatch(
+                    setTargetTransmitters({
+                        noradId: satelliteData.norad_id,
+                        transmitters: latestTransmitters,
+                    })
+                );
+                setRows(
+                    latestTransmitters.map((transmitter, index) => ({
+                        id: transmitter.id || `existing-${index}`,
+                        description: transmitter.description || "-",
+                        source: transmitter.source || "-",
+                        type: transmitter.type || "-",
+                        status: transmitter.status || "-",
+                        alive: transmitter.alive || "-",
+                        uplinkLow: transmitter.uplink_low || "-",
+                        uplinkHigh: transmitter.uplink_high || "-",
+                        uplinkDrift: transmitter.uplink_drift || "-",
+                        downlinkLow: transmitter.downlink_low || "-",
+                        downlinkHigh: transmitter.downlink_high || "-",
+                        downlinkDrift: transmitter.downlink_drift || "-",
+                        mode: transmitter.mode || "-",
+                        uplinkMode: transmitter.uplink_mode || "-",
+                        invert: transmitter.invert || "-",
+                        baud: transmitter.baud || "-",
+                        _original: transmitter,
+                    }))
+                );
+            } else {
+                const updatedTransmitters = rows.filter(row => !selected.includes(row.id));
+                setRows(updatedTransmitters);
+            }
             setSelected([]);
 
             console.log('Transmitters deleted successfully');

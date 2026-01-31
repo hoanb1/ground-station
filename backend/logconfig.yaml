@@ -161,6 +161,12 @@ loggers:
       - default
     propagate: no
 
+  tracker-manager:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
   uhd-worker:
     level: INFO
     handlers:
@@ -276,6 +282,12 @@ loggers:
     propagate: no
 
   apscheduler.scheduler:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  tlesync-task:
     level: INFO
     handlers:
       - default

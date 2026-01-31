@@ -1015,7 +1015,7 @@ class PerformanceMonitor(threading.Thread):
                     )
                 )
 
-                # For IQ-based decoders (BPSK, GMSK, LoRa, SSTVDecoderV2)
+                # For IQ-based decoders (BPSK, GMSK, LoRa, SSTVDecoder)
                 if supplied_rates:
                     # Accept either field names for samples per sec
                     samples_in_rate = (
@@ -1054,15 +1054,15 @@ class PerformanceMonitor(threading.Thread):
                 decoder_name = vfo_num  # Using vfo_num as decoder name based on the key structure
 
                 # Check if this is an IQ-based decoder by type name (not attribute check)
-                # IQ-based: BPSK, FSK, GFSK, GMSK, LoRa, SSTVDecoderV2 (with integrated FM demod)
-                # Audio-based: AFSK, SSTVDecoder (legacy), Morse
+                # IQ-based: BPSK, FSK, GFSK, GMSK, LoRa, SSTVDecoder (with integrated FM demod)
+                # Audio-based: AFSK, Morse
                 is_iq_decoder = decoder_type in [
                     "BPSKDecoder",
                     "FSKDecoder",
                     "GFSKDecoder",
                     "GMSKDecoder",
                     "LoRaDecoder",
-                    "SSTVDecoderV2",
+                    "SSTVDecoder",
                 ]
 
                 if is_iq_decoder:

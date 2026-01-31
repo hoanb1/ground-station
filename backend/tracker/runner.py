@@ -87,7 +87,7 @@ def start_tracker_process():
 
     # Initialize the tracker manager singleton
     global _tracker_manager
-    _tracker_manager = TrackerManager()
+    _tracker_manager = TrackerManager(queue_to_tracker=queue_to_tracker)
     logger.info("Initialized TrackerManager singleton")
 
     return tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event

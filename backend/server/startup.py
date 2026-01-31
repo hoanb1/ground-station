@@ -36,7 +36,7 @@ from server.systeminfo import start_system_info_emitter
 from server.version import get_full_version_info
 from tasks.manager import BackgroundTaskManager
 from tracker.messages import handle_tracker_messages
-from tracker.runner import start_tracker_process
+from tracker.runner import get_tracker_manager, start_tracker_process
 
 # Increase payload limits to handle large waterfall PNG images (typically 2-5MB as base64)
 Payload.max_decode_packets = 50
@@ -67,6 +67,7 @@ async def lifespan(fastapiapp: FastAPI):
 
     logger.info("FastAPI lifespan startup...")
     start_tracker_process()
+    tracker_manager = get_tracker_manager()
     # In an async context, prefer get_running_loop() (get_event_loop() is deprecated when no loop set)
     event_loop = asyncio.get_running_loop()
 
@@ -91,6 +92,7 @@ async def lifespan(fastapiapp: FastAPI):
     logger.info("ProcessManager initialized with event loop")
 
     asyncio.create_task(handle_tracker_messages(sio))
+    await tracker_manager.sync_tracking_state_from_db()
 
     # SoapySDR discovery (runs as background tasks)
     if arguments.runonce_soapy_discovery:

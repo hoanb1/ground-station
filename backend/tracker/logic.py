@@ -23,15 +23,21 @@ from typing import Any, Dict, List, Optional
 
 import psutil
 
-import crud
 from common.arguments import arguments as args
-from common.constants import DictKeys, SocketEvents, TrackingStateNames
-from db.__init__ import AsyncSessionLocal
-from tracker.data import compiled_satellite_data
+from common.constants import DictKeys, SocketEvents
+from tracker.data import compiled_satellite_data_from_inputs
+from tracker.ipc import (
+    TRACKER_MSG_COMMAND,
+    TRACKER_MSG_SET_HARDWARE,
+    TRACKER_MSG_SET_LOCATION,
+    TRACKER_MSG_SET_MAP_SETTINGS,
+    TRACKER_MSG_SET_SATELLITE_EPHEMERIS,
+    TRACKER_MSG_SET_TRACKING_STATE,
+    TRACKER_MSG_SET_TRANSMITTERS,
+)
 from tracker.righandler import RigHandler
 from tracker.rotatorhandler import RotatorHandler
 from tracker.statemanager import StateManager
-from tracker.utils import pretty_dict
 
 logger = logging.getLogger("tracker-worker")
 
@@ -170,6 +176,14 @@ class SatelliteTracker:
         self.rig_handler = RigHandler(self)
         self.state_manager = StateManager(self)
 
+        # Inputs provided by manager via IPC
+        self.input_tracking_state: Optional[Dict[str, Any]] = None
+        self.input_location: Optional[Dict[str, Any]] = None
+        self.input_transmitters: List[Dict[str, Any]] = []
+        self.input_satellite: Optional[Dict[str, Any]] = None
+        self.input_map_settings: Dict[str, Any] = {}
+        self.input_hardware: Dict[str, Any] = {}
+
     def in_tracking_state(self) -> bool:
         """Check if rotator is currently in tracking state."""
         return self.current_rotator_state == "tracking"
@@ -183,6 +197,11 @@ class SatelliteTracker:
 
         tracker: Dict[str, Any] = {}
 
+        logger.info(
+            "Tracker process started (pid=%s, interval=%ss)",
+            self.process.pid,
+            args.track_interval,
+        )
         while True:
             # Update CPU and memory usage periodically
             current_time = time.time()
@@ -196,8 +215,8 @@ class SatelliteTracker:
                     self.stats["memory_mb"] = memory_mb
                     self.stats["memory_percent"] = memory_percent
                     self.last_cpu_check = current_time
-                except Exception as e:
-                    logger.debug(f"Error updating CPU/memory usage: {e}")
+                except Exception:
+                    pass
 
             # Send stats periodically via queue_out
             if current_time - self.last_stats_send >= self.stats_send_interval:
@@ -225,72 +244,48 @@ class SatelliteTracker:
                 self.start_loop_date = datetime.now(timezone.utc)
                 self.events = []
 
-                # Get tracking data from database
-                async with AsyncSessionLocal() as dbsession:
-                    self.stats["db_queries"] += 1
+                tracking_state = self.input_tracking_state
+                if not tracking_state:
+                    continue
 
-                    # Get tracking state from the db (snapshot at start of iteration)
-                    tracking_state_reply = await crud.trackingstate.get_tracking_state(
-                        dbsession, name=TrackingStateNames.SATELLITE_TRACKING
+                initial_tracking_state = dict(tracking_state)
+
+                if not tracking_state.get("norad_id"):
+                    logger.warning(
+                        "No norad id found in satellite tracking state, skipping iteration"
                     )
-                    self.stats["db_queries"] += 1
+                    continue
 
-                    # Handle missing or empty tracking state (first-time users)
-                    if not tracking_state_reply.get("success"):
-                        logger.error(f"Error in satellite tracking task: {tracking_state_reply}")
-                        continue
+                if not self.input_location:
+                    logger.warning("No location provided to tracker, skipping iteration")
+                    continue
+                location = self.input_location
 
-                    if tracking_state_reply.get("data") is None:
-                        logger.debug(
-                            f"No tracking state was found in the db: {tracking_state_reply}"
-                        )
-                        continue
+                if not self.input_satellite or self.input_satellite.get(
+                    "norad_id"
+                ) != tracking_state.get("norad_id"):
+                    logger.warning("No matching satellite ephemeris provided, skipping iteration")
+                    continue
 
-                    tracking_data = tracking_state_reply.get("data")
-                    if tracking_data is None or tracking_data.get("value") is None:
-                        logger.debug("Tracking state has no value, skipping iteration")
-                        continue
+                tracker = tracking_state
 
-                    initial_tracking_state = tracking_data["value"].copy()
+                # Get a data dict that contains all the information for the target satellite
+                self.satellite_data = compiled_satellite_data_from_inputs(
+                    self.input_satellite,
+                    self.input_location,
+                    self.input_transmitters,
+                    self.input_map_settings,
+                )
+                assert not self.satellite_data["error"], (
+                    f"Could not compute satellite details for satellite "
+                    f"{tracking_state.get('norad_id')}"
+                )
 
-                    if not tracking_state_reply.get("success", False):
-                        logger.error(f"Error in satellite tracking task: {tracking_state_reply}")
-                        continue
-
-                    if not tracking_state_reply["data"]["value"].get("group_id"):
-                        logger.debug(
-                            "No group id found in satellite tracking state, continuing without group context"
-                        )
-
-                    if not tracking_state_reply["data"]["value"].get("norad_id"):
-                        logger.warning(
-                            "No norad id found in satellite tracking state, skipping iteration"
-                        )
-                        continue
-
-                    # Fetch the location of the ground station
-                    location_reply = await crud.locations.fetch_all_locations(dbsession)
-                    self.stats["db_queries"] += 1
-                    if not location_reply["data"] or len(location_reply["data"]) == 0:
-                        raise Exception("No location found in the database")
-                    location = location_reply["data"][0]
-                    tracker = tracking_state_reply["data"]["value"]
-
-                    # Get a data dict that contains all the information for the target satellite
-                    self.satellite_data = await compiled_satellite_data(
-                        dbsession, tracking_state_reply["data"]["value"]["norad_id"]
-                    )
-                    self.stats["db_queries"] += 1
-                    assert not self.satellite_data["error"], (
-                        f"Could not compute satellite details for satellite "
-                        f"{tracking_state_reply['data']['value']['norad_id']}"
-                    )
-
-                    satellite_tles = [
-                        self.satellite_data["details"]["tle1"],
-                        self.satellite_data["details"]["tle2"],
-                    ]
-                    satellite_name = self.satellite_data["details"]["name"]
+                satellite_tles = [
+                    self.input_satellite["tle1"],
+                    self.input_satellite["tle2"],
+                ]
+                satellite_name = self.input_satellite["name"]
 
                 # Update current state variables
                 self.current_norad_id = tracker.get("norad_id", None)
@@ -332,17 +327,22 @@ class SatelliteTracker:
                 # Check position limits
                 self.rotator_handler.check_position_limits(skypoint, satellite_name)
 
-                # Log valid target
-                logger.debug(
-                    f"We have a valid target (#{self.current_norad_id} "
-                    f"{satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°"
-                )
-
                 # Handle transmitter tracking
                 await self.rig_handler.handle_transmitter_tracking(satellite_tles, location)
 
                 # Calculate doppler shift for all active transmitters
                 await self.rig_handler.calculate_all_transmitters_doppler(satellite_tles, location)
+                transmitters = self.rig_data.get("transmitters") or []
+                transmitter_count = len(transmitters) if isinstance(transmitters, list) else 0
+                logger.debug(
+                    "Target #%s %s az=%.4f el=%.4f tx=%s dopplers=%s",
+                    self.current_norad_id,
+                    satellite_name,
+                    skypoint[0],
+                    skypoint[1],
+                    self.current_transmitter_id,
+                    transmitter_count,
+                )
 
                 # Control rig frequency
                 await self.rig_handler.control_rig_frequency()
@@ -357,19 +357,7 @@ class SatelliteTracker:
 
             finally:
                 # Check for race condition: re-read tracking state and compare
-                final_tracking_state = None
-                if initial_tracking_state:
-                    try:
-                        async with AsyncSessionLocal() as dbsession:
-                            final_tracking_state_reply = (
-                                await crud.trackingstate.get_tracking_state(
-                                    dbsession, name=TrackingStateNames.SATELLITE_TRACKING
-                                )
-                            )
-                            if final_tracking_state_reply.get("success"):
-                                final_tracking_state = final_tracking_state_reply["data"]["value"]
-                    except Exception as e:
-                        logger.error(f"Error re-reading tracking state in finally block: {e}")
+                final_tracking_state = self.input_tracking_state
 
                 # Send updates via the queue
                 # Check if we have satellite data and tracker data
@@ -380,9 +368,7 @@ class SatelliteTracker:
                         and final_tracking_state
                         and initial_tracking_state != final_tracking_state
                     ):
-                        logger.debug(
-                            "Tracking state changed during iteration, skipping UI update to avoid race condition"
-                        )
+                        pass
                     else:
                         try:
                             full_msg = {
@@ -395,9 +381,6 @@ class SatelliteTracker:
                                     DictKeys.TRACKING_STATE: tracker.copy(),
                                 },
                             }
-                            logger.debug(
-                                f"Sending satellite tracking data: " f"\n{pretty_dict(full_msg)}"
-                            )
                             self.queue_out.put(full_msg)
                             self.stats["updates_sent"] += 1
 
@@ -432,12 +415,34 @@ class SatelliteTracker:
                     logger.info("Stop event detected, exiting tracking task")
                     break
 
-                logger.debug(
-                    f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
-                    f"(already spent {round(loop_duration, 2)})..."
-                )
-
                 await asyncio.sleep(remaining_time_to_sleep)
+
+    def apply_input_message(self, message: Dict[str, Any]) -> None:
+        """Apply IPC message payloads sent from the manager."""
+        msg_type = message.get("type")
+        payload = message.get("payload", {})
+
+        if msg_type == TRACKER_MSG_SET_TRACKING_STATE:
+            self.input_tracking_state = dict(payload)
+        elif msg_type == TRACKER_MSG_SET_LOCATION:
+            self.input_location = dict(payload)
+        elif msg_type == TRACKER_MSG_SET_TRANSMITTERS:
+            self.input_transmitters = list(payload.get("items", []))
+        elif msg_type == TRACKER_MSG_SET_SATELLITE_EPHEMERIS:
+            self.input_satellite = dict(payload)
+        elif msg_type == TRACKER_MSG_SET_MAP_SETTINGS:
+            self.input_map_settings = dict(payload)
+        elif msg_type == TRACKER_MSG_SET_HARDWARE:
+            self.input_hardware.update(payload)
+            if payload.get("rig"):
+                self.rig_details = payload["rig"]
+            if payload.get("sdr"):
+                self.rig_details = payload["sdr"]
+            if payload.get("rotator"):
+                self.rotator_details = payload["rotator"]
+        elif msg_type == TRACKER_MSG_COMMAND:
+            # handled in StateManager.process_commands
+            return
 
 
 async def satellite_tracking_task(

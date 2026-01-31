@@ -78,6 +78,58 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
         else:
             emit_callback(state)
 
+    async def _notify_tracker_manager(
+        satellite_norad_ids: set[int],
+        transmitter_norad_ids: set[int],
+        transmitters_by_norad: Dict[int, List[Dict[str, Any]]],
+    ) -> None:
+        if not satellite_norad_ids and not transmitter_norad_ids:
+            return
+        try:
+            from tracker.runner import get_tracker_manager
+
+            manager = get_tracker_manager()
+            if satellite_norad_ids:
+                logger.info(
+                    "Notifying tracker manager (satellites): %s",
+                    sorted(satellite_norad_ids),
+                )
+                for norad_id in satellite_norad_ids:
+                    try:
+                        logger.info("Notify tracker manager TLE start (norad_id=%s)", norad_id)
+                        await manager.notify_tle_updated(norad_id)
+                        logger.info("Notify tracker manager TLE done (norad_id=%s)", norad_id)
+                    except Exception as e:
+                        logger.error(
+                            "Notify tracker manager TLE failed (norad_id=%s, error=%s)",
+                            norad_id,
+                            e,
+                        )
+            if transmitter_norad_ids:
+                logger.info(
+                    "Notifying tracker manager (transmitters): %s",
+                    sorted(transmitter_norad_ids),
+                )
+                for norad_id in transmitter_norad_ids:
+                    try:
+                        logger.info(
+                            "Notify tracker manager transmitters start (norad_id=%s)", norad_id
+                        )
+                        manager.notify_transmitters_changed_with_items(
+                            norad_id, transmitters_by_norad.get(norad_id, [])
+                        )
+                        logger.info(
+                            "Notify tracker manager transmitters done (norad_id=%s)", norad_id
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "Notify tracker manager transmitters failed (norad_id=%s, error=%s)",
+                            norad_id,
+                            e,
+                        )
+        except Exception as e:
+            logger.debug(f"Failed to notify tracker manager of TLE updates: {e}")
+
     # Try to acquire the lock without blocking
     if _sync_lock.locked():
         logger.warning("Satellite data synchronization already in progress, skipping this run")
@@ -564,3 +616,46 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
         finally:
             # Always close the session when you're done
             await dbsession.close()
+            if not sync_state.get("success"):
+                return
+            satellite_norad_ids = {
+                sat.get("norad_id") for sat in sync_state.get("modified", {}).get("satellites", [])
+            }
+            satellite_norad_ids.update(
+                {
+                    sat.get("norad_id")
+                    for sat in sync_state.get("newly_added", {}).get("satellites", [])
+                }
+            )
+            satellite_norad_ids = {nid for nid in satellite_norad_ids if nid}
+
+            transmitter_norad_ids = {
+                tx.get("norad_id") for tx in sync_state.get("modified", {}).get("transmitters", [])
+            }
+            transmitter_norad_ids.update(
+                {
+                    tx.get("norad_id")
+                    for tx in sync_state.get("newly_added", {}).get("transmitters", [])
+                }
+            )
+            transmitter_norad_ids.update(
+                {tx.get("norad_id") for tx in sync_state.get("removed", {}).get("transmitters", [])}
+            )
+            transmitter_norad_ids = {nid for nid in transmitter_norad_ids if nid}
+
+            transmitters_by_norad: Dict[int, List[Dict[str, Any]]] = {}
+            if transmitter_norad_ids:
+                for transmitter in satnogs_transmitter_data:
+                    norad_id = transmitter.get("norad_cat_id")
+                    if norad_id in transmitter_norad_ids:
+                        normalized = dict(transmitter)
+                        if "id" not in normalized:
+                            normalized["id"] = normalized.get("uuid")
+                        transmitters_by_norad.setdefault(norad_id, []).append(normalized)
+
+            if satellite_norad_ids or transmitter_norad_ids:
+                asyncio.create_task(
+                    _notify_tracker_manager(
+                        satellite_norad_ids, transmitter_norad_ids, transmitters_by_norad
+                    )
+                )

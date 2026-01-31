@@ -101,7 +101,7 @@ export const submitTransmitter = createAsyncThunk(
 );
 
 export const editTransmitter = createAsyncThunk(
-    'satellites/submitTransmitter',
+    'satellites/editTransmitter',
     async ({socket, transmitterData}, {rejectWithValue}) => {
         try {
             return await new Promise((resolve, reject) => {
@@ -326,6 +326,9 @@ const satellitesSlice = createSlice({
             .addCase(submitTransmitter.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.loading = false;
+                if (Array.isArray(action.payload)) {
+                    state.clickedSatellite.transmitters = action.payload;
+                }
             })
             .addCase(submitTransmitter.rejected, (state, action) => {
                 state.status = 'failed';
@@ -340,6 +343,26 @@ const satellitesSlice = createSlice({
             .addCase(deleteTransmitter.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.loading = false;
+                if (Array.isArray(action.payload)) {
+                    state.clickedSatellite.transmitters = action.payload;
+                }
+            })
+            .addCase(editTransmitter.pending, (state) => {
+                state.status = 'loading';
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(editTransmitter.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.loading = false;
+                if (Array.isArray(action.payload)) {
+                    state.clickedSatellite.transmitters = action.payload;
+                }
+            })
+            .addCase(editTransmitter.rejected, (state, action) => {
+                state.status = 'failed';
+                state.loading = false;
+                state.error = action.error?.message;
             })
             .addCase(deleteTransmitter.rejected, (state, action) => {
                 state.status = 'failed';

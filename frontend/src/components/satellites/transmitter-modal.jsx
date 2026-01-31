@@ -21,6 +21,7 @@ import {
     editTransmitter,
     setClickedSatelliteTransmitters,
 } from "./satellite-slice.jsx";
+import { setTargetTransmitters } from "../target/target-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 
 
@@ -246,6 +247,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                 // Update the transmitters with the response
                 dispatch(setClickedSatelliteTransmitters(result));
+                dispatch(setTargetTransmitters({ noradId: satelliteId, transmitters: result }));
             } else {
                 const result = await dispatch(editTransmitter({
                     socket,
@@ -254,6 +256,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                 // Update the transmitters with the response
                 dispatch(setClickedSatelliteTransmitters(result));
+                dispatch(setTargetTransmitters({ noradId: satelliteId, transmitters: result }));
             }
 
             // Close modal on successful submission

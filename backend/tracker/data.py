@@ -319,6 +319,108 @@ async def compiled_satellite_data(dbsession, norad_id: int) -> Dict[str, Any]:
     return satellite_data
 
 
+def compiled_satellite_data_from_inputs(
+    satellite: Dict[str, Any],
+    location: Dict[str, Any],
+    transmitters: Optional[List[Any]] = None,
+    map_settings: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Compile satellite data using in-memory inputs instead of database access.
+    """
+    satellite_data: Dict[str, Any] = {
+        "details": {},
+        "position": {},
+        "paths": {"past": [], "future": []},
+        "coverage": [],
+        "transmitters": transmitters or [],
+        "error": False,
+    }
+
+    try:
+        if not satellite or not location:
+            raise Exception("Missing satellite or location data")
+
+        satellite_details = {
+            "name": satellite.get("name"),
+            "tle1": satellite.get("tle1"),
+            "tle2": satellite.get("tle2"),
+            "norad_id": satellite.get("norad_id"),
+        }
+        if not satellite_details["tle1"] or not satellite_details["tle2"]:
+            raise ValueError("Missing TLE data for satellite")
+        satellite_details["is_geostationary"] = is_geostationary(
+            [satellite_details["tle1"], satellite_details["tle2"]]
+        )
+        satellite_data["details"] = satellite_details
+
+        # get current position
+        position = get_satellite_position_from_tle(
+            [
+                satellite_details["name"],
+                satellite_details["tle1"],
+                satellite_details["tle2"],
+            ]
+        )
+
+        home_lat = location["lat"]
+        home_lon = location["lon"]
+        sky_point = get_satellite_az_el(
+            home_lat,
+            home_lon,
+            satellite_details["tle1"],
+            satellite_details["tle2"],
+            datetime.now(timezone.utc),
+        )
+
+        # calculate paths with caching
+        duration_minutes = int((map_settings or {}).get("orbitProjectionDuration", 240))
+        step_minutes = 0.5
+
+        tle1 = str(satellite_details["tle1"])
+        tle2 = str(satellite_details["tle2"])
+
+        cached_paths = get_cached_satellite_paths(
+            tle1,
+            tle2,
+            duration_minutes,
+            step_minutes,
+        )
+        if cached_paths is not None:
+            satellite_data["paths"] = cached_paths
+        else:
+            paths = get_satellite_path(
+                [tle1, tle2],
+                duration_minutes=duration_minutes,
+                step_minutes=step_minutes,
+            )
+            cache_satellite_paths(
+                tle1,
+                tle2,
+                duration_minutes,
+                step_minutes,
+                paths,
+                ttl_minutes=30,
+            )
+            satellite_data["paths"] = paths
+
+        satellite_data["coverage"] = get_satellite_coverage_circle(
+            position["lat"], position["lon"], position["alt"] / 1000, num_points=300
+        )
+
+        position["az"] = sky_point[0]
+        position["el"] = sky_point[1]
+        satellite_data["position"] = position
+        satellite_data = serialize_object(satellite_data)
+
+    except Exception as e:
+        logger.error(f"Failed to compile satellite data from inputs, error: {e}")
+        logger.exception(e)
+        satellite_data["error"] = True
+
+    return satellite_data
+
+
 async def get_ui_tracker_state(group_id: str, norad_id: int):
     """
     Fetches the current tracker state for a specified group ID and satellite ID. This function

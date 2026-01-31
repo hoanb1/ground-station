@@ -20,6 +20,7 @@ from typing import Any, Dict, Optional, Union
 import crud
 from db import AsyncSessionLocal
 from handlers.entities.tracking import emit_tracker_data, emit_ui_tracker_values
+from tracker.runner import get_tracker_manager
 
 
 async def fetch_preferences(
@@ -110,6 +111,9 @@ async def set_map_settings(
         # Emit tracker data so all browsers are informed of the change
         await emit_tracker_data(dbsession, sio, logger)
         await emit_ui_tracker_values(dbsession, sio, logger)
+        if data and data.get("name") == "target-map-settings":
+            manager = get_tracker_manager()
+            manager.notify_map_settings_changed(data.get("value", {}))
 
         return {"success": map_settings_reply["success"], "data": map_settings_reply["data"]}
 

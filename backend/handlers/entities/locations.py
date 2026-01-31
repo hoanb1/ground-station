@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional, Union
 
 import crud
 from db import AsyncSessionLocal
+from tracker.runner import get_tracker_manager
 
 
 async def get_locations(
@@ -60,6 +61,9 @@ async def submit_location(
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding location, data: {data}")
         add_reply = await crud.locations.add_location(dbsession, data)
+        if add_reply.get("success"):
+            manager = get_tracker_manager()
+            await manager.notify_locations_changed()
         return {"success": add_reply["success"], "data": None}
 
 
@@ -81,6 +85,9 @@ async def edit_location(
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Editing location, data: {data}")
         edit_reply = await crud.locations.edit_location(dbsession, data)
+        if edit_reply.get("success"):
+            manager = get_tracker_manager()
+            await manager.notify_locations_changed()
         return {"success": edit_reply["success"], "data": None}
 
 
@@ -102,6 +109,9 @@ async def delete_location(
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Delete location, data: {data}")
         delete_reply = await crud.locations.delete_location(dbsession, data)
+        if delete_reply.get("success"):
+            manager = get_tracker_manager()
+            await manager.notify_locations_changed()
         return {"success": delete_reply["success"], "data": None}
 
 

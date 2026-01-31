@@ -657,30 +657,40 @@ export const createFlowFromMetrics = (metrics) => {
                             }
                         } else if (decoderConnection.source_type === 'audio_broadcaster') {
                             // Audio-based decoder (SSTV, Morse) - connect from audio broadcaster
-                            // Extract session_id and vfo from decoder key (e.g., "de6TGRr9dWAMVx39AAAS_vfo1")
-                            const parts = decKey.split('_vfo');
-                            if (parts.length === 2) {
-                                const sessionId = parts[0];
-                                const vfoNum = parts[1];
-                                const audioBroadcasterId = nodeMap.get(`${sdrId}-audio-broadcaster-${sessionId}_${vfoNum}`);
+                            const audioBroadcasterKey = decoderConnection.source_id
+                                ? `${sdrId}-audio-broadcaster-${decoderConnection.source_id}`
+                                : null;
+                            let audioBroadcasterId = audioBroadcasterKey ? nodeMap.get(audioBroadcasterKey) : null;
+                            let audioBroadcaster = decoderConnection.source_id
+                                ? sdrData.broadcasters?.[decoderConnection.source_id]
+                                : null;
 
-                                if (audioBroadcasterId) {
-                                    const audioBroadcaster = sdrData.broadcasters[`audio_${sessionId}_${vfoNum}`];
-                                    const isAnimated = hasPositiveOutputRate(audioBroadcaster);
-                                    const queueUtilization = decoder.input_queue_size / Math.max(decoder.input_queue_maxsize || 10, 1);
-
-                                    edges.push({
-                                        id: `edge-${audioBroadcasterId}-${nodeId}`,
-                                        source: audioBroadcasterId,
-                                        target: nodeId,
-                                        sourceHandle: getNextOutputHandle(audioBroadcasterId),
-                                        targetHandle: getNextInputHandle(nodeId),
-                                        animated: isAnimated,
-                                        style: { stroke: getEdgeColor('audio', queueUtilization, isAnimated), strokeWidth: 2 },
-                                        label: decoder.input_queue_size ? `${decoder.input_queue_size}` : undefined,
-                                        type: 'smoothstep',
-                                    });
+                            if (!audioBroadcasterId) {
+                                // Fallback for legacy keys: derive from decoder key (e.g., "session_vfo1")
+                                const parts = decKey.split('_vfo');
+                                if (parts.length === 2) {
+                                    const sessionId = parts[0];
+                                    const vfoNum = parts[1];
+                                    audioBroadcasterId = nodeMap.get(`${sdrId}-audio-broadcaster-${sessionId}_${vfoNum}`);
+                                    audioBroadcaster = sdrData.broadcasters?.[`audio_${sessionId}_${vfoNum}`];
                                 }
+                            }
+
+                            if (audioBroadcasterId) {
+                                const isAnimated = hasPositiveOutputRate(audioBroadcaster);
+                                const queueUtilization = decoder.input_queue_size / Math.max(decoder.input_queue_maxsize || 10, 1);
+
+                                edges.push({
+                                    id: `edge-${audioBroadcasterId}-${nodeId}`,
+                                    source: audioBroadcasterId,
+                                    target: nodeId,
+                                    sourceHandle: getNextOutputHandle(audioBroadcasterId),
+                                    targetHandle: getNextInputHandle(nodeId),
+                                    animated: isAnimated,
+                                    style: { stroke: getEdgeColor('audio', queueUtilization, isAnimated), strokeWidth: 2 },
+                                    label: decoder.input_queue_size ? `${decoder.input_queue_size}` : undefined,
+                                    type: 'smoothstep',
+                                });
                             }
                         }
                     }

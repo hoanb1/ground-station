@@ -20,10 +20,8 @@ Handles all rotator-related operations including connection, positioning, and li
 
 import logging
 
-import crud
-from common.constants import DictKeys, SocketEvents, TrackingEvents, TrackingStateNames
+from common.constants import DictKeys, SocketEvents, TrackingEvents
 from controllers.rotator import RotatorController
-from db.__init__ import AsyncSessionLocal
 
 logger = logging.getLogger("tracker-worker")
 
@@ -63,12 +61,11 @@ class RotatorHandler:
         """Connect to the rotator hardware."""
         if self.tracker.current_rotator_id is not None and self.tracker.rotator_controller is None:
             try:
-                async with AsyncSessionLocal() as dbsession:
-                    rotator_details_reply = await crud.hardware.fetch_rotators(
-                        dbsession, rotator_id=self.tracker.current_rotator_id
+                rotator_details = self.tracker.rotator_details
+                if not rotator_details:
+                    raise Exception(
+                        f"No rotator details provided for ID: {self.tracker.current_rotator_id}"
                     )
-                    rotator_details = rotator_details_reply["data"]
-                    self.tracker.rotator_details = rotator_details
 
                 self.tracker.rotator_data.update(
                     {
@@ -126,14 +123,9 @@ class RotatorHandler:
             }
         )
 
-        async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.trackingstate.set_tracking_state(
-                dbsession,
-                {
-                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                    "value": {"rotator_state": "disconnected"},
-                },
-            )
+        updated_tracking_state = dict(self.tracker.input_tracking_state or {})
+        updated_tracking_state["rotator_state"] = "disconnected"
+        self.tracker.input_tracking_state = updated_tracking_state
 
         self.tracker.queue_out.put(
             {
@@ -143,7 +135,7 @@ class RotatorHandler:
                         {DictKeys.NAME: TrackingEvents.ROTATOR_ERROR, "error": str(error)}
                     ],
                     DictKeys.ROTATOR_DATA: self.tracker.rotator_data.copy(),
-                    DictKeys.TRACKING_STATE: new_tracking_state[DictKeys.DATA]["value"],
+                    DictKeys.TRACKING_STATE: updated_tracking_state,
                 },
             }
         )

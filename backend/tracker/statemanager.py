@@ -21,15 +21,8 @@ Handles state change detection, validation, and command processing.
 import logging
 from typing import Any, List, Tuple
 
-import crud
-from common.constants import (
-    DictKeys,
-    SocketEvents,
-    TrackerCommands,
-    TrackingEvents,
-    TrackingStateNames,
-)
-from db.__init__ import AsyncSessionLocal
+from common.constants import DictKeys, SocketEvents, TrackerCommands, TrackingEvents
+from tracker.ipc import TRACKER_MSG_COMMAND
 
 logger = logging.getLogger("tracker-worker")
 
@@ -133,21 +126,14 @@ class StateManager:
         )
 
         # Update rig state in database
-        async with AsyncSessionLocal() as dbsession:
-            tracking_state_reply = await crud.trackingstate.set_tracking_state(
-                dbsession,
-                {
-                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                    "value": {
-                        "transmitter_id": "none",
-                        "rig_state": (
-                            "stopped"
-                            if self.tracker.current_rig_state == "tracking"
-                            else self.tracker.current_rig_state
-                        ),
-                    },
-                },
-            )
+        updated_tracking_state = dict(self.tracker.input_tracking_state or {})
+        updated_tracking_state["transmitter_id"] = "none"
+        updated_tracking_state["rig_state"] = (
+            "stopped"
+            if self.tracker.current_rig_state == "tracking"
+            else self.tracker.current_rig_state
+        )
+        self.tracker.input_tracking_state = updated_tracking_state
 
         # Update local state
         self.tracker.rig_data["tracking"] = False
@@ -159,7 +145,7 @@ class StateManager:
                 DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                 DictKeys.DATA: {
                     DictKeys.RIG_DATA: self.tracker.rig_data.copy(),
-                    DictKeys.TRACKING_STATE: tracking_state_reply["data"]["value"],
+                    DictKeys.TRACKING_STATE: updated_tracking_state,
                 },
             }
         )
@@ -185,9 +171,18 @@ class StateManager:
         try:
             while not self.tracker.queue_in.empty():
                 command = self.tracker.queue_in.get_nowait()
-                logger.info(f"Received command: {command}")
+                logger.debug(f"Received command: {command}")
 
-                cmd_type = command.get("command")
+                if command.get("type"):
+                    if command.get("type") == TRACKER_MSG_COMMAND:
+                        cmd_payload = command.get("payload", {})
+                        cmd_type = cmd_payload.get("command")
+                    else:
+                        self.tracker.apply_input_message(command)
+                        continue
+                else:
+                    cmd_type = command.get("command")
+
                 if cmd_type == TrackerCommands.STOP:
                     logger.info("Received stop command, exiting tracking task")
                     return True
@@ -213,15 +208,9 @@ class StateManager:
             and self.tracker.rotator_controller is None
         ):
             logger.warning("Tracking state said rotator must be connected but it is not")
-
-            async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.trackingstate.set_tracking_state(
-                    dbsession,
-                    {
-                        DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                        "value": {"rotator_state": "disconnected"},
-                    },
-                )
+            updated_tracking_state = dict(self.tracker.input_tracking_state or {})
+            updated_tracking_state["rotator_state"] = "disconnected"
+            self.tracker.input_tracking_state = updated_tracking_state
 
             self.tracker.rotator_data["connected"] = False
             self.tracker.rotator_data["tracking"] = False
@@ -232,7 +221,7 @@ class StateManager:
                     DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                     DictKeys.DATA: {
                         DictKeys.ROTATOR_DATA: self.tracker.rotator_data.copy(),
-                        DictKeys.TRACKING_STATE: new_tracking_state[DictKeys.DATA]["value"],
+                        DictKeys.TRACKING_STATE: updated_tracking_state,
                     },
                 }
             )
@@ -240,15 +229,9 @@ class StateManager:
         # Check if rig should be connected but isn't
         if self.tracker.current_rig_state == "connected" and self.tracker.rig_controller is None:
             logger.warning("Tracking state said rig must be connected but it is not")
-
-            async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.trackingstate.set_tracking_state(
-                    dbsession,
-                    {
-                        DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                        "value": {"rig_state": "disconnected"},
-                    },
-                )
+            updated_tracking_state = dict(self.tracker.input_tracking_state or {})
+            updated_tracking_state["rig_state"] = "disconnected"
+            self.tracker.input_tracking_state = updated_tracking_state
 
             self.tracker.rig_data["connected"] = False
             self.tracker.rig_data["tracking"] = False
@@ -259,7 +242,7 @@ class StateManager:
                     DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                     DictKeys.DATA: {
                         DictKeys.RIG_DATA: self.tracker.rig_data.copy(),
-                        DictKeys.TRACKING_STATE: new_tracking_state[DictKeys.DATA]["value"],
+                        DictKeys.TRACKING_STATE: updated_tracking_state,
                     },
                 }
             )

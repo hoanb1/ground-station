@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional, Union
 
 import crud
 from db import AsyncSessionLocal
+from tracker.runner import get_tracker_manager
 
 
 async def submit_transmitter(
@@ -43,6 +44,9 @@ async def submit_transmitter(
         transmitters = await crud.transmitters.fetch_transmitters_for_satellite(
             dbsession, norad_cat_id
         )
+        if norad_cat_id:
+            manager = get_tracker_manager()
+            await manager.notify_transmitters_changed(norad_cat_id)
         return {
             "success": (transmitters["success"] & add_reply["success"]),
             "data": transmitters.get("data", []),
@@ -66,12 +70,23 @@ async def edit_transmitter(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Editing transmitter, data: {data}")
+        transmitter_id = data.get("id") if data else None
         edit_reply = await crud.transmitters.edit_transmitter(dbsession, data)
         logger.info(edit_reply)
-        norad_cat_id = data.get("norad_cat_id") if data else None
+        norad_cat_id = None
+        if edit_reply.get("success"):
+            norad_cat_id = (edit_reply.get("data") or {}).get("norad_cat_id")
+        if not norad_cat_id and data:
+            norad_cat_id = data.get("norad_cat_id")
+        if not norad_cat_id and transmitter_id:
+            fetch_reply = await crud.transmitters.fetch_transmitter(dbsession, transmitter_id)
+            norad_cat_id = (fetch_reply.get("data") or {}).get("norad_cat_id")
         transmitters = await crud.transmitters.fetch_transmitters_for_satellite(
             dbsession, norad_cat_id
         )
+        if norad_cat_id:
+            manager = get_tracker_manager()
+            await manager.notify_transmitters_changed(norad_cat_id)
         return {
             "success": (transmitters["success"] & edit_reply["success"]),
             "data": transmitters.get("data", []),
@@ -101,6 +116,9 @@ async def delete_transmitter(
         transmitters = await crud.transmitters.fetch_transmitters_for_satellite(
             dbsession, norad_cat_id
         )
+        if norad_cat_id:
+            manager = get_tracker_manager()
+            await manager.notify_transmitters_changed(norad_cat_id)
         return {
             "success": (transmitters["success"] & delete_reply["success"]),
             "data": transmitters.get("data", []),

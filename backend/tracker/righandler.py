@@ -21,11 +21,9 @@ Handles all rig-related operations including connection, frequency control, and 
 import logging
 import time
 
-import crud
-from common.constants import DictKeys, SocketEvents, TrackingEvents, TrackingStateNames
+from common.constants import DictKeys, SocketEvents, TrackingEvents
 from controllers.rig import RigController
 from controllers.sdr import SDRController
-from db.__init__ import AsyncSessionLocal
 from tracking.doppler import calculate_doppler_shift
 
 logger = logging.getLogger("tracker-worker")
@@ -47,27 +45,13 @@ class RigHandler:
         """Connect to rig hardware (radio or SDR)."""
         if self.tracker.current_rig_id is not None and self.tracker.rig_controller is None:
             try:
-                async with AsyncSessionLocal() as dbsession:
-                    # Try the hardware rig first
-                    rig_details_reply = await crud.hardware.fetch_rigs(
-                        dbsession, rig_id=self.tracker.current_rig_id
+                rig_details = self.tracker.rig_details
+                rig_type = (self.tracker.input_hardware or {}).get("rig_type", "radio")
+
+                if not rig_details:
+                    raise Exception(
+                        f"No rig details provided for ID: {self.tracker.current_rig_id}"
                     )
-
-                    if rig_details_reply.get("data") is not None:
-                        rig_type = "radio"
-                    else:
-                        # Try SDR
-                        rig_details_reply = await crud.hardware.fetch_sdr(
-                            dbsession, sdr_id=self.tracker.current_rig_id
-                        )
-                        if not rig_details_reply.get("data", None):
-                            raise Exception(
-                                f"No rig or SDR found with ID: {self.tracker.current_rig_id}"
-                            )
-                        rig_type = "sdr"
-
-                    rig_details = rig_details_reply["data"]
-                    self.tracker.rig_details = rig_details
 
                 # Create appropriate controller
                 if rig_type == "sdr":
@@ -126,14 +110,9 @@ class RigHandler:
             }
         )
 
-        async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.trackingstate.set_tracking_state(
-                dbsession,
-                {
-                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                    "value": {"rig_state": "disconnected"},
-                },
-            )
+        updated_tracking_state = dict(self.tracker.input_tracking_state or {})
+        updated_tracking_state["rig_state"] = "disconnected"
+        self.tracker.input_tracking_state = updated_tracking_state
 
         self.tracker.queue_out.put(
             {
@@ -143,7 +122,7 @@ class RigHandler:
                         {DictKeys.NAME: TrackingEvents.RIG_ERROR, "error": str(error)}
                     ],
                     DictKeys.RIG_DATA: self.tracker.rig_data.copy(),
-                    DictKeys.TRACKING_STATE: new_tracking_state[DictKeys.DATA]["value"],
+                    DictKeys.TRACKING_STATE: updated_tracking_state,
                 },
             }
         )
@@ -201,11 +180,14 @@ class RigHandler:
     async def handle_transmitter_tracking(self, satellite_tles, location):
         """Handle transmitter selection and doppler calculation for both RX and TX."""
         if self.tracker.current_transmitter_id != "none":
-            async with AsyncSessionLocal() as dbsession:
-                current_transmitter_reply = await crud.transmitters.fetch_transmitter(
-                    dbsession, transmitter_id=self.tracker.current_transmitter_id
-                )
-                current_transmitter = current_transmitter_reply.get("data", {})
+            current_transmitter = next(
+                (
+                    t
+                    for t in self.tracker.input_transmitters
+                    if t.get("id") == self.tracker.current_transmitter_id
+                ),
+                None,
+            )
 
             if current_transmitter:
                 downlink_freq = current_transmitter.get("downlink_low", 0)
@@ -265,7 +247,6 @@ class RigHandler:
             self.tracker.rig_data["transmitter_id"] = self.tracker.current_transmitter_id
 
         else:
-            logger.debug("No satellite transmitter selected")
             self.tracker.rig_data["transmitter_id"] = self.tracker.current_transmitter_id
             self.tracker.rig_data["downlink_observed_freq"] = 0
             self.tracker.rig_data["doppler_shift"] = 0
@@ -287,15 +268,8 @@ class RigHandler:
             return
 
         try:
-            async with AsyncSessionLocal() as dbsession:
-                all_transmitters_reply = await crud.transmitters.fetch_transmitters_for_satellite(
-                    dbsession, norad_id=self.tracker.current_norad_id
-                )
-                all_transmitters = all_transmitters_reply.get("data", [])
-
-            # Calculate doppler shift for each transmitter
             transmitters_with_doppler = []
-            for transmitter in all_transmitters:
+            for transmitter in self.tracker.input_transmitters:
                 downlink_freq = transmitter.get("downlink_low", 0)
                 uplink_freq = transmitter.get("uplink_low", 0)
 
@@ -353,10 +327,7 @@ class RigHandler:
                     transmitters_with_doppler.append(transmitter_data)
 
             self.tracker.rig_data["transmitters"] = transmitters_with_doppler
-            logger.debug(
-                f"Calculated doppler shift for {len(transmitters_with_doppler)} "
-                f"transmitters for satellite #{self.tracker.current_norad_id}"
-            )
+            # Debug log handled by tracker loop for compact output.
 
         except Exception as e:
             logger.error(f"Error calculating doppler for all transmitters: {e}")

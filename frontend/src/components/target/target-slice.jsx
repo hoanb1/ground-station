@@ -558,6 +558,19 @@ const targetSatTrackSlice = createSlice({
         setAvailableTransmitters(state, action) {
             state.availableTransmitters = action.payload;
         },
+        setTargetTransmitters(state, action) {
+            const noradId = action.payload?.noradId;
+            const transmitters = action.payload?.transmitters || [];
+            if (
+                state.satelliteData?.details?.norad_id != null
+                && String(state.satelliteData.details.norad_id) === String(noradId)
+            ) {
+                state.satelliteData.transmitters = transmitters;
+            }
+            if (state.satelliteId != null && String(state.satelliteId) === String(noradId)) {
+                state.availableTransmitters = transmitters;
+            }
+        },
         setShowGrid(state, action) {
             state.showGrid = action.payload;
         },
@@ -815,6 +828,7 @@ export const {
     setNextPassesHours,
     setSelectedTransmitter,
     setAvailableTransmitters,
+    setTargetTransmitters,
     setShowGrid,
     setColorMap,
     setColorMaps,
