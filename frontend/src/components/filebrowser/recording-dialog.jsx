@@ -69,8 +69,6 @@ export default function RecordingDialog({ open, onClose, recording }) {
         return date.toLocaleString('en-US', { timeZone: timezone });
     };
 
-    if (!recording) return null;
-
     useEffect(() => {
         if (open) {
             setZoom(1);
@@ -345,6 +343,8 @@ export default function RecordingDialog({ open, onClose, recording }) {
         }
         setIsPanning(false);
     };
+
+    if (!recording) return null;
 
     return (
         <Dialog

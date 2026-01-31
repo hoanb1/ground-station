@@ -25,8 +25,7 @@ from demodulators.gfskdecoder import GFSKDecoder
 from demodulators.gmskdecoder import GMSKDecoder
 from demodulators.loradecoder import LoRaDecoder
 from demodulators.morsedecoder import MorseDecoder
-from demodulators.sstvdecoder import SSTVDecoder  # noqa: F401 - kept for backward compatibility
-from demodulators.sstvdecoderv2 import SSTVDecoderV2
+from demodulators.sstvdecoder import SSTVDecoder
 
 
 @dataclass
@@ -89,7 +88,7 @@ class DecoderRegistry:
             ),
             "sstv": DecoderCapabilities(
                 name="sstv",
-                decoder_class=SSTVDecoderV2,
+                decoder_class=SSTVDecoder,
                 needs_raw_iq=True,  # Receives IQ directly (integrated FM demod)
                 required_demodulator=None,  # Has integrated FM demodulator
                 demodulator_mode=None,
