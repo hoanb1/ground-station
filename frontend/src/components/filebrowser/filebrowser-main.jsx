@@ -111,6 +111,7 @@ import FileTableView from './file-table-view.jsx';
 import MeteorM2xLrptFolderDialog from './meteor-m2x-lrpt-folder-dialog.jsx';
 import MeteorHrptFolderDialog from './meteor-hrpt-folder-dialog.jsx';
 import ProcessingDialog from './processing-dialog.jsx';
+import ZoomableImage from '../common/zoomable-image.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -1800,8 +1801,7 @@ export default function FilebrowserMain() {
                 <Dialog
                     open={detailsOpen}
                     onClose={() => setDetailsOpen(false)}
-                    maxWidth="lg"
-                    fullWidth
+                    maxWidth="sm"
                 >
                     <DialogTitle>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1876,8 +1876,13 @@ export default function FilebrowserMain() {
                 <Dialog
                     open={detailsOpen}
                     onClose={() => setDetailsOpen(false)}
-                    maxWidth="lg"
-                    fullWidth
+                    maxWidth={false}
+                    PaperProps={{
+                        sx: {
+                            width: '900px',
+                            maxWidth: '90vw',
+                        },
+                    }}
                 >
                     <DialogTitle>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1906,23 +1911,22 @@ export default function FilebrowserMain() {
                         {selectedItem && (
                             <Box>
                                 {/* Image */}
-                                <Box
-                                    sx={{
-                                        textAlign: 'center',
+                                <ZoomableImage
+                                    src={selectedItem.url}
+                                    alt={selectedItem.displayName || selectedItem.filename}
+                                    resetKey={`${detailsOpen}-${selectedItem.url}`}
+                                    containerSx={{
                                         mb: 3,
                                         p: 2,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 1.5,
-                                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+                                        minHeight: 420,
                                     }}
-                                >
-                                    <img
-                                        src={selectedItem.url}
-                                        alt={selectedItem.displayName || selectedItem.filename}
-                                        style={{ maxWidth: '100%', height: 'auto' }}
-                                    />
-                                </Box>
+                                    imageSx={{
+                                        width: 'auto',
+                                        height: 'auto',
+                                        maxWidth: '100%',
+                                        maxHeight: '100%',
+                                    }}
+                                />
 
                                 {/* Metadata */}
                                 {telemetryMetadata && (
