@@ -292,11 +292,6 @@ class TrackerManager:
         self._send_to_tracker(TRACKER_MSG_SET_TRANSMITTERS, {"items": transmitters})
 
     async def notify_tle_updated(self, norad_id: int) -> None:
-        logger.info(
-            "notify_tle_updated called (norad_id=%s, tracking=%s)",
-            norad_id,
-            (self.current_tracking_state or {}).get("norad_id"),
-        )
         if not norad_id:
             logger.debug("notify_tle_updated: no norad_id provided")
             return
@@ -305,11 +300,6 @@ class TrackerManager:
             logger.debug("notify_tle_updated: no tracking state available")
             return
         if str(tracking_state.get("norad_id")) != str(norad_id):
-            logger.info(
-                "notify_tle_updated: norad_id mismatch (tracking=%s notify=%s)",
-                tracking_state.get("norad_id"),
-                norad_id,
-            )
             logger.debug(
                 "notify_tle_updated: norad_id mismatch (tracking=%s notify=%s)",
                 tracking_state.get("norad_id"),
@@ -347,6 +337,50 @@ class TrackerManager:
                 "tle2": sat.get("tle2"),
             },
         )
+
+    async def notify_tracking_inputs_from_db(self, norad_id: int) -> None:
+        if not norad_id:
+            logger.debug("notify_tracking_inputs_from_db: no norad_id provided")
+            return
+        tracking_state = await self._ensure_tracking_state()
+        if not tracking_state:
+            logger.debug("notify_tracking_inputs_from_db: no tracking state available")
+            return
+        if str(tracking_state.get("norad_id")) != str(norad_id):
+            return
+        async with AsyncSessionLocal() as dbsession:
+            try:
+                satellites = await asyncio.wait_for(
+                    crud.satellites.fetch_satellites(dbsession, norad_id=norad_id),
+                    timeout=5.0,
+                )
+                transmitters = await asyncio.wait_for(
+                    crud.transmitters.fetch_transmitters_for_satellite(
+                        dbsession, norad_id=norad_id
+                    ),
+                    timeout=5.0,
+                )
+            except asyncio.TimeoutError:
+                logger.error(
+                    "notify_tracking_inputs_from_db: fetch timed out (norad_id=%s)", norad_id
+                )
+                return
+        if satellites.get("success") and satellites.get("data"):
+            sat = satellites["data"][0]
+            self._send_to_tracker(
+                TRACKER_MSG_SET_SATELLITE_EPHEMERIS,
+                {
+                    "norad_id": sat.get("norad_id"),
+                    "name": sat.get("name"),
+                    "tle1": sat.get("tle1"),
+                    "tle2": sat.get("tle2"),
+                },
+            )
+        if transmitters.get("success"):
+            self._send_to_tracker(
+                TRACKER_MSG_SET_TRANSMITTERS,
+                {"items": transmitters.get("data", [])},
+            )
 
     async def sync_tracking_state_from_db(self) -> None:
         async with AsyncSessionLocal() as dbsession:

@@ -103,6 +103,7 @@ class TaskInfo:
     output_lines: List[str] = field(default_factory=list)
     error_lines: List[str] = field(default_factory=list)
     queue: Optional[mp.Queue] = None
+    tracker_notified: bool = False
 
 
 def _task_wrapper(func: Callable, args: Tuple, kwargs: Dict, queue: mp.Queue):
@@ -521,6 +522,57 @@ class BackgroundTaskManager:
                     "progress": progress,
                 },
             )
+
+            if (
+                state.get("status") == "complete"
+                and state.get("success")
+                and not task_info.tracker_notified
+            ):
+                task_info.tracker_notified = True
+                try:
+                    from tracker.runner import get_tracker_manager
+
+                    manager = get_tracker_manager()
+
+                    satellite_norad_ids = {
+                        sat.get("norad_id")
+                        for sat in (state.get("modified", {}) or {}).get("satellites", [])
+                    }
+                    satellite_norad_ids.update(
+                        {
+                            sat.get("norad_id")
+                            for sat in (state.get("newly_added", {}) or {}).get("satellites", [])
+                        }
+                    )
+                    satellite_norad_ids = {nid for nid in satellite_norad_ids if nid}
+
+                    transmitter_norad_ids = {
+                        tx.get("norad_id")
+                        for tx in (state.get("modified", {}) or {}).get("transmitters", [])
+                    }
+                    transmitter_norad_ids.update(
+                        {
+                            tx.get("norad_id")
+                            for tx in (state.get("newly_added", {}) or {}).get("transmitters", [])
+                        }
+                    )
+                    transmitter_norad_ids.update(
+                        {
+                            tx.get("norad_id")
+                            for tx in (state.get("removed", {}) or {}).get("transmitters", [])
+                        }
+                    )
+                    transmitter_norad_ids = {nid for nid in transmitter_norad_ids if nid}
+
+                    all_norad_ids = set()
+                    all_norad_ids.update(satellite_norad_ids)
+                    all_norad_ids.update(transmitter_norad_ids)
+
+                    for norad_id in sorted(all_norad_ids):
+                        await manager.notify_tracking_inputs_from_db(norad_id)
+
+                except Exception as e:
+                    logger.debug(f"Failed to notify tracker manager after TLE sync: {e}")
 
     async def stop_task(self, task_id: str, timeout: float = 5.0) -> bool:
         """

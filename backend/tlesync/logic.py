@@ -90,15 +90,9 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
 
             manager = get_tracker_manager()
             if satellite_norad_ids:
-                logger.info(
-                    "Notifying tracker manager (satellites): %s",
-                    sorted(satellite_norad_ids),
-                )
                 for norad_id in satellite_norad_ids:
                     try:
-                        logger.info("Notify tracker manager TLE start (norad_id=%s)", norad_id)
                         await manager.notify_tle_updated(norad_id)
-                        logger.info("Notify tracker manager TLE done (norad_id=%s)", norad_id)
                     except Exception as e:
                         logger.error(
                             "Notify tracker manager TLE failed (norad_id=%s, error=%s)",
@@ -106,20 +100,10 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                             e,
                         )
             if transmitter_norad_ids:
-                logger.info(
-                    "Notifying tracker manager (transmitters): %s",
-                    sorted(transmitter_norad_ids),
-                )
                 for norad_id in transmitter_norad_ids:
                     try:
-                        logger.info(
-                            "Notify tracker manager transmitters start (norad_id=%s)", norad_id
-                        )
                         manager.notify_transmitters_changed_with_items(
                             norad_id, transmitters_by_norad.get(norad_id, [])
-                        )
-                        logger.info(
-                            "Notify tracker manager transmitters done (norad_id=%s)", norad_id
                         )
                     except Exception as e:
                         logger.error(
@@ -616,6 +600,7 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
         finally:
             # Always close the session when you're done
             await dbsession.close()
+            # Skip tracker notifications if the sync did not complete successfully.
             if not sync_state.get("success"):
                 return
             satellite_norad_ids = {
@@ -653,6 +638,7 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                             normalized["id"] = normalized.get("uuid")
                         transmitters_by_norad.setdefault(norad_id, []).append(normalized)
 
+            # Fire-and-forget notifications so cleanup doesn't block on tracker IPC.
             if satellite_norad_ids or transmitter_norad_ids:
                 asyncio.create_task(
                     _notify_tracker_manager(
