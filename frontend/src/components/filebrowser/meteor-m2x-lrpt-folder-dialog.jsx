@@ -439,9 +439,6 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                                 borderRadius: 0,
                                 bgcolor: 'transparent',
                             }}
-                            imageSx={{
-                                objectFit: 'cover',
-                            }}
                         />
                     </DialogContent>
                     <DialogActions>

@@ -454,9 +454,6 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                                 borderRadius: 0,
                                 bgcolor: 'transparent',
                             }}
-                            imageSx={{
-                                objectFit: 'cover',
-                            }}
                         />
                     </DialogContent>
                     <DialogActions>
