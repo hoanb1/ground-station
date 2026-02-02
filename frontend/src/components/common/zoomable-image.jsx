@@ -30,6 +30,7 @@ export default function ZoomableImage({
     imageSx,
     minZoom = 1,
     maxZoom = 6,
+    constrainPan = true,
     showHint = true,
     hintText = 'Scroll or pinch to zoom · Drag to pan',
     showZoomBadge = true,
@@ -105,6 +106,9 @@ export default function ZoomableImage({
     const clampPan = (nextPan, zoomValue) => {
         if (zoomValue <= 1) {
             return { x: 0, y: 0 };
+        }
+        if (!constrainPan) {
+            return nextPan;
         }
         const { maxX, maxY } = getPanBounds(zoomValue);
         return {
