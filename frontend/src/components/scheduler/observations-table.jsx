@@ -616,7 +616,7 @@ const ObservationsTable = () => {
             </Box>
 
             {/* Actions below table */}
-            <Stack direction="row" spacing={2} sx={{ marginTop: '15px', flexShrink: 0, flexWrap: 'wrap' }}>
+            <Stack direction="row" spacing={1} sx={{ marginTop: '15px', flexShrink: 0, flexWrap: 'wrap' }}>
                 <Button
                     variant="contained"
                     onClick={handleAdd}

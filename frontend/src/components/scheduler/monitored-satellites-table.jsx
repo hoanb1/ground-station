@@ -68,6 +68,8 @@ const MonitoredSatellitesTable = () => {
     const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
     const [previewData, setPreviewData] = useState(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+    const [regenerationTargetId, setRegenerationTargetId] = useState(null);
+    const [openNoEnabledDialog, setOpenNoEnabledDialog] = useState(false);
 
     const monitoredSatellites = useSelector((state) => state.scheduler?.monitoredSatellites || []);
     const loading = useSelector((state) => state.scheduler?.monitoredSatellitesLoading || false);
@@ -119,16 +121,13 @@ const MonitoredSatellitesTable = () => {
         }
     };
 
-    const handleRegenerateClick = () => {
+    const triggerRegenerationPreview = (monitoredSatelliteId) => {
         if (socket) {
             setIsLoadingPreview(true);
-
-            // For single satellite selection, pass specific ID
-            // For no selection or multiple, pass null to regenerate all enabled
-            const monitored_satellite_id = selectedIds.length === 1 ? selectedIds[0] : null;
+            setRegenerationTargetId(monitoredSatelliteId);
 
             socket.emit('data_submission', 'regenerate-observations', {
-                monitored_satellite_id,
+                monitored_satellite_id: monitoredSatelliteId,
                 dry_run: true
             }, (response) => {
                 setIsLoadingPreview(false);
@@ -142,12 +141,25 @@ const MonitoredSatellitesTable = () => {
         }
     };
 
+    const handleRegenerateSelectedClick = () => {
+        if (selectedIds.length === 1) {
+            triggerRegenerationPreview(selectedIds[0]);
+        }
+    };
+
+    const handleRegenerateAllEnabledClick = () => {
+        const hasEnabled = monitoredSatellites.some((sat) => sat.enabled);
+        if (!hasEnabled) {
+            setOpenNoEnabledDialog(true);
+            return;
+        }
+        triggerRegenerationPreview(null);
+    };
+
     const handlePreviewConfirm = (conflictChoices) => {
         if (socket) {
-            const monitored_satellite_id = selectedIds.length === 1 ? selectedIds[0] : null;
-
             socket.emit('data_submission', 'regenerate-observations', {
-                monitored_satellite_id,
+                monitored_satellite_id: regenerationTargetId,
                 dry_run: false,
                 user_conflict_overrides: conflictChoices
             }, (response) => {
@@ -155,6 +167,7 @@ const MonitoredSatellitesTable = () => {
                     console.log('Regeneration successful:', response.data);
                     setOpenPreviewDialog(false);
                     setPreviewData(null);
+                    setRegenerationTargetId(null);
                 } else {
                     console.error('Regeneration failed:', response.error);
                 }
@@ -380,7 +393,7 @@ const MonitoredSatellitesTable = () => {
             </Box>
 
             {/* Actions below table */}
-            <Stack direction="row" spacing={2} sx={{ marginTop: '15px', flexShrink: 0, flexWrap: 'wrap' }}>
+            <Stack direction="row" spacing={1} sx={{ marginTop: '15px', flexShrink: 0, flexWrap: 'wrap', width: '100%' }}>
                 <Button
                     variant="contained"
                     onClick={handleAdd}
@@ -449,11 +462,9 @@ const MonitoredSatellitesTable = () => {
                 </Button>
                 <Tooltip
                     title={
-                        selectedIds.length === 0
-                            ? "Regenerate observations for ALL enabled satellites"
-                            : selectedIds.length === 1
-                                ? "Regenerate observations for the selected satellite only"
-                                : "Please select only one satellite to regenerate specific observations"
+                        selectedIds.length === 1
+                            ? "Regenerate observations for the selected satellite only"
+                            : "Please select exactly one satellite to regenerate observations"
                     }
                     arrow
                 >
@@ -461,8 +472,8 @@ const MonitoredSatellitesTable = () => {
                         <Button
                             variant="contained"
                             color="warning"
-                            onClick={handleRegenerateClick}
-                            disabled={selectedIds.length > 1 || isLoadingPreview}
+                            onClick={handleRegenerateSelectedClick}
+                            disabled={selectedIds.length !== 1 || isLoadingPreview}
                             sx={{
                                 minWidth: 'auto',
                                 px: { xs: 1, md: 2 }
@@ -471,12 +482,7 @@ const MonitoredSatellitesTable = () => {
                             <RefreshIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                             <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                                 <RefreshIcon sx={{ mr: 1 }} />
-                                {isLoadingPreview
-                                    ? 'Loading Preview...'
-                                    : selectedIds.length === 0
-                                        ? 'Regenerate All Enabled'
-                                        : `Regenerate for ${selectedIds.length} Selected`
-                                }
+                                {isLoadingPreview ? 'Loading Preview...' : 'Regenerate Selected'}
                             </Box>
                         </Button>
                     </span>
@@ -497,6 +503,32 @@ const MonitoredSatellitesTable = () => {
                         Delete
                     </Box>
                 </Button>
+                <Box sx={{ flexGrow: 1 }} />
+                <Box sx={{ display: 'flex' }}>
+                    <Tooltip
+                        title="Regenerate observations for ALL enabled satellites"
+                        arrow
+                    >
+                        <span>
+                            <Button
+                                variant="contained"
+                                color="warning"
+                                onClick={handleRegenerateAllEnabledClick}
+                                disabled={isLoadingPreview}
+                                sx={{
+                                    minWidth: 'auto',
+                                    px: { xs: 1, md: 2 }
+                                }}
+                            >
+                                <RefreshIcon sx={{ display: { xs: 'block', md: 'none' } }} />
+                                <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+                                    <RefreshIcon sx={{ mr: 1 }} />
+                                    Regenerate All Enabled
+                                </Box>
+                            </Button>
+                        </span>
+                    </Tooltip>
+                </Box>
             </Stack>
 
             {/* Delete Confirmation Dialog */}
@@ -645,10 +677,31 @@ const MonitoredSatellitesTable = () => {
                 onClose={() => {
                     setOpenPreviewDialog(false);
                     setPreviewData(null);
+                    setRegenerationTargetId(null);
                 }}
                 previewData={previewData}
                 onConfirm={handlePreviewConfirm}
             />
+
+            {/* No Enabled Monitors Dialog */}
+            <Dialog
+                open={openNoEnabledDialog}
+                onClose={() => setOpenNoEnabledDialog(false)}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle>No Enabled Monitors</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2">
+                        There are no enabled monitored satellites. Enable at least one monitor to regenerate observations.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenNoEnabledDialog(false)} variant="contained">
+                        OK
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Paper>
     );
 };
