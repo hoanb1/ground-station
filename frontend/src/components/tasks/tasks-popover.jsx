@@ -605,17 +605,26 @@ const BackgroundTasksPopover = () => {
                     horizontal: 'right',
                 }}
                 PaperProps={{
-                    sx: {
+                    sx: (theme) => ({
                         borderRadius: 0,
                         border: '1px solid',
                         borderColor: 'divider',
                         boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
                         overflow: 'hidden',
                         backgroundColor: 'background.default',
-                    },
+                        width: { xs: 420, sm: 440, md: 460 },
+                        maxWidth: '90vw',
+                        [theme.breakpoints.down('sm')]: {
+                            left: '16px !important',
+                            right: '16px !important',
+                            width: 'auto',
+                            maxWidth: 'calc(100vw - 32px)',
+                            transform: 'none',
+                        },
+                    }),
                 }}
             >
-                <Box sx={{ width: 460, maxHeight: 600, display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ width: '100%', maxHeight: 600, display: 'flex', flexDirection: 'column' }}>
                     <Box
                         sx={{
                             display: 'flex',
