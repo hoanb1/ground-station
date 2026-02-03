@@ -51,6 +51,8 @@ KNOWN_SATDUMP_PIPELINES = {
     "meteor_m2-x_lrpt",
     "meteor_m2-x_lrpt_80k",
     "meteor_hrpt",
+    "elektro_lrit",
+    "elektro_hrit",
 }
 
 

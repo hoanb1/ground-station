@@ -404,6 +404,14 @@ export const SATDUMP_PIPELINES = {
             { value: 'meteor_m2-x_lrpt_80k', label: 'METEOR-M2 LRPT (80k)' },
             { value: 'meteor_hrpt', label: 'METEOR HRPT' }
         ]
+    },
+    elektro: {
+        label: 'ELEKTRO',
+        description: 'SatDump pipelines for ELEKTRO-L',
+        pipelines: [
+            { value: 'elektro_lrit', label: 'ELEKTRO-L LRIT' },
+            { value: 'elektro_hrit', label: 'ELEKTRO-L HRIT' }
+        ]
     }
 };
 

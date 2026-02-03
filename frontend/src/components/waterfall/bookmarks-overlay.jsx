@@ -206,7 +206,8 @@ const BookmarkCanvas = ({
         // Constants for label sizing
         const textHeight = 14;
         const padding = 4;
-        const verticalSpacing = textHeight + padding * 2; // Total height of a label
+        const labelGap = 2; // Extra spacing between stacked labels
+        const verticalSpacing = textHeight + padding * 2 + labelGap; // Total height of a label plus gap
         const baseY = 16; // Base Y position for the first label
         const bookmarkLabelOffset = 20; // Vertical offset from base position for bookmark labels
 
@@ -264,7 +265,7 @@ const BookmarkCanvas = ({
                 if (bookmark.label) {
                     // Calculate label vertical position based on index
                     const labelOffset = (visibleBookmarkIndex % 3) * verticalSpacing;
-                    const labelY = baseY + labelOffset + 35 + bookmarkLabelOffset;
+                    const labelY = baseY + labelOffset + 35 + bookmarkLabelOffset + verticalSpacing - 5;
 
                     // Store the bottom edge of the label box (south edge)
                     labelBottomY = labelY + textHeight + padding * 2;
@@ -389,7 +390,7 @@ const BookmarkCanvas = ({
                     // Calculate label vertical position based on index
                     // Use visibleBookmarkIndex to ensure proper alternating heights (3 rows)
                     const labelOffset = (visibleBookmarkIndex % 3) * verticalSpacing;
-                    const labelY = baseY + labelOffset + 35 + bookmarkLabelOffset;
+                    const labelY = baseY + labelOffset + 35 + bookmarkLabelOffset + verticalSpacing;
 
                     // Store the bottom edge of the label box (south edge)
                     labelBottomY = labelY + textHeight + padding * 2;
@@ -471,7 +472,7 @@ const BookmarkCanvas = ({
 
                     // Calculate label vertical position based on doppler index (alternating heights - 3 rows)
                     const dopplerLabelOffset = (dopplerIndex % 3) * verticalSpacing;
-                    const dopplerLabelY = 50 + bookmarkLabelOffset - padding - textHeight + dopplerLabelOffset;
+                    const dopplerLabelY = 50 + bookmarkLabelOffset - padding - textHeight + dopplerLabelOffset + verticalSpacing - 30;
 
                     // Store the bottom edge of the doppler label box (south edge)
                     labelBottomY = dopplerLabelY + textHeight + padding * 2;
