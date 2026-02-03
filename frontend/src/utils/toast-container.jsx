@@ -49,13 +49,14 @@ export const ToastContainerWithStyles = () => {
                     transform: translateX(-50%) !important;
                     width: auto !important;
                     min-width: 0 !important;
-                    width: min(500px, calc(100vw - 24px)) !important;
+                    width: max-content !important;
                     max-width: 90vw !important;
                 }
 
                 .Toastify__toast-container--top-center .Toastify__toast {
-                    width: 100% !important;
+                    width: auto !important;
                     min-width: 0 !important;
+                    max-width: 90vw !important;
                 }
 
                 .Toastify__toast-container--bottom-center {
@@ -64,13 +65,14 @@ export const ToastContainerWithStyles = () => {
                     transform: translateX(-50%) !important;
                     width: auto !important;
                     min-width: 0 !important;
-                    width: min(500px, calc(100vw - 24px)) !important;
+                    width: max-content !important;
                     max-width: 90vw !important;
                 }
 
                 .Toastify__toast-container--bottom-center .Toastify__toast {
-                    width: 100% !important;
+                    width: auto !important;
                     min-width: 0 !important;
+                    max-width: 90vw !important;
                 }
                 
                 @media (max-width: 600px) {
@@ -168,9 +170,9 @@ export const ToastContainerWithStyles = () => {
 
                 .observation-countdown-toast__line {
                     font-size: 14px;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
+                    white-space: normal;
+                    overflow: visible;
+                    text-overflow: clip;
                 }
 
             `}</style>
