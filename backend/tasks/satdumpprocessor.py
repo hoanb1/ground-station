@@ -133,6 +133,7 @@ def satdump_process_recording(
         raise FileNotFoundError(error_msg)
 
     # Create output directory
+    output_dir_preexisted = output_path.exists()
     output_path.mkdir(parents=True, exist_ok=True)
 
     # Build SatDump command using resolved absolute paths
@@ -266,14 +267,16 @@ def satdump_process_recording(
 
         # Check if output directory has any decoded products (images, data files)
         # SatDump v1.2.3 returns exit code 1 even when decoding succeeded
+        has_images = False
         has_output = False
         if output_path.exists():
             # Check for any image files or data products
-            has_output = (
+            has_images = (
                 any(output_path.rglob("*.png"))
                 or any(output_path.rglob("*.jpg"))
-                or any(output_path.rglob("product.cbor"))
+                or any(output_path.rglob("*.jpeg"))
             )
+            has_output = has_images or any(output_path.rglob("product.cbor"))
 
         if delete_input_after:
             try:
@@ -305,6 +308,25 @@ def satdump_process_recording(
                             "stream": "stderr",
                         }
                     )
+
+        if not has_images:
+            if output_path.exists() and not output_dir_preexisted:
+                if _progress_queue:
+                    _progress_queue.put(
+                        {
+                            "type": "output",
+                            "output": (
+                                "No decoded images found; removing SatDump output directory"
+                            ),
+                            "stream": "stdout",
+                        }
+                    )
+                shutil.rmtree(output_path)
+
+            error_msg = "SatDump completed without decoded images"
+            if _progress_queue:
+                _progress_queue.put({"type": "error", "error": error_msg, "stream": "stderr"})
+            raise RuntimeError(error_msg)
 
         if return_code == 0 or (return_code == 1 and has_output):
             if _progress_queue:
