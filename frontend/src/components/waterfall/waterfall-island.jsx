@@ -202,6 +202,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
         fftDataOverflow,
         fftDataOverflowLimit,
         showRotatorDottedLines,
+        autoScalePreset,
         waterFallScaleX,
         waterFallPositionX,
     } = useSelector((state) => state.waterfall);
@@ -417,12 +418,19 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
                 createWorker: createExternalWorker,
                 onMessage: handleWorkerMessage
             });
+
+            if (workerRef.current) {
+                workerRef.current.postMessage({
+                    cmd: 'setAutoScalePreset',
+                    preset: autoScalePreset,
+                });
+            }
         }
 
         return () => {
             // Cleanup handled elsewhere to avoid StrictMode issues
         };
-    }, [waterFallCanvasWidth, waterFallCanvasHeight, colorMap, dbRange, fftSize, showRotatorDottedLines, theme, dispatch]);
+    }, [waterFallCanvasWidth, waterFallCanvasHeight, colorMap, dbRange, fftSize, showRotatorDottedLines, theme, dispatch, autoScalePreset]);
 
     // Add event listener for fullscreen change
     useEffect(() => {
@@ -547,6 +555,14 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
             }
         });
     }, [colorMap, dbRange, fftSize, theme.palette.background, theme.palette.border, theme.palette.overlay, theme.palette.text]);
+
+    useEffect(() => {
+        if (!workerRef.current) return;
+        workerRef.current.postMessage({
+            cmd: 'setAutoScalePreset',
+            preset: autoScalePreset,
+        });
+    }, [autoScalePreset]);
 
     // Update the worker when FPS changes
     useEffect(() => {

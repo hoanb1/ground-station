@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper, Box, Stack, IconButton, Menu, MenuItem, ListItemIcon } from '@mui/material';
+import { Paper, Box, Stack, IconButton, Menu, MenuItem, ListItemIcon, Checkbox, ListItemText } from '@mui/material';
 import StopIcon from '@mui/icons-material/Stop';
 import CheckIcon from '@mui/icons-material/Check';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -10,6 +10,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ErrorIcon from '@mui/icons-material/Error';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import LockIcon from '@mui/icons-material/Lock';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 import {
     VFO1Icon,
     VFO2Icon,
@@ -26,7 +27,7 @@ import {
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { setShowNeighboringTransmitters } from './waterfall-slice';
+import { setShowNeighboringTransmitters, setShowBookmarkSource } from './waterfall-slice';
 
 const WaterfallToolbar = ({
                               startStreamingLoading,
@@ -59,7 +60,15 @@ const WaterfallToolbar = ({
     const dispatch = useDispatch();
     const showNeighboringTransmitters = useSelector((state) => state.waterfall.showNeighboringTransmitters);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
+    const [experimentMenuAnchorEl, setExperimentMenuAnchorEl] = React.useState(null);
     const menuOpen = Boolean(menuAnchorEl);
+    const experimentMenuOpen = Boolean(experimentMenuAnchorEl);
+    const showBookmarkSources = useSelector((state) => state.waterfall.showBookmarkSources);
+    const bookmarkSourceState = showBookmarkSources || {
+        manual: true,
+        satdump: true,
+        satnogs: true,
+    };
     const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
     const vfoMarkers = useSelector((state) => state.vfo.vfoMarkers);
 
@@ -69,6 +78,19 @@ const WaterfallToolbar = ({
 
     const handleMenuClose = () => {
         setMenuAnchorEl(null);
+    };
+
+    const handleExperimentMenuClick = (event) => {
+        setExperimentMenuAnchorEl(event.currentTarget);
+    };
+
+    const handleExperimentMenuClose = () => {
+        setExperimentMenuAnchorEl(null);
+    };
+
+    const toggleBookmarkSource = (sourceKey) => {
+        const currentValue = bookmarkSourceState[sourceKey];
+        dispatch(setShowBookmarkSource({ source: sourceKey, value: !currentValue }));
     };
 
     const handleStrongSignals = () => {
@@ -204,6 +226,16 @@ const WaterfallToolbar = ({
                     title={t('toolbar.signal_strength_presets')}
                 >
                     <SignalPresetsIcon />
+                </IconButton>
+
+                <IconButton
+                    sx={{ borderRadius: 0 }}
+                    onClick={handleExperimentMenuClick}
+                    size="small"
+                    color="primary"
+                    title={t('toolbar.bookmark_source_filters', 'Bookmark source filters')}
+                >
+                    <BookmarkIcon />
                 </IconButton>
 
                 <IconButton
@@ -457,6 +489,27 @@ const WaterfallToolbar = ({
                 vertical: 'top',
                 horizontal: 'left',
             }}
+            PaperProps={{
+                sx: {
+                    minWidth: 180,
+                    '& .MuiMenuItem-root': {
+                        py: 0.25,
+                        minHeight: 32,
+                    },
+                    '& .MuiListItemIcon-root': {
+                        minWidth: 32,
+                    },
+                    '& .MuiCheckbox-root': {
+                        p: 0.25,
+                    },
+                },
+            }}
+            MenuListProps={{
+                dense: true,
+                sx: {
+                    py: 0.25,
+                },
+            }}
         >
             <MenuItem onClick={handleStrongSignals}>
                 <ListItemIcon>
@@ -475,6 +528,81 @@ const WaterfallToolbar = ({
                     {autoScalePreset === 'weak' ? <CheckIcon fontSize="small" /> : <Box sx={{ width: 20 }} />}
                 </ListItemIcon>
                 {t('toolbar.preset_weak_signals')}
+            </MenuItem>
+        </Menu>
+
+        <Menu
+            anchorEl={experimentMenuAnchorEl}
+            open={experimentMenuOpen}
+            onClose={handleExperimentMenuClose}
+            anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+            }}
+            transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+            }}
+            PaperProps={{
+                sx: {
+                    minWidth: 180,
+                    '& .MuiMenuItem-root': {
+                        py: 0.25,
+                        minHeight: 32,
+                    },
+                    '& .MuiListItemIcon-root': {
+                        minWidth: 32,
+                    },
+                    '& .MuiCheckbox-root': {
+                        p: 0.25,
+                    },
+                },
+            }}
+            MenuListProps={{
+                dense: true,
+                sx: {
+                    py: 0.25,
+                },
+            }}
+        >
+            <MenuItem onClick={() => toggleBookmarkSource('manual')}>
+                <ListItemIcon>
+                    <Checkbox
+                        edge="start"
+                        checked={Boolean(bookmarkSourceState.manual)}
+                        tabIndex={-1}
+                        disableRipple
+                    />
+                </ListItemIcon>
+                <ListItemText
+                    primary={t('toolbar.experimental_option_user_defined', 'User defined')}
+                />
+            </MenuItem>
+            <MenuItem onClick={() => toggleBookmarkSource('satnogs')}>
+                <ListItemIcon>
+                    <Checkbox
+                        edge="start"
+                        checked={Boolean(bookmarkSourceState.satnogs)}
+                        tabIndex={-1}
+                        disableRipple
+                    />
+                </ListItemIcon>
+                <ListItemText
+                    primary={t('toolbar.experimental_option_satnogs', 'SATNOGS')}
+                />
+            </MenuItem>
+            <MenuItem onClick={() => toggleBookmarkSource('satdump')}>
+                <ListItemIcon>
+                    <Checkbox
+                        edge="start"
+                        checked={Boolean(bookmarkSourceState.satdump)}
+                        tabIndex={-1}
+                        disableRipple
+                    />
+                </ListItemIcon>
+                <ListItemText
+                    primary={t('toolbar.experimental_option_satdump', 'Satdump')}
+                />
             </MenuItem>
         </Menu>
     </Paper>

@@ -189,6 +189,11 @@ const initialState = {
     // Neighboring transmitters (doppler-shifted transmitters within bandwidth)
     neighboringTransmitters: [],
     showNeighboringTransmitters: true,
+    showBookmarkSources: {
+        manual: true,
+        satdump: true,
+        satnogs: true,
+    },
 };
 
 // Add these new reducers to your createSlice
@@ -390,6 +395,19 @@ export const waterfallSlice = createSlice({
         setShowNeighboringTransmitters: (state, action) => {
             state.showNeighboringTransmitters = action.payload;
         },
+        setShowBookmarkSource: (state, action) => {
+            const { source, value } = action.payload || {};
+            if (!state.showBookmarkSources) {
+                state.showBookmarkSources = {
+                    manual: true,
+                    satdump: true,
+                    satnogs: true,
+                };
+            }
+            if (source && Object.prototype.hasOwnProperty.call(state.showBookmarkSources, source)) {
+                state.showBookmarkSources[source] = value;
+            }
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -498,6 +516,7 @@ export const {
     setPacketsDrawerHeight,
     setNeighboringTransmitters,
     setShowNeighboringTransmitters,
+    setShowBookmarkSource,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

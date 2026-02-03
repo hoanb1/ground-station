@@ -19,6 +19,17 @@
 
 import * as satellite from 'satellite.js';
 
+const normalizeSource = (source) => {
+    if (typeof source !== 'string') {
+        return 'manual';
+    }
+    const lowered = source.toLowerCase();
+    if (lowered === 'manual' || lowered === 'satdump' || lowered === 'satnogs') {
+        return lowered;
+    }
+    return 'manual';
+};
+
 /**
  * Calculate the Doppler shift for a satellite at a given time.
  *
@@ -193,6 +204,7 @@ export function calculateNeighboringTransmitters(
                 if (observedFreqHz >= minFreq && observedFreqHz <= maxFreq) {
                     neighboringTransmitters.push({
                         ...tx,
+                        source: normalizeSource(tx.source),
                         satellite_name: sat.name,
                         satellite_norad_id: sat.norad_id,
                         original_frequency: tx.downlink_low,
@@ -289,6 +301,7 @@ function createGroupedTransmitter(transmitters, satGroup) {
         transmitters.reduce((sum, tx) => sum + tx.doppler_frequency, 0) / transmitters.length
     );
 
+    const groupSource = normalizeSource(transmitters[0]?.source);
     return {
         id: `group_${satGroup.satellite_norad_id}_${avgFrequency}`,
         satellite_name: satGroup.satellite_name,
@@ -299,6 +312,7 @@ function createGroupedTransmitter(transmitters, satGroup) {
         description: `${transmitters.length} transmitters`,
         is_group: true,
         group_count: transmitters.length,
+        source: groupSource,
         grouped_transmitters: transmitters
     };
 }

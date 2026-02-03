@@ -22,6 +22,34 @@ import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
 
+const normalizeSource = (source) => {
+    if (typeof source !== 'string') {
+        return 'manual';
+    }
+    const lowered = source.toLowerCase();
+    if (lowered === 'manual' || lowered === 'satdump' || lowered === 'satnogs') {
+        return lowered;
+    }
+    return 'manual';
+};
+
+const normalizeTransmitters = (transmitters = []) =>
+    transmitters.map((tx) => ({
+        ...tx,
+        source: normalizeSource(tx.source),
+    }));
+
+const normalizeGroupOfSats = (sats = []) =>
+    sats.map((sat) => {
+        if (!Array.isArray(sat.transmitters)) {
+            return sat;
+        }
+        return {
+            ...sat,
+            transmitters: normalizeTransmitters(sat.transmitters),
+        };
+    });
+
 
 export const sendNudgeCommand = createAsyncThunk(
     'targetSatTrack/sendNudgeCommand',
@@ -374,7 +402,7 @@ const targetSatTrackSlice = createSlice({
                 state.satelliteData.position = action.payload['satellite_data']['position'];
                 state.satelliteData.paths = action.payload['satellite_data']['paths'];
                 state.satelliteData.coverage = action.payload['satellite_data']['coverage'];
-                state.satelliteData.transmitters = action.payload['satellite_data']['transmitters'];
+                state.satelliteData.transmitters = normalizeTransmitters(action.payload['satellite_data']['transmitters']);
                 state.satelliteData.nextPass = action.payload['satellite_data']['nextPass'];
             }
 
@@ -424,12 +452,15 @@ const targetSatTrackSlice = createSlice({
             // Update the whole rig_data object
             if (action.payload['rig_data']) {
                 state.rigData = action.payload['rig_data'];
+                if (Array.isArray(state.rigData?.transmitters)) {
+                    state.rigData.transmitters = normalizeTransmitters(state.rigData.transmitters);
+                }
             }
         },
         setUITrackerValues(state, action) {
             state.satGroups = action.payload['groups'];
-            state.groupOfSats = action.payload['satellites'];
-            state.availableTransmitters = action.payload['transmitters'];
+            state.groupOfSats = normalizeGroupOfSats(action.payload['satellites']);
+            state.availableTransmitters = normalizeTransmitters(action.payload['transmitters']);
             state.satelliteId = action.payload['norad_id'];
             state.groupId = action.payload['group_id'];
             state.selectedRadioRig = action.payload['rig_id'];
@@ -517,7 +548,7 @@ const targetSatTrackSlice = createSlice({
             state.satelliteGroupSelectOpen = action.payload;
         },
         setGroupOfSats(state, action) {
-            state.groupOfSats = action.payload;
+            state.groupOfSats = normalizeGroupOfSats(action.payload);
         },
         setUITrackerDisabled(state, action) {
             state.uiTrackerDisabled = action.payload;
@@ -556,11 +587,11 @@ const targetSatTrackSlice = createSlice({
             state.selectedTransmitter = action.payload;
         },
         setAvailableTransmitters(state, action) {
-            state.availableTransmitters = action.payload;
+            state.availableTransmitters = normalizeTransmitters(action.payload);
         },
         setTargetTransmitters(state, action) {
             const noradId = action.payload?.noradId;
-            const transmitters = action.payload?.transmitters || [];
+            const transmitters = normalizeTransmitters(action.payload?.transmitters || []);
             if (
                 state.satelliteData?.details?.norad_id != null
                 && String(state.satelliteData.details.norad_id) === String(noradId)
@@ -693,7 +724,7 @@ const targetSatTrackSlice = createSlice({
             .addCase(fetchSatellitesByGroupId.fulfilled, (state, action) => {
                 state.loading = false;
                 const { satellites } = action.payload;
-                state.groupOfSats = satellites;
+                state.groupOfSats = normalizeGroupOfSats(satellites);
             })
             .addCase(fetchSatellitesByGroupId.rejected, (state, action) => {
                 state.loading = false;
@@ -705,7 +736,14 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(fetchSatellite.fulfilled, (state, action) => {
                 state.loading = false;
-                state.satelliteData = action.payload;
+                if (action.payload?.transmitters) {
+                    state.satelliteData = {
+                        ...action.payload,
+                        transmitters: normalizeTransmitters(action.payload.transmitters),
+                    };
+                } else {
+                    state.satelliteData = action.payload;
+                }
                 state.error = null;
             })
             .addCase(fetchSatellite.rejected, (state, action) => {

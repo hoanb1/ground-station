@@ -49,6 +49,7 @@ const BookmarkCanvas = ({
         bookmarks,
         neighboringTransmitters,
         showNeighboringTransmitters,
+        showBookmarkSources,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -122,9 +123,31 @@ const BookmarkCanvas = ({
 
     // Merged effect: Create transmitter, doppler-shifted, and neighboring transmitter bookmarks
     useEffect(() => {
+        const normalizeSource = (source) => {
+            if (typeof source !== 'string') {
+                return 'manual';
+            }
+            const lowered = source.toLowerCase();
+            if (lowered === 'manual' || lowered === 'satdump' || lowered === 'satnogs') {
+                return lowered;
+            }
+            return 'manual';
+        };
+
+        const isSourceEnabled = (source) => {
+            const normalized = normalizeSource(source);
+            if (!showBookmarkSources) {
+                return true;
+            }
+            return Boolean(showBookmarkSources[normalized]);
+        };
+
         // 1. Create static transmitter bookmarks from availableTransmitters
         const transmitterBookmarks = [];
         availableTransmitters.forEach(transmitter => {
+            if (!isSourceEnabled(transmitter.source)) {
+                return;
+            }
             const isActive = transmitter['status'] === 'active';
             transmitterBookmarks.push(makeBookMark(
                 transmitter['downlink_low'],
@@ -141,7 +164,7 @@ const BookmarkCanvas = ({
         // 2. Create doppler-shifted bookmarks from rigData (tracked satellite)
         const transmittersWithDoppler = rigData['transmitters'] || [];
         const dopplerBookmarks = transmittersWithDoppler
-            .filter(transmitter => transmitter.downlink_observed_freq > 0)
+            .filter(transmitter => transmitter.downlink_observed_freq > 0 && isSourceEnabled(transmitter.source))
             .map(transmitter => ({
                 frequency: transmitter.downlink_observed_freq,
                 label: `${satelliteData['details']['name']} - ${transmitter.description || 'Unknown'} - Corrected: ${preciseHumanizeFrequency(transmitter.downlink_observed_freq)}`,
@@ -154,7 +177,9 @@ const BookmarkCanvas = ({
 
         // 3. Create neighboring transmitter bookmarks (from groupOfSats) - only if enabled
         const neighborBookmarks = showNeighboringTransmitters
-            ? neighboringTransmitters.map(tx => {
+            ? neighboringTransmitters
+                .filter(tx => isSourceEnabled(tx.source))
+                .map(tx => {
                 // Check if this is a grouped transmitter
                 const label = tx.is_group
                     ? `${tx.satellite_name} (${tx.group_count})`
@@ -183,7 +208,7 @@ const BookmarkCanvas = ({
         if (!areBookmarksEqual(bookmarks, updatedBookmarks)) {
             dispatch(setBookMarks(updatedBookmarks));
         }
-    }, [availableTransmitters, rigData, satelliteData, neighboringTransmitters, showNeighboringTransmitters, theme.palette.success.main, theme.palette.warning.main, theme.palette.info.main, theme.palette.grey]);
+    }, [availableTransmitters, rigData, satelliteData, neighboringTransmitters, showNeighboringTransmitters, showBookmarkSources, theme.palette.success.main, theme.palette.warning.main, theme.palette.info.main, theme.palette.grey]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
