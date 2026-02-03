@@ -210,9 +210,13 @@ const SatelliteInfoPopover = () => {
     // Determine the current active pass
     const getCurrentActivePass = () => {
         if (!satellitePasses || satellitePasses.length === 0) return null;
+        if (!satelliteData.details?.norad_id) return null;
 
         const now = new Date();
         return satellitePasses.find(pass => {
+            if (pass.norad_id !== satelliteData.details.norad_id) {
+                return false;
+            }
             const passStart = new Date(pass.event_start);
             const passEnd = new Date(pass.event_end);
             return now >= passStart && now <= passEnd;
