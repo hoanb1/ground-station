@@ -31,34 +31,28 @@ const WaterfallStatusBar = ({isStreaming, eventMetrics, centerFrequency, sampleR
 
     return (
         <WaterfallStatusBarPaper>
-            {isStreaming ? (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, fontSize: '0.75rem', fontFamily: 'monospace', color: 'text.secondary', width: '100%' }}>
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Box component="span">FPS: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{eventMetrics.current.renderWaterfallPerSecond}</Box></Box>
-                        <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                        <Box component="span">FFTs/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.fftUpdatesPerSecond)}</Box></Box>
-                        <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                        <Box component="span">bins/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{humanizeNumber(eventMetrics.current.binsPerSecond)}</Box></Box>
-                        <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                        <Box component="span">f: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(centerFrequency)}</Box></Box>
-                        <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                        <Box component="span">sr: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(sampleRate)}</Box></Box>
-                        <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                        <Box component="span">g: <Box component="span" sx={{ fontWeight: 500 }}>{gain} dB</Box></Box>
-                    </Box>
-                    {transformData && (
-                        <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 0.5, marginLeft: 'auto' }}>
-                            <Box component="span">zoom: <Box component="span" sx={{ fontWeight: 500 }}>{transformData.scale.toFixed(1)}x</Box></Box>
-                            <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                            <Box component="span">view: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(transformData.startFreq)} - {humanizeFrequency(transformData.endFreq)}</Box></Box>
-                            <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                            <Box component="span">bw: <Box component="span" sx={{ fontWeight: 500 }}>{humanizeFrequency(transformData.visibleBandwidth)}</Box></Box>
-                        </Box>
-                    )}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, fontSize: '0.75rem', fontFamily: 'monospace', color: 'text.secondary', width: '100%' }}>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Box component="span">FPS: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{isStreaming ? eventMetrics.current.renderWaterfallPerSecond : '-'}</Box></Box>
+                    <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                    <Box component="span">FFTs/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{isStreaming ? humanizeNumber(eventMetrics.current.fftUpdatesPerSecond) : '-'}</Box></Box>
+                    <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                    <Box component="span">bins/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{isStreaming ? humanizeNumber(eventMetrics.current.binsPerSecond) : '-'}</Box></Box>
+                    <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                    <Box component="span">f: <Box component="span" sx={{ fontWeight: 500 }}>{isStreaming ? humanizeFrequency(centerFrequency) : '-'}</Box></Box>
+                    <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                    <Box component="span">sr: <Box component="span" sx={{ fontWeight: 500 }}>{isStreaming ? humanizeFrequency(sampleRate) : '-'}</Box></Box>
+                    <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                    <Box component="span">g: <Box component="span" sx={{ fontWeight: 500 }}>{isStreaming ? `${gain} dB` : '-'}</Box></Box>
                 </Box>
-            ) : (
-                t('statusbar.stopped')
-            )}
+                <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 0.5, marginLeft: 'auto' }}>
+                    <Box component="span">zoom: <Box component="span" sx={{ fontWeight: 500 }}>{isStreaming && transformData ? `${transformData.scale.toFixed(1)}x` : '-'}</Box></Box>
+                    <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                    <Box component="span">view: <Box component="span" sx={{ fontWeight: 500 }}>{isStreaming && transformData ? `${humanizeFrequency(transformData.startFreq)} - ${humanizeFrequency(transformData.endFreq)}` : '-'}</Box></Box>
+                    <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
+                    <Box component="span">bw: <Box component="span" sx={{ fontWeight: 500 }}>{isStreaming && transformData ? humanizeFrequency(transformData.visibleBandwidth) : '-'}</Box></Box>
+                </Box>
+            </Box>
         </WaterfallStatusBarPaper>
     );
 };
