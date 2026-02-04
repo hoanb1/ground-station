@@ -36,6 +36,7 @@ import {
 import SunCalc from 'suncalc';
 import { setTimelineDuration, setSelectedObservation, setDialogOpen } from './scheduler-slice.jsx';
 import { getFlattenedTasks } from './session-utils.js';
+import { humanizeFutureDateInMinutes } from '../common/common.jsx';
 
 const ObservationsTimeline = () => {
     const dispatch = useDispatch();
@@ -250,6 +251,18 @@ const ObservationsTimeline = () => {
         if (obs.status === 'cancelled' || obs.status === 'failed') return '#ef5350';
         if (!obs.enabled) return '#999';
         return '#ab47bc';
+    };
+
+    const formatDuration = (startIso, endIso) => {
+        if (!startIso || !endIso) return '-';
+        const start = new Date(startIso);
+        const end = new Date(endIso);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '-';
+        const totalMinutes = Math.max(0, Math.round((end - start) / 60000));
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        return `${minutes}m`;
     };
 
     return (
@@ -495,16 +508,34 @@ const ObservationsTimeline = () => {
                             }}
                         >
                             <Typography variant="subtitle2" fontWeight="bold">
-                                {hoveredObservation.satellite.name}
+                                {hoveredObservation.satellite?.name || hoveredObservation.satellite_name || 'Unknown'}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                Start: {new Date(hoveredObservation.task_start).toLocaleString()}
+                                Status: {hoveredObservation.status || 'unknown'}{hoveredObservation.enabled === false ? ' (disabled)' : ''}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                End: {new Date(hoveredObservation.task_end).toLocaleString()}
+                                Task start: {hoveredObservation.task_start ? new Date(hoveredObservation.task_start).toLocaleString() : 'N/A'}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                Peak: {hoveredObservation.pass.peak_altitude}°
+                                Starts in: {hoveredObservation.task_start ? humanizeFutureDateInMinutes(hoveredObservation.task_start) : 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" display="block">
+                                Task end: {hoveredObservation.task_end ? new Date(hoveredObservation.task_end).toLocaleString() : 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" display="block">
+                                Task duration: {formatDuration(hoveredObservation.task_start, hoveredObservation.task_end)}
+                            </Typography>
+                            <Typography variant="caption" display="block">
+                                Pass start: {hoveredObservation.pass?.event_start ? new Date(hoveredObservation.pass.event_start).toLocaleString() : 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" display="block">
+                                Pass end: {hoveredObservation.pass?.event_end ? new Date(hoveredObservation.pass.event_end).toLocaleString() : 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" display="block">
+                                Pass duration: {formatDuration(hoveredObservation.pass?.event_start, hoveredObservation.pass?.event_end)}
+                            </Typography>
+                            <Typography variant="caption" display="block">
+                                Peak: {hoveredObservation.pass?.peak_altitude != null ? `${hoveredObservation.pass.peak_altitude}°` : 'N/A'}
                             </Typography>
                             <Box mt={1}>
                                 {getFlattenedTasks(hoveredObservation).map((task, idx) => (
