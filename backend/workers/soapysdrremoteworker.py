@@ -166,6 +166,7 @@ def soapysdr_remote_worker_process(
         antenna = config.get("antenna", "")
         channel = config.get("channel", 0)
         offset_freq = int(config.get("offset_freq", 0))
+        ppm_error = float(config.get("ppm_error", 0) or 0)
 
         # Set sample rate
         sdr.setSampleRate(SOAPY_SDR_RX, channel, sample_rate)
@@ -176,6 +177,14 @@ def soapysdr_remote_worker_process(
         sdr.setFrequency(SOAPY_SDR_RX, channel, center_freq + offset_freq)
         actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
         logger.info(f"Center frequency set to {actual_freq/1e6} MHz")
+
+        # Apply ppm correction if supported
+        if ppm_error:
+            try:
+                sdr.setFrequencyCorrection(SOAPY_SDR_RX, channel, ppm_error)
+                logger.info(f"Applied frequency correction: {ppm_error} ppm")
+            except Exception as e:
+                logger.warning(f"Failed to apply frequency correction: {e}")
 
         # Set gain
         if config.get("soapy_agc", False):
@@ -386,6 +395,15 @@ def soapysdr_remote_worker_process(
                             sdr.activateStream(rx_stream)
 
                             logger.info(f"Updated offset frequency: {actual_freq}")
+
+                    if "ppm_error" in new_config:
+                        if old_config.get("ppm_error", 0) != new_config["ppm_error"]:
+                            try:
+                                ppm_error = float(new_config["ppm_error"] or 0)
+                                sdr.setFrequencyCorrection(SOAPY_SDR_RX, channel, ppm_error)
+                                logger.info(f"Updated frequency correction: {ppm_error} ppm")
+                            except Exception as e:
+                                logger.warning(f"Failed to update frequency correction: {e}")
 
                     old_config = new_config
 

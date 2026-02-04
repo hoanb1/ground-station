@@ -253,6 +253,7 @@ class ProcessLifecycleManager:
                 "soapy_agc",
                 "antenna",
                 "offset_freq",
+                "ppm_error",
                 "recording_path",
                 "loop_playback",
             ]:
