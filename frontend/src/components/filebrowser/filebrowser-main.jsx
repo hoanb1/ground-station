@@ -1801,7 +1801,13 @@ export default function FilebrowserMain() {
                 <Dialog
                     open={detailsOpen}
                     onClose={() => setDetailsOpen(false)}
-                    maxWidth="sm"
+                    maxWidth={false}
+                    PaperProps={{
+                        sx: {
+                            width: '1280px',
+                            maxWidth: '96vw',
+                        },
+                    }}
                 >
                     <DialogTitle>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1823,19 +1829,26 @@ export default function FilebrowserMain() {
                             <Box>
                                 <Box
                                     sx={{
-                                        textAlign: 'center',
                                         mb: 2.5,
-                                        p: 2,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 1.5,
-                                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
                                     }}
                                 >
-                                    <img
+                                    <ZoomableImage
                                         src={selectedItem.url}
                                         alt={selectedItem.name}
-                                        style={{ maxWidth: '100%', height: 'auto' }}
+                                        resetKey={`${detailsOpen}-${selectedItem.url}`}
+                                        containerSx={{
+                                            p: 2,
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            borderRadius: 1.5,
+                                            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
+                                        }}
+                                        imageSx={{
+                                            width: 'auto',
+                                            height: 'auto',
+                                            maxWidth: '100%',
+                                            maxHeight: '100%',
+                                        }}
                                     />
                                 </Box>
                                 <Typography variant="subtitle2" gutterBottom>
