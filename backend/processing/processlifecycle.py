@@ -251,6 +251,10 @@ class ProcessLifecycleManager:
                 "tuner_agc",
                 "rtl_agc",
                 "soapy_agc",
+                "antenna",
+                "offset_freq",
+                "recording_path",
+                "loop_playback",
             ]:
                 if param in sdr_config:
                     config[param] = sdr_config[param]
