@@ -17,6 +17,7 @@ import asyncio
 from typing import Dict, Union
 
 import crud
+from common.sdrconfig import SDRConfig
 from crud import fetch_all_preferences
 from db import AsyncSessionLocal
 from demodulators.amdemodulator import AMDemodulator
@@ -184,27 +185,26 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 recording_path = data.get("recordingPath", "")
 
                 # SDR configuration dictionary
-                sdr_config = {
-                    "center_freq": center_freq,
-                    "sample_rate": sample_rate,
-                    "gain": gain,
-                    "fft_size": fft_size,
-                    "bias_t": bias_t,
-                    "tuner_agc": tuner_agc,
-                    "rtl_agc": rtl_agc,
-                    "fft_window": fft_window,
-                    "fft_averaging": fft_averaging,
-                    "sdr_id": sdr_id,
-                    "recording_path": recording_path,
-                    "serial_number": sdr_serial,
-                    "host": sdr_host,
-                    "port": sdr_port,
-                    "client_id": client_id,
-                    "soapy_agc": soapy_agc,
-                    "offset_freq": offset_freq,
-                }
-                if antenna is not None:
-                    sdr_config["antenna"] = antenna
+                sdr_config = SDRConfig(
+                    center_freq=center_freq,
+                    sample_rate=sample_rate,
+                    gain=gain,
+                    fft_size=fft_size,
+                    bias_t=bias_t,
+                    tuner_agc=tuner_agc,
+                    rtl_agc=rtl_agc,
+                    fft_window=fft_window,
+                    fft_averaging=fft_averaging,
+                    sdr_id=sdr_id,
+                    recording_path=recording_path,
+                    serial_number=sdr_serial,
+                    host=sdr_host,
+                    port=sdr_port,
+                    client_id=client_id,
+                    soapy_agc=soapy_agc,
+                    offset_freq=offset_freq,
+                    antenna=antenna,
+                ).to_dict()
 
                 # Create or update SDR session via SessionService (also updates tracker)
                 logger.info(f"Creating an SDR session for client {client_id}")

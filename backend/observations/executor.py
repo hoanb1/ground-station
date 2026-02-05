@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, cast
 
 from common.logger import logger
+from common.sdrconfig import SDRConfig
 from crud.hardware import fetch_sdr
 from crud.scheduledobservations import fetch_scheduled_observations
 from db import AsyncSessionLocal
@@ -454,37 +455,33 @@ class ObservationExecutor:
                 sdr_device = sdr_result["data"]
 
             # Build SDR config dict (operational parameters)
-            sdr_config = {
-                "sdr_id": sdr_id,
-                "center_freq": sdr_config_dict.get("center_frequency", 100000000),
-                "sample_rate": sdr_config_dict.get("sample_rate", 2048000),
-                "gain": sdr_config_dict.get("gain", 20),
-                "ppm_error": sdr_config_dict.get("ppm_error", 0),
-                "antenna": sdr_config_dict.get("antenna_port", "TX/RX"),  # B210 uses TX/RX or RX2
-                "bias_t": sdr_config_dict.get("bias_t", sdr_config_dict.get("biasT", 0)),
-                "tuner_agc": sdr_config_dict.get(
-                    "tuner_agc", sdr_config_dict.get("tunerAgc", False)
-                ),
-                "rtl_agc": sdr_config_dict.get("rtl_agc", sdr_config_dict.get("rtlAgc", False)),
-                "soapy_agc": sdr_config_dict.get(
-                    "soapy_agc", sdr_config_dict.get("soapyAgc", False)
-                ),
-                "offset_freq": sdr_config_dict.get(
+            sdr_config = SDRConfig(
+                sdr_id=sdr_id,
+                center_freq=sdr_config_dict.get("center_frequency", 100000000),
+                sample_rate=sdr_config_dict.get("sample_rate", 2048000),
+                gain=sdr_config_dict.get("gain", 20),
+                ppm_error=sdr_config_dict.get("ppm_error", 0),
+                antenna=sdr_config_dict.get("antenna_port", "TX/RX"),  # B210 uses TX/RX or RX2
+                bias_t=sdr_config_dict.get("bias_t", sdr_config_dict.get("biasT", 0)),
+                tuner_agc=sdr_config_dict.get("tuner_agc", sdr_config_dict.get("tunerAgc", False)),
+                rtl_agc=sdr_config_dict.get("rtl_agc", sdr_config_dict.get("rtlAgc", False)),
+                soapy_agc=sdr_config_dict.get("soapy_agc", sdr_config_dict.get("soapyAgc", False)),
+                offset_freq=sdr_config_dict.get(
                     "offset_freq", sdr_config_dict.get("offsetFrequency", 0)
                 ),
-                "fft_size": (
+                fft_size=(
                     sdr_config_dict.get("fft_size") or sdr_config_dict.get("fftSize") or 1024
                 ),
-                "fft_window": (
+                fft_window=(
                     sdr_config_dict.get("fft_window")
                     or sdr_config_dict.get("fftWindow")
                     or "hanning"
                 ),
-                "fft_averaging": (
+                fft_averaging=(
                     sdr_config_dict.get("fft_averaging") or sdr_config_dict.get("fftAveraging") or 1
                 ),
-                "serial_number": (sdr_device.get("serial") or sdr_device.get("serial_number") or 0),
-            }
+                serial_number=(sdr_device.get("serial") or sdr_device.get("serial_number") or 0),
+            ).to_dict()
 
             # 2. Register internal observation session (creates session, starts SDR)
             metadata = {
