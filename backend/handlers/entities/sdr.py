@@ -33,6 +33,48 @@ from session.service import session_service
 from session.tracker import session_tracker
 
 
+def _coerce_float(value, default, field_name, logger):
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in ("", "none"):
+            logger.warning(f"{field_name} is unset; using default {default}.")
+            return default
+        try:
+            return float(normalized)
+        except ValueError:
+            logger.warning(f"{field_name} is invalid ({value}); using default {default}.")
+            return default
+    logger.warning(f"{field_name} has unsupported type; using default {default}.")
+    return default
+
+
+def _coerce_int(value, default, field_name, logger):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in ("", "none"):
+            logger.warning(f"{field_name} is unset; using default {default}.")
+            return default
+        try:
+            return int(float(normalized))
+        except ValueError:
+            logger.warning(f"{field_name} is invalid ({value}); using default {default}.")
+            return default
+    logger.warning(f"{field_name} has unsupported type; using default {default}.")
+    return default
+
+
 async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
     async with AsyncSessionLocal() as dbsession:
@@ -72,7 +114,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 sdr_port = sdr_device.get("port", None)
 
                 # Default to 100 MHz
-                center_freq = data.get("centerFrequency", 100e6)
+                center_freq = _coerce_float(
+                    data.get("centerFrequency", 100e6), 100e6, "centerFrequency", logger
+                )
 
                 # Validate center frequency against device limits
                 freq_min = sdr_device.get("frequency_min", None)
@@ -97,13 +141,15 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                         )
 
                 # Default to 2.048 MSPS
-                sample_rate = data.get("sampleRate", 2.048e6)
+                sample_rate = _coerce_float(
+                    data.get("sampleRate", 2.048e6), 2.048e6, "sampleRate", logger
+                )
 
                 # Default to 20 dB gain
-                gain = data.get("gain", 20)
+                gain = _coerce_float(data.get("gain", 20), 20, "gain", logger)
 
                 # Default FFT size
-                fft_size = data.get("fftSize", 1024)
+                fft_size = _coerce_int(data.get("fftSize", 1024), 1024, "fftSize", logger)
 
                 # Enable/disable Bias-T
                 bias_t = data.get("biasT", False)
@@ -118,16 +164,21 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 fft_window = data.get("fftWindow", "hanning")
 
                 # FFT Averaging
-                fft_averaging = data.get("fftAveraging", 1)
+                fft_averaging = _coerce_int(data.get("fftAveraging", 1), 1, "fftAveraging", logger)
 
                 # Antenna port
                 antenna = data.get("antenna", None)
+                if isinstance(antenna, str) and antenna.strip().lower() in ("", "none"):
+                    logger.warning("Antenna is unset; using device default.")
+                    antenna = None
 
                 # Soapy AGC
                 soapy_agc = data.get("soapyAgc", False)
 
                 # Offset frequency for downconverters and upconverters
-                offset_freq = data.get("offsetFrequency", 0)
+                offset_freq = _coerce_float(
+                    data.get("offsetFrequency", 0), 0, "offsetFrequency", logger
+                )
 
                 # Recording path for sigmfplayback
                 recording_path = data.get("recordingPath", "")
@@ -143,7 +194,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     "rtl_agc": rtl_agc,
                     "fft_window": fft_window,
                     "fft_averaging": fft_averaging,
-                    "antenna": antenna,
                     "sdr_id": sdr_id,
                     "recording_path": recording_path,
                     "serial_number": sdr_serial,
@@ -153,6 +203,8 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     "soapy_agc": soapy_agc,
                     "offset_freq": offset_freq,
                 }
+                if antenna is not None:
+                    sdr_config["antenna"] = antenna
 
                 # Create or update SDR session via SessionService (also updates tracker)
                 logger.info(f"Creating an SDR session for client {client_id}")
