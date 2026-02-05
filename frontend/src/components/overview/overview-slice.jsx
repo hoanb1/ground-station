@@ -250,7 +250,7 @@ const overviewSlice = createSlice({
             is_geosynchronous: false,
         },
         recentSatelliteGroups: [],
-        showGeostationarySatellites: false, // Default off - hide geostationary satellites
+        showGeostationarySatellites: true, // Default on - show geostationary satellites
         passesTablePageSize: 5, // Default page size for passes table
         satellitesTablePageSize: 50, // Default page size for satellites table
         passesTableSortModel: [{field: 'event_start', sort: 'asc'}], // Default sort for passes table
