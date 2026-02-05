@@ -33,6 +33,7 @@ import {
     LibraryVersionsCard,
     ReduxStateInspectorCard,
     DatabaseBackupCard,
+    TransmitterImportCard,
     SystemInfoCard,
     SessionSnapshotCard,
     EventLogConsoleCard
@@ -128,6 +129,9 @@ const MaintenanceForm = () => {
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12 }}>
                             <DatabaseBackupCard />
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                            <TransmitterImportCard />
                         </Grid>
                     </Grid>
                 </TabPanel>
