@@ -366,9 +366,10 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
 
         const targetFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
 
-        // Calculate offset to avoid DC spike at center
-        // Offset by 25% of sample rate to move target signal away from center
-        const offsetHz = sampleRate * 0.25;
+        // Calculate offset to avoid DC spike at center.
+        // If sample rate is unset (e.g., "none"), fall back to no offset.
+        const parsedSampleRate = typeof sampleRate === 'number' ? sampleRate : Number(sampleRate);
+        const offsetHz = Number.isFinite(parsedSampleRate) ? parsedSampleRate * 0.25 : 0;
         const newCenterFrequency = targetFrequency + offsetHz;
 
         dispatch(setCenterFrequency(newCenterFrequency));

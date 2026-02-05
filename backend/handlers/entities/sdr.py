@@ -78,14 +78,23 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 freq_min = sdr_device.get("frequency_min", None)
                 freq_max = sdr_device.get("frequency_max", None)
 
-                # Only validate if both limits are defined and numeric
-                if freq_min is not None and freq_max is not None:
-                    if isinstance(freq_min, (int, float)) and isinstance(freq_max, (int, float)):
-                        if not (freq_min * 1e6 <= center_freq <= freq_max * 1e6):
-                            raise Exception(
-                                f"Center frequency {center_freq / 1e6:.2f} MHz is outside device limits "
-                                f"({freq_min:.2f} MHz - {freq_max:.2f} MHz)"
-                            )
+                # Only validate if both limits are defined and numeric; otherwise warn and skip validation.
+                if freq_min is None or freq_max is None:
+                    logger.warning(
+                        "SDR frequency limits missing; skipping center frequency validation."
+                    )
+                elif not isinstance(freq_min, (int, float)) or not isinstance(
+                    freq_max, (int, float)
+                ):
+                    logger.warning(
+                        "SDR frequency limits invalid; skipping center frequency validation."
+                    )
+                else:
+                    if not (freq_min * 1e6 <= center_freq <= freq_max * 1e6):
+                        raise Exception(
+                            f"Center frequency {center_freq / 1e6:.2f} MHz is outside device limits "
+                            f"({freq_min:.2f} MHz - {freq_max:.2f} MHz)"
+                        )
 
                 # Default to 2.048 MSPS
                 sample_rate = data.get("sampleRate", 2.048e6)
