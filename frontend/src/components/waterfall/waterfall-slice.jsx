@@ -193,6 +193,7 @@ const initialState = {
         manual: true,
         satdump: true,
         satnogs: true,
+        'gr-satellites': true,
     },
 };
 
@@ -402,6 +403,7 @@ export const waterfallSlice = createSlice({
                     manual: true,
                     satdump: true,
                     satnogs: true,
+                    'gr-satellites': true,
                 };
             }
             if (source && Object.prototype.hasOwnProperty.call(state.showBookmarkSources, source)) {

@@ -20,7 +20,11 @@
     "toggle_neighboring_transmitters": "Toggle neighboring satellite transmitters",
     "take_snapshot": "Take waterfall snapshot",
     "toggle_vfo": "Toggle VFO {{number}}",
-    "fft_overflow": "FFT update rate overflow — incoming updates are being throttled"
+    "fft_overflow": "FFT update rate overflow — incoming updates are being throttled",
+    "bookmark_source_user_defined": "User defined",
+    "bookmark_source_satnogs": "SATNOGS",
+    "bookmark_source_gr_satellites": "gr-satellites",
+    "bookmark_source_satdump": "Satdump"
   },
   "frequency": {
     "title": "Frequency control",

@@ -128,7 +128,7 @@ const BookmarkCanvas = ({
                 return 'manual';
             }
             const lowered = source.toLowerCase();
-            if (lowered === 'manual' || lowered === 'satdump' || lowered === 'satnogs') {
+            if (lowered === 'manual' || lowered === 'satdump' || lowered === 'satnogs' || lowered === 'gr-satellites') {
                 return lowered;
             }
             return 'manual';

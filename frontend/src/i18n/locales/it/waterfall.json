@@ -18,7 +18,11 @@
     "reset_zoom": "Reimposta zoom",
     "toggle_rotator_lines": "Attiva/disattiva linee tratteggiate eventi rotatore",
     "toggle_vfo": "Attiva/disattiva VFO {{number}}",
-    "fft_overflow": "Overflow velocità aggiornamento FFT — gli aggiornamenti in arrivo vengono limitati"
+    "fft_overflow": "Overflow velocità aggiornamento FFT — gli aggiornamenti in arrivo vengono limitati",
+    "bookmark_source_user_defined": "User defined",
+    "bookmark_source_satnogs": "SATNOGS",
+    "bookmark_source_gr_satellites": "gr-satellites",
+    "bookmark_source_satdump": "Satdump"
   },
   "frequency": {
     "title": "Controllo frequenza",

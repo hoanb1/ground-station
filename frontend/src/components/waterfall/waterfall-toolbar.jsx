@@ -68,6 +68,7 @@ const WaterfallToolbar = ({
         manual: true,
         satdump: true,
         satnogs: true,
+        'gr-satellites': true,
     };
     const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
     const vfoMarkers = useSelector((state) => state.vfo.vfoMarkers);
@@ -575,7 +576,7 @@ const WaterfallToolbar = ({
                     />
                 </ListItemIcon>
                 <ListItemText
-                    primary={t('toolbar.experimental_option_user_defined', 'User defined')}
+                    primary={t('toolbar.bookmark_source_user_defined', 'User defined')}
                 />
             </MenuItem>
             <MenuItem onClick={() => toggleBookmarkSource('satnogs')}>
@@ -588,7 +589,20 @@ const WaterfallToolbar = ({
                     />
                 </ListItemIcon>
                 <ListItemText
-                    primary={t('toolbar.experimental_option_satnogs', 'SATNOGS')}
+                    primary={t('toolbar.bookmark_source_satnogs', 'SATNOGS')}
+                />
+            </MenuItem>
+            <MenuItem onClick={() => toggleBookmarkSource('gr-satellites')}>
+                <ListItemIcon>
+                    <Checkbox
+                        edge="start"
+                        checked={Boolean(bookmarkSourceState['gr-satellites'])}
+                        tabIndex={-1}
+                        disableRipple
+                    />
+                </ListItemIcon>
+                <ListItemText
+                    primary={t('toolbar.bookmark_source_gr_satellites', 'gr-satellites')}
                 />
             </MenuItem>
             <MenuItem onClick={() => toggleBookmarkSource('satdump')}>
@@ -601,7 +615,7 @@ const WaterfallToolbar = ({
                     />
                 </ListItemIcon>
                 <ListItemText
-                    primary={t('toolbar.experimental_option_satdump', 'Satdump')}
+                    primary={t('toolbar.bookmark_source_satdump', 'Satdump')}
                 />
             </MenuItem>
         </Menu>
