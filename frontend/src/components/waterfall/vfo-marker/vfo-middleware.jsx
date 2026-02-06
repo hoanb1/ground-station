@@ -160,17 +160,21 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
             return result;
         }
 
-        // Get the complete VFO state and merge with updates
-        const vfoState = state.vfo.vfoMarkers[vfoNumber];
-        const vfoActiveState = state.vfo.vfoActive[vfoNumber];
-        const isSelected = state.vfo.selectedVFO === vfoNumber;
-
         // Filter out UI-only fields before sending to backend
-        const backendVfoState = filterUIOnlyFields(vfoState);
         const backendUpdates = filterUIOnlyFields(updates);
 
         // Dispatch async thunk to update backend with complete state (debounced)
+        // Re-read state at fire time to avoid sending stale active/selected values.
         debouncedBackendUpdate(store, vfoNumber, () => {
+            const currentState = store.getState();
+            const currentVfoState = currentState.vfo.vfoMarkers[vfoNumber];
+            if (!currentVfoState) {
+                return;
+            }
+            const currentVfoActiveState = currentState.vfo.vfoActive[vfoNumber];
+            const currentIsSelected = currentState.vfo.selectedVFO === vfoNumber;
+            const backendVfoState = filterUIOnlyFields(currentVfoState);
+
             store.dispatch(backendUpdateVFOParameters({
                 socket,
                 vfoNumber,
@@ -178,8 +182,8 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                     vfoNumber: vfoNumber,
                     ...backendVfoState,
                     ...backendUpdates,
-                    active: vfoActiveState,
-                    selected: isSelected,
+                    active: currentVfoActiveState,
+                    selected: currentIsSelected,
                 },
             }));
         });
