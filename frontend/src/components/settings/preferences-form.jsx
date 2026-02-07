@@ -374,10 +374,10 @@ const PreferencesForm = () => {
                         />
                     </Grid>
 
-                    {/* DeBabel Transcription Service */}
+                    {/* Transcription Service */}
                     <Grid size={16} sx={{ mt: 2 }}>
                         <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 1 }}>
-                            {t('preferences.debabel_configuration', 'DeBabel Transcription')}
+                            {t('preferences.debabel_configuration', 'Transcription')}
                         </Typography>
                         <Divider sx={{ mb: 2 }} />
                     </Grid>
