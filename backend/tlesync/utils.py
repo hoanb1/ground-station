@@ -213,7 +213,7 @@ def detect_duplicate_satellites(celestrak_list, logger):
 
             # Keep the satellite entry with the most recent TLE or prefer certain naming conventions
             # For now, we'll keep the first one found, but you could implement preference logic here
-            logger.info(
+            logger.debug(
                 f"Duplicate satellite detected - NORAD ID: {norad_id}, "
                 f"Names: {duplicates_info[norad_id]['names']}, "
                 f"Occurrences: {duplicates_info[norad_id]['occurrences']}"

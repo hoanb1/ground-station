@@ -6,10 +6,10 @@ from typing import Optional
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
+import observations.events as obs_events
 from common.logger import logger
 from db import AsyncSessionLocal
 from observations.constants import DEFAULT_AUTO_GENERATE_INTERVAL_HOURS
-from observations.events import emit_scheduled_observations_changed, observation_sync
 from observations.generator import generate_observations_for_monitored_satellites
 
 # Suppress apscheduler internal INFO logs (only show warnings and errors)
@@ -82,11 +82,11 @@ async def generate_observations_job():
 
                 # Emit event to all clients if observations were changed
                 if stats.get("generated", 0) > 0 or stats.get("updated", 0) > 0:
-                    await emit_scheduled_observations_changed()
+                    await obs_events.emit_scheduled_observations_changed()
 
                     # Sync all observations to APScheduler
-                    if observation_sync:
-                        sync_result = await observation_sync.sync_all_observations()
+                    if obs_events.observation_sync:
+                        sync_result = await obs_events.observation_sync.sync_all_observations()
                         if sync_result["success"]:
                             sync_stats = sync_result.get("stats", {})
                             logger.info(
@@ -119,7 +119,7 @@ async def run_initial_observation_generation():
 
                 # Emit event to all clients if observations were changed
                 if stats.get("generated", 0) > 0 or stats.get("updated", 0) > 0:
-                    await emit_scheduled_observations_changed()
+                    await obs_events.emit_scheduled_observations_changed()
 
                 # Note: Sync to APScheduler is handled by startup.py after this completes
             else:
