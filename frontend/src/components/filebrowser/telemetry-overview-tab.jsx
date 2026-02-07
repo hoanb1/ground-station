@@ -19,6 +19,8 @@ import {
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { getDecoderDisplay, ModulationType } from '../../constants/modulations';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatDateTime } from '../../utils/date-time.js';
 
 function InfoSection({ title, children }) {
     const theme = useTheme();
@@ -69,13 +71,14 @@ function InfoRow({ label, value, mono = false }) {
 
 export default function OverviewTab({ metadata, file, telemetry, packet, ax25 }) {
     const theme = useTheme();
+    const { timezone, locale } = useUserTimeSettings();
 
     // Format timestamp
     const formatTimestamp = (ts) => {
         if (!ts) return '-';
         try {
-            const date = new Date(typeof ts === 'number' ? ts * 1000 : ts);
-            return date.toLocaleString();
+            const dateValue = typeof ts === 'number' ? ts * 1000 : ts;
+            return formatDateTime(dateValue, { timezone, locale });
         } catch {
             return String(ts);
         }

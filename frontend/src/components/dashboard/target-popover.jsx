@@ -50,6 +50,8 @@ import SatSelectorIsland from "../target/satellite-selector.jsx";
 import { SatellitePassTimeline } from "../target/timeline-main.jsx";
 import TransmittersDialog from "../satellites/transmitters-dialog.jsx";
 import { calculateElevationCurve } from "../../utils/elevation-curve-calculator.js";
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatDate as formatDateHelper } from '../../utils/date-time.js';
 
 const SatelliteInfoPopover = () => {
     const theme = useTheme();
@@ -58,6 +60,7 @@ const SatelliteInfoPopover = () => {
     const [transmittersDialogOpen, setTransmittersDialogOpen] = useState(false);
     const navigate = useNavigate();
     const { t } = useTranslation('dashboard');
+    const { timezone, locale } = useUserTimeSettings();
 
     // Get satellite data from Redux store
     const { satelliteData, trackingState, rotatorData, satellitePasses, activePass } = useSelector(state => state.targetSatTrack);
@@ -89,7 +92,7 @@ const SatelliteInfoPopover = () => {
     // Format date helper - use common function
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString();
+        return formatDateHelper(dateString, { timezone, locale });
     };
 
     const getTooltipText = () => {
@@ -399,7 +402,7 @@ const SatelliteInfoPopover = () => {
                     {countdown}
                 </Typography>
                 <Typography variant="caption" color="text.disabled">
-                    {formatLegibleDateTime(currentPass.event_start)}
+                    {formatLegibleDateTime(currentPass.event_start, timezone, locale)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                     Peak elevation: {currentPass.peak_altitude?.toFixed(1)}°

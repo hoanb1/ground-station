@@ -39,6 +39,8 @@ import StopIcon from '@mui/icons-material/Stop';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useSocket } from '../../common/socket.jsx';
+import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
+import { formatTime } from '../../../utils/date-time.js';
 
 const LIMIT_OPTIONS = [200, 500, 1000, 2000];
 const HARD_CAP = 5000;
@@ -53,14 +55,17 @@ const LOG_LEVEL_COLORS = {
 };
 
 // Format timestamp
-function formatTimestamp(timestamp) {
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        fractionalSecondDigits: 3
+function formatTimestamp(timestamp, timezone, locale) {
+    return formatTime(timestamp * 1000, {
+        timezone,
+        locale,
+        options: {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            fractionalSecondDigits: 3
+        },
     });
 }
 
@@ -93,6 +98,7 @@ function extractCleanMessage(message) {
 const LogEntryRow = React.memo(function LogEntryRow({ log, showMetadata }) {
     const levelColor = LOG_LEVEL_COLORS[log.level] || 'default';
     const cleanMessage = extractCleanMessage(log.message);
+    const { timezone, locale } = useUserTimeSettings();
 
     return (
         <Box
@@ -113,7 +119,7 @@ const LogEntryRow = React.memo(function LogEntryRow({ log, showMetadata }) {
                     variant="caption"
                     sx={{ fontFamily: 'monospace', color: 'text.secondary', minWidth: '90px' }}
                 >
-                    {formatTimestamp(log.timestamp)}
+                    {formatTimestamp(log.timestamp, timezone, locale)}
                 </Typography>
 
                 <Chip

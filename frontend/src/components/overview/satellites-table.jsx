@@ -31,6 +31,8 @@ import {
     TitleBar
 } from "../common/common.jsx";
 import ElevationDisplay from "../common/elevation-display.jsx";
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatDate as formatDateHelper } from '../../utils/date-time.js';
 import {
     setSelectedSatelliteId,
     setSatellitesTableColumnVisibility,
@@ -70,6 +72,7 @@ const MemoizedStyledDataGrid = React.memo(({
     const currentLanguage = i18n.language;
     const dataGridLocale = currentLanguage === 'el' ? elGR : enUS;
     const [page, setPage] = useState(0);
+    const { timezone, locale } = useUserTimeSettings();
 
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
@@ -147,11 +150,10 @@ const MemoizedStyledDataGrid = React.memo(({
     const formatDate = (dateString) => {
         if (!dateString) return t('satellites_table.na');
         try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
+            return formatDateHelper(dateString, {
+                timezone,
+                locale,
+                options: { year: 'numeric', month: 'short', day: 'numeric' },
             });
         } catch (e) {
             return t('satellites_table.invalid_date');

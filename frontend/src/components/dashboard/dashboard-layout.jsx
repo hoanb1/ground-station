@@ -80,6 +80,8 @@ import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import {getNavigation} from "../../config/navigation.jsx";
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatTime } from '../../utils/date-time.js';
 
 // Drawer widths
 const drawerWidthExpanded = 240;
@@ -290,6 +292,7 @@ const accounts = [
 function TimeDisplay() {
     const [isUTC, setIsUTC] = React.useState(false); // Toggle between UTC and Local Time
     const [currentTime, setCurrentTime] = React.useState(new Date());
+    const { timezone, locale } = useUserTimeSettings();
 
     // Update the time every second
     React.useEffect(() => {
@@ -299,11 +302,22 @@ function TimeDisplay() {
 
     // Format time based on whether it's UTC or local
     const formattedTime = isUTC
-        ? currentTime.toUTCString().slice(17, 25) // Extract only the 24-hour time part
-        : currentTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false});
+        ? formatTime(currentTime, {
+            timezone: 'UTC',
+            locale,
+            options: { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false },
+        })
+        : formatTime(currentTime, {
+            timezone,
+            locale,
+            options: { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false },
+        });
 
-    const timeZoneAbbr = new Date().toLocaleTimeString('en-US', { timeZoneName: 'short' })
-        .split(' ').pop();
+    const timeZoneAbbr = isUTC
+        ? 'UTC'
+        : new Intl.DateTimeFormat(locale, { timeZone: timezone, timeZoneName: 'short' })
+            .formatToParts(currentTime)
+            .find((part) => part.type === 'timeZoneName')?.value || timezone;
 
     return (
         <Box
@@ -437,6 +451,7 @@ export default function Layout() {
     const [open, setOpen] = React.useState(false);
     const [mobileOpen, setMobileOpen] = React.useState(false);
     const [navigation, setNavigation] = React.useState(getNavigation());
+    const { timezone, locale } = useUserTimeSettings();
 
     const {
         connecting,
@@ -617,10 +632,10 @@ export default function Layout() {
                 if (runningObservation) {
                     const satelliteName = runningObservation.satellite?.name || 'Unknown';
                     const endTime = runningObservation.pass?.event_end
-                        ? new Date(runningObservation.pass.event_end).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: false
+                        ? formatTime(runningObservation.pass.event_end, {
+                            timezone,
+                            locale,
+                            options: { hour: '2-digit', minute: '2-digit', hour12: false },
                           })
                         : 'N/A';
                     const remainingTime = runningObservation.pass?.event_end
@@ -633,10 +648,10 @@ export default function Layout() {
                 if (nextObservation) {
                     const satelliteName = nextObservation.satellite?.name || 'Unknown';
                     const startTime = nextObservation.pass?.event_start
-                        ? new Date(nextObservation.pass.event_start).toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: false
+                        ? formatTime(nextObservation.pass.event_start, {
+                            timezone,
+                            locale,
+                            options: { hour: '2-digit', minute: '2-digit', hour12: false },
                           })
                         : 'N/A';
                     const timeUntil = nextObservation.pass?.event_start

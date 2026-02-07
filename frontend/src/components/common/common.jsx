@@ -30,6 +30,7 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import Tabs from "@mui/material/Tabs";
 import i18n from '../../i18n/config';
+import { formatDateTime, formatTime } from '../../utils/date-time.js';
 
 export const SATELLITE_NUMBER_LIMIT = 50;
 
@@ -313,11 +314,10 @@ export const humanizeFutureDateInMinutes = (isoString, zeroPadding = 2) => {
     return `in ${formatWithZeros(diffInMinutes, zeroPadding)}m ${formatWithZeros(remainingSeconds, zeroPadding)}s`;
 };
 
-export const betterDateTimes = (date, timezone = 'UTC') => {
+export const betterDateTimes = (date, timezone = 'UTC', locale) => {
     if (date) {
         // Format the date in the user's timezone for the tooltip
-        const dateObj = new Date(date);
-        const formattedDate = dateObj.toLocaleString('en-US', { timeZone: timezone });
+        const formattedDate = formatDateTime(date, { timezone, locale });
 
         return (
             <Tooltip title={formattedDate} arrow>
@@ -332,11 +332,10 @@ export const betterDateTimes = (date, timezone = 'UTC') => {
 };
 
 
-export function formatLegibleDateTime(isoString) {
+export function formatLegibleDateTime(isoString, timezone, locale) {
     if (!isoString) return "-"; // Handle invalid or empty input
 
     const date = new Date(isoString);
-
     if (isNaN(date)) return "Invalid date"; // Handle invalid dates
 
     const options = {
@@ -349,20 +348,20 @@ export function formatLegibleDateTime(isoString) {
         hour12: false, // Optional: Use 12-hour format with AM/PM
     };
 
-    return date.toLocaleString(undefined, options);
+    return formatDateTime(date, { timezone, locale, options });
 }
 
-export function getTimeFromISO(isoString) {
+export function getTimeFromISO(isoString, timezone, locale) {
     if (!isoString) return "-"; // Handle invalid or empty input
 
     const date = new Date(isoString);
     if (isNaN(date)) return "Invalid date"; // Handle invalid dates
 
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    const seconds = date.getSeconds().toString().padStart(2, "0");
-
-    return `${hours}:${minutes}:${seconds}`;
+    return formatTime(date, {
+        timezone,
+        locale,
+        options: { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false },
+    });
 }
 
 export const MapArrowControls = function ({mapObject}) {

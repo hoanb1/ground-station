@@ -24,6 +24,8 @@ import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility, Cancel, 
 import { useSocket } from '../common/socket.jsx';
 import { cancelRunningObservation } from './scheduler-slice.jsx';
 import { getFlattenedTasks, getSessionSdrs } from './session-utils.js';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatTime as formatTimeHelper } from '../../utils/date-time.js';
 
 /**
  * Compact banner showing either:
@@ -37,6 +39,7 @@ export default function ObservationStatusBanner() {
     const [countdown, setCountdown] = useState('');
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
     const [isSatelliteVisible, setIsSatelliteVisible] = useState(false);
+    const { timezone, locale } = useUserTimeSettings();
 
     const { runningObservation, nextObservation } = useMemo(() => {
         const now = new Date();
@@ -176,8 +179,11 @@ export default function ObservationStatusBanner() {
     // Format start/end times
     const formatTime = (isoString) => {
         if (!isoString) return '';
-        const date = new Date(isoString);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return formatTimeHelper(isoString, {
+            timezone,
+            locale,
+            options: { hour: '2-digit', minute: '2-digit' },
+        });
     };
 
     // Use task_start/task_end (root level) if available, fallback to event_start/event_end (in pass)

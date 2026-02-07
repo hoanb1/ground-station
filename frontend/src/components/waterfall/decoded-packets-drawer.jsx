@@ -37,6 +37,8 @@ import { deleteOutputByFilename } from '../decoders/decoders-slice';
 import { useSocket } from '../common/socket.jsx';
 import { humanizeBytes } from '../common/common.jsx';
 import { toast } from 'react-toastify';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatTime } from '../../utils/date-time.js';
 
 // Humanize timestamp to show relative time (e.g., "5m 32s ago")
 const humanizePastTime = (timestamp) => {
@@ -70,6 +72,7 @@ const humanizePastTime = (timestamp) => {
 // Time formatter component that updates without causing re-renders
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
     const [, setForceUpdate] = useState(0);
+    const { timezone, locale } = useUserTimeSettings();
 
     // Force component to update every 5 seconds
     useEffect(() => {
@@ -79,11 +82,10 @@ const TimeFormatter = React.memo(function TimeFormatter({ value }) {
         return () => clearInterval(interval);
     }, []);
 
-    const timeString = new Date(value).toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+    const timeString = formatTime(value, {
+        timezone,
+        locale,
+        options: { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' },
     });
 
     return <span>{humanizePastTime(value)} ({timeString})</span>;

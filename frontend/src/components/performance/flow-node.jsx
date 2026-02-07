@@ -20,6 +20,8 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { Paper, Box, Typography, Chip, Divider, Stack, Tooltip } from '@mui/material';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatDateTime } from '../../utils/date-time.js';
 
 const formatRate = (rate) => {
     if (rate === null || rate === undefined) return 'N/A';
@@ -207,6 +209,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
 
 export const ComponentNode = ({ data }) => {
     const { component, type, inputCount = 1, outputCount = 1 } = data;
+    const { timezone, locale } = useUserTimeSettings();
 
     // Workers and Trackers don't have input handles (they're sources)
     const isWorker = type === 'worker';
@@ -307,7 +310,7 @@ export const ComponentNode = ({ data }) => {
                             />
                         )}
                         {component.stats?.last_activity && (
-                            <Tooltip title={`Last activity: ${new Date(component.stats.last_activity * 1000).toLocaleString()}`} arrow>
+                            <Tooltip title={`Last activity: ${formatDateTime(component.stats.last_activity * 1000, { timezone, locale })}`} arrow>
                                 <Typography 
                                     variant="caption" 
                                     sx={{ 

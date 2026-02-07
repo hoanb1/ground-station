@@ -48,6 +48,8 @@ import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import ImageIcon from '@mui/icons-material/Image';
 import FolderIcon from '@mui/icons-material/Folder';
 import ZoomableImage from '../common/zoomable-image.jsx';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatDateTime } from '../../utils/date-time.js';
 
 function TabPanel({ children, value, index }) {
     return (
@@ -95,6 +97,7 @@ function getImageTitle(filename) {
 }
 
 export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
+    const { timezone, locale } = useUserTimeSettings();
     const [activeTab, setActiveTab] = useState(0);
     const [selectedImage, setSelectedImage] = useState(null);
 
@@ -251,7 +254,7 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                                                         <TableCell sx={{ fontWeight: 600 }}>Timestamp</TableCell>
                                                         <TableCell>
                                                             {folder.metadata?.timestamp
-                                                                ? new Date(folder.metadata.timestamp * 1000).toLocaleString()
+                                                                ? formatDateTime(folder.metadata.timestamp * 1000, { timezone, locale })
                                                                 : folder.timestamp || 'N/A'}
                                                         </TableCell>
                                                     </TableRow>
@@ -277,7 +280,7 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                                                     </TableRow>
                                                     <TableRow>
                                                         <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
-                                                        <TableCell>{new Date(folder.created).toLocaleString()}</TableCell>
+                                                        <TableCell>{formatDateTime(folder.created, { timezone, locale })}</TableCell>
                                                     </TableRow>
                                                 </TableBody>
                                             </Table>

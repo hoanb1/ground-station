@@ -68,6 +68,8 @@ import {
     setSelectedObservationForData,
 } from './scheduler-slice.jsx';
 import { TitleBar, getTimeFromISO, humanizeFutureDateInMinutes } from '../common/common.jsx';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatDateTime } from '../../utils/date-time.js';
 import Button from '@mui/material/Button';
 import ObservationsTimeline from './observations-timeline-svg.jsx';
 import { getFlattenedTasks, getSessionSdrs } from './session-utils.js';
@@ -94,6 +96,7 @@ const getStatusColor = (status) => {
 // Time formatter component that updates every second
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
     const [, setForceUpdate] = useState(0);
+    const { timezone, locale } = useUserTimeSettings();
 
     // Force component to update every second
     useEffect(() => {
@@ -107,7 +110,7 @@ const TimeFormatter = React.memo(function TimeFormatter({ value }) {
         return '-';
     }
 
-    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+    return `${getTimeFromISO(value, timezone, locale)} (${humanizeFutureDateInMinutes(value)})`;
 });
 
 const ObservationsTable = () => {
@@ -125,6 +128,7 @@ const ObservationsTable = () => {
     const openSettingsDialog = useSelector((state) => state.scheduler?.openObservationsTableSettingsDialog || false);
     const openDataDialog = useSelector((state) => state.scheduler?.openObservationDataDialog || false);
     const selectedObservationForData = useSelector((state) => state.scheduler?.selectedObservationForData || null);
+    const { timezone, locale } = useUserTimeSettings();
 
     // Filter observations based on status filters
     const observations = allObservations.filter(obs => statusFilters[obs.status]);
@@ -833,10 +837,10 @@ const ObservationsTable = () => {
                                             Satellite: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.satellite?.name || obs.satellite_name}</Typography>
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                            Start: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.pass?.event_start ? new Date(obs.pass.event_start).toLocaleString() : 'N/A'}</Typography>
+                                            Start: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.pass?.event_start ? formatDateTime(obs.pass.event_start, { timezone, locale }) : 'N/A'}</Typography>
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                            End: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.pass?.event_end ? new Date(obs.pass.event_end).toLocaleString() : 'N/A'}</Typography>
+                                            End: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.pass?.event_end ? formatDateTime(obs.pass.event_end, { timezone, locale }) : 'N/A'}</Typography>
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
                                             Status: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.status}</Typography>

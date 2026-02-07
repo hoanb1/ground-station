@@ -35,6 +35,8 @@ import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeMuteIcon from '@mui/icons-material/VolumeMute';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatTime } from '../../utils/date-time.js';
 
 /**
  * Language code to emoji flag mapping
@@ -594,11 +596,11 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                             {/* Timestamp at the beginning of the line */}
                             {line.segments.length > 0 && (() => {
                                 const firstTimestamp = line.segments[0].timestamp;
-                                const date = new Date(firstTimestamp);
-                                const hours = String(date.getHours()).padStart(2, '0');
-                                const minutes = String(date.getMinutes()).padStart(2, '0');
-                                const seconds = String(date.getSeconds()).padStart(2, '0');
-                                const timeString = `[${hours}:${minutes}:${seconds}]`;
+                                const timeString = formatTime(firstTimestamp, {
+                                    timezone,
+                                    locale,
+                                    options: { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false },
+                                });
 
                                 return (
                                     <Box
@@ -609,7 +611,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
                                             fontWeight: 500,
                                         }}
                                     >
-                                        {timeString}
+                                        [{timeString}]
                                     </Box>
                                 );
                             })()}
@@ -649,6 +651,7 @@ const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, t
  */
 const TranscriptionSubtitles = ({ maxLines = 4, maxWordsPerLine = 20 }) => {
     const dispatch = useDispatch();
+    const { timezone, locale } = useUserTimeSettings();
 
     // Get live transcription state
     const liveTranscription = useSelector((state) => state.transcription.liveTranscription);

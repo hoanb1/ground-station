@@ -38,10 +38,12 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { fetchNextPasses, updateSatellitePassesWithElevationCurves, setPassesTableColumnVisibility, setOpenPassesTableSettingsDialog } from './target-slice.jsx';
 import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
 import TargetPassesTableSettingsDialog from './target-passes-table-settings-dialog.jsx';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 
 
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
     const [, setForceUpdate] = useState(0);
+    const { timezone, locale } = useUserTimeSettings();
 
     // Force component to update regularly
     useEffect(() => {
@@ -51,7 +53,7 @@ const TimeFormatter = React.memo(function TimeFormatter({ value }) {
         return () => clearInterval(interval);
     }, []);
 
-    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+    return `${getTimeFromISO(value, timezone, locale)} (${humanizeFutureDateInMinutes(value)})`;
 });
 
 

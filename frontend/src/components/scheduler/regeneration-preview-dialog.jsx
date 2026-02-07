@@ -36,9 +36,12 @@ import {
     Stack,
 } from '@mui/material';
 import { Warning as WarningIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatTime } from '../../utils/date-time.js';
 
 const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) => {
     const [conflictChoices, setConflictChoices] = useState({});
+    const { timezone, locale } = useUserTimeSettings();
 
     if (!previewData) return null;
 
@@ -242,7 +245,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                                         sx={{ ml: 1 }}
                                                     />
                                                     <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                                        ({new Date(conflict.existing_obs.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(conflict.existing_obs.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })})
+                                                        ({formatTime(conflict.existing_obs.start, { timezone, locale, options: { hour: '2-digit', minute: '2-digit', hour12: false } })} - {formatTime(conflict.existing_obs.end, { timezone, locale, options: { hour: '2-digit', minute: '2-digit', hour12: false } })})
                                                     </Typography>
                                                     {effectiveAction === 'keep' && conflict.strategy_action === 'keep' && (
                                                         <Chip
@@ -267,7 +270,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                                         sx={{ ml: 1 }}
                                                     />
                                                     <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                                        ({new Date(conflict.new_pass.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(conflict.new_pass.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })})
+                                                        ({formatTime(conflict.new_pass.start, { timezone, locale, options: { hour: '2-digit', minute: '2-digit', hour12: false } })} - {formatTime(conflict.new_pass.end, { timezone, locale, options: { hour: '2-digit', minute: '2-digit', hour12: false } })})
                                                     </Typography>
                                                     {effectiveAction === 'replace' && conflict.strategy_action === 'replace' && (
                                                         <Chip

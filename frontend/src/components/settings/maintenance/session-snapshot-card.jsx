@@ -15,6 +15,8 @@ import TabletIcon from '@mui/icons-material/Tablet';
 import DevicesIcon from '@mui/icons-material/Devices';
 import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
+import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
+import { formatDateTime, formatTime } from '../../../utils/date-time.js';
 
 const KeyValue = ({ label, value, wrap = false }) => (
     <Stack direction="row" spacing={1} alignItems={wrap ? "flex-start" : "center"} sx={{ mb: 1 }}>
@@ -118,6 +120,7 @@ const SessionSnapshotCard = () => {
     const { socket } = useSocket();
     const [sdrFilter, setSdrFilter] = useState('');
     const [sessionFilter, setSessionFilter] = useState('');
+    const { timezone, locale } = useUserTimeSettings();
 
     const runtime = useSelector((state) => state.sessions.runtimeSnapshot);
 
@@ -172,7 +175,7 @@ const SessionSnapshotCard = () => {
                     {enrichedSessions.map(({ sid, info, sdrData }) => {
                         const metadata = info?.metadata || {};
                         const connectedAt = metadata.connected_at
-                            ? new Date(metadata.connected_at * 1000).toLocaleString()
+                            ? formatDateTime(metadata.connected_at * 1000, { timezone, locale })
                             : '—';
                         const duration = metadata.connected_at
                             ? Math.floor((Date.now() - metadata.connected_at * 1000) / 1000)
@@ -375,7 +378,7 @@ const SessionSnapshotCard = () => {
 
             <Divider sx={{ my: 2 }} />
             <Stack direction="row" spacing={2}>
-                <KeyValue label="Last Updated" value={runtime.lastUpdated ? new Date(runtime.lastUpdated).toLocaleTimeString() : '—'} />
+                <KeyValue label="Last Updated" value={runtime.lastUpdated ? formatTime(runtime.lastUpdated, { timezone, locale }) : '—'} />
                 <KeyValue label="Socket Connected" value={socket?.connected ? 'yes' : 'no'} />
                 <KeyValue label="Update Mode" value="auto (1s)" />
             </Stack>

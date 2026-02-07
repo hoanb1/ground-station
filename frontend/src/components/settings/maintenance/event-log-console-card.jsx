@@ -25,6 +25,8 @@ import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { useSocket } from '../../common/socket.jsx';
 import { JsonView, defaultStyles, darkStyles } from 'react-json-view-lite';
 import 'react-json-view-lite/dist/index.css';
+import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
+import { formatTime } from '../../../utils/date-time.js';
 
 const LIMIT_OPTIONS = [200, 500, 1000];
 const HARD_CAP = 5000;
@@ -75,6 +77,7 @@ function matchesFilter(entry, filter) {
 // Memoized row to preserve JsonView expansion state across parent re-renders
 const LogEntryRow = React.memo(function LogEntryRow({ entry, jsonStyles }) {
     const collapseNone = useCallback(() => false, []); // stable ref
+    const { timezone, locale } = useUserTimeSettings();
 
     if (entry.direction === 'marker') {
         return (
@@ -86,7 +89,7 @@ const LogEntryRow = React.memo(function LogEntryRow({ entry, jsonStyles }) {
         );
     }
 
-    const ts = new Date(entry.ts).toLocaleTimeString();
+    const ts = formatTime(entry.ts, { timezone, locale });
     const dirColor = entry.direction === 'in' ? 'success.main' : 'info.main';
 
     const renderPayload = (args) => {

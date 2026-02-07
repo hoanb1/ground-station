@@ -66,6 +66,7 @@ import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PassesTableSettingsDialog from './passes-table-settings-dialog.jsx';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 
 
 const CustomPagination = () => {
@@ -173,6 +174,7 @@ const CustomPagination = () => {
 
 const TimeFormatter = React.memo(function TimeFormatter({params, value}) {
     const [, setForceUpdate] = useState(0);
+    const { timezone, locale } = useUserTimeSettings();
 
     // Force component to update regularly
     useEffect(() => {
@@ -186,7 +188,7 @@ const TimeFormatter = React.memo(function TimeFormatter({params, value}) {
         return "∞";
     }
 
-    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+    return `${getTimeFromISO(value, timezone, locale)} (${humanizeFutureDateInMinutes(value)})`;
 });
 
 

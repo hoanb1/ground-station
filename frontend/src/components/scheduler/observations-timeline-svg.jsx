@@ -37,6 +37,8 @@ import SunCalc from 'suncalc';
 import { setTimelineDuration, setSelectedObservation, setDialogOpen } from './scheduler-slice.jsx';
 import { getFlattenedTasks } from './session-utils.js';
 import { humanizeFutureDateInMinutes } from '../common/common.jsx';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatDateTime, formatTime } from '../../utils/date-time.js';
 
 const ObservationsTimeline = () => {
     const dispatch = useDispatch();
@@ -50,6 +52,7 @@ const ObservationsTimeline = () => {
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const [width, setWidth] = useState(1200);
     const containerRef = useRef(null);
+    const { timezone, locale } = useUserTimeSettings();
 
     // Capture "now" and update it every minute
     const [staticNow, setStaticNow] = useState(new Date());
@@ -352,7 +355,11 @@ const ObservationsTimeline = () => {
                             const isSunrise = event.type === 'sunrise';
                             const color = isSunrise ? '#6b5110' : '#2a5070';
                             const eventTime = new Date(event.time);
-                            const timeStr = eventTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                            const timeStr = formatTime(eventTime, {
+                                timezone,
+                                locale,
+                                options: { hour: '2-digit', minute: '2-digit', hour12: false },
+                            });
 
                             return (
                                 <g key={`sun-${index}`}>
@@ -389,7 +396,11 @@ const ObservationsTimeline = () => {
                             const hour = i * hourStep - halfDuration; // Offset to start from negative
                             const x = marginLeft + ((i * hourStep) / durationHours) * (width - marginLeft - marginRight);
                             const time = new Date(now.getTime() + hour * 60 * 60 * 1000);
-                            const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                            const timeStr = formatTime(time, {
+                                timezone,
+                                locale,
+                                options: { hour: '2-digit', minute: '2-digit', hour12: false },
+                            });
                             const absHour = Math.abs(hour);
                             const sign = hour >= 0 ? '+' : '-';
                             const tPlusStr = `T${sign}${Math.floor(absHour)}:${String(Math.floor((absHour % 1) * 60)).padStart(2, '0')}`;
@@ -514,22 +525,22 @@ const ObservationsTimeline = () => {
                                 Status: {hoveredObservation.status || 'unknown'}{hoveredObservation.enabled === false ? ' (disabled)' : ''}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                Task start: {hoveredObservation.task_start ? new Date(hoveredObservation.task_start).toLocaleString() : 'N/A'}
+                                Task start: {hoveredObservation.task_start ? formatDateTime(hoveredObservation.task_start, { timezone, locale }) : 'N/A'}
                             </Typography>
                             <Typography variant="caption" display="block">
                                 Starts in: {hoveredObservation.task_start ? humanizeFutureDateInMinutes(hoveredObservation.task_start) : 'N/A'}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                Task end: {hoveredObservation.task_end ? new Date(hoveredObservation.task_end).toLocaleString() : 'N/A'}
+                                Task end: {hoveredObservation.task_end ? formatDateTime(hoveredObservation.task_end, { timezone, locale }) : 'N/A'}
                             </Typography>
                             <Typography variant="caption" display="block">
                                 Task duration: {formatDuration(hoveredObservation.task_start, hoveredObservation.task_end)}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                Pass start: {hoveredObservation.pass?.event_start ? new Date(hoveredObservation.pass.event_start).toLocaleString() : 'N/A'}
+                                Pass start: {hoveredObservation.pass?.event_start ? formatDateTime(hoveredObservation.pass.event_start, { timezone, locale }) : 'N/A'}
                             </Typography>
                             <Typography variant="caption" display="block">
-                                Pass end: {hoveredObservation.pass?.event_end ? new Date(hoveredObservation.pass.event_end).toLocaleString() : 'N/A'}
+                                Pass end: {hoveredObservation.pass?.event_end ? formatDateTime(hoveredObservation.pass.event_end, { timezone, locale }) : 'N/A'}
                             </Typography>
                             <Typography variant="caption" display="block">
                                 Pass duration: {formatDuration(hoveredObservation.pass?.event_start, hoveredObservation.pass?.event_end)}
