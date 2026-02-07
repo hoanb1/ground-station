@@ -622,7 +622,8 @@ const RigControl = React.memo(function RigControl() {
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>
                             <Button disabled={
                                 ["tracking", "connected", "stopped"].includes(trackingState['rig_state']) ||
-                                ["none", ""].includes(selectedRotator)
+                                ["none", ""].includes(selectedRotator) ||
+                                ["none", ""].includes(selectedRadioRig)
                             } fullWidth={true} variant="contained" color="success" style={{height: '50px'}}
                                     onClick={() => {
                                         connectRig()
