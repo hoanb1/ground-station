@@ -193,10 +193,7 @@ async def add_rig(session: AsyncSession, data: dict) -> dict:
         assert data.get("host", "") != "", "host is required"
         assert data.get("port", "") != "", "port is required"
         assert data.get("radiotype", "") != "", "radiotype is required"
-        assert data.get("pttstatus", "") != "", "pttstatus is required"
         assert data.get("vfotype", "") != "", "vfotype is required"
-        assert data.get("lodown", "") != "", "lodown is required"
-        assert data.get("loup", "") != "", "loup is required"
 
         new_id = uuid.uuid4()
         now = datetime.now(timezone.utc)
@@ -208,10 +205,7 @@ async def add_rig(session: AsyncSession, data: dict) -> dict:
                 host=data["host"],
                 port=data["port"],
                 radiotype=data["radiotype"],
-                pttstatus=data["pttstatus"],
                 vfotype=data["vfotype"],
-                lodown=data["lodown"],
-                loup=data["loup"],
                 added=now,
                 updated=now,
             )

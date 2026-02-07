@@ -191,10 +191,7 @@ class Rigs(Base):
     host = Column(String, nullable=False)
     port = Column(Integer, nullable=False)
     radiotype = Column(String, nullable=False)
-    pttstatus = Column(Integer, nullable=False)
     vfotype = Column(Integer, nullable=False)
-    lodown = Column(Integer, nullable=False)
-    loup = Column(Integer, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
     updated = Column(
         AwareDateTime,

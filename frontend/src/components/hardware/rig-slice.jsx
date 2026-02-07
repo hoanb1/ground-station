@@ -85,10 +85,7 @@ const defaultRig = {
     host: 'localhost',
     port: 4532,
     radiotype: 'rx',
-    pttstatus: 'normal',
     vfotype: 'normal',
-    lodown: 0,
-    loup: 0,
 };
 
 const rigsSlice = createSlice({

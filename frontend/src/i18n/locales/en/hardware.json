@@ -1,7 +1,7 @@
 {
   "rig": {
     "title": "Radio Rig Control Setup",
-    "subtitle": "Configure and manage radio transceiver connections for automated frequency control during satellite tracking. This system uses Hamlib, the industry-standard library supporting over 200 radio models including popular brands like Yaesu, Icom, Kenwood, Elecraft, FlexRadio, and many others. Radio control is supported exclusively through network connections - direct serial/USB connections are not supported. Rigctld handles client requests via TCP sockets, allowing multiple user programs to share one radio. Set up connection parameters including host address, port, radio type, PTT control, VFO configuration, and local oscillator offsets for uplink/downlink frequency compensation. Rigs integrate seamlessly with satellite tracking to automatically adjust frequencies based on Doppler shift calculations.",
+    "subtitle": "Configure and manage radio transceiver connections for automated frequency control during satellite tracking. This system uses Hamlib, the industry-standard library supporting over 200 radio models including popular brands like Yaesu, Icom, Kenwood, Elecraft, FlexRadio, and many others. Radio control is supported exclusively through network connections - direct serial/USB connections are not supported. Rigctld handles client requests via TCP sockets, allowing multiple user programs to share one radio. Set up connection parameters including host address, port, radio type, and VFO configuration. Rigs integrate seamlessly with satellite tracking to automatically adjust frequencies based on Doppler shift calculations.",
     "add": "Add",
     "edit": "Edit",
     "delete": "Delete",

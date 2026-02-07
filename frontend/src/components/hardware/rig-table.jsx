@@ -24,9 +24,7 @@ import {
     Alert,
     AlertTitle,
     Button,
-    DialogContentText,
     FormControl,
-    InputAdornment,
     InputLabel,
     MenuItem,
     Select,
@@ -52,8 +50,6 @@ import {
 } from './rig-slice.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
-import {humanizeFrequency} from "../common/common.jsx";
-import {useEffect} from "react";
 import Paper from "@mui/material/Paper";
 
 
@@ -69,10 +65,7 @@ export default function RigTable() {
         host: 'localhost',
         port: 4532,
         radiotype: 'rx',
-        pttstatus: 'normal',
         vfotype: 'normal',
-        lodown: 0,
-        loup: 0,
     };
     const [pageSize, setPageSize] = React.useState(10);
 
@@ -92,20 +85,7 @@ export default function RigTable() {
             }
         },
         {field: 'radiotype', headerName: t('rig.radio_type'), flex: 1, minWidth: 150},
-        {field: 'pttstatus', headerName: t('rig.ptt_status'), flex: 1, minWidth: 150},
         {field: 'vfotype', headerName: t('rig.vfo_type'), flex: 1, minWidth: 50},
-        {
-            field: 'lodown', headerName: t('rig.lo_down'), type: 'string', flex: 1, minWidth: 60,
-            valueFormatter: (value) => {
-                return humanizeFrequency(value);
-            }
-        },
-        {
-            field: 'loup', headerName: t('rig.lo_up'), type: 'string', flex: 1, minWidth: 60,
-            valueFormatter: (value) => {
-                return humanizeFrequency(value);
-            }
-        },
     ];
 
     // useEffect(() => {
@@ -165,12 +145,6 @@ export default function RigTable() {
         validationErrors.port = 'Required';
     } else if (Number(formValues.port) <= 0 || Number(formValues.port) > 65535) {
         validationErrors.port = 'Port must be 1-65535';
-    }
-    if (formValues.lodown !== '' && Number.isNaN(Number(formValues.lodown))) {
-        validationErrors.lodown = 'Must be a number';
-    }
-    if (formValues.loup !== '' && Number.isNaN(Number(formValues.loup))) {
-        validationErrors.loup = 'Must be a number';
     }
     const hasValidationErrors = Object.keys(validationErrors).length > 0;
 
@@ -321,18 +295,6 @@ export default function RigTable() {
                                     </Select>
                                 </FormControl>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel>{t('rig.ptt_status')}</InputLabel>
-                                    <Select
-                                        name="pttstatus"
-                                        label={t('rig.ptt_status')}
-                                        size="small"
-                                        value={formValues.pttstatus}
-                                        onChange={handleChange}
-                                    >
-                                        <MenuItem value="normal">{t('rig.normal')}</MenuItem>
-                                    </Select>
-                                </FormControl>
-                                <FormControl fullWidth size="small">
                                     <InputLabel>{t('rig.vfo_type')}</InputLabel>
                                     <Select
                                         name="vfotype"
@@ -344,30 +306,6 @@ export default function RigTable() {
                                         <MenuItem value="normal">{t('rig.normal')}</MenuItem>
                                     </Select>
                                 </FormControl>
-                                <TextField
-                                    name="lodown"
-                                    label={t('rig.lo_down')}
-                                    type="number"
-                                    fullWidth
-                                    size="small"
-                                    value={formValues.lodown}
-                                    onChange={handleChange}
-                                    error={Boolean(validationErrors.lodown)}
-                                    helperText={validationErrors.lodown || 'Hz'}
-                                    InputProps={{ endAdornment: <InputAdornment position="end">Hz</InputAdornment> }}
-                                />
-                                <TextField
-                                    name="loup"
-                                    label={t('rig.lo_up')}
-                                    type="number"
-                                    fullWidth
-                                    size="small"
-                                    value={formValues.loup}
-                                    onChange={handleChange}
-                                    error={Boolean(validationErrors.loup)}
-                                    helperText={validationErrors.loup || 'Hz'}
-                                    InputProps={{ endAdornment: <InputAdornment position="end">Hz</InputAdornment> }}
-                                />
                             </Stack>
                         </DialogContent>
                         <DialogActions
@@ -490,16 +428,6 @@ export default function RigTable() {
                                                     {rig.vfotype}
                                                 </Typography>
 
-                                                {(rig.lodown !== 0 || rig.loup !== 0) && (
-                                                    <>
-                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                            LO Offset:
-                                                        </Typography>
-                                                        <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                                            ↓{humanizeFrequency(rig.lodown)} / ↑{humanizeFrequency(rig.loup)}
-                                                        </Typography>
-                                                    </>
-                                                )}
                                             </Box>
                                         </Box>
                                     );

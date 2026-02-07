@@ -187,10 +187,7 @@ class TestRigsCRUD:
             "host": "localhost",
             "port": 4532,
             "radiotype": "IC-9700",
-            "pttstatus": "off",
             "vfotype": "VFOA",
-            "lodown": 0,
-            "loup": 0,
         }
 
         result = await add_rig(db_session, rig_data)
@@ -221,10 +218,7 @@ class TestRigsCRUD:
                 "host": "host1",
                 "port": 4532,
                 "radiotype": "IC-9700",
-                "pttstatus": "off",
                 "vfotype": "VFOA",
-                "lodown": 0,
-                "loup": 0,
             },
         )
         await add_rig(
@@ -234,10 +228,7 @@ class TestRigsCRUD:
                 "host": "host2",
                 "port": 4533,
                 "radiotype": "FT-991A",
-                "pttstatus": "on",
                 "vfotype": "VFOB",
-                "lodown": 100,
-                "loup": 200,
             },
         )
 
@@ -262,10 +253,7 @@ class TestRigsCRUD:
                 "host": "localhost",
                 "port": 4532,
                 "radiotype": "IC-9700",
-                "pttstatus": "off",
                 "vfotype": "VFOA",
-                "lodown": 0,
-                "loup": 0,
             },
         )
 
@@ -293,10 +281,7 @@ class TestRigsCRUD:
                 "host": "localhost",
                 "port": 4532,
                 "radiotype": "IC-9700",
-                "pttstatus": "off",
                 "vfotype": "VFOA",
-                "lodown": 0,
-                "loup": 0,
             },
         )
 
