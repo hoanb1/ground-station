@@ -96,10 +96,6 @@ const AboutPage = () => {
 
     const plannedFeatures = [
         {
-            text: "Additional Decoders: Morse/CW decoder.",
-            icon: <ImageIcon fontSize="small" color="secondary" />
-        },
-        {
             text: "Additional Decoders: AFSK packet decoder.",
             icon: <SatelliteAltIcon fontSize="small" color="secondary" />
         },

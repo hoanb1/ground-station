@@ -86,7 +86,7 @@ Ground Station includes a comprehensive automated observation system that can sc
 
 *   **Monitored Satellites:** Define satellite monitoring templates with hardware configurations, signal parameters, and task definitions. The system automatically generates scheduled observations for all qualifying passes.
 *   **Automated Pass Scheduling:** Automatically calculate and schedule upcoming satellite passes based on configurable criteria (minimum elevation, lookahead window). The scheduler uses APScheduler to trigger observations at AOS (Acquisition of Signal) and stop at LOS (Loss of Signal).
-*   **Flexible Task Composition:** Each observation can include multiple concurrent tasks: IQ recording (SigMF format), audio recording (WAV/MP3/FLAC), protocol decoding (AFSK, GMSK, SSTV, APRS, Morse), and optional AI transcription.
+*   **Flexible Task Composition:** Each observation can include multiple concurrent tasks: IQ recording (SigMF format), audio recording (WAV), protocol decoding (AFSK, GMSK, SSTV), and optional AI transcription.
 *   **Hardware Orchestration:** Automatically controls SDR devices, antenna rotators (with satellite tracking), and rigs (with Doppler correction) during scheduled observations.
 *   **Live Observation Capability:** Users can observe any automated pass in real-time through the web interface - view the spectrum waterfall, listen to demodulated audio, and watch live decoder output. When using the same SDR as an automated observation, users can monitor without interference, but be aware that changing the SDR's center frequency or bandwidth will affect the ongoing observation.
 *   **Multi-SDR Observing:** Automated observations can run on one SDR while additional SDRs record, decode, and listen to the same pass in parallel.
@@ -98,7 +98,6 @@ Ground Station includes a comprehensive automated observation system that can sc
 The following features are planned or in development:
 
 *   **Additional Decoders:**
-    *   Morse/CW decoder
     *   AFSK packet decoder
     *   LoRa decoders
     *   NOAA APT weather satellite images
@@ -128,7 +127,7 @@ flowchart TB
         W2A[FFT Processor<br/>- Spectrum computation<br/>- Waterfall generation<br/>- Real-time FFT analysis]
         W2B[Demodulators<br/>- FM/SSB/AM modes<br/>- Normal & Internal modes<br/>- Frequency translation<br/>- Audio processing<br/>- Multi-VFO support]
         W2C[IQ Recorder<br/>- SigMF format recording<br/>- Metadata capture<br/>- Satellite info tagging<br/>- Waterfall snapshot saving]
-        W2D[Decoders<br/>- SSTV image decoder ✓<br/>- Morse/CW decoder WIP<br/>- AFSK packet decoder WIP<br/>- LoRa/GMSK decoders WIP<br/>- Audio Broadcaster for monitoring]
+        W2D[Decoders<br/>- SSTV image decoder ✓<br/>- AFSK packet decoder WIP<br/>- LoRa/GMSK decoders WIP<br/>- Audio Broadcaster for monitoring]
         W3[SDR Local Probe<br/>- Device discovery<br/>- Local SoapySDR enumeration<br/>- Hardware capability detection]
         W4[SDR Remote Probe<br/>- Remote SoapySDR discovery<br/>- Network device scanning<br/>- Remote capability detection]
     end
@@ -146,7 +145,7 @@ flowchart TB
     %% Storage Layer
     subgraph Storage["Data Storage"]
         S1[SigMF Recordings<br/>- .sigmf-data files<br/>- .sigmf-meta files<br/>- Waterfall snapshots]
-        S2[Decoded Outputs<br/>- SSTV images<br/>- Morse text logs<br/>- Packet data]
+        S2[Decoded Outputs<br/>- SSTV images<br/>- Packet data]
     end
 
     %% External Services
@@ -256,7 +255,7 @@ flowchart TB
     %% Decoder Chain
     subgraph DecoderChain["Audio-based Decoder Processing"]
         direction TB
-        DEC[Decoder<br/>Morse / AFSK]
+        DEC[Decoder<br/>AFSK]
         UIAUDIO[UI Audio Stream<br/>Live Monitoring]
     end
 
@@ -317,15 +316,15 @@ flowchart TB
 **Audio Broadcaster (Decoder Pattern):**
 - Only used for internal demodulators feeding decoders
 - Distributes demodulated audio to:
-  - **Decoder subscriber:** SSTV/Morse decoder processing
+  - **Decoder subscriber:** SSTV/AFSK decoder processing
   - **UI subscriber:** Live audio monitoring in browser
 - Statistics tracking: delivered/dropped message counts per subscriber
 - Graceful slow consumer handling
 
-**Chain Processing Example (Morse/CW - In Development):**
-1. SDR → IQBroadcaster → Internal SSB Demodulator (CW mode, 2.5 kHz BW)
-2. SSB Demodulator → AudioBroadcaster input queue
-3. AudioBroadcaster → Decoder subscriber → Morse Decoder → Text output
+**Chain Processing Example (SSTV):**
+1. SDR → IQBroadcaster → Internal FM Demodulator (SSTV)
+2. FM Demodulator → AudioBroadcaster input queue
+3. AudioBroadcaster → Decoder subscriber → SSTV Decoder → Image output
 4. AudioBroadcaster → UI subscriber → Browser audio player
 
 **Why Broadcasters?**
@@ -336,7 +335,7 @@ flowchart TB
 
 *   **Frontend:** The frontend is a single-page application built with React, Redux Toolkit, and Material-UI. It communicates with the backend using a socket.io connection for real-time updates, including decoded data display and live audio monitoring.
 *   **Backend:** The backend is a Python application built with FastAPI. It provides a REST API and a socket.io interface for the frontend. It manages worker processes, decoder lifecycle, and coordinates the pub/sub architecture for signal distribution.
-*   **Workers:** The worker processes are responsible for the heavy lifting. They perform tasks such as satellite tracking, SDR streaming, signal demodulation, data decoding (SSTV implemented, Morse/AFSK/LoRa in development), and antenna control. Workers use IQ Broadcaster and Audio Broadcaster for efficient multi-consumer signal distribution.
+*   **Workers:** The worker processes are responsible for the heavy lifting. They perform tasks such as satellite tracking, SDR streaming, signal demodulation, data decoding (SSTV implemented, AFSK/LoRa in development), and antenna control. Workers use IQ Broadcaster and Audio Broadcaster for efficient multi-consumer signal distribution.
 
 ## Third-Party Libraries & Technologies
 
@@ -378,7 +377,7 @@ The SDR architecture uses a pub/sub pattern (IQ Broadcaster) to separate IQ acqu
     *   **IQ Recorder** for SigMF format file capture
 *   **Raw IQ Decoders** (BPSK, GMSK) that bypass demodulation
 *   **Audio Broadcaster** distributes demodulated audio from internal demodulators to:
-*   **Data Decoders** (Morse, AFSK) for signal decoding
+*   **Data Decoders** (AFSK) for signal decoding
     *   **UI Audio Stream** for live monitoring in browser
 
 > **Note:** The signal processing components (demodulators, broadcasters, decoders) were developed with assistance from Claude AI (Anthropic) to handle complex DSP algorithms. These components are clearly marked in the source code and are licensed under GPL-3.0 like the rest of the project.
