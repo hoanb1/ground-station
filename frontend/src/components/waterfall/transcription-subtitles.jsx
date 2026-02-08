@@ -124,7 +124,26 @@ const getLanguageFlag = (languageCode) => {
 /**
  * Single VFO Subtitle Component
  */
-const VFOSubtitle = ({ vfoNumber, transcription, vfoColor, fontSizeMultiplier, textAlignment, maxLines, maxWordsPerLine, onClear, onIncreaseFontSize, onDecreaseFontSize, onSetAlignment, isStreaming, isMuted, translateTo, sourceLang, provider }) => {
+const VFOSubtitle = ({
+    vfoNumber,
+    transcription,
+    vfoColor,
+    fontSizeMultiplier,
+    textAlignment,
+    maxLines,
+    maxWordsPerLine,
+    onClear,
+    onIncreaseFontSize,
+    onDecreaseFontSize,
+    onSetAlignment,
+    isStreaming,
+    isMuted,
+    translateTo,
+    sourceLang,
+    provider,
+    timezone,
+    locale
+}) => {
     const [lines, setLines] = useState([]);
 
     // Individual position state per VFO
@@ -731,6 +750,8 @@ const TranscriptionSubtitles = ({ maxLines = 4, maxWordsPerLine = 20 }) => {
                                     translateTo={translateTo}
                                     sourceLang={sourceLang}
                                     provider={provider}
+                                    timezone={timezone}
+                                    locale={locale}
                                 />
                             </React.Fragment>
                         );
