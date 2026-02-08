@@ -15,14 +15,14 @@ live radio signals from satellites.
 <div align="center">
 
 ### Global Satellite Overview
-<img src="frontend/public/ground station - birds eye view - amateur.png" alt="Global satellite tracking view" width="450"/>
+<img src="frontend/public/ground station - overview page - amateur group.png" alt="Overview page with amateur satellite group" width="450"/>
 
-*Real-time global satellite tracking with interactive world map showing satellite positions, ground tracks, and coverage areas*
+*Overview page with quick group selection and real-time satellite status indicators*
 
 ---
 
 ### Satellite Tracking Console
-<img src="frontend/public/ground station - tracking console - amateur iss.png" alt="ISS tracking console" width="450"/>
+<img src="frontend/public/ground station - tracking console.png" alt="Satellite tracking console" width="450"/>
 
 *Dedicated tracking interface for the targeted satellite showing orbital parameters, pass predictions, and real-time position data*
 
@@ -36,9 +36,9 @@ live radio signals from satellites.
 ---
 
 ### TLE Data Synchronization
-<img src="frontend/public/ground station - tle data sync - with modified sats.png" alt="TLE synchronization progress" width="450"/>
+<img src="frontend/public/ground station - tle sync page.png" alt="TLE synchronization page" width="450"/>
 
-*Automated TLE data synchronization from CelesTrak and SatNOGS showing real-time progress and satellite database updates*
+*TLE synchronization page showing real-time progress and satellite database updates*
 
 ---
 
@@ -49,30 +49,41 @@ live radio signals from satellites.
 
 ---
 
-### Performance Monitoring
-<img src="frontend/public/ground station - performance metric - overview.png" alt="Performance monitoring visualization" width="450"/>
+### Overview Page
+<img src="frontend/public/ground station - overview page - amateur group.png" alt="Overview page with amateur satellite group" width="450"/>
 
-*Real-time performance monitoring with interactive data flow visualization showing signal processing pipeline, component health, queue utilization, and throughput rates*
+*Overview page with quick group selection and real-time satellite status indicators*
+
+---
+
+### File Browser & Decoders
+<img src="frontend/public/ground station - file browser - weather images - decoded packets - recorded transcriptions.png" alt="File browser with decoded outputs and transcriptions" width="450"/>
+
+*File browser view showing decoded weather images, packet outputs, and saved transcriptions*
+
+---
+
+### Observations Overview
+<img src="frontend/public/ground station - observations - overview.png" alt="Observations overview" width="450"/>
+
+*Automated observations dashboard with upcoming passes and task status*
+
+---
 
 </div>
 
 ## Key Features
 
 *   **Real-time Satellite Tracking:** Track hundreds of satellites with high-precision orbital models. TLE data is automatically updated from CelesTrak and SatNOGS.
-*   **Automated Antenna Control:** Interface with popular antenna rotators to automatically track satellites as they pass overhead.
+*   **Automated Antenna Rotator Control:** Interface with popular antenna rotators to automatically track satellites as they pass overhead.
 *   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
 *   **IQ Recording & Playback:** Record raw IQ data in SigMF format with complete metadata (center frequency, sample rate, satellite info) and play back recordings through a virtual SDR device for analysis and debugging.
-*   **Data Decoding:** Decode SSTV images in real-time with live audio monitoring (additional decoders in development)
-*   **AI-Powered Transcription:** Optional real-time speech-to-text transcription of demodulated audio with support for multiple providers:
-    *   **Google Gemini Live API:** Real-time transcription with built-in language detection and translation capabilities. Optimized for conversational speech with low latency. See [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing).
-    *   **Deepgram Streaming API:** Specialized for noisy RF audio environments with excellent performance on radio communications. See [Deepgram pricing](https://deepgram.com/pricing).
-    *   **Per-VFO Configuration:** Each VFO can have independent transcription settings (provider, source language, translation target).
-    *   **Live Subtitles:** Transcriptions appear as real-time subtitles overlaid on the waterfall display with automatic line wrapping and word-level timing.
-    *   **File Output:** All transcriptions are automatically saved to timestamped text files in the `backend/data/transcriptions/` directory.
-    *   **Optional Translation:** Deepgram transcriptions can be translated to any language using Google Cloud Translation API.
-    *   **Privacy-Conscious:** Requires user-provided API keys. Audio is streamed to external services only when explicitly enabled. All costs and data handling are the user's responsibility.
+*   **Data Decoding:** Decode SSTV, FSK, GFSK, GMSK, and BPSK with AX25 USP Geoscan framing. LoRa and AFSK decoders are currently not working; help is needed.
+*   **AI-Powered Transcription:** Real-time speech-to-text for demodulated audio via Gemini Live or Deepgram. Privacy-conscious and user-keyed, with optional translation and file output to `backend/data/transcriptions/`.
+*   **Scheduled Observations:** Define detailed observation tasks that automatically listen, decode, transcribe, and record audio and IQ during satellite passes without manual intervention.
+*   **SatDump Integration:** Decode weather satellite images from METEOR-M2 (LRPT and HRPT) via SatDump, coupled with automated observations.
 *   **Performance Monitoring:** Real-time visualization of the signal processing pipeline showing data flow between components (SDR → FFT → Demodulator → Decoder → Browser), queue health monitoring, throughput rates, and component statistics to diagnose bottlenecks and optimize performance.
-*   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.
+*   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network. Works great on a tablet and cell.
 
 ## Scheduled Observations & Automated Pass Recording
 
@@ -83,21 +94,19 @@ Ground Station includes a comprehensive automated observation system that can sc
 *   **Flexible Task Composition:** Each observation can include multiple concurrent tasks: IQ recording (SigMF format), audio recording (WAV/MP3/FLAC), protocol decoding (AFSK, GMSK, SSTV, APRS, Morse), and optional AI transcription.
 *   **Hardware Orchestration:** Automatically controls SDR devices, antenna rotators (with satellite tracking), and rigs (with Doppler correction) during scheduled observations.
 *   **Live Observation Capability:** Users can observe any automated pass in real-time through the web interface - view the spectrum waterfall, listen to demodulated audio, and watch live decoder output. When using the same SDR as an automated observation, users can monitor without interference, but be aware that changing the SDR's center frequency or bandwidth will affect the ongoing observation.
-*   **Conflict Detection & Resolution:** Smart scheduling system detects overlapping satellite passes and supports multiple resolution strategies (priority-based on elevation, skip conflicting passes, or force scheduling). Dry-run mode allows preview of conflicts before committing.
+*   **Multi-SDR Observing:** Automated observations can run on one SDR while additional SDRs record, decode, and listen to the same pass in parallel.
 *   **Status Management:** Real-time observation status tracking (scheduled, running, completed, failed, cancelled, missed) with automatic cleanup of old completed observations.
 *   **Session Management:** Automated observations run in isolated internal VFO sessions (namespace: "internal:<observation_id>"). When using different SDRs, user sessions and automated observations operate completely independently without any interference.
-*   **Multi-Signal Support:** Within a single SDR observation bandwidth, you can decode multiple signals using VFO markers - for example, simultaneously record IQ on the main frequency, decode APRS from VFO #1, and monitor another signal on VFO #2.
 
 ## Planned Features & Roadmap
 
 The following features are planned or in development:
 
 *   **Additional Decoders:**
-    *   Morse/CW decoder (in development)
-    *   AFSK packet decoder (in development)
-    *   LoRa decoders (in development)
+    *   Morse/CW decoder
+    *   AFSK packet decoder
+    *   LoRa decoders
     *   NOAA APT weather satellite images
-    *   METEOR LRPT weather satellite images
     *   Additional telemetry formats
 
 ## Architecture
@@ -236,6 +245,7 @@ flowchart TB
         FFT[FFT Processor<br/>→ Spectrum Display]
         REC[IQ Recorder<br/>→ SigMF Files]
         DEMOD[Demodulator<br/>FM/SSB/AM]
+        IQDEC[IQ Decoders<br/>GMSK/FSK/BPSK]
     end
 
     %% Demodulator Branches
@@ -249,9 +259,9 @@ flowchart TB
     AUDIOB[Audio Broadcaster<br/>Pub/Sub Pattern<br/>Deep copy for each subscriber]
 
     %% Decoder Chain
-    subgraph DecoderChain["Decoder Processing"]
+    subgraph DecoderChain["Audio-based Decoder Processing"]
         direction TB
-        DEC[Decoder<br/>SSTV ✓ / Morse WIP / AFSK WIP]
+        DEC[Decoder<br/>Morse / AFSK]
         UIAUDIO[UI Audio Stream<br/>Live Monitoring]
     end
 
@@ -266,9 +276,10 @@ flowchart TB
 
     %% Connections
     SDR -->|Raw IQ Samples| IQB
-    IQB -->|Subscribe| FFT
+    SDR -->|Raw IQ Samples| FFT
     IQB -->|Subscribe| REC
     IQB -->|Subscribe| DEMOD
+    IQB -->|Subscribe| IQDEC
 
     DEMOD -->|Branch| NORM
     DEMOD -->|Branch| INT
@@ -282,6 +293,7 @@ flowchart TB
     FFT -->|FFT Data| SPECUI
     REC -->|Write| SIGFILE
     DEC -->|Decoded Output| DECOUT
+    IQDEC -->|Decoded Output| DECOUT
     UIAUDIO -->|Audio Chunks| AUDIOUI
 
     %% Styling
@@ -301,18 +313,11 @@ flowchart TB
 #### Key Concepts
 
 **IQ Broadcaster (Pub/Sub Pattern):**
-- SDR produces raw IQ samples at high rate (e.g., 2.4 MSPS)
+- SDR produces raw IQ samples at high rate
 - IQBroadcaster distributes to multiple consumers simultaneously
 - Each subscriber gets independent queue with deep-copied samples
 - Slow consumers: messages dropped rather than blocking producer
 - Supports: FFT processor, demodulators, IQ recorder, decoders (LoRa/GMSK)
-
-**Demodulator Modes:**
-- **Normal Mode:** User-controlled VFO → Audio output for playback
-- **Internal Mode:** Created automatically by DecoderManager for SSTV/Morse
-  - Bypasses VFO checks
-  - Fixed parameters (frequency, bandwidth)
-  - Feeds AudioBroadcaster instead of direct playback
 
 **Audio Broadcaster (Decoder Pattern):**
 - Only used for internal demodulators feeding decoders
@@ -321,12 +326,6 @@ flowchart TB
   - **UI subscriber:** Live audio monitoring in browser
 - Statistics tracking: delivered/dropped message counts per subscriber
 - Graceful slow consumer handling
-
-**Chain Processing Example (SSTV - Implemented ✓):**
-1. SDR → IQBroadcaster → Internal FM Demodulator (12.5 kHz BW)
-2. FM Demodulator → AudioBroadcaster input queue
-3. AudioBroadcaster → Decoder subscriber → SSTV Decoder → Image output
-4. AudioBroadcaster → UI subscriber → Browser audio player (user hears what decoder processes)
 
 **Chain Processing Example (Morse/CW - In Development):**
 1. SDR → IQBroadcaster → Internal SSB Demodulator (CW mode, 2.5 kHz BW)
@@ -355,6 +354,8 @@ flowchart TB
 *   **[Socket.IO](https://python-socketio.readthedocs.io/en/latest/):** A library for real-time, bidirectional, event-based communication.
 *   **[pyrtlsdr](https://pypi.org/project/pyrtlsdr/):** A Python wrapper for the RTL-SDR library.
 *   **[SoapySDR](https://pypi.org/project/SoapySDR/):** A vendor and platform neutral SDR support library.
+*   **[SatDump](https://github.com/SatDump/SatDump):** Satellite decoder suite used for weather image decoding workflows.
+*   **[gr-satellites](https://github.com/daniestevez/gr-satellites):** GNU Radio out-of-tree modules for satellite communications decoding.
 
 ### Frontend
 
@@ -380,12 +381,12 @@ The SDR architecture uses a pub/sub pattern (IQ Broadcaster) to separate IQ acqu
     *   **FFT Processor** for spectrum/waterfall display
     *   **Demodulators** (FM/SSB/AM) for audio output in normal and internal modes
     *   **IQ Recorder** for SigMF format file capture
-    *   **Raw IQ Decoders** (LoRa, GMSK) that bypass demodulation
+*   **Raw IQ Decoders** (BPSK, GMSK) that bypass demodulation
 *   **Audio Broadcaster** distributes demodulated audio from internal demodulators to:
-    *   **Data Decoders** (SSTV ✓, Morse WIP, AFSK WIP) for signal decoding
+*   **Data Decoders** (Morse, AFSK) for signal decoding
     *   **UI Audio Stream** for live monitoring in browser
 
-> **Note:** The signal processing components (demodulators, broadcasters, decoders) were developed with assistance from Claude AI (Anthropic) to handle complex DSP algorithms and pub/sub architecture. These components are clearly marked in the source code and are licensed under GPL-3.0 like the rest of the project.
+> **Note:** The signal processing components (demodulators, broadcasters, decoders) were developed with assistance from Claude AI (Anthropic) to handle complex DSP algorithms. These components are clearly marked in the source code and are licensed under GPL-3.0 like the rest of the project.
 
 ## IQ Recording & Playback
 
@@ -402,220 +403,26 @@ Ground Station includes comprehensive IQ recording and playback capabilities usi
 ### Playback Features
 *   **Virtual SDR Device:** Recordings appear as "SigMF Playback" SDR in the device list
 *   **Full Processing Pipeline:** Playback supports FFT display, demodulation, and all signal processing
+*   **Live-equivalent Decoding:** During playback, demodulators and decoders run exactly as they do with live SDR input
 *   **Recording Browser:** Sortable list of recordings with metadata preview (sample rate, duration, timestamp)
 *   **Seamless Integration:** Switch between live SDR and playback without changing workflows
 
-### File Organization
-Recordings are stored in `backend/data/recordings/` with the following naming convention:
-```
-<satellite-name>-<frequency>-<timestamp>.sigmf-data
-<satellite-name>-<frequency>-<timestamp>.sigmf-meta
-<satellite-name>-<frequency>-<timestamp>.png
-```
+## Automated Observations
 
-Example: `ISS-145_800MHz-20251105_143022.sigmf-data`
+Ground Station includes an automated observation system for scheduled satellite passes:
+
+*   **Monitored Satellites:** Define satellite monitoring templates with hardware configurations, signal parameters, and task definitions.
+*   **Automated Pass Scheduling:** Automatically calculate and schedule upcoming passes based on configurable criteria (minimum elevation, lookahead window).
+*   **Flexible Task Composition:** Combine IQ recording (SigMF), audio recording, protocol decoding, and AI transcription in a single observation.
+*   **Hardware Orchestration:** Control SDR devices, antenna rotators (with satellite tracking), and rigs (with Doppler correction) during scheduled runs.
+*   **Live Observation Capability:** Watch the spectrum waterfall, listen to demodulated audio, and view live decoder output during automated passes.
+*   **Multi-SDR Observing:** Run automated observations on one SDR while additional SDRs record, decode, and listen to the same pass in parallel.
+*   **Status Management:** Track observation status (scheduled, running, completed, failed, cancelled, missed) with automatic cleanup of old entries.
+*   **Session Management:** Automated observations run in isolated internal VFO sessions (namespace: "internal:<observation_id>").
 
 ## Getting Started
 
-### Prerequisites
-
-*   Python 3.8+
-*   Node.js 14+
-*   Docker (optional)
-
-### Installation
-
-#### Option 1: Using pyproject.toml (Recommended)
-
-The backend now uses modern Python packaging with `pyproject.toml`, which provides better dependency management and development tooling.
-
-1.  **Backend Setup**
-    ```bash
-    cd backend
-    python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-    # Install the project in editable mode with all dependencies
-    pip install -e .
-
-    # For development (includes testing and code quality tools)
-    pip install -e ".[dev]"
-
-    # Start the server
-    python app.py --host 0.0.0.0 --port 5000
-    ```
-
-2.  **Frontend Setup**
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-    The development server proxies API and socket traffic to the backend port defined in `.env.development` (defaults to `localhost:5000`).
-
-#### Option 2: Using requirements.txt (Traditional)
-
-1.  **Backend**
-    ```bash
-    cd backend
-    python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-    pip install -r requirements.txt
-
-    # For development
-    pip install -r requirements-dev.txt
-
-    python app.py --host 0.0.0.0 --port 5000
-    ```
-
-2.  **Frontend**
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-
-### LoRa Decoder Support (GNU Radio + gr-lora_sdr)
-
-The ground station includes a LoRa decoder that uses GNU Radio and gr-lora_sdr for proper LoRa PHY decoding. Due to NumPy 2.x compatibility requirements, GNU Radio must be compiled from source:
-
-**Prerequisites:**
-```bash
-# Install system dependencies
-sudo apt-get install cmake libboost-all-dev libgmp-dev libmpfr-dev \
-    liblog4cpp5-dev libspdlog-dev libfmt-dev libvolk-dev \
-    pybind11-dev python3-pybind11
-```
-
-**Build GNU Radio 3.10 (with NumPy 2.x support):**
-```bash
-cd ~/projects/ground-station/backend
-source venv/bin/activate
-
-# Install Python packages
-pip install packaging pybind11
-
-# Clone and build GNU Radio
-cd /tmp
-git clone --recursive https://github.com/gnuradio/gnuradio.git
-cd gnuradio
-git checkout maint-3.10
-mkdir build && cd build
-
-# Configure to install into venv
-cmake -DCMAKE_BUILD_TYPE=Release \
-      -DENABLE_PYTHON=ON \
-      -DENABLE_GR_QTGUI=OFF \
-      -DENABLE_TESTING=OFF \
-      -DPython3_EXECUTABLE=$VIRTUAL_ENV/bin/python3 \
-      -DPYTHON_EXECUTABLE=$VIRTUAL_ENV/bin/python3 \
-      -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV \
-      ..
-
-# Build and install (takes 15-30 minutes)
-make -j$(nproc)
-make install
-```
-
-**Build gr-lora_sdr:**
-```bash
-cd /tmp
-git clone https://github.com/tapparelj/gr-lora_sdr.git
-cd gr-lora_sdr
-mkdir build && cd build
-
-cmake -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV ..
-make -j$(nproc)
-make install
-```
-
-**Configure library paths:**
-```bash
-cd ~/projects/ground-station/backend
-echo 'export LD_LIBRARY_PATH=$VIRTUAL_ENV/lib:$LD_LIBRARY_PATH' >> venv/bin/activate
-source venv/bin/activate
-```
-
-**Verify installation:**
-```bash
-python -c "from gnuradio import gr, lora_sdr; print('LoRa decoder ready!')"
-```
-
-> **Note:** This is only required for development. Docker images include pre-built GNU Radio and gr-lora_sdr.
-
-### Development Workflow with pyproject.toml
-
-The project's `pyproject.toml` provides comprehensive tooling configuration:
-
-#### Code Formatting
-```bash
-# Format code with Black (line length: 100)
-black .
-
-# Sort imports with isort
-isort .
-```
-
-#### Testing
-
-**Backend Tests (Python)**
-```bash
-cd backend
-
-# Run tests with coverage
-pytest
-
-# Run specific test markers
-pytest -m unit          # Run only unit tests
-pytest -m integration   # Run only integration tests
-pytest -m slow          # Run slow tests
-
-# Generate coverage reports
-pytest --cov=crud --cov=server --cov=controllers --cov-report=html
-```
-
-**Frontend Tests (JavaScript/React)**
-```bash
-cd frontend
-
-# Run unit/component tests
-npm test
-
-# Run with coverage
-npm run test:coverage
-
-# Run E2E tests (requires dev server running)
-npm run test:e2e
-
-# Run E2E tests with interactive UI
-npm run test:e2e:ui
-```
-
-See [frontend/TESTING.md](frontend/TESTING.md) for comprehensive testing documentation.
-
-#### Pre-commit Hooks (Recommended)
-```bash
-# Install pre-commit hooks to automatically check code before commits
-pre-commit install
-
-# Run hooks manually on all files
-pre-commit run --all-files
-```
-
-### Package Information
-
-The project is configured as a Python package with the following metadata:
-- **Name:** ground-station
-- **Version:** 0.1.0
-- **Python Support:** 3.8, 3.9, 3.10, 3.11, 3.12
-- **License:** GPL-3.0-only
-- **Entry Point:** `ground-station` command (after installation)
-
-You can install the package and use it as a command-line tool:
-```bash
-pip install -e .
-ground-station  # Starts the application
-```
+For development setup, build steps, and testing, see `DEVELOPMENT.md`.
 
 ## Docker
 
@@ -637,47 +444,88 @@ docker run --rm --network host --device /dev/bus/usb ground-station
 
 Pre-built multi-architecture Docker images are available for each release. For detailed instructions on using a specific release, see the [Releases page](https://github.com/sgoudelis/ground-station/releases).
 
-**Quick Start with Docker Image:**
+### Pull the image
 
 ```bash
-# Pull the latest image
-docker pull ghcr.io/sgoudelis/ground-station:latest
+# Latest release tag (recommended)
+docker pull ghcr.io/sgoudelis/ground-station:<version>
+
+# Or pull architecture-specific tags directly
+docker pull ghcr.io/sgoudelis/ground-station:<version>-amd64
+docker pull ghcr.io/sgoudelis/ground-station:<version>-arm64
 ```
+
+### Run the container
 
 **Option 1: With SoapySDR Remote Server Discovery (Recommended)**
 
 Uses host networking to enable automatic mDNS discovery of SoapySDR remote servers:
 
 ```bash
+# AMD64
 docker run -d \
+  --platform linux/amd64 \
   --network host \
   --name ground-station \
   --restart unless-stopped \
   --device=/dev/bus/usb \
   --privileged \
-  -v ground-station-data:/app/backend/data \
-  ghcr.io/sgoudelis/ground-station:latest
+  -v /path/to/data:/app/backend/data \
+  -e GS_ENVIRONMENT=production \
+  -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
+  ghcr.io/sgoudelis/ground-station:<version>
+
+# ARM64 (Raspberry Pi, etc)
+docker run -d \
+  --platform linux/arm64 \
+  --network host \
+  --name ground-station \
+  --restart unless-stopped \
+  -v /dev:/dev \
+  --privileged \
+  -v /path/to/data:/app/backend/data \
+  -e GS_ENVIRONMENT=production \
+  -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
+  ghcr.io/sgoudelis/ground-station:<version>
 ```
 
 **Option 2: Standard Bridge Mode (No SoapySDR Remote Discovery)**
 
-Uses standard bridge networking with port mapping (works for locally connected SDRs):
+Uses standard bridge networking with port mapping:
 
 ```bash
+# AMD64
 docker run -d \
+  --platform linux/amd64 \
   -p 7000:7000 \
   --name ground-station \
   --restart unless-stopped \
   --device=/dev/bus/usb \
   --privileged \
-  -v ground-station-data:/app/backend/data \
-  ghcr.io/sgoudelis/ground-station:latest
+  -v /path/to/data:/app/backend/data \
+  -e GS_ENVIRONMENT=production \
+  -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
+  ghcr.io/sgoudelis/ground-station:<version>
+
+# ARM64 (Raspberry Pi, etc)
+docker run -d \
+  --platform linux/arm64 \
+  -p 7000:7000 \
+  --name ground-station \
+  --restart unless-stopped \
+  -v /dev:/dev \
+  --privileged \
+  -v /path/to/data:/app/backend/data \
+  -e GS_ENVIRONMENT=production \
+  -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
+  ghcr.io/sgoudelis/ground-station:<version>
 ```
 
 **Important Notes:**
-- The `-v ground-station-data:/app/backend/data` volume mount persists satellite database, TLE data, and configuration between container restarts
+- Replace `/path/to/data` with your desired data directory path
 - Option 1 (host networking) is required for automatic discovery of SoapySDR remote servers via mDNS
-- Option 2 works perfectly for locally connected SDRs and all other features
+- Option 2 works for local SDRs and all other features
+- For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible
 - Access the web interface at `http://<YOUR_HOST>:7000`
 
 ## Contributing
