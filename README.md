@@ -70,6 +70,7 @@ This project was built with the help of Claude Code and Codex.
 
 *   **Real-time Satellite Tracking:** Track hundreds of satellites with high-precision orbital models. TLE data is automatically updated from CelesTrak and SatNOGS.
 *   **Automated Antenna Rotator Control:** Interface with popular antenna rotators to automatically track satellites as they pass overhead.
+*   **Rig Control (Hamlib):** Control Hamlib-compatible rigs with Doppler correction during satellite passes.
 *   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
 *   **IQ Recording & Playback:** Record raw IQ data in SigMF format with complete metadata (center frequency, sample rate, satellite info) and play back recordings through a virtual SDR device for analysis and debugging.
 *   **Data Decoding:** Decode SSTV, FSK, GFSK, GMSK, and BPSK with AX25 USP Geoscan framing. LoRa and AFSK decoders are currently not working; help is needed.
