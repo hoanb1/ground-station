@@ -109,14 +109,7 @@ class GeminiTranscriptionWorker(TranscriptionWorker):
 
             # Create session config for audio transcription
             config: dict = {
-                "response_modalities": ["TEXT"],
-                "realtime_input_config": {
-                    "automatic_activity_detection": {
-                        "disabled": False,
-                        "end_of_speech_sensitivity": "END_SENSITIVITY_HIGH",
-                        "silence_duration_ms": 100,
-                    }
-                },
+                "response_modalities": ["AUDIO"],
             }
 
             # Build system instruction based on language and translation settings
@@ -177,8 +170,8 @@ class GeminiTranscriptionWorker(TranscriptionWorker):
                 raise RuntimeError("Gemini client not initialized")
 
             # Connect to Live API
-            # Only gemini-2.0-flash-exp currently supports Live API (bidiGenerateContent)
-            model = "models/gemini-2.0-flash-exp"
+            # Gemini Live model code from current Gemini API docs
+            model = "gemini-2.5-flash-native-audio-preview-12-2025"
             session_context = self.gemini_client.aio.live.connect(model=model, config=config)
 
             # Enter the async context manager
@@ -188,7 +181,7 @@ class GeminiTranscriptionWorker(TranscriptionWorker):
             self.last_connection_attempt = 0  # Reset backoff
 
             logger.info(
-                f"Connected to Gemini Live API for session {self.session_id[:8]} VFO {self.vfo_number}"
+                f"Connected to Gemini Live API for session {self.session_id[:8]} VFO {self.vfo_number} using {model}"
             )
 
         except Exception as e:
@@ -229,7 +222,7 @@ class GeminiTranscriptionWorker(TranscriptionWorker):
 
         # Stream audio
         await self.gemini_session.send(
-            input={"media_chunks": [{"data": audio_b64, "mime_type": "audio/pcm"}]},
+            input={"media_chunks": [{"data": audio_b64, "mime_type": "audio/pcm;rate=16000"}]},
             end_of_turn=should_flush,
         )
 
