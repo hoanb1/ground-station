@@ -64,6 +64,13 @@ This project was built with the help of Claude Code and Codex.
 
 ---
 
+### DSP Topology & Performance
+<img src="frontend/public/ground station - dsp topology - performance.png" alt="DSP topology and performance view" width="450"/>
+
+*Chain of threads and processes IQ samples pass through, showing performance and data flow across the DSP pipeline*
+
+---
+
 </div>
 
 ## Key Features
