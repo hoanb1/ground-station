@@ -188,6 +188,7 @@ class RecorderHandler:
                 modulation=demodulator_type,
                 decoder="none",  # No decoder, just demodulator
                 locked_transmitter_id=audio_transmitter_id,
+                session_id=session_id,
             )
 
             logger.info(

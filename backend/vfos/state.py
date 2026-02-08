@@ -334,6 +334,7 @@ class VFOManager:
         squelch: int = -150,
         volume: int = 50,
         session_key: Optional[str] = None,
+        session_id: Optional[str] = None,
     ) -> None:
         """
         Configure a VFO for automated observation with sensible defaults.
@@ -351,6 +352,8 @@ class VFOManager:
             locked_transmitter_id: Transmitter ID for doppler tracking (default: "none")
             squelch: Squelch level in dB (default: -150, wide open)
             volume: Audio volume 0-100 (default: 50)
+            session_key: Optional suffix to identify the internal session
+            session_id: Optional full internal session ID override
 
         Example:
             >>> vfo_mgr.configure_internal_vfo(
@@ -363,14 +366,16 @@ class VFOManager:
             ...     locked_transmitter_id="noaa-18-apt"
             ... )
         """
-        session_id = self.make_internal_session_id(observation_id, session_key)
+        internal_session_id = session_id or self.make_internal_session_id(
+            observation_id, session_key
+        )
 
         # Ensure VFOs exist for this observation
-        self._ensure_session_vfos(session_id)
+        self._ensure_session_vfos(internal_session_id)
 
         # Configure VFO with sensible defaults for automation
         self.update_vfo_state(
-            session_id=session_id,
+            session_id=internal_session_id,
             vfo_id=vfo_number,
             center_freq=center_freq,
             bandwidth=bandwidth,

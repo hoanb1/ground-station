@@ -104,6 +104,7 @@ class DecoderHandler:
                 modulation=modulation,
                 decoder=decoder_type,
                 locked_transmitter_id=transmitter_id,
+                session_id=session_id,
             )
 
             logger.info(

@@ -100,6 +100,7 @@ class TranscriptionHandler:
                 modulation=demodulator_type,
                 decoder="none",  # No decoder, just demodulator
                 locked_transmitter_id=transcription_transmitter_id,
+                session_id=session_id,
             )
 
             logger.info(
