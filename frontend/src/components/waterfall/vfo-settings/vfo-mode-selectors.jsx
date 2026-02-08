@@ -5,10 +5,11 @@
  */
 
 import React from 'react';
-import { Box, Typography, ToggleButtonGroup, ToggleButton, Link } from '@mui/material';
+import { Box, Typography, ToggleButtonGroup, ToggleButton, Link, Tooltip } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { useTranslation } from 'react-i18next';
 import { BANDWIDTHS, STEP_SIZES } from './vfo-constants.js';
+import { DECODER_SUPPORT } from '../decoder-parameters.js';
 import { formatDecoderParamsSummary } from './vfo-formatters.js';
 import { isLockedBandwidth } from '../vfo-marker/vfo-config.js';
 
@@ -271,6 +272,8 @@ export const DataDecoderSelector = ({
 }) => {
     const { t } = useTranslation('waterfall');
     const vfo = vfoMarkers[vfoIndex];
+    const unsupportedDecoderTooltip = t('vfo.decoders_unsupported', 'Not supported yet');
+    const isDecoderSupported = (decoderKey) => DECODER_SUPPORT[decoderKey] !== false;
 
     const handleDecoderChange = (event, newValue) => {
         if (newValue !== null) {
@@ -322,15 +325,36 @@ export const DataDecoderSelector = ({
                 onChange={handleDecoderChange}
                 sx={toggleButtonStyles}
             >
-                <ToggleButton value="none">{t('vfo.decoders_modes.none', 'None')}</ToggleButton>
-                <ToggleButton value="sstv">{t('vfo.decoders_modes.sstv', 'SSTV')}</ToggleButton>
-                <ToggleButton value="morse">{t('vfo.decoders_modes.morse', 'Morse')}</ToggleButton>
-                <ToggleButton value="lora">{t('vfo.decoders_modes.lora', 'LoRa')}</ToggleButton>
-                <ToggleButton value="fsk">{t('vfo.decoders_modes.fsk', 'FSK')}</ToggleButton>
-                <ToggleButton value="gmsk">{t('vfo.decoders_modes.gmsk', 'GMSK')}</ToggleButton>
-                <ToggleButton value="gfsk">{t('vfo.decoders_modes.gfsk', 'GFSK')}</ToggleButton>
-                <ToggleButton value="bpsk">{t('vfo.decoders_modes.bpsk', 'BPSK')}</ToggleButton>
-                <ToggleButton value="afsk">{t('vfo.decoders_modes.afsk', 'AFSK')}</ToggleButton>
+                {[
+                    { value: 'none', label: t('vfo.decoders_modes.none', 'None') },
+                    { value: 'sstv', label: t('vfo.decoders_modes.sstv', 'SSTV') },
+                    { value: 'morse', label: t('vfo.decoders_modes.morse', 'Morse') },
+                    { value: 'lora', label: t('vfo.decoders_modes.lora', 'LoRa') },
+                    { value: 'fsk', label: t('vfo.decoders_modes.fsk', 'FSK') },
+                    { value: 'gmsk', label: t('vfo.decoders_modes.gmsk', 'GMSK') },
+                    { value: 'gfsk', label: t('vfo.decoders_modes.gfsk', 'GFSK') },
+                    { value: 'bpsk', label: t('vfo.decoders_modes.bpsk', 'BPSK') },
+                    { value: 'afsk', label: t('vfo.decoders_modes.afsk', 'AFSK') }
+                ].map(({ value, label }) => {
+                    const supported = isDecoderSupported(value);
+                    const button = (
+                        <ToggleButton key={value} value={value} disabled={!supported}>
+                            {label}
+                        </ToggleButton>
+                    );
+
+                    if (supported) {
+                        return button;
+                    }
+
+                    return (
+                        <Tooltip key={value} title={unsupportedDecoderTooltip} arrow>
+                            <span style={{ display: 'inline-flex' }}>
+                                {button}
+                            </span>
+                        </Tooltip>
+                    );
+                })}
             </ToggleButtonGroup>
 
             {/* Decoder Parameters Link */}

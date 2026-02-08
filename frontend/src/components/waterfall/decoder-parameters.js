@@ -392,6 +392,22 @@ export const SSTV_PARAMETERS = {
 };
 
 /**
+ * Decoder support flags
+ * Use this map to disable unsupported decoders in the UI.
+ */
+export const DECODER_SUPPORT = {
+    sstv: true,
+    fsk: true,
+    gmsk: true,
+    gfsk: true,
+    bpsk: true,
+    apt: true,
+    lora: false,
+    morse: false,
+    afsk: false
+};
+
+/**
  * SatDump Pipeline Definitions
  * Defines supported SatDump pipelines by satellite family.
  */
