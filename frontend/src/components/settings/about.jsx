@@ -30,10 +30,6 @@ import {
     Chip,
     useTheme,
     Link,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
-    LinearProgress,
 } from "@mui/material";
 import { GroundStationLogoGreenBlue } from "../common/dataurl-icons.jsx";
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
@@ -49,14 +45,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import MemoryIcon from '@mui/icons-material/Memory';
 import ComputerIcon from '@mui/icons-material/Computer';
 import Grid from "@mui/material/Grid";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-} from "@mui/material";
 
 
 const AboutPage = () => {
@@ -69,7 +57,7 @@ const AboutPage = () => {
             icon: <SatelliteAltIcon fontSize="small" color="primary" />
         },
         {
-            text: "Automated Antenna Control: Interface with popular antenna rotators to automatically track satellites as they pass overhead.",
+            text: "Automated Antenna Rotator Control: Interface with popular antenna rotators to automatically track satellites as they pass overhead.",
             icon: <SettingsInputAntennaIcon fontSize="small" color="primary" />
         },
         {
@@ -77,23 +65,55 @@ const AboutPage = () => {
             icon: <RadioIcon fontSize="small" color="primary" />
         },
         {
-            text: "Responsive Web Interface: A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.",
+            text: "IQ Recording & Playback: Record raw IQ data in SigMF format with complete metadata and play back recordings through a virtual SDR device for analysis and debugging.",
+            icon: <StorageIcon fontSize="small" color="primary" />
+        },
+        {
+            text: "Data Decoding: Decode SSTV, FSK, GFSK, GMSK, and BPSK with AX25 USP Geoscan framing. LoRa and AFSK decoders are currently not working; help is needed.",
+            icon: <ImageIcon fontSize="small" color="primary" />
+        },
+        {
+            text: "AI-Powered Transcription: Real-time speech-to-text for demodulated audio via Gemini Live or Deepgram. Privacy-conscious and user-keyed, with optional translation and file output to backend/data/transcriptions/.",
+            icon: <MemoryIcon fontSize="small" color="primary" />
+        },
+        {
+            text: "Scheduled Observations: Define detailed observation tasks that automatically listen, decode, transcribe, and record audio and IQ during satellite passes without manual intervention.",
+            icon: <SatelliteAltIcon fontSize="small" color="primary" />
+        },
+        {
+            text: "SatDump Integration: Decode weather satellite images from METEOR-M2 (LRPT and HRPT) via SatDump, coupled with automated observations.",
+            icon: <ImageIcon fontSize="small" color="primary" />
+        },
+        {
+            text: "Performance Monitoring: Real-time visualization of the signal processing pipeline showing data flow, queue health, throughput rates, and component statistics to diagnose bottlenecks and optimize performance.",
+            icon: <ComputerIcon fontSize="small" color="primary" />
+        },
+        {
+            text: "Responsive Web Interface: A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network. Works great on a tablet and cell.",
             icon: <DevicesIcon fontSize="small" color="primary" />
         }
     ];
 
     const plannedFeatures = [
         {
-            text: "Data Decoding: Decode and display images from weather satellites (e.g., NOAA APT, METEOR LRPT) and telemetry from various amateur satellites.",
+            text: "Additional Decoders: Morse/CW decoder.",
             icon: <ImageIcon fontSize="small" color="secondary" />
         },
         {
-            text: "Pass Scheduler: Automated scheduling and recording of satellite passes.",
+            text: "Additional Decoders: AFSK packet decoder.",
             icon: <SatelliteAltIcon fontSize="small" color="secondary" />
         },
         {
-            text: "Signal Recording: Enhanced recording capabilities with metadata tagging.",
+            text: "Additional Decoders: LoRa decoders.",
             icon: <RadioIcon fontSize="small" color="secondary" />
+        },
+        {
+            text: "Additional Decoders: NOAA APT weather satellite images.",
+            icon: <ImageIcon fontSize="small" color="secondary" />
+        },
+        {
+            text: "Additional Decoders: Additional telemetry formats.",
+            icon: <CodeIcon fontSize="small" color="secondary" />
         }
     ];
 
@@ -104,7 +124,9 @@ const AboutPage = () => {
         { name: "SGP4", description: "A Python implementation of the SGP4 satellite propagation model.", url: "https://pypi.org/project/sgp4/" },
         { name: "Socket.IO", description: "A library for real-time, bidirectional, event-based communication.", url: "https://python-socketio.readthedocs.io/en/latest/" },
         { name: "pyrtlsdr", description: "A Python wrapper for the RTL-SDR library.", url: "https://pypi.org/project/pyrtlsdr/" },
-        { name: "SoapySDR", description: "A vendor and platform neutral SDR support library.", url: "https://pypi.org/project/SoapySDR/" }
+        { name: "SoapySDR", description: "A vendor and platform neutral SDR support library.", url: "https://pypi.org/project/SoapySDR/" },
+        { name: "SatDump", description: "Satellite decoder suite used for weather image decoding workflows.", url: "https://github.com/SatDump/SatDump" },
+        { name: "gr-satellites", description: "GNU Radio out-of-tree modules for satellite communications decoding.", url: "https://github.com/daniestevez/gr-satellites" }
     ];
 
     const frontendTechnologies = [
@@ -255,6 +277,20 @@ const AboutPage = () => {
                         <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.6 }}>
                             <strong>Ground Station is a full-featured, open-source software solution for satellite tracking and radio communication.</strong> Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving live radio signals from satellites.
                         </Typography>
+                        <Typography variant="body2">
+                            <Link
+                                href="https://github.com/sgoudelis/ground-station"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{ display: "inline-flex", alignItems: "center" }}
+                            >
+                                <img
+                                    src="https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white"
+                                    alt="GitHub repository"
+                                    style={{ height: "20px" }}
+                                />
+                            </Link>
+                        </Typography>
                     </Card>
 
                     {/* Architecture Overview */}
@@ -315,14 +351,6 @@ const AboutPage = () => {
                             ))}
                         </Stack>
 
-                        <Card elevation={1} sx={{ p: 2, mt: 2, backgroundColor: 'rgba(255, 152, 0, 0.05)', border: `1px solid ${theme.palette.warning.main}30` }}>
-                            <Stack direction="row" spacing={1} alignItems="flex-start">
-                                <InfoIcon fontSize="small" color="warning" sx={{ mt: 0.5 }} />
-                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                    <strong>Note:</strong> Data decoding functionality is planned but not yet implemented.
-                                </Typography>
-                            </Stack>
-                        </Card>
                     </Box>
 
                     {/* SDR Device Support */}
