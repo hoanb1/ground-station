@@ -49,13 +49,6 @@ live radio signals from satellites.
 
 ---
 
-### Overview Page
-<img src="frontend/public/ground station - overview page - amateur group.png" alt="Overview page with amateur satellite group" width="450"/>
-
-*Overview page with quick group selection and real-time satellite status indicators*
-
----
-
 ### File Browser & Decoders
 <img src="frontend/public/ground station - file browser - weather images - decoded packets - recorded transcriptions.png" alt="File browser with decoded outputs and transcriptions" width="450"/>
 
