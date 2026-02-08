@@ -1,7 +1,4 @@
 [![Tests](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml/badge.svg)](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Release](https://github.com/sgoudelis/ground-station/actions/workflows/release-from-images.yml/badge.svg?event=push)](https://github.com/sgoudelis/ground-station/actions/workflows/release-from-images.yml)
-<div align="center">
-  <img src="frontend/public/gs-logo-green-blue.png" alt="Ground Station Logo" width="200"/>
-</div>
 
 # Ground Station
 
@@ -33,6 +30,13 @@ This project was built with the help of Claude Code and Codex.
 <img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect.png" alt="Live waterfall analysis" width="450"/>
 
 *Live RF spectrum waterfall demonstrating Doppler effect visualization during active satellite communication*
+
+---
+
+### Waterfall Packet Decoding (GMSK)
+<img src="frontend/public/ground station - waterfall page - packet decoding gmsk.png" alt="Waterfall packet decoding view with GMSK" width="450"/>
+
+*Waterfall view with live GMSK packet decoding and decoded output details*
 
 ---
 
