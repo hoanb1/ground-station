@@ -27,9 +27,9 @@ This project was built with the help of Claude Code and Codex.
 ---
 
 ### SDR Waterfall View
-<img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect.png" alt="Live waterfall analysis" width="450"/>
+<img src="frontend/public/ground station - waterfall page - transcription - iss.png" alt="Waterfall view with live transcription" width="450"/>
 
-*Live RF spectrum waterfall demonstrating Doppler effect visualization during active satellite communication*
+*Waterfall view with live transcription overlay during active satellite communication*
 
 ---
 
