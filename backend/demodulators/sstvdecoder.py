@@ -421,7 +421,7 @@ class SSTVDecoder(BaseDecoderProcess):
             self._rates_prev_ts = None
             self._rates_prev_counters = {
                 "iq_chunks_in": 0,
-                # SSTVDecoderV2 tracks iq_samples_in
+                # SSTVDecoder tracks iq_samples_in
                 "samples_in": 0,
                 "data_messages_out": 0,
             }

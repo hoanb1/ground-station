@@ -90,7 +90,7 @@ def soapysdr_remote_worker_process(
         serial_number = config.get("serial_number", "")
 
         # Connect to remote SoapySDR server
-        hostname = config.get("hostname", "127.0.0.1")
+        hostname = config.get("host", "127.0.0.1")
         port = config.get("port", 55132)
 
         # The format should be 'remote:host=HOSTNAME:port=PORT,driver=DRIVER,serial=SERIAL'
@@ -617,7 +617,7 @@ def soapysdr_remote_worker_process(
                 time.sleep(1)
 
     except ConnectionRefusedError as e:
-        hostname = config.get("hostname", "unknown")
+        hostname = config.get("host", "unknown")
         port = config.get("port", "unknown")
         error_msg = f"Connection refused to SoapySDR remote server at {hostname}:{port}: {str(e)}"
         logger.error(error_msg)

@@ -91,7 +91,7 @@ def rtlsdr_worker_process(
 
         # Connect to the RTL-SDR device
         if config.get("connection_type") == "tcp":
-            hostname = config.get("hostname", "127.0.0.1")
+            hostname = config.get("host", "127.0.0.1")
             port = config.get("port", 1234)
             logger.info(f"Connecting to RTL-SDR TCP server at {hostname}:{port}...")
             sdr = RtlSdrTcpClient(hostname=hostname, port=port)

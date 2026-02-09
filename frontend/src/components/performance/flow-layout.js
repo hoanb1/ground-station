@@ -80,6 +80,9 @@ const hasPositiveOutputRate = (component, componentType = null) => {
            (rates.messages_broadcast_per_sec > 0) ||
            (rates.messages_received_per_sec > 0) ||
            (rates.iq_chunks_per_sec > 0) ||
+           (rates.iq_chunks_in_per_sec > 0) ||
+           (rates.samples_in_per_sec > 0) ||
+           (rates.iq_samples_in_per_sec > 0) ||
            (rates.audio_chunks_out_per_sec > 0) ||
            (rates.audio_chunks_in_per_sec > 0) ||
            (rates.fft_results_per_sec > 0) ||

@@ -216,6 +216,20 @@ export const ComponentNode = ({ data }) => {
     const isTracker = type === 'tracker';
     const isIQBroadcaster = type === 'broadcaster' && component.broadcaster_type === 'iq';
     const isAudioBroadcaster = type === 'broadcaster' && component.broadcaster_type === 'audio';
+    const isIQDecoder = (
+        type === 'decoder' && (
+            component.type === 'BPSKDecoder' ||
+            component.type === 'FSKDecoder' ||
+            component.type === 'GMSKDecoder' ||
+            component.type === 'GFSKDecoder' ||
+            component.type === 'LoRaDecoder' ||
+            component.type === 'SSTVDecoder' ||
+            component.stats?.iq_chunks_in !== undefined ||
+            component.stats?.iq_samples_in !== undefined ||
+            component.rates?.iq_chunks_in_per_sec !== undefined ||
+            component.rates?.samples_in_per_sec !== undefined
+        )
+    );
 
     // Calculate handle positions for multiple connections
     const calculateHandlePositions = (count) => {
@@ -756,8 +770,8 @@ export const ComponentNode = ({ data }) => {
                                         label="Queue"
                                         value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
-                                    {/* IQ-based decoders (BPSK, FSK-family, LoRa, SSTVDecoderV2) receive IQ samples, others receive audio */}
-                                    {(component.type === 'BPSKDecoder' || component.type === 'FSKDecoder' || component.type === 'GMSKDecoder' || component.type === 'GFSKDecoder' || component.type === 'LoRaDecoder' || component.type === 'SSTVDecoderV2') ? (
+                                    {/* IQ-based decoders (BPSK, FSK-family, LoRa, SSTVDecoder) receive IQ samples, others receive audio */}
+                                    {isIQDecoder ? (
                                         <>
                                             <MetricRow
                                                 label="IQ"
