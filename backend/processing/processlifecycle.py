@@ -22,6 +22,7 @@ import os
 import numpy as np
 
 from common.constants import DictKeys, QueueMessageTypes, SocketEvents
+from common.sdrconfig import SDRConfig
 from fft.processor import fft_processor_process
 from handlers.entities.filebrowser import emit_file_browser_state
 from processing.iqbroadcaster import IQBroadcaster
@@ -308,29 +309,30 @@ class ProcessLifecycleManager:
             stop_event = multiprocessing.Event()
 
             # Prepare initial configuration
-            config = {
-                "sdr_id": sdr_id,
-                "client_id": client_id,
-                "connection_type": connection_type,
-                "serial_number": sdr_config.get("serial_number", 0),
-                "hostname": hostname,
-                "port": port,
-                "driver": driver,
-                "sample_rate": sdr_config.get("sample_rate", 2.048e6),
-                "center_freq": sdr_config.get("center_freq", 100e6),
-                "gain": sdr_config.get("gain", "auto"),
-                "fft_size": sdr_config.get("fft_size", 1024),
-                "fft_window": sdr_config.get("fft_window", "hanning"),
-                "bias_t": sdr_config.get("bias_t", 0),
-                "tuner_agc": sdr_config.get("tuner_agc", False),
-                "rtl_agc": sdr_config.get("rtl_agc", False),
-                "antenna": sdr_config.get("antenna", "RX"),
-                "soapy_agc": sdr_config.get("soapy_agc", False),
-                "offset_freq": int(sdr_config.get("offset_freq", 0)),
-                "fft_averaging": sdr_config.get("fft_averaging", 1),
-                "recording_path": sdr_config.get("recording_path", ""),
-                "loop_playback": sdr_config.get("loop_playback", True),
-            }
+            config = SDRConfig(
+                sdr_id=sdr_id,
+                center_freq=sdr_config.get("center_freq", 100e6),
+                sample_rate=sdr_config.get("sample_rate", 2.048e6),
+                gain=sdr_config.get("gain", "auto"),
+                fft_size=sdr_config.get("fft_size"),
+                bias_t=sdr_config.get("bias_t", 0),
+                tuner_agc=sdr_config.get("tuner_agc", False),
+                rtl_agc=sdr_config.get("rtl_agc", False),
+                fft_window=sdr_config.get("fft_window"),
+                fft_averaging=sdr_config.get("fft_averaging"),
+                recording_path=sdr_config.get("recording_path", ""),
+                serial_number=sdr_config.get("serial_number", 0),
+                host=hostname,
+                port=port,
+                client_id=client_id,
+                connection_type=connection_type,
+                driver=driver,
+                soapy_agc=sdr_config.get("soapy_agc", False),
+                offset_freq=int(sdr_config.get("offset_freq", 0)),
+                antenna=sdr_config.get("antenna", "RX"),
+                ppm_error=sdr_config.get("ppm_error"),
+                loop_playback=sdr_config.get("loop_playback", True),
+            ).to_dict()
 
             if not worker_process:
                 raise Exception(f"Worker process {worker_process} for SDR id: {sdr_id} not found")

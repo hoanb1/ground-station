@@ -26,18 +26,20 @@ class SDRConfig:
     center_freq: Number
     sample_rate: Number
     gain: Gain
-    fft_size: int
+    fft_size: Optional[int]
     bias_t: Union[bool, int]
     tuner_agc: bool
     rtl_agc: bool
-    fft_window: str
-    fft_averaging: int
+    fft_window: Optional[str]
+    fft_averaging: Optional[int]
     sdr_id: str
     recording_path: Optional[str] = None
     serial_number: Optional[SerialNumber] = None
     host: Optional[str] = None
     port: Optional[int] = None
     client_id: Optional[str] = None
+    connection_type: Optional[str] = None
+    driver: Optional[str] = None
     soapy_agc: Optional[bool] = None
     offset_freq: Optional[Number] = None
     antenna: Optional[str] = None
@@ -49,15 +51,18 @@ class SDRConfig:
             "center_freq": self.center_freq,
             "sample_rate": self.sample_rate,
             "gain": self.gain,
-            "fft_size": self.fft_size,
             "bias_t": self.bias_t,
             "tuner_agc": self.tuner_agc,
             "rtl_agc": self.rtl_agc,
-            "fft_window": self.fft_window,
-            "fft_averaging": self.fft_averaging,
             "sdr_id": self.sdr_id,
         }
 
+        if self.fft_size is not None:
+            payload["fft_size"] = self.fft_size
+        if self.fft_window is not None:
+            payload["fft_window"] = self.fft_window
+        if self.fft_averaging is not None:
+            payload["fft_averaging"] = self.fft_averaging
         if self.recording_path is not None:
             payload["recording_path"] = self.recording_path
         if self.serial_number is not None:
@@ -68,6 +73,10 @@ class SDRConfig:
             payload["port"] = self.port
         if self.client_id is not None:
             payload["client_id"] = self.client_id
+        if self.connection_type is not None:
+            payload["connection_type"] = self.connection_type
+        if self.driver is not None:
+            payload["driver"] = self.driver
         if self.soapy_agc is not None:
             payload["soapy_agc"] = self.soapy_agc
         if self.offset_freq is not None:

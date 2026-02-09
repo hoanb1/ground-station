@@ -461,25 +461,15 @@ class ObservationExecutor:
                 sample_rate=sdr_config_dict.get("sample_rate", 2048000),
                 gain=sdr_config_dict.get("gain", 20),
                 ppm_error=sdr_config_dict.get("ppm_error", 0),
-                antenna=sdr_config_dict.get("antenna_port", "TX/RX"),  # B210 uses TX/RX or RX2
-                bias_t=sdr_config_dict.get("bias_t", sdr_config_dict.get("biasT", 0)),
-                tuner_agc=sdr_config_dict.get("tuner_agc", sdr_config_dict.get("tunerAgc", False)),
-                rtl_agc=sdr_config_dict.get("rtl_agc", sdr_config_dict.get("rtlAgc", False)),
-                soapy_agc=sdr_config_dict.get("soapy_agc", sdr_config_dict.get("soapyAgc", False)),
-                offset_freq=sdr_config_dict.get(
-                    "offset_freq", sdr_config_dict.get("offsetFrequency", 0)
-                ),
-                fft_size=(
-                    sdr_config_dict.get("fft_size") or sdr_config_dict.get("fftSize") or 1024
-                ),
-                fft_window=(
-                    sdr_config_dict.get("fft_window")
-                    or sdr_config_dict.get("fftWindow")
-                    or "hanning"
-                ),
-                fft_averaging=(
-                    sdr_config_dict.get("fft_averaging") or sdr_config_dict.get("fftAveraging") or 1
-                ),
+                antenna=sdr_config_dict.get("antenna_port", "RX"),
+                bias_t=sdr_config_dict.get("bias_t", 0),
+                tuner_agc=sdr_config_dict.get("tuner_agc", False),
+                rtl_agc=sdr_config_dict.get("rtl_agc", False),
+                soapy_agc=sdr_config_dict.get("soapy_agc", False),
+                offset_freq=sdr_config_dict.get("offset_freq", 0),
+                fft_size=sdr_config_dict.get("fft_size", 16384),
+                fft_window=sdr_config_dict.get("fft_window", "hamming"),
+                fft_averaging=sdr_config_dict.get("fft_averaging", 1),
                 serial_number=(sdr_device.get("serial") or sdr_device.get("serial_number") or 0),
             ).to_dict()
 
