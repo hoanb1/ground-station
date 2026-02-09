@@ -59,6 +59,7 @@ export default function AntennaRotatorTable() {
         openDeleteConfirm,
         formValues
     } = useSelector((state) => state.rotators);
+    const isEditing = Boolean(formValues.id);
 
     const columns = [
         {field: 'name', headerName: t('rotator.name'), flex: 1, minWidth: 150},
@@ -240,7 +241,7 @@ export default function AntennaRotatorTable() {
                                     py: 2.5,
                                 }}
                             >
-                                {t('rotator.add_dialog_title')}
+                                {isEditing ? t('rotator.edit_dialog_title') : t('rotator.add_dialog_title')}
                             </DialogTitle>
                             <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
                                 <Stack spacing={2} sx={{ mt: 3 }}>

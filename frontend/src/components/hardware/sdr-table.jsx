@@ -162,6 +162,7 @@ export default function SDRsPage() {
         localSoapyDevices,
         loadingLocalSDRs,
     } = useSelector((state) => state.sdrs);
+    const isEditing = Boolean(formValues.id);
 
     useEffect(() => {
         if (!hasInitialized.current) {
@@ -739,7 +740,7 @@ export default function SDRsPage() {
                                     py: 2.5,
                                 }}
                             >
-                                {t('sdr.add_dialog_title')}
+                                {isEditing ? t('sdr.edit_dialog_title') : t('sdr.add_dialog_title')}
                             </DialogTitle>
                             <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
                                 <Stack spacing={2} sx={{ mt: 3 }}>

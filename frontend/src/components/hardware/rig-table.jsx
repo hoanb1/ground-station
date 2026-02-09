@@ -58,6 +58,7 @@ export default function RigTable() {
     const {socket} = useSocket();
     const {rigs, loading, selected, openDeleteConfirm, formValues, openAddDialog} = useSelector((state) => state.rigs);
     const { t } = useTranslation('hardware');
+    const isEditing = Boolean(formValues.id);
 
     const defaultRig = {
         id: null,
@@ -244,7 +245,7 @@ export default function RigTable() {
                                 py: 2.5,
                             }}
                         >
-                            {t('rig.add_dialog_title')}
+                            {isEditing ? t('rig.edit_dialog_title') : t('rig.add_dialog_title')}
                         </DialogTitle>
                         <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
                             <Stack spacing={2} sx={{ mt: 3 }}>
