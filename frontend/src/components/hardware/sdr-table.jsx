@@ -50,6 +50,7 @@ import {
     setOpenDeleteConfirm,
     setOpenAddDialog,
     setFormValues,
+    resetFormValues,
     fetchSoapySDRServers,
     setSelectedSdrDevice,
     fetchLocalSoapySDRDevices,
@@ -301,6 +302,10 @@ export default function SDRsPage() {
                 errors.port = 'Port must be 1-65535';
             }
         }
+        if (!config.excludeFields.includes('serial')) {
+            const serialValue = getFieldValue('serial');
+            if (!String(serialValue || '').trim()) errors.serial = 'Required';
+        }
 
         const minFreq = getFieldValue('frequency_min');
         const maxFreq = getFieldValue('frequency_max');
@@ -533,7 +538,7 @@ export default function SDRsPage() {
                             onChange={handleChange}
                             value={getFieldValue('host')}
                             error={Boolean(validationErrors.host)}
-                            helperText={validationErrors.host}
+                            required
                         />
                     );
                 }
@@ -552,7 +557,7 @@ export default function SDRsPage() {
                         onChange={handleChange}
                         value={getFieldValue('port')}
                         error={Boolean(validationErrors.port)}
-                        helperText={validationErrors.port}
+                        required
                     />
                 );
             }
@@ -568,7 +573,7 @@ export default function SDRsPage() {
                     onChange={handleChange}
                     value={getFieldValue('name')}
                     error={Boolean(validationErrors.name)}
-                    helperText={validationErrors.name}
+                    required
                 />,
                 <TextField
                     key="frequency_min"
@@ -580,7 +585,6 @@ export default function SDRsPage() {
                     onChange={handleChange}
                     value={getFieldValue('frequency_min')}
                     error={Boolean(validationErrors.frequency_min)}
-                    helperText={validationErrors.frequency_min || 'MHz'}
                     InputProps={{ endAdornment: <InputAdornment position="end">MHz</InputAdornment> }}
                 />,
                 <TextField
@@ -593,7 +597,6 @@ export default function SDRsPage() {
                     onChange={handleChange}
                     value={getFieldValue('frequency_max')}
                     error={Boolean(validationErrors.frequency_max)}
-                    helperText={validationErrors.frequency_max || 'MHz'}
                     InputProps={{ endAdornment: <InputAdornment position="end">MHz</InputAdornment> }}
                 />,
             );
@@ -624,6 +627,8 @@ export default function SDRsPage() {
                         size="small"
                         onChange={handleChange}
                         value={getFieldValue('serial')}
+                        error={Boolean(validationErrors.serial)}
+                        required
                     />
                 );
             }
@@ -703,7 +708,14 @@ export default function SDRsPage() {
                         }}
                     />
                     <Stack direction="row" spacing={2} style={{marginTop: 15}}>
-                        <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                dispatch(resetFormValues());
+                                dispatch(setSelectedSdrDevice(''));
+                                dispatch(setOpenAddDialog(true));
+                            }}
+                        >
                             {t('sdr.add')}
                         </Button>
                         <Dialog

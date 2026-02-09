@@ -258,7 +258,7 @@ export default function RigTable() {
                                     value={formValues.name}
                                     onChange={handleChange}
                                     error={Boolean(validationErrors.name)}
-                                    helperText={validationErrors.name}
+                                    required
                                 />
                                 <TextField
                                     name="host"
@@ -269,7 +269,7 @@ export default function RigTable() {
                                     value={formValues.host}
                                     onChange={handleChange}
                                     error={Boolean(validationErrors.host)}
-                                    helperText={validationErrors.host}
+                                    required
                                 />
                                 <TextField
                                     name="port"
@@ -280,7 +280,7 @@ export default function RigTable() {
                                     value={formValues.port}
                                     onChange={handleChange}
                                     error={Boolean(validationErrors.port)}
-                                    helperText={validationErrors.port}
+                                    required
                                 />
                                 <FormControl fullWidth size="small">
                                     <InputLabel>{t('rig.radio_type')}</InputLabel>

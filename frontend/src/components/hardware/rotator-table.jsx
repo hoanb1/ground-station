@@ -39,6 +39,7 @@ import {
     setOpenDeleteConfirm,
     setOpenAddDialog,
     setFormValues,
+    resetFormValues,
 } from './rotaror-slice.jsx';
 import Paper from "@mui/material/Paper";
 
@@ -112,11 +113,38 @@ export default function AntennaRotatorTable() {
     } else if (Number(formValues.port) <= 0 || Number(formValues.port) > 65535) {
         validationErrors.port = 'Port must be 1-65535';
     }
-    if (formValues.minaz !== '' && formValues.maxaz !== '' && Number(formValues.minaz) > Number(formValues.maxaz)) {
-        validationErrors.azimuth = 'Min azimuth must be <= max azimuth';
+    const isEmptyValue = (value) => value === '' || value === null || value === undefined;
+    if (isEmptyValue(formValues.minaz)) {
+        validationErrors.minaz = 'Required';
+    } else if (Number.isNaN(Number(formValues.minaz))) {
+        validationErrors.minaz = 'Must be a number';
     }
-    if (formValues.minel !== '' && formValues.maxel !== '' && Number(formValues.minel) > Number(formValues.maxel)) {
-        validationErrors.elevation = 'Min elevation must be <= max elevation';
+    if (isEmptyValue(formValues.maxaz)) {
+        validationErrors.maxaz = 'Required';
+    } else if (Number.isNaN(Number(formValues.maxaz))) {
+        validationErrors.maxaz = 'Must be a number';
+    }
+    if (!isEmptyValue(formValues.minaz)
+        && !isEmptyValue(formValues.maxaz)
+        && Number(formValues.minaz) > Number(formValues.maxaz)) {
+        validationErrors.minaz = 'Min azimuth must be <= max azimuth';
+        validationErrors.maxaz = 'Min azimuth must be <= max azimuth';
+    }
+    if (isEmptyValue(formValues.minel)) {
+        validationErrors.minel = 'Required';
+    } else if (Number.isNaN(Number(formValues.minel))) {
+        validationErrors.minel = 'Must be a number';
+    }
+    if (isEmptyValue(formValues.maxel)) {
+        validationErrors.maxel = 'Required';
+    } else if (Number.isNaN(Number(formValues.maxel))) {
+        validationErrors.maxel = 'Must be a number';
+    }
+    if (!isEmptyValue(formValues.minel)
+        && !isEmptyValue(formValues.maxel)
+        && Number(formValues.minel) > Number(formValues.maxel)) {
+        validationErrors.minel = 'Min elevation must be <= max elevation';
+        validationErrors.maxel = 'Min elevation must be <= max elevation';
     }
     const hasValidationErrors = Object.keys(validationErrors).length > 0;
 
@@ -182,7 +210,13 @@ export default function AntennaRotatorTable() {
                         }}
                     />
                     <Stack direction="row" spacing={2} style={{marginTop: 15}}>
-                        <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                dispatch(resetFormValues());
+                                dispatch(setOpenAddDialog(true));
+                            }}
+                        >
                             {t('rotator.add')}
                         </Button>
                         <Dialog
@@ -218,7 +252,7 @@ export default function AntennaRotatorTable() {
                                         onChange={handleChange}
                                         value={formValues.name}
                                         error={Boolean(validationErrors.name)}
-                                        helperText={validationErrors.name}
+                                        required
                                     />
                                     <TextField
                                         name="host"
@@ -228,7 +262,7 @@ export default function AntennaRotatorTable() {
                                         onChange={handleChange}
                                         value={formValues.host}
                                         error={Boolean(validationErrors.host)}
-                                        helperText={validationErrors.host}
+                                        required
                                     />
                                     <TextField
                                         name="port"
@@ -239,7 +273,7 @@ export default function AntennaRotatorTable() {
                                         onChange={handleChange}
                                         value={formValues.port}
                                         error={Boolean(validationErrors.port)}
-                                        helperText={validationErrors.port}
+                                        required
                                     />
                                     <TextField
                                         name="minaz"
@@ -249,8 +283,8 @@ export default function AntennaRotatorTable() {
                                         size="small"
                                         onChange={handleChange}
                                         value={formValues.minaz}
-                                        error={Boolean(validationErrors.azimuth)}
-                                        helperText={validationErrors.azimuth}
+                                        error={Boolean(validationErrors.minaz)}
+                                        required
                                         InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }}
                                     />
                                     <TextField
@@ -261,8 +295,8 @@ export default function AntennaRotatorTable() {
                                         size="small"
                                         onChange={handleChange}
                                         value={formValues.maxaz}
-                                        error={Boolean(validationErrors.azimuth)}
-                                        helperText={validationErrors.azimuth}
+                                        error={Boolean(validationErrors.maxaz)}
+                                        required
                                         InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }}
                                     />
                                     <TextField
@@ -273,8 +307,8 @@ export default function AntennaRotatorTable() {
                                         size="small"
                                         onChange={handleChange}
                                         value={formValues.minel}
-                                        error={Boolean(validationErrors.elevation)}
-                                        helperText={validationErrors.elevation}
+                                        error={Boolean(validationErrors.minel)}
+                                        required
                                         InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }}
                                     />
                                     <TextField
@@ -285,8 +319,8 @@ export default function AntennaRotatorTable() {
                                         size="small"
                                         onChange={handleChange}
                                         value={formValues.maxel}
-                                        error={Boolean(validationErrors.elevation)}
-                                        helperText={validationErrors.elevation}
+                                        error={Boolean(validationErrors.maxel)}
+                                        required
                                         InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }}
                                     />
                                 </Stack>

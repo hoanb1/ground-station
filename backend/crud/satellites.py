@@ -20,6 +20,7 @@ from typing import List, Union
 
 from pydantic.v1 import UUID4
 from sqlalchemy import String, delete, insert, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.common import logger, serialize_object
@@ -192,6 +193,16 @@ async def add_satellite(session: AsyncSession, data: dict) -> dict:
         new_satellite = serialize_object(new_satellite)
         return {"success": True, "data": new_satellite, "error": None}
 
+    except IntegrityError as e:
+        await session.rollback()
+        if "UNIQUE constraint failed: satellites.norad_id" in str(e):
+            return {
+                "success": False,
+                "error": f"Satellite with NORAD ID {data.get('norad_id')} already exists.",
+            }
+        logger.error(f"Error adding satellite: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": "Failed to add satellite due to a database constraint."}
     except Exception as e:
         await session.rollback()
         logger.error(f"Error adding satellite: {e}")

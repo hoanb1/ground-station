@@ -208,7 +208,7 @@ export const submitOrEditSatellite = createAsyncThunk(
                     if (response.success) {
                         resolve(response.data);
                     } else {
-                        reject(new Error(`Failed to ${action === 'edit-satellite' ? 'edit' : 'add'} satellite`));
+                        reject(new Error(response.error || `Failed to ${action === 'edit-satellite' ? 'edit' : 'add'} satellite`));
                     }
                 });
             });

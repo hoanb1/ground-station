@@ -128,6 +128,9 @@ export default function SourcesTable() {
     };
 
     const handleSubmit = () => {
+        if (hasValidationErrors) {
+            return;
+        }
         if (formValues.id === null) {
             dispatch(submitOrEditTLESource({socket, formValues}))
                 .unwrap()
@@ -153,6 +156,23 @@ export default function SourcesTable() {
         }
         dispatch(setOpenAddDialog(false));
     };
+
+    const validationErrors = {};
+    if (!String(formValues.name || '').trim()) validationErrors.name = 'Required';
+    if (!String(formValues.url || '').trim()) {
+        validationErrors.url = 'Required';
+    } else {
+        try {
+            const parsedUrl = new URL(formValues.url);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                validationErrors.url = 'Must be http or https URL';
+            }
+        } catch {
+            validationErrors.url = 'Invalid URL';
+        }
+    }
+    if (!String(formValues.format || '').trim()) validationErrors.format = 'Required';
+    const hasValidationErrors = Object.keys(validationErrors).length > 0;
 
     // useEffect(() => {
     //     dispatch(fetchTLESources({socket}));
@@ -380,22 +400,27 @@ export default function SourcesTable() {
                                 name="name"
                                 value={formValues.name}
                                 onChange={handleInputChange}
+                                size="small"
                                 fullWidth
+                                error={Boolean(validationErrors.name)}
                             />
                             <TextField
                                 label={t('tle_sources.url')}
                                 name="url"
                                 value={formValues.url}
                                 onChange={handleInputChange}
+                                size="small"
                                 fullWidth
+                                error={Boolean(validationErrors.url)}
                             />
-                            <FormControl fullWidth>
+                            <FormControl fullWidth size="small" error={Boolean(validationErrors.format)}>
                                 <InputLabel id="format-label">{t('tle_sources.format')}</InputLabel>
                                 <Select
                                     label={t('tle_sources.format')}
                                     name="format"
                                     value={formValues.format || ''}
                                     onChange={handleInputChange}
+                                    size="small"
                                 >
                                     <MenuItem value="3le">3LE</MenuItem>
                                 </Select>
@@ -424,7 +449,10 @@ export default function SourcesTable() {
                         >
                             {t('tle_sources.cancel')}
                         </Button>
-                        <Button variant="contained" onClick={handleSubmit}
+                        <Button
+                            variant="contained"
+                            onClick={handleSubmit}
+                            disabled={hasValidationErrors}
                                 color="success">{formValues.id ? t('tle_sources.edit') : t('tle_sources.submit')}</Button>
                     </DialogActions>
                 </Dialog>

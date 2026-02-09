@@ -240,6 +240,19 @@ export function setupTheme(themeName = 'dark') {
                         backgroundColor: isDark ? "#121212" : "#ffffff",
                     }
                 },
+            },
+            MuiFormHelperText: {
+                styleOverrides: {
+                    root: {
+                        backgroundColor: 'transparent',
+                        '&.MuiFormHelperText-contained': {
+                            backgroundColor: 'transparent',
+                        },
+                        '&.MuiFormHelperText-sizeSmall': {
+                            backgroundColor: 'transparent',
+                        },
+                    }
+                },
             }
             // MuiAppBar: {
             //     styleOverrides: {
