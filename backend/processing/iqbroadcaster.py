@@ -21,7 +21,7 @@ import queue
 import threading
 import time
 from dataclasses import asdict
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 from vfos.state import VFOManager
 
@@ -69,7 +69,11 @@ class IQBroadcaster(threading.Thread):
         self.stats_lock = threading.Lock()
 
     def subscribe(
-        self, session_id: str, maxsize: int = 50, for_process: bool = False
+        self,
+        session_id: str,
+        maxsize: int = 50,
+        for_process: bool = False,
+        session_id_hint: Optional[str] = None,
     ) -> Union[queue.Queue[Any], multiprocessing.Queue[Any]]:
         """
         Create a new subscriber queue for a session.
@@ -82,6 +86,7 @@ class IQBroadcaster(threading.Thread):
             for_process: If True, creates multiprocessing.Queue for Process subscribers.
                         Use this when subscriber is a multiprocessing.Process rather than
                         a threading.Thread. Default: False (threading queue)
+            session_id_hint: Optional canonical session ID used for metadata enrichment.
 
         Returns:
             Queue that will receive copies of IQ samples (threading or multiprocessing)
@@ -97,8 +102,12 @@ class IQBroadcaster(threading.Thread):
                     subscriber_queue = queue.Queue(maxsize=maxsize)
                     queue_type = "threading"
 
+                resolved_session_id = session_id_hint or self._extract_session_id(session_id)
+                if not resolved_session_id:
+                    resolved_session_id = session_id
                 self.subscribers[session_id] = {
                     "queue": subscriber_queue,
+                    "session_id": resolved_session_id,
                     "maxsize": maxsize,
                     "is_process_queue": for_process,
                     "delivered": 0,
@@ -174,18 +183,24 @@ class IQBroadcaster(threading.Thread):
         # For internal sessions: "decoder:internal:obs-123:vfo1" -> need "internal:obs-123"
         # For regular sessions: "decoder:regular-session-id:vfo1" -> need "regular-session-id"
         parts = subscription_key.split(":")
-        if len(parts) >= 2:
-            # Check if this is an internal session (has "internal:" prefix)
-            if len(parts) >= 4 and parts[1] == "internal":
+        if len(parts) < 2:
+            return ""
+
+        # Check if this is an internal session (has "internal:" prefix)
+        if parts[1] == "internal":
+            if len(parts) >= 4:
                 # "decoder:internal:obs-123:vfo1" -> "internal:obs-123"
+                # "decoder:internal:obs-123:uuid:vfo1" -> "internal:obs-123:uuid"
+                if parts[3].startswith("vfo") and parts[3][3:].isdigit():
+                    return f"{parts[1]}:{parts[2]}"
+                return f"{parts[1]}:{parts[2]}:{parts[3]}"
+            if len(parts) >= 3:
+                # "decoder:internal:obs-123" -> "internal:obs-123"
                 return f"{parts[1]}:{parts[2]}"
-            elif len(parts) == 3:
-                # "decoder:session_id:vfo1" -> "session_id"
-                return parts[1]
-            elif len(parts) == 2:
-                # "decoder:session_id" -> "session_id"
-                return parts[1]
-        return ""
+            return "internal"
+
+        # Non-internal session IDs do not contain ':' in practice.
+        return parts[1]
 
     def _enrich_iq_message_with_vfo_states(
         self, iq_message: Dict[str, Any], session_id: str
@@ -259,7 +274,9 @@ class IQBroadcaster(threading.Thread):
                         is_process_queue = subscriber_info.get("is_process_queue", False)
 
                         # Extract session_id from subscription key and enrich message with VFO states
-                        session_id = self._extract_session_id(subscription_key)
+                        session_id = subscriber_info.get("session_id") or self._extract_session_id(
+                            subscription_key
+                        )
                         if session_id:
                             # Create enriched message with VFO states for this specific session
                             enriched_message = self._enrich_iq_message_with_vfo_states(

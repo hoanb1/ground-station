@@ -324,7 +324,9 @@ class DecoderManager:
                 # Subscribe to the broadcaster to get a dedicated IQ queue
                 # Use multiprocessing queue for process-based decoders (FSK, BPSK, LoRa, etc.)
                 # Increased maxsize from 3 to 10 for better burst handling on slower CPUs (RPi5)
-                iq_queue = iq_broadcaster.subscribe(subscription_key, maxsize=10, for_process=True)
+                iq_queue = iq_broadcaster.subscribe(
+                    subscription_key, maxsize=10, for_process=True, session_id_hint=session_id
+                )
 
                 # Resolve decoder configuration using DecoderConfigService
                 # This centralizes all parameter resolution logic
