@@ -560,6 +560,14 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             f"within {timeout} seconds timeout"
         )
         logger.error(error_msg)
+        if sdr_id in sdr_parameters_cache and sdr_id != "sigmf-playback":
+            logger.warning(
+                f"Returning cached SDR parameters for {sdr_id} after timeout: {error_msg}"
+            )
+            reply["success"] = True
+            reply["data"] = sdr_parameters_cache[sdr_id]
+            reply["error"] = error_msg
+            return reply
         reply["success"] = False
         reply["error"] = error_msg
 
@@ -567,6 +575,12 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
         error_msg = str(e)
         logger.error(f"Error occurred while getting parameters from SDR with id {sdr_id}")
         logger.error(error_msg)
+        if sdr_id in sdr_parameters_cache and sdr_id != "sigmf-playback":
+            logger.warning(f"Returning cached SDR parameters for {sdr_id} after error: {error_msg}")
+            reply["success"] = True
+            reply["data"] = sdr_parameters_cache[sdr_id]
+            reply["error"] = error_msg
+            return reply
         reply["success"] = False
         reply["error"] = error_msg
 

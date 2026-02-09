@@ -283,7 +283,6 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                 .catch(error => {
                     // Error occurred while getting SDR parameters
                     dispatch(setErrorMessage(error));
-                    dispatch(setIsStreaming(false));
                     dispatch(setErrorDialogOpen(true));
                 });
         }
