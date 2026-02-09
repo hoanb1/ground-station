@@ -179,7 +179,7 @@ export const themeConfigs = {
             default: '#000000', // Pure black for OLED screens
             paper: '#121212', // Very dark gray
             elevated: '#1e1e1e', // Slightly elevated
-            titleBar: '#1a2838',
+            titleBar: '#161316',
         },
         border: {
             main: '#2d2d2d',
