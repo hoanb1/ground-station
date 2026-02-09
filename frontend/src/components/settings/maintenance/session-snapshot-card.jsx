@@ -83,7 +83,7 @@ const ConsumerBadges = ({ map, sessionId }) => {
     // If sessionId provided, filter to only show that session's consumers
     let entries = Object.entries(map);
     if (sessionId) {
-        entries = entries.filter(([k]) => k === sessionId);
+        entries = entries.filter(([k]) => k === sessionId || k.startsWith(`${sessionId}:`));
     }
 
     if (!entries.length) return <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>None</Typography>;
@@ -103,11 +103,13 @@ const ConsumerBadges = ({ map, sessionId }) => {
                     ));
                 }
                 // For simple consumers (recorders)
+                const suffix = sessionId && k.startsWith(`${sessionId}:`) ? k.slice(sessionId.length + 1) : null;
+                const label = suffix ? `${v || 'Active'} (${suffix})` : (v || 'Active');
                 return (
                     <Chip
                         key={k}
                         size="small"
-                        label={v || 'Active'}
+                        label={label}
                         sx={{ fontSize: '0.7rem', height: 22 }}
                     />
                 );
