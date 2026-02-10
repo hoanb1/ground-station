@@ -42,7 +42,6 @@ import {
     setShowGeostationarySatellites,
 } from './overview-slice.jsx';
 import NextPassesGroupIsland from "./satellite-passes.jsx";
-import WeatherDisplay from "./weather-card.jsx";
 import OverviewSatelliteInfoCard from "./satellite-info.jsx";
 import {setTrackingStateInBackend} from "../target/target-slice.jsx";
 import SatelliteMapContainer from './overview-map.jsx';
@@ -169,7 +168,6 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
         selectedRotator,
         selectedTransmitter
     } = useSelector(state => state.targetSatTrack);
-    const {location,} = useSelector((state) => state.location);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
@@ -424,9 +422,6 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
         <StyledIslandParentNoScrollbar key="passes">
             <NextPassesGroupIsland/>
         </StyledIslandParentNoScrollbar>,
-        // <StyledIslandParentNoScrollbar key="weather">
-        //     <WeatherDisplay latitude={location.lat} longitude={location.lon}/>
-        // </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="sat-info">
             <OverviewSatelliteInfoCard/>
         </StyledIslandParentNoScrollbar>,

@@ -27,7 +27,6 @@
     "notifications": "Notifications",
     "api_configuration": "Configuration API",
     "stadia_maps_api_key": "Clé API Stadia Maps",
-    "openweather_api_key": "Clé API OpenWeatherMap",
     "ground_station_configuration": "Configuration de la station au sol",
     "minimum_elevation": "Élévation minimale (degrés)",
     "save_preferences": "ENREGISTRER LES PRÉFÉRENCES",

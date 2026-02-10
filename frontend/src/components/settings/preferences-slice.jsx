@@ -80,11 +80,6 @@ const preferencesSlice = createSlice({
             },
             {
                 id: null,
-                name: 'openweather_api_key',
-                value: "",
-            },
-            {
-                id: null,
                 name: 'toast_position',
                 value: 'bottom-center',
             },

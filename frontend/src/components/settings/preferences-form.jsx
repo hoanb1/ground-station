@@ -348,32 +348,6 @@ const PreferencesForm = () => {
                         />
                     </Grid>
 
-                    {/* OpenWeatherMap API Key */}
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>{t('preferences.openweather_api_key')}</Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <TextField
-                            style={{fontFamily: 'monospace'}}
-                            fullWidth
-                            id="openweather-api-key"
-                            variant="outlined"
-                            type="text"
-                            size="small"
-                            disabled={isLoading}
-                            label={t('preferences.openweather_api_key')}
-                            value={getPreferenceValue('openweather_api_key')}
-                            onChange={handleChange('openweather_api_key')}
-                            sx={{
-                                marginTop: 1,
-                                marginBottom: 1,
-                                '& .MuiInputBase-root': {
-                                    backgroundColor: 'transparent'
-                                }
-                            }}
-                        />
-                    </Grid>
-
                     {/* Transcription Service */}
                     <Grid size={16} sx={{ mt: 2 }}>
                         <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 1 }}>

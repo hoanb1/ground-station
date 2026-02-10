@@ -58,7 +58,6 @@ async def fetch_all_preferences(session: AsyncSession) -> dict:
         "language": "en_US",
         "theme": "auto",
         "stadia_maps_api_key": "",
-        "openweather_api_key": "",
         "toast_position": "bottom-center",
         "gemini_api_key": "",  # Google Gemini API key for transcription
         "deepgram_api_key": "",  # Deepgram API key for transcription

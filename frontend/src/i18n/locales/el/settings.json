@@ -27,7 +27,6 @@
     "notifications": "Ειδοποιήσεις",
     "api_configuration": "Διαμόρφωση API",
     "stadia_maps_api_key": "Κλειδί API Stadia Maps",
-    "openweather_api_key": "Κλειδί API OpenWeatherMap",
     "ground_station_configuration": "Διαμόρφωση Σταθμού Εδάφους",
     "minimum_elevation": "Ελάχιστη Ανύψωση (μοίρες)",
     "save_preferences": "ΑΠΟΘΗΚΕΥΣΗ ΠΡΟΤΙΜΗΣΕΩΝ",

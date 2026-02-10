@@ -33,7 +33,6 @@ import preferencesReducer from '../settings/preferences-slice.jsx';
 import targetSatTrackReducer from '../target/target-slice.jsx'
 import overviewSatTrackReducer from '../overview/overview-slice.jsx';
 import dashboardReducer from '../dashboard/dashboard-slice.jsx';
-import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
 import waterfallReducer from '../waterfall/waterfall-slice.jsx';
 import vfoReducer from '../waterfall/vfo-marker/vfo-slice.jsx';
@@ -169,12 +168,6 @@ const dashboardPersistConfig = {
     whitelist: []
 };
 
-// Persist configuration for weather slice
-const weatherPersistConfig = {
-    key: 'weather',
-    storage,
-    whitelist: []
-};
 
 // Persist configuration for camera slice
 const cameraPersistConfig = {
@@ -268,7 +261,6 @@ const persistedPreferencesReducer = persistReducer(preferencesPersistConfig, pre
 const persistedTargetSatTrackReducer = persistReducer(targetSatTrackPersistConfig, targetSatTrackReducer);
 const persistedOverviewSatTrackReducer = persistReducer(overviewSatTrackPersistConfig, overviewSatTrackReducer);
 const persistedDashboardReducer = persistReducer(dashboardPersistConfig, dashboardReducer);
-const persistedWeatherReducer = persistReducer(weatherPersistConfig, weatherReducer);
 const persistedCameraReducer = persistReducer(cameraPersistConfig, cameraReducer);
 const persistedSdrReducer = persistReducer(sdrPersistConfig, sdrsReducer);
 const persistedVersionInfoReducer = persistReducer(versionInfoConfig, versionReducer);
@@ -297,7 +289,6 @@ export const store = configureStore({
         targetSatTrack: persistedTargetSatTrackReducer,
         overviewSatTrack: persistedOverviewSatTrackReducer,
         dashboard: persistedDashboardReducer,
-        weather: persistedWeatherReducer,
         cameras: persistedCameraReducer,
         sdrs: persistedSdrReducer,
         version: persistedVersionInfoReducer,
