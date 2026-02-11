@@ -5,6 +5,20 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Rig Configuration', () => {
+  const openRigDialog = async (page) => {
+    await page.getByRole('button', { name: /add/i }).click();
+    return page.getByRole('dialog');
+  };
+
+  const selectRigRowForDelete = async (page, rowLocator) => {
+    await expect(rowLocator).toBeVisible();
+    const checkbox = rowLocator.getByRole('checkbox');
+    await checkbox.scrollIntoViewIfNeeded();
+    await checkbox.check({ force: true });
+    await expect(checkbox).toBeChecked();
+    await expect(page.getByRole('button', { name: /^delete$/i })).toBeEnabled();
+  };
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/hardware/rig');
     await page.waitForLoadState('domcontentloaded');
@@ -40,9 +54,89 @@ test.describe('Rig Configuration', () => {
     const totalButtons = await buttons.count();
     expect(totalButtons).toBeGreaterThan(0);
   });
+
+  test('should allow adding, editing, and deleting a rig', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const rigName = `Rig ${Date.now()}`;
+    const updatedName = `${rigName} Updated`;
+
+    const addDialog = await openRigDialog(page);
+    await addDialog.getByLabel('Name').fill(rigName);
+    await addDialog.getByLabel('Host').fill('127.0.0.1');
+    await addDialog.getByLabel('Port').fill('4532');
+    await addDialog.getByRole('button', { name: /submit/i }).click();
+    await expect(addDialog).toBeHidden();
+
+    const row = page.locator('.MuiDataGrid-row').filter({ hasText: rigName });
+    await expect(row).toBeVisible();
+    await selectRigRowForDelete(page, row);
+    await page.getByRole('button', { name: /^edit$/i }).click();
+
+    const editDialog = page.getByRole('dialog');
+    await editDialog.getByLabel('Name').fill(updatedName);
+    await editDialog.getByRole('button', { name: /submit/i }).click();
+    await expect(editDialog).toBeHidden();
+
+    const updatedRow = page.locator('.MuiDataGrid-row').filter({ hasText: updatedName });
+    await expect(updatedRow).toBeVisible();
+
+    await selectRigRowForDelete(page, updatedRow);
+    await page.getByRole('button', { name: /^delete$/i }).click();
+    const deleteDialog = page.getByRole('dialog');
+    await deleteDialog.getByRole('button', { name: /^delete$/i }).click();
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: updatedName })).toHaveCount(0);
+  });
+
+  test('should allow deleting multiple rigs', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const rigNameA = `Rig A ${Date.now()}`;
+    const rigNameB = `Rig B ${Date.now()}`;
+
+    const addDialogA = await openRigDialog(page);
+    await addDialogA.getByLabel('Name').fill(rigNameA);
+    await addDialogA.getByLabel('Host').fill('127.0.0.1');
+    await addDialogA.getByLabel('Port').fill('4532');
+    await addDialogA.getByRole('button', { name: /submit/i }).click();
+    await expect(addDialogA).toBeHidden();
+
+    const addDialogB = await openRigDialog(page);
+    await addDialogB.getByLabel('Name').fill(rigNameB);
+    await addDialogB.getByLabel('Host').fill('127.0.0.1');
+    await addDialogB.getByLabel('Port').fill('4532');
+    await addDialogB.getByRole('button', { name: /submit/i }).click();
+    await expect(addDialogB).toBeHidden();
+
+    const rowA = page.locator('.MuiDataGrid-row').filter({ hasText: rigNameA });
+    const rowB = page.locator('.MuiDataGrid-row').filter({ hasText: rigNameB });
+    await rowA.getByRole('checkbox').check({ force: true });
+    await rowB.getByRole('checkbox').check({ force: true });
+    await expect(page.getByRole('button', { name: /^delete$/i })).toBeEnabled();
+
+    await page.getByRole('button', { name: /^delete$/i }).click();
+    const deleteDialog = page.getByRole('dialog');
+    await deleteDialog.getByRole('button', { name: /^delete$/i }).click();
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: rigNameA })).toHaveCount(0);
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: rigNameB })).toHaveCount(0);
+  });
 });
 
 test.describe('Rotator Configuration', () => {
+  const openRotatorDialog = async (page) => {
+    await page.getByRole('button', { name: /add/i }).click();
+    return page.getByRole('dialog');
+  };
+
+  const selectRotatorRowForDelete = async (page, rowLocator) => {
+    await expect(rowLocator).toBeVisible();
+    const checkbox = rowLocator.getByRole('checkbox');
+    await checkbox.scrollIntoViewIfNeeded();
+    await checkbox.check({ force: true });
+    await expect(checkbox).toBeChecked();
+    await expect(page.getByRole('button', { name: /^delete$/i })).toBeEnabled();
+  };
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/hardware/rotator');
     await page.waitForLoadState('domcontentloaded');
@@ -76,9 +170,116 @@ test.describe('Rotator Configuration', () => {
     const count = await azElText.count();
     expect(count).toBeGreaterThanOrEqual(0); // May or may not be visible depending on setup
   });
+
+  test('should allow adding, editing, and deleting a rotator', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const rotatorName = `Rotator ${Date.now()}`;
+    const updatedName = `${rotatorName} Updated`;
+
+    const addDialog = await openRotatorDialog(page);
+    await addDialog.getByLabel('Name').fill(rotatorName);
+    await addDialog.getByLabel('Host').fill('127.0.0.1');
+    await addDialog.getByLabel('Port').fill('4533');
+    await addDialog.locator('input[name="minaz"]').fill('0');
+    await addDialog.locator('input[name="maxaz"]').fill('360');
+    await addDialog.locator('input[name="minel"]').fill('0');
+    await addDialog.locator('input[name="maxel"]').fill('90');
+    await addDialog.getByRole('button', { name: /submit/i }).click();
+    await expect(addDialog).toBeHidden();
+
+    const row = page.locator('.MuiDataGrid-row').filter({ hasText: rotatorName });
+    await expect(row).toBeVisible();
+    await selectRotatorRowForDelete(page, row);
+    await page.getByRole('button', { name: /^edit$/i }).click();
+
+    const editDialog = page.getByRole('dialog');
+    await editDialog.getByLabel('Name').fill(updatedName);
+    await editDialog.getByRole('button', { name: /submit/i }).click();
+    await expect(editDialog).toBeHidden();
+
+    const updatedRow = page.locator('.MuiDataGrid-row').filter({ hasText: updatedName });
+    await expect(updatedRow).toBeVisible();
+
+    await selectRotatorRowForDelete(page, updatedRow);
+    await page.getByRole('button', { name: /^delete$/i }).click();
+    const deleteDialog = page.getByRole('dialog');
+    await deleteDialog.getByRole('button', { name: /^delete$/i }).click();
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: updatedName })).toHaveCount(0);
+  });
+
+  test('should allow deleting multiple rotators', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const rotatorNameA = `Rotator A ${Date.now()}`;
+    const rotatorNameB = `Rotator B ${Date.now()}`;
+
+    const addDialogA = await openRotatorDialog(page);
+    await addDialogA.getByLabel('Name').fill(rotatorNameA);
+    await addDialogA.getByLabel('Host').fill('127.0.0.1');
+    await addDialogA.getByLabel('Port').fill('4533');
+    await addDialogA.locator('input[name="minaz"]').fill('0');
+    await addDialogA.locator('input[name="maxaz"]').fill('360');
+    await addDialogA.locator('input[name="minel"]').fill('0');
+    await addDialogA.locator('input[name="maxel"]').fill('90');
+    await addDialogA.getByRole('button', { name: /submit/i }).click();
+    await expect(addDialogA).toBeHidden();
+
+    const addDialogB = await openRotatorDialog(page);
+    await addDialogB.getByLabel('Name').fill(rotatorNameB);
+    await addDialogB.getByLabel('Host').fill('127.0.0.1');
+    await addDialogB.getByLabel('Port').fill('4533');
+    await addDialogB.locator('input[name="minaz"]').fill('0');
+    await addDialogB.locator('input[name="maxaz"]').fill('360');
+    await addDialogB.locator('input[name="minel"]').fill('0');
+    await addDialogB.locator('input[name="maxel"]').fill('90');
+    await addDialogB.getByRole('button', { name: /submit/i }).click();
+    await expect(addDialogB).toBeHidden();
+
+    const rowA = page.locator('.MuiDataGrid-row').filter({ hasText: rotatorNameA });
+    const rowB = page.locator('.MuiDataGrid-row').filter({ hasText: rotatorNameB });
+    await rowA.getByRole('checkbox').check({ force: true });
+    await rowB.getByRole('checkbox').check({ force: true });
+    await expect(page.getByRole('button', { name: /^delete$/i })).toBeEnabled();
+
+    await page.getByRole('button', { name: /^delete$/i }).click();
+    const deleteDialog = page.getByRole('dialog');
+    await deleteDialog.getByRole('button', { name: /^delete$/i }).click();
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: rotatorNameA })).toHaveCount(0);
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: rotatorNameB })).toHaveCount(0);
+  });
 });
 
 test.describe('SDR Configuration', () => {
+  const openAddDialog = async (page) => {
+    await page.getByRole('button', { name: /add/i }).click();
+    return page.getByRole('dialog');
+  };
+
+  const selectRtlUsb = async (page, dialog, version = 'v4') => {
+    await dialog.getByLabel('SDR Type').click();
+    await page.getByRole('option', { name: 'RTL-SDR USB' }).click();
+    await dialog.getByRole('button', { name: version }).click();
+  };
+
+  const addBogusRtlUsb = async (page, { name, serial, version = 'v4' }) => {
+    const dialog = await openAddDialog(page);
+    await selectRtlUsb(page, dialog, version);
+    await dialog.getByLabel('Name').fill(name);
+    await dialog.getByLabel('Serial').fill(serial);
+    await dialog.getByRole('button', { name: /submit/i }).click();
+    await expect(dialog).toBeHidden();
+  };
+
+  const selectRowForDelete = async (page, rowLocator) => {
+    await expect(rowLocator).toBeVisible();
+    const checkbox = rowLocator.getByRole('checkbox');
+    await checkbox.scrollIntoViewIfNeeded();
+    await checkbox.check({ force: true });
+    await expect(checkbox).toBeChecked();
+    await expect(page.getByRole('button', { name: /^delete$/i })).toBeEnabled();
+  };
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/hardware/sdrs');
     await page.waitForLoadState('domcontentloaded');
@@ -111,6 +312,101 @@ test.describe('SDR Configuration', () => {
 
     // Should have control buttons
     expect(count).toBeGreaterThan(0);
+  });
+
+  test('should allow adding a bogus RTL-SDR and deleting it', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const bogusName = `Bogus RTL-SDR ${Date.now()}`;
+
+    await addBogusRtlUsb(page, { name: bogusName, serial: 'BOGUS123' });
+
+    const row = page.locator('.MuiDataGrid-row').filter({ hasText: bogusName });
+    await expect(row).toBeVisible();
+
+    await row.getByRole('checkbox').click();
+    await page.getByRole('button', { name: /^delete$/i }).click();
+
+    const deleteDialog = page.getByRole('dialog');
+    await deleteDialog.getByRole('button', { name: /^delete$/i }).click();
+
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: bogusName })).toHaveCount(0);
+  });
+
+  test('should validate required RTL-SDR USB fields', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const dialog = await openAddDialog(page);
+    await selectRtlUsb(page, dialog, 'v4');
+
+    await dialog.getByLabel('Name').fill('');
+    await dialog.getByLabel('Serial').fill('');
+
+    await expect(dialog.getByRole('button', { name: /submit/i })).toBeDisabled();
+  });
+
+  test('should validate required RTL-SDR TCP fields', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const dialog = await openAddDialog(page);
+    await dialog.getByLabel('SDR Type').click();
+    await page.getByRole('option', { name: 'RTL-SDR TCP' }).click();
+    await dialog.getByRole('button', { name: 'v4' }).click();
+
+    await dialog.getByLabel('Name').fill('Bogus RTL TCP');
+    await dialog.getByLabel('Host').fill('');
+    await dialog.getByLabel('Port').fill('');
+
+    await expect(dialog.getByRole('button', { name: /submit/i })).toBeDisabled();
+  });
+
+  test('should allow editing an SDR', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const initialName = `Bogus RTL-SDR ${Date.now()}`;
+    const updatedName = `${initialName} Updated`;
+
+    await addBogusRtlUsb(page, { name: initialName, serial: 'BOGUS234' });
+
+    const row = page.locator('.MuiDataGrid-row').filter({ hasText: initialName });
+    await row.getByRole('checkbox').click();
+    await page.getByRole('button', { name: /^edit$/i }).click();
+
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Name').fill(updatedName);
+    await dialog.getByRole('button', { name: /submit/i }).click();
+    await expect(dialog).toBeHidden();
+
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: updatedName })).toHaveCount(1);
+
+    const updatedRow = page.locator('.MuiDataGrid-row').filter({ hasText: updatedName });
+    await selectRowForDelete(page, updatedRow);
+    await page.getByRole('button', { name: /^delete$/i }).click();
+    const deleteDialog = page.getByRole('dialog');
+    await deleteDialog.getByRole('button', { name: /^delete$/i }).click();
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: updatedName })).toHaveCount(0);
+  });
+
+  test('should delete multiple SDRs', async ({ page }) => {
+    await page.waitForTimeout(2000);
+
+    const nameA = `Bogus RTL-SDR A ${Date.now()}`;
+    const nameB = `Bogus RTL-SDR B ${Date.now()}`;
+
+    await addBogusRtlUsb(page, { name: nameA, serial: 'BOGUS345' });
+    await addBogusRtlUsb(page, { name: nameB, serial: 'BOGUS346' });
+
+    const rowA = page.locator('.MuiDataGrid-row').filter({ hasText: nameA });
+    const rowB = page.locator('.MuiDataGrid-row').filter({ hasText: nameB });
+    await rowA.getByRole('checkbox').click();
+    await rowB.getByRole('checkbox').click();
+
+    await page.getByRole('button', { name: /^delete$/i }).click();
+    const deleteDialog = page.getByRole('dialog');
+    await deleteDialog.getByRole('button', { name: /^delete$/i }).click();
+
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: nameA })).toHaveCount(0);
+    await expect(page.locator('.MuiDataGrid-row').filter({ hasText: nameB })).toHaveCount(0);
   });
 });
 
