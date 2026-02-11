@@ -25,14 +25,40 @@ from common.constants import DictKeys, QueueMessageTypes, SocketEvents
 from common.sdrconfig import SDRConfig
 from fft.processor import fft_processor_process
 from handlers.entities.filebrowser import emit_file_browser_state
-from processing.iqbroadcaster import IQBroadcaster
-from processing.utils import create_named_worker_process
+from pipeline.streaming.iqbroadcaster import IQBroadcaster
 from vfos.state import VFOManager
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.sigmfplaybackworker import sigmf_playback_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
 from workers.soapysdrremoteworker import soapysdr_remote_worker_process
 from workers.uhdworker import uhd_worker_process
+
+# Add setproctitle import for process naming
+try:
+    import setproctitle
+
+    _HAS_SETPROCTITLE = True
+except ImportError:
+    _HAS_SETPROCTITLE = False
+
+
+def _create_named_worker_process(worker_func, process_name, *args):
+    """
+    Wrap a worker function to name the process before it runs.
+    """
+
+    def named_worker(*args):
+        # Set the process title if available
+        if _HAS_SETPROCTITLE:
+            setproctitle.setproctitle(process_name)
+
+        # Set the multiprocessing process name
+        multiprocessing.current_process().name = process_name
+
+        # Call the actual worker function
+        worker_func(*args)
+
+    return named_worker
 
 
 class ProcessLifecycleManager:
@@ -338,7 +364,7 @@ class ProcessLifecycleManager:
                 raise Exception(f"Worker process {worker_process} for SDR id: {sdr_id} not found")
 
             # Create a named worker function
-            named_worker = create_named_worker_process(worker_process, process_name)
+            named_worker = _create_named_worker_process(worker_process, process_name)
 
             # Create and start the process with a descriptive name
             # Pass both IQ queues so SDR can broadcast to both consumers
@@ -356,7 +382,7 @@ class ProcessLifecycleManager:
 
             # Create and start FFT processor process
             fft_process_name = f"Ground Station - FFT-Processor-{sdr_id}"
-            fft_named_worker = create_named_worker_process(fft_processor_process, fft_process_name)
+            fft_named_worker = _create_named_worker_process(fft_processor_process, fft_process_name)
             fft_process = multiprocessing.Process(
                 target=fft_named_worker,
                 args=(iq_queue_fft, data_queue, stop_event, client_id),

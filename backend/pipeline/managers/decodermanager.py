@@ -21,9 +21,9 @@ import signal
 import threading
 import time
 
-from processing.decoderconfigservice import decoder_config_service
-from processing.decoderregistry import decoder_registry
-from processing.demodulatorregistry import demodulator_registry
+from pipeline.config.decoderconfigservice import decoder_config_service
+from pipeline.registries.decoderregistry import decoder_registry
+from pipeline.registries.demodulatorregistry import demodulator_registry
 
 
 class DecoderManager:
@@ -617,7 +617,7 @@ class DecoderManager:
 
                 if should_stop_demod:
                     # Get demodulator type name from the instance class
-                    from processing.demodulatorregistry import demodulator_registry
+                    from pipeline.registries.demodulatorregistry import demodulator_registry
 
                     demod_class_name = type(vfo_demod).__name__
                     demod_type = "UNKNOWN"

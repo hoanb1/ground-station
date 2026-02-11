@@ -17,7 +17,7 @@ Commands (data_request):
 
 from typing import Any, Dict, Optional
 
-from processing.processmanager import process_manager
+from pipeline.orchestration.processmanager import process_manager
 from session.service import session_service
 from session.tracker import session_tracker
 

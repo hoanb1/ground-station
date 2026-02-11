@@ -21,12 +21,12 @@ from typing import Any, Dict, List, Optional
 
 from common.constants import SocketEvents
 from monitoring.performancemonitor import PerformanceMonitor
-from processing.audiorecordermanager import AudioRecorderManager
-from processing.decodermanager import DecoderManager
-from processing.demodulatormanager import DemodulatorManager
-from processing.processlifecycle import ProcessLifecycleManager
-from processing.recordermanager import RecorderManager
-from processing.transcriptionmanager import TranscriptionManager
+from pipeline.managers.audiorecordermanager import AudioRecorderManager
+from pipeline.managers.decodermanager import DecoderManager
+from pipeline.managers.demodulatormanager import DemodulatorManager
+from pipeline.managers.recordermanager import RecorderManager
+from pipeline.managers.transcriptionmanager import TranscriptionManager
+from pipeline.orchestration.processlifecycle import ProcessLifecycleManager
 from server import shutdown
 
 

@@ -18,7 +18,7 @@ try:
 except ImportError:
     HAS_SETPROCTITLE = False
 
-from processing.waterfallgenerator import WaterfallConfig, WaterfallGenerator
+from fft.waterfallgenerator import WaterfallConfig, WaterfallGenerator
 
 logger = logging.getLogger("waterfall-task")
 

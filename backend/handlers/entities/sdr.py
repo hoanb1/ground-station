@@ -25,7 +25,7 @@ from demodulators.fmdemodulator import FMDemodulator
 from demodulators.fmstereodemodulator import FMStereoDemodulator
 from demodulators.ssbdemodulator import SSBDemodulator
 from handlers.entities.filebrowser import emit_file_browser_state
-from processing.processmanager import process_manager
+from pipeline.orchestration.processmanager import process_manager
 from server.audiorecorder import start_audio_recording, stop_audio_recording
 from server.recorder import start_recording, stop_recording
 from server.snapshots import save_waterfall_snapshot

@@ -19,7 +19,7 @@ import os
 from datetime import datetime
 
 from demodulators.audiorecorder import AudioRecorder
-from processing.processmanager import process_manager
+from pipeline.orchestration.processmanager import process_manager
 
 logger = logging.getLogger("audio-recorder-api")
 

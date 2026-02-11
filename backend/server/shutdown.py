@@ -7,7 +7,7 @@ from audio.audiobroadcaster import AudioBroadcaster
 from audio.audiostreamer import WebAudioStreamer
 from common.logger import logger
 from observations.events import observation_sync
-from processing.utils import active_sdr_clients
+from session.service import active_sdr_clients
 
 # Globals used by audio threads
 audio_consumer: Optional[WebAudioStreamer] = None
@@ -104,7 +104,7 @@ def cleanup_everything():
 
     # Stop all transcription consumers (per-VFO)
     try:
-        from processing.processmanager import process_manager
+        from pipeline.orchestration.processmanager import process_manager
 
         if process_manager and process_manager.transcription_manager:
             # Stop all transcription consumers across all SDRs and sessions

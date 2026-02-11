@@ -17,7 +17,7 @@
 import asyncio
 import logging
 
-from processing.consumerbase import ConsumerManager
+from pipeline.managers.consumerbase import ConsumerManager
 
 
 class AudioRecorderManager(ConsumerManager):

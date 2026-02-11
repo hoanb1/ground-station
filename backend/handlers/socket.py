@@ -29,7 +29,7 @@ from handlers.entities.databasebackup import (
 from handlers.entities.filebrowser import filebrowser_request_routing
 from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry
-from processing.processmanager import process_manager
+from pipeline.orchestration.processmanager import process_manager
 from server.shutdown import cleanup_everything
 from session.service import session_service
 from session.tracker import session_tracker

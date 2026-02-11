@@ -23,7 +23,7 @@ from sqlalchemy import select
 from common.logger import logger
 from db import AsyncSessionLocal
 from db.models import Satellites, Transmitters
-from processing.decoderregistry import decoder_registry
+from pipeline.registries.decoderregistry import decoder_registry
 from vfos.state import VFOManager
 
 

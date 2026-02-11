@@ -8,14 +8,64 @@ active_sdr_clients as the backing store for configuration.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, cast
 
-from processing.utils import active_sdr_clients, add_sdr_session
-from processing.utils import cleanup_sdr_session as utils_cleanup_sdr_session
-from processing.utils import get_process_manager, get_sdr_session
-from server import shutdown
-from session.tracker import session_tracker
 from vfos.state import VFOManager
+
+logger = logging.getLogger("session-service")
+
+# Store active SDR clients and client sessions, keyed by client ID and session ID, respectively.
+active_sdr_clients: Dict[str, Dict[str, Any]] = {}
+
+
+def add_sdr_session(sid: str, sdr_config: Dict) -> Dict[str, Any]:
+    """
+    Add a new SDR session configuration to the active sessions dictionary.
+    """
+    active_sdr_clients[sid] = sdr_config
+    return active_sdr_clients[sid]
+
+
+def get_sdr_session(sid: str) -> Optional[Dict]:
+    """
+    Return the SDR session configuration for a given session ID.
+    """
+    return active_sdr_clients.get(sid)
+
+
+async def cleanup_sdr_session(sid: str) -> None:
+    """Clean up and release resources associated with an SDR client session."""
+    if sid in active_sdr_clients:
+        client = get_sdr_session(sid)
+        sdr_id = client.get("sdr_id") if client else None
+
+        if sdr_id:
+            from pipeline.orchestration.processmanager import process_manager
+
+            await process_manager.stop_sdr_process(sdr_id, sid)
+
+            if process_manager.transcription_manager:
+                process_manager.transcription_manager.stop_all_for_session(sid)
+                logger.info("Stopped all transcription consumers for session %s", sid)
+
+        del active_sdr_clients[sid]
+
+    else:
+        logger.debug(
+            "Client %s not found in active clients during cleanup. "
+            "This is normal for sessions that never started streaming.",
+            sid,
+        )
+
+        from pipeline.orchestration.processmanager import process_manager
+
+        if process_manager.transcription_manager:
+            process_manager.transcription_manager.stop_all_for_session(sid)
+
+    from session.tracker import session_tracker
+
+    session_tracker.clear_session(sid)
 
 
 class SessionService:
@@ -50,6 +100,8 @@ class SessionService:
         # Update tracker relationship (session -> sdr)
         sdr_id = sdr_config.get("sdr_id")
         if sdr_id:
+            from session.tracker import session_tracker
+
             session_tracker.register_session_streaming(session_id, sdr_id)
 
     async def start_streaming(self, session_id: str, sdr_device: Dict[str, Any]) -> Optional[str]:
@@ -58,11 +110,16 @@ class SessionService:
         if not cfg:
             return None
         sdr_id = cfg.get("sdr_id")
-        pm = get_process_manager()
+        from pipeline.orchestration.processmanager import process_manager
+
         # ProcessManager API may be untyped; cast result to Optional[str]
-        started_id = cast(Optional[str], await pm.start_sdr_process(sdr_device, cfg, session_id))
+        started_id = cast(
+            Optional[str], await process_manager.start_sdr_process(sdr_device, cfg, session_id)
+        )
         # Ensure tracker binding is set
         if sdr_id:
+            from session.tracker import session_tracker
+
             session_tracker.register_session_streaming(session_id, sdr_id)
         return started_id
 
@@ -72,13 +129,18 @@ class SessionService:
             cfg = self.get_session_config(session_id)
             sdr_id = cfg.get("sdr_id") if cfg else None
         if sdr_id:
-            pm = get_process_manager()
-            await pm.stop_sdr_process(sdr_id, session_id)
+            from pipeline.orchestration.processmanager import process_manager
+
+            await process_manager.stop_sdr_process(sdr_id, session_id)
             # Unregister streaming relationship from tracker, but keep the session alive
+            from session.tracker import session_tracker
+
             session_tracker.unregister_session_streaming(session_id)
 
     async def select_vfo(self, session_id: str, vfo_number: Optional[int]) -> None:
         """Update the selected VFO in SessionTracker (normalized Optional[int])."""
+        from session.tracker import session_tracker
+
         session_tracker.set_session_vfo_int(session_id, vfo_number)
 
     async def cleanup_session(self, session_id: str) -> None:
@@ -91,6 +153,8 @@ class SessionService:
         """
         # Clean up WebAudioStreamer session stats
         try:
+            from server import shutdown
+
             if shutdown.audio_consumer:
                 shutdown.audio_consumer.cleanup_session(session_id)
         except Exception as e:
@@ -101,13 +165,15 @@ class SessionService:
             logger.warning(f"Failed to cleanup WebAudioStreamer for session {session_id}: {e}")
 
         # Delegate to existing idempotent cleanup function which also clears tracker
-        await utils_cleanup_sdr_session(session_id)
+        await cleanup_sdr_session(session_id)
 
     # -------------------- Read-only views --------------------
     def get_runtime_snapshot(self) -> Dict[str, dict]:
-        pm = get_process_manager()
+        from pipeline.orchestration.processmanager import process_manager
+        from session.tracker import session_tracker
+
         # Tracker returns a mapping structure; cast to declared type for mypy
-        return cast(Dict[str, dict], session_tracker.get_runtime_snapshot(pm))
+        return cast(Dict[str, dict], session_tracker.get_runtime_snapshot(process_manager))
 
     # -------------------- Internal observation support --------------------
     async def register_internal_observation(
@@ -137,6 +203,8 @@ class SessionService:
         session_id = VFOManager.make_internal_session_id(observation_id, session_key)
 
         # Register in tracker
+        from session.tracker import session_tracker
+
         session_tracker.register_internal_session(
             observation_id, sdr_config["sdr_id"], vfo_number, metadata, session_key=session_key
         )
@@ -166,6 +234,8 @@ class SessionService:
         await self.cleanup_session(session_id)
 
         # Unregister from internal session set
+        from session.tracker import session_tracker
+
         session_tracker.unregister_internal_session(observation_id, session_key=session_key)
 
 

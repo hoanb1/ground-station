@@ -326,7 +326,7 @@ class SessionTracker:
         Returns:
             SDR configuration dict or None if session not found
         """
-        from processing.utils import get_sdr_session
+        from session.service import get_sdr_session
 
         return cast(Dict[str, Any] | None, get_sdr_session(session_id))
 
@@ -343,7 +343,7 @@ class SessionTracker:
                 "end_freq": float      # bandwidth end in Hz
             }
         """
-        from processing.utils import active_sdr_clients
+        from session.service import active_sdr_clients
 
         sdrs: Dict[str, Dict[str, Any]] = {}
         for session_id, config in active_sdr_clients.items():

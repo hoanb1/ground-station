@@ -27,7 +27,7 @@ from observations.events import emit_scheduled_observations_changed as _emit
 from observations.events import set_socketio_instance
 from observations.executor import ObservationExecutor
 from observations.sync import ObservationSchedulerSync
-from processing.processmanager import process_manager
+from pipeline.orchestration.processmanager import process_manager
 from server import shutdown
 from server.firsttime import first_time_initialization, run_initial_sync
 from server.scheduler import run_initial_observation_generation, start_scheduler, stop_scheduler

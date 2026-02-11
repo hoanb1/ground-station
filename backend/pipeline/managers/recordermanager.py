@@ -18,8 +18,8 @@ import asyncio
 import logging
 from pathlib import Path
 
-from processing.consumerbase import ConsumerManager
-from processing.waterfallgenerator import WaterfallConfig, WaterfallGenerator
+from fft.waterfallgenerator import WaterfallConfig, WaterfallGenerator
+from pipeline.managers.consumerbase import ConsumerManager
 
 
 class RecorderManager(ConsumerManager):

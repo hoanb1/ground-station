@@ -22,7 +22,7 @@ from datetime import datetime
 from typing import Optional
 
 from demodulators.iqrecorder import IQRecorder
-from processing.processmanager import process_manager
+from pipeline.orchestration.processmanager import process_manager
 
 logger = logging.getLogger("recorder")
 

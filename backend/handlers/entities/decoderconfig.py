@@ -17,7 +17,7 @@
 
 from typing import Any, Dict, Optional, Union
 
-from processing.decoderconfigservice import decoder_config_service
+from pipeline.config.decoderconfigservice import decoder_config_service
 
 
 async def get_decoder_config(

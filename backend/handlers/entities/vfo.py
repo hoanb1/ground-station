@@ -23,12 +23,11 @@ from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
 from db.models import Satellites, Transmitters
 from handlers.entities.sdr import handle_vfo_demodulator_state
-from processing.decoderconfigservice import decoder_config_service
-from processing.decoderregistry import decoder_registry
-from processing.processmanager import process_manager
-from processing.utils import get_process_manager, get_sdr_session
+from pipeline.config.decoderconfigservice import decoder_config_service
+from pipeline.orchestration.processmanager import process_manager
+from pipeline.registries.decoderregistry import decoder_registry
 from server.startup import audio_queue
-from session.service import session_service
+from session.service import get_sdr_session, session_service
 from session.tracker import session_tracker
 from vfos.state import VFOManager
 
@@ -358,7 +357,6 @@ async def toggle_transcription(
         )
 
         # Get process manager and transcription manager
-        process_manager = get_process_manager()
         transcription_manager = process_manager.transcription_manager
 
         if not transcription_manager:
@@ -461,7 +459,6 @@ async def toggle_transcription(
         # Disabling transcription - stop worker if it exists
         logger.info(f"Stopping transcription for VFO {vfo_number}")
 
-        process_manager = get_process_manager()
         transcription_manager = process_manager.transcription_manager
 
         if transcription_manager:

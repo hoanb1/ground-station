@@ -17,7 +17,7 @@
 import logging
 from typing import Dict, Optional
 
-from processing.decoderconfig import DecoderConfig
+from pipeline.config.decoderconfig import DecoderConfig
 from satconfig.config import SatelliteConfigService
 
 logger = logging.getLogger("decoderconfigservice")

@@ -10,7 +10,7 @@ import asyncio
 from typing import Set
 
 from common.logger import logger
-from processing.processmanager import process_manager
+from pipeline.orchestration.processmanager import process_manager
 from session.service import session_service
 from session.tracker import session_tracker
 
