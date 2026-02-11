@@ -15,9 +15,15 @@ test.describe('Accessibility - Keyboard Navigation', () => {
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
 
-    // Check that focus is on some element
-    const focusedElement = await page.locator(':focus');
-    await expect(focusedElement).toBeVisible();
+    // Check that focus moved to a visible element
+    const isFocusedVisible = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return false;
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+    });
+    expect(isFocusedVisible).toBe(true);
   });
 
   test('should allow Enter key to activate navigation links', async ({ page }) => {

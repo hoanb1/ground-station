@@ -4,12 +4,35 @@
 
 import { test, expect } from '@playwright/test';
 
+const ensureLocationIsSet = async (page) => {
+  await page.goto('/settings/location');
+  await page.waitForLoadState('domcontentloaded');
+  const saveButton = page.getByRole('button', { name: /save location/i });
+  await saveButton.waitFor({ state: 'visible' });
+  await saveButton.click();
+  await page.waitForTimeout(1000);
+};
+
+const openAddDialogWithLocationFallback = async (page) => {
+  const currentUrl = page.url();
+  const getAddButton = () => page.locator('button', { hasText: /add|new|create/i }).first();
+
+  try {
+    await getAddButton().waitFor({ state: 'visible', timeout: 5000 });
+  } catch {
+    await ensureLocationIsSet(page);
+    await page.goto(currentUrl);
+    await page.waitForLoadState('domcontentloaded');
+    await getAddButton().waitFor({ state: 'visible' });
+  }
+
+  await getAddButton().click();
+  return page.getByRole('dialog');
+};
+
 test.describe('Rig Configuration', () => {
   const openRigDialog = async (page) => {
-    const addButton = page.locator('button', { hasText: /add|new|create/i }).first();
-    await addButton.waitFor({ state: 'visible' });
-    await addButton.click();
-    return page.getByRole('dialog');
+    return openAddDialogWithLocationFallback(page);
   };
 
   const selectRigRowForDelete = async (page, rowLocator) => {
@@ -126,10 +149,7 @@ test.describe('Rig Configuration', () => {
 
 test.describe('Rotator Configuration', () => {
   const openRotatorDialog = async (page) => {
-    const addButton = page.locator('button', { hasText: /add|new|create/i }).first();
-    await addButton.waitFor({ state: 'visible' });
-    await addButton.click();
-    return page.getByRole('dialog');
+    return openAddDialogWithLocationFallback(page);
   };
 
   const selectRotatorRowForDelete = async (page, rowLocator) => {
@@ -256,10 +276,7 @@ test.describe('Rotator Configuration', () => {
 
 test.describe('SDR Configuration', () => {
   const openAddDialog = async (page) => {
-    const addButton = page.locator('button', { hasText: /add|new|create/i }).first();
-    await addButton.waitFor({ state: 'visible' });
-    await addButton.click();
-    return page.getByRole('dialog');
+    return openAddDialogWithLocationFallback(page);
   };
 
   const selectRtlUsb = async (page, dialog, version = 'v4') => {
