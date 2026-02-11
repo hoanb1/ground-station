@@ -6,7 +6,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Rig Configuration', () => {
   const openRigDialog = async (page) => {
-    await page.getByRole('button', { name: /add/i }).click();
+    const addButton = page.locator('button', { hasText: /add|new|create/i }).first();
+    await addButton.waitFor({ state: 'visible' });
+    await addButton.click();
     return page.getByRole('dialog');
   };
 
@@ -124,7 +126,9 @@ test.describe('Rig Configuration', () => {
 
 test.describe('Rotator Configuration', () => {
   const openRotatorDialog = async (page) => {
-    await page.getByRole('button', { name: /add/i }).click();
+    const addButton = page.locator('button', { hasText: /add|new|create/i }).first();
+    await addButton.waitFor({ state: 'visible' });
+    await addButton.click();
     return page.getByRole('dialog');
   };
 
@@ -252,7 +256,9 @@ test.describe('Rotator Configuration', () => {
 
 test.describe('SDR Configuration', () => {
   const openAddDialog = async (page) => {
-    await page.getByRole('button', { name: /add/i }).click();
+    const addButton = page.locator('button', { hasText: /add|new|create/i }).first();
+    await addButton.waitFor({ state: 'visible' });
+    await addButton.click();
     return page.getByRole('dialog');
   };
 
