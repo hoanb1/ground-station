@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import multiprocessing
+import sys
 from typing import Any, Dict, Optional, Union
 
 from crud import hardware
@@ -176,7 +177,7 @@ async def get_local_soapy_sdr_devices():
         logger.info("Probing local SoapySDR devices...")
         # Call probe_available_usb_sdrs using a subprocess instead of multiprocessing.Pool
         probe_process = await asyncio.create_subprocess_exec(
-            "python3",
+            sys.executable,
             "-c",
             "from hardware.soapyenum import probe_available_usb_sdrs;"
             "import json; print(probe_available_usb_sdrs())",
@@ -210,6 +211,55 @@ async def get_local_soapy_sdr_devices():
         reply["error"] = str(e)
 
     logger.info("Done probing local SoapySDR devices")
+    return reply
+
+
+async def get_local_rtl_sdr_devices():
+    """Retrieve a list of local RTL-SDR devices"""
+
+    reply: Dict[str, Union[bool, dict, list, str, None]] = {
+        "success": None,
+        "data": None,
+        "error": None,
+    }
+
+    try:
+        logger.info("Probing local RTL-SDR devices...")
+        probe_process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-c",
+            "from hardware.rtlsdrenum import probe_available_rtl_sdrs;"
+            "import json; print(probe_available_rtl_sdrs())",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(probe_process.communicate(), timeout=35)
+            result = json.loads(stdout.decode().strip())
+
+            if result["success"]:
+                result = result["data"]
+            else:
+                raise Exception("Error enumerating local RTL-SDR devices")
+
+            reply["success"] = True
+            reply["data"] = result
+            logger.info("Detected %d RTL-SDR device(s)", len(result))
+
+        except asyncio.TimeoutError:
+            probe_process.kill()
+            logger.error("Process timed out while probing RTL-SDR devices")
+            reply["success"] = False
+            reply["error"] = "Operation timed out after 5 seconds"
+
+    except Exception as e:
+        logger.error(f"Error probing RTL-SDR devices: {str(e)}")
+        logger.exception(e)
+        reply["success"] = False
+        reply["error"] = str(e)
+
+    logger.info("Done probing local RTL-SDR devices")
     return reply
 
 

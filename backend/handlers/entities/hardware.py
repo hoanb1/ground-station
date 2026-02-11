@@ -20,7 +20,7 @@ from typing import Any, Dict, Optional, Union
 import crud
 from db import AsyncSessionLocal
 from hardware.soapysdrbrowser import discovered_servers
-from processing.utils import get_local_soapy_sdr_devices
+from processing.utils import get_local_rtl_sdr_devices, get_local_soapy_sdr_devices
 from processing.utils import get_sdr_parameters as fetch_sdr_parameters_util
 from tracker.runner import get_tracker_manager
 
@@ -373,6 +373,19 @@ async def get_local_soapy_sdr_devices_handler(
     }
 
 
+async def get_local_rtl_sdr_devices_handler(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, list, str]]:
+    """Get local RTL-SDR devices."""
+    logger.debug("Getting local RTL-SDR devices")
+    devices = await get_local_rtl_sdr_devices()
+    return {
+        "success": devices["success"],
+        "data": devices["data"],
+        "error": devices["error"],
+    }
+
+
 def register_handlers(registry):
     """Register hardware handlers with the command registry."""
     registry.register_batch(
@@ -401,5 +414,6 @@ def register_handlers(registry):
             "get-soapy-servers": (get_soapy_servers, "data_request"),
             "get-sdr-parameters": (get_sdr_parameters, "data_request"),
             "get-local-soapy-sdr-devices": (get_local_soapy_sdr_devices_handler, "data_request"),
+            "get-local-rtl-sdr-devices": (get_local_rtl_sdr_devices_handler, "data_request"),
         }
     )

@@ -31,6 +31,8 @@ import {
     InputLabel,
     MenuItem,
     Select,
+    ToggleButton,
+    ToggleButtonGroup,
     TextField,
     Typography
 } from "@mui/material";
@@ -55,6 +57,7 @@ import {
     setSelectedSdrDevice,
     fetchLocalSoapySDRDevices,
     startSoapySDRDiscovery,
+    fetchLocalRtlSdrDevices,
 } from './sdr-slice.jsx';
 import Paper from "@mui/material/Paper";
 
@@ -140,13 +143,31 @@ const sdrTypeFields = {
     }
 };
 
+const rtlUsbTypes = new Set(['rtlsdrusbv3', 'rtlsdrusbv4']);
+const rtlTcpTypes = new Set(['rtlsdrtcpv3', 'rtlsdrtcpv4']);
+
+const getRtlGroup = (type) => {
+    if (rtlUsbTypes.has(type)) return 'usb';
+    if (rtlTcpTypes.has(type)) return 'tcp';
+    return null;
+};
+
+const getMergedRtlValue = (type) => {
+    const group = getRtlGroup(type);
+    return group ? `rtlsdr${group}` : type;
+};
+
+const isMergedRtlValue = (value) => value === 'rtlsdrusb' || value === 'rtlsdrtcp';
+
 
 export default function SDRsPage() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const [selected, setSelected] = useState([]);
     const [pageSize, setPageSize] = useState(10);
+    const [selectedRtlDevice, setSelectedRtlDevice] = useState('');
     const hasInitialized = useRef(false);
+    const rtlProbeRequested = useRef(false);
     const { t } = useTranslation('hardware');
 
     const {
@@ -161,8 +182,11 @@ export default function SDRsPage() {
         selectedSdrDevice,
         localSoapyDevices,
         loadingLocalSDRs,
+        localRtlDevices,
+        loadingLocalRtlSDRs,
     } = useSelector((state) => state.sdrs);
     const isEditing = Boolean(formValues.id);
+    const isDialogLoading = loading || loadingLocalSDRs || loadingLocalRtlSDRs;
 
     useEffect(() => {
         if (!hasInitialized.current) {
@@ -172,12 +196,53 @@ export default function SDRsPage() {
         }
     }, [dispatch, socket]);
 
+    useEffect(() => {
+        if (openAddDialog) {
+            setSelectedRtlDevice('');
+        } else {
+            rtlProbeRequested.current = false;
+        }
+    }, [openAddDialog]);
+
+    useEffect(() => {
+        const isRtlUsb = rtlUsbTypes.has(formValues.type);
+        if (openAddDialog && isRtlUsb && !loadingLocalRtlSDRs && !rtlProbeRequested.current) {
+            rtlProbeRequested.current = true;
+            dispatch(fetchLocalRtlSdrDevices({ socket }));
+        }
+    }, [dispatch, formValues.type, loadingLocalRtlSDRs, openAddDialog, socket]);
+
+    const getTypeLabel = (type) => {
+        if (rtlUsbTypes.has(type)) return t('sdr.rtlsdr_usb', 'RTL-SDR USB');
+        if (rtlTcpTypes.has(type)) return t('sdr.rtlsdr_tcp', 'RTL-SDR TCP');
+
+        switch (type) {
+            case 'soapysdrremote':
+                return t('sdr.soapysdr_remote');
+            case 'soapysdrlocal':
+                return t('sdr.soapysdr_usb');
+            case 'uhd':
+                return t('sdr.uhd');
+            default:
+                return type || '-';
+        }
+    };
+
     const columns = [
         {
             field: 'name', headerName: t('sdr.name'), flex: 1, minWidth: 150
         },
         {
-            field: 'type', headerName: t('sdr.type'), flex: 1, minWidth: 100
+            field: 'type',
+            headerName: t('sdr.type'),
+            flex: 1,
+            minWidth: 100,
+            renderCell: (params) => {
+                if (!params.row) {
+                    return "-";
+                }
+                return getTypeLabel(params.row.type);
+            }
         },
         {
             field: 'host', headerName: t('sdr.host'), flex: 1, minWidth: 150
@@ -233,6 +298,7 @@ export default function SDRsPage() {
             // Normal field update
             dispatch(setFormValues({...formValues, [name]: value}));
         }
+
     };
 
     const handleSubmit = () => {
@@ -325,6 +391,11 @@ export default function SDRsPage() {
 
     const renderFormFields = () => {
         const selectedType = formValues.type || '';
+        const mergedRtlValue = getMergedRtlValue(selectedType);
+        const typeSelectValue = mergedRtlValue;
+        const rtlGroup = getRtlGroup(selectedType);
+        const showRtlVersion = Boolean(rtlGroup) || isMergedRtlValue(typeSelectValue);
+        const rtlVersion = selectedType.endsWith('v3') ? 'v3' : 'v4';
 
         // Define common fields that all SDR types have
         const fields = [
@@ -335,16 +406,20 @@ export default function SDRsPage() {
                     labelId="sdr-type-label"
                     label={t('sdr.sdr_type')}
                     size="small"
-                    value={formValues.type || ''}
+                    value={typeSelectValue || ''}
                     onChange={(e) => {
-                        handleChange({target: {name: "type", value: e.target.value}});
+                        const nextValue = e.target.value;
+                        if (isMergedRtlValue(nextValue)) {
+                            const mappedType = nextValue === 'rtlsdrusb' ? 'rtlsdrusbv4' : 'rtlsdrtcpv4';
+                            handleChange({target: {name: "type", value: mappedType}});
+                        } else {
+                            handleChange({target: {name: "type", value: nextValue}});
+                        }
                         dispatch(setSelectedSdrDevice('')); // Reset selected SDR when type changes
                     }}
                 >
-                    <MenuItem value="rtlsdrusbv3">{t('sdr.rtlsdr_usb_v3')}</MenuItem>
-                    <MenuItem value="rtlsdrtcpv3">{t('sdr.rtlsdr_tcp_v3')}</MenuItem>
-                    <MenuItem value="rtlsdrusbv4">{t('sdr.rtlsdr_usb_v4')}</MenuItem>
-                    <MenuItem value="rtlsdrtcpv4">{t('sdr.rtlsdr_tcp_v4')}</MenuItem>
+                    <MenuItem key="rtlsdrusb" value="rtlsdrusb">{t('sdr.rtlsdr_usb', 'RTL-SDR USB')}</MenuItem>
+                    <MenuItem key="rtlsdrtcp" value="rtlsdrtcp">{t('sdr.rtlsdr_tcp', 'RTL-SDR TCP')}</MenuItem>
                     <MenuItem value="soapysdrremote">{t('sdr.soapysdr_remote')}</MenuItem>
                     <MenuItem value="soapysdrlocal">{t('sdr.soapysdr_usb')}</MenuItem>
                     <MenuItem value="uhd">{t('sdr.uhd')}</MenuItem>
@@ -352,9 +427,128 @@ export default function SDRsPage() {
             </FormControl>
         ];
 
+        if (showRtlVersion) {
+            fields.push(
+                <FormControl key="rtl-version-toggle" fullWidth size="small">
+                    <Typography variant="caption" sx={{ mb: 0.5, color: 'text.secondary' }}>
+                        {t('sdr.rtlsdr_version', 'RTL-SDR Version')}
+                    </Typography>
+                    <ToggleButtonGroup
+                        exclusive
+                        size="small"
+                        value={rtlVersion}
+                        onChange={(_, value) => {
+                            if (!value) return;
+                            const group = rtlGroup || (typeSelectValue === 'rtlsdrtcp' ? 'tcp' : 'usb');
+                            const mappedType = group === 'tcp'
+                                ? (value === 'v3' ? 'rtlsdrtcpv3' : 'rtlsdrtcpv4')
+                                : (value === 'v3' ? 'rtlsdrusbv3' : 'rtlsdrusbv4');
+                            handleChange({target: {name: "type", value: mappedType}});
+                        }}
+                    >
+                        <ToggleButton value="v3">v3</ToggleButton>
+                        <ToggleButton value="v4">v4</ToggleButton>
+                    </ToggleButtonGroup>
+                </FormControl>
+            );
+        }
+
         // If a valid SDR type is selected, add the corresponding fields
         if (selectedType && sdrTypeFields[selectedType]) {
             const config = sdrTypeFields[selectedType];
+
+            if (rtlUsbTypes.has(selectedType)) {
+                if (loadingLocalRtlSDRs) {
+                    fields.push(
+                        <Alert
+                            key="loading-rtl-devices"
+                            severity="info"
+                            sx={{
+                                mt: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                '& .MuiAlert-message': {
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    display: 'inline-block',
+                                    width: '16px',
+                                    height: '16px',
+                                    border: '2px solid #e3f2fd',
+                                    borderTop: '2px solid #1976d2',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite',
+                                    '@keyframes spin': {
+                                        '0%': { transform: 'rotate(0deg)' },
+                                        '100%': { transform: 'rotate(360deg)' }
+                                    }
+                                }}
+                            />
+                            <Typography variant="body2" component="span">
+                                {t('sdr.probing_rtl', 'Probing for local RTL-SDR devices...')}
+                            </Typography>
+                        </Alert>
+                    );
+                } else if (localRtlDevices && localRtlDevices.length > 0) {
+                    fields.push(
+                        <FormControl key="rtl-device-select" fullWidth size="small">
+                            <InputLabel id="rtl-device-label">{t('sdr.select_rtl_device', 'RTL-SDR Device')}</InputLabel>
+                            <Select
+                                labelId="rtl-device-label"
+                                label={t('sdr.select_rtl_device', 'RTL-SDR Device')}
+                                size="small"
+                                value={selectedRtlDevice}
+                                onChange={(e) => {
+                                    const selectedIndex = e.target.value;
+                                    setSelectedRtlDevice(selectedIndex);
+
+                                    if (selectedIndex !== '') {
+                                        const selectedDevice = localRtlDevices[selectedIndex];
+                                        if (selectedDevice) {
+                                            const newValues = {
+                                                ...formValues,
+                                                name: selectedDevice.label || 'RTL-SDR',
+                                                serial: selectedDevice.serial || ''
+                                            };
+                                            dispatch(setFormValues(newValues));
+                                        }
+                                    }
+                                }}
+                            >
+                                <MenuItem value="">{t('sdr.select_rtl_device', 'RTL-SDR Device')}</MenuItem>
+                                {localRtlDevices.map((device, index) => (
+                                    <MenuItem key={index} value={index}>
+                                        {device.label || `RTL-SDR ${index}`}
+                                        {device.serial ? ` :: ${device.serial}` : ''}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    );
+                    fields.push(
+                        <Button
+                            key="rtl-refresh-button"
+                            variant="outlined"
+                            size="small"
+                            onClick={() => dispatch(fetchLocalRtlSdrDevices({ socket }))}
+                            sx={{ alignSelf: 'flex-start' }}
+                        >
+                            {t('sdr.refresh_rtl_devices', 'Refresh RTL-SDR devices')}
+                        </Button>
+                    );
+                } else {
+                    fields.push(
+                        <Alert key="no-rtl-devices" severity="info" sx={{ mt: 1 }}>
+                            {t('sdr.no_rtl_devices', 'No local RTL-SDR devices detected. Please connect a device and refresh.')}
+                        </Alert>
+                    );
+                }
+            }
 
             // Add a dropdown to select local Soapy USB devices
             if (selectedType === 'soapysdrlocal') {
@@ -434,11 +628,33 @@ export default function SDRsPage() {
                             </Select>
                         </FormControl>
                     );
+                    fields.push(
+                        <Button
+                            key="soapy-refresh-button"
+                            variant="outlined"
+                            size="small"
+                            onClick={() => dispatch(fetchLocalSoapySDRDevices({ socket }))}
+                            sx={{ alignSelf: 'flex-start' }}
+                        >
+                            {t('sdr.refresh_soapy_devices', 'Refresh SoapySDR devices')}
+                        </Button>
+                    );
                 } else {
                     fields.push(
                         <Alert key="no-local-devices" severity="info" sx={{ mt: 1 }}>
                             No local SoapySDR devices detected. Please connect a device and refresh.
                         </Alert>
+                    );
+                    fields.push(
+                        <Button
+                            key="soapy-refresh-button"
+                            variant="outlined"
+                            size="small"
+                            onClick={() => dispatch(fetchLocalSoapySDRDevices({ socket }))}
+                            sx={{ alignSelf: 'flex-start' }}
+                        >
+                            {t('sdr.refresh_soapy_devices', 'Refresh SoapySDR devices')}
+                        </Button>
                     );
                 }
             }
@@ -623,14 +839,14 @@ export default function SDRsPage() {
                     <TextField
                         key="serial"
                         name="serial"
-                        label="Serial"
-                        fullWidth
-                        size="small"
-                        onChange={handleChange}
-                        value={getFieldValue('serial')}
-                        error={Boolean(validationErrors.serial)}
-                        required
-                    />
+                    label="Serial"
+                    fullWidth
+                    size="small"
+                    onChange={handleChange}
+                    value={getFieldValue('serial')}
+                    error={Boolean(validationErrors.serial)}
+                    required
+                />
                 );
             }
 
@@ -743,9 +959,20 @@ export default function SDRsPage() {
                                 {isEditing ? t('sdr.edit_dialog_title') : t('sdr.add_dialog_title')}
                             </DialogTitle>
                             <DialogContent sx={{ bgcolor: 'background.paper', px: 3, py: 3 }}>
-                                <Stack spacing={2} sx={{ mt: 3 }}>
-                                    {renderFormFields()}
-                                </Stack>
+                                <Box
+                                    component="fieldset"
+                                    disabled={isDialogLoading}
+                                    sx={{
+                                        border: 0,
+                                        padding: 0,
+                                        margin: 0,
+                                        minWidth: 0,
+                                    }}
+                                >
+                                    <Stack spacing={2} sx={{ mt: 3 }}>
+                                        {renderFormFields()}
+                                    </Stack>
+                                </Box>
                             </DialogContent>
                             <DialogActions
                                 sx={{
@@ -891,7 +1118,7 @@ export default function SDRsPage() {
                                                         Type:
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                                        {sdr.type}
+                                                        {getTypeLabel(sdr.type)}
                                                     </Typography>
 
                                                     {sdr.host && sdr.host !== '-' && (

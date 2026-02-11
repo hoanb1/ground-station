@@ -41,6 +41,26 @@ export const fetchLocalSoapySDRDevices = createAsyncThunk(
 );
 
 
+export const fetchLocalRtlSdrDevices = createAsyncThunk(
+    'sdrs/fetchLocalRtlSdrDevices',
+    async ({socket}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-local-rtl-sdr-devices', null, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to fetch local RTL-SDR devices'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+
 export const fetchSoapySDRServers = createAsyncThunk(
     'sdrs/fetchSoapySDRServers',
     async ({socket}, {rejectWithValue}) => {
@@ -153,11 +173,11 @@ const defaultSDR = {
     name: '',
     host: '127.0.0.1',
     port: 1234,
-    type: 'rtlsdrusbv3',
+    type: 'rtlsdrusbv4',
     serial: '',
     driver: '',
     frequency_min: 24,
-    frequency_max: 1700,
+    frequency_max: 1800,
 };
 
 const sdrsSlice = createSlice({
@@ -173,11 +193,13 @@ const sdrsSlice = createSlice({
         selected: [],
         loading: false,
         loadingLocalSDRs: false,
+        loadingLocalRtlSDRs: false,
         pageSize: 10,
         formValues: defaultSDR,
         soapyServers: {},
         selectedSdrDevice: "",
         localSoapyDevices: [],
+        localRtlDevices: [],
     },
     reducers: {
         setSDRs: (state, action) => {
@@ -317,6 +339,21 @@ const sdrsSlice = createSlice({
                 state.status = 'failed';
                 state.error = action.payload;
             })
+            .addCase(fetchLocalRtlSdrDevices.pending, (state) => {
+                state.loadingLocalRtlSDRs = true;
+                state.error = null;
+                state.status = 'loading';
+            })
+            .addCase(fetchLocalRtlSdrDevices.fulfilled, (state, action) => {
+                state.loadingLocalRtlSDRs = false;
+                state.status = 'succeeded';
+                state.localRtlDevices = action.payload;
+            })
+            .addCase(fetchLocalRtlSdrDevices.rejected, (state, action) => {
+                state.loadingLocalRtlSDRs = false;
+                state.status = 'failed';
+                state.error = action.payload;
+            });
     },
 });
 
