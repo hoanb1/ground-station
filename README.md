@@ -40,6 +40,13 @@ This project was built with the help of Claude Code and Codex.
 
 ---
 
+### Telemetry Packet Viewer (Hex + ASCII)
+<img src="frontend/public/ground station - packet viewer - as hexascii.png" alt="Telemetry packet viewer with hex and ASCII columns" width="450"/>
+
+*Packet viewer showing telemetry payload bytes in hex with ASCII side-by-side*
+
+---
+
 ### TLE Data Synchronization
 <img src="frontend/public/ground station - tle sync page.png" alt="TLE synchronization page" width="450"/>
 
@@ -530,6 +537,7 @@ docker run -d \
 - Replace `/path/to/data` with your desired data directory path
 - Option 1 (host networking) is required for automatic discovery of SoapySDR remote servers via mDNS
 - Option 2 works for local SDRs and all other features
+- For Raspberry Pi hardware, only the Raspberry Pi 5 is recommended
 - For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible
 - Access the web interface at `http://<YOUR_HOST>:7000`
 
