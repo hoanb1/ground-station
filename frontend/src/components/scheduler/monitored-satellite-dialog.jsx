@@ -75,6 +75,8 @@ const DECODER_TYPES = [
     { value: 'sstv', label: 'SSTV' },
 ];
 
+const SSTV_DEFAULT_BANDWIDTH = 12500;
+
 const DEMODULATOR_TYPES = [
     { value: 'fm', label: 'FM (Frequency Modulation)' },
     { value: 'am', label: 'AM (Amplitude Modulation)' },
@@ -557,12 +559,16 @@ export default function MonitoredSatelliteDialog() {
             const currentTask = newTasks[index];
 
             if (field === 'decoder_type' && currentTask.type === 'decoder') {
+                const nextBandwidth = value === 'sstv'
+                    ? (currentTask.config.bandwidth ?? SSTV_DEFAULT_BANDWIDTH)
+                    : undefined;
                 newTasks[index] = {
                     ...currentTask,
                     config: {
                         ...currentTask.config,
                         decoder_type: value,
-                        parameters: getDecoderDefaultParameters(value)
+                        parameters: getDecoderDefaultParameters(value),
+                        bandwidth: nextBandwidth,
                     },
                 };
             } else {

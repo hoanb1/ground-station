@@ -302,7 +302,8 @@ class SSTVDecoder(BaseDecoderProcess):
         else:
             cutoff = min(15e3, vfo_bandwidth * 0.15)
 
-        cutoff = max(cutoff, 500)
+        # Keep SSTV tone range (1200-2300 Hz) intact even if VFO BW is small.
+        cutoff = max(cutoff, 3000)
         nyquist = intermediate_rate / 2.0
         normalized_cutoff = cutoff / nyquist
         normalized_cutoff = min(0.45, max(0.01, normalized_cutoff))
