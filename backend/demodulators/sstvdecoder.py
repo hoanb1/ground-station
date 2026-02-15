@@ -799,9 +799,12 @@ class SSTVDecoder(BaseDecoderProcess):
                         else:
                             r_y = 0
 
-                    r = int(y_val + 1.6 * r_y)
-                    b = int(y_val + 1.6 * b_y)
-                    g = int(y_val - 0.51 * 1.6 * r_y - 0.19 * 1.6 * b_y)
+                    # Use BT.601-style YUV->RGB coefficients for better chroma fidelity.
+                    v = r_y
+                    u = b_y
+                    r = int(y_val + 1.402 * v)
+                    b = int(y_val + 1.772 * u)
+                    g = int(y_val - 0.344136 * u - 0.714136 * v)
 
                     pixel = (max(0, min(255, r)), max(0, min(255, g)), max(0, min(255, b)))
                 else:

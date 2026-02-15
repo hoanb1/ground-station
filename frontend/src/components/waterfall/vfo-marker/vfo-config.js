@@ -152,7 +152,7 @@ export const DECODERS = {
         hasProgressDisplay: true, // shows percentage progress
         hasTextOutput: false, // no text output, outputs images
         hasModeDisplay: true, // shows SSTV mode (e.g., "Martin M1", "Scottie S1")
-        defaultBandwidth: 3300, // 3.3 kHz for SSTV (audio content ~1200-2300 Hz)
+        defaultBandwidth: 12500, // 12.5 kHz for SSTV (typical NFM channel bandwidth)
         bandwidthType: 'double-sided',
         showBothEdges: true,
         allowLeftEdgeDrag: true,
