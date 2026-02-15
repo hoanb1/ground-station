@@ -482,7 +482,7 @@ const MonitoredSatellitesTable = () => {
                             <RefreshIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                             <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                                 <RefreshIcon sx={{ mr: 1 }} />
-                                {isLoadingPreview ? 'Loading Preview...' : 'Regenerate Selected'}
+                                {isLoadingPreview ? 'Loading Preview...' : 'Regenerate'}
                             </Box>
                         </Button>
                     </span>
