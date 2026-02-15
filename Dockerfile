@@ -160,6 +160,27 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapyHackRF.git && \
     sudo make install -j$(nproc) && \
     sudo ldconfig
 
+# compile HydraSDR (rfone_host) and SoapyHydraSDR
+WORKDIR /src
+RUN git clone --depth=1 https://github.com/hydrasdr/rfone_host.git && \
+    cd rfone_host && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
+    sudo ldconfig
+
+WORKDIR /src
+RUN git clone --depth=1 https://github.com/hydrasdr/SoapyHydraSDR.git && \
+    cd SoapyHydraSDR && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j$(nproc) && \
+    sudo make install -j$(nproc) && \
+    sudo ldconfig
+
 # Install SDRplay API (prerequisite for SoapySDRPlay3)
 WORKDIR /src
 RUN apt-get update && apt-get install -y libusb-1.0-0 libudev1 && rm -rf /var/lib/apt/lists/*
