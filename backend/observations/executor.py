@@ -22,8 +22,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, cast
 
+from common.constants import TrackingStateNames
 from common.logger import logger
 from common.sdrconfig import SDRConfig
+from crud import trackingstate
 from crud.hardware import fetch_sdr
 from crud.scheduledobservations import fetch_scheduled_observations
 from db import AsyncSessionLocal
@@ -179,7 +181,31 @@ class ObservationExecutor:
                 await remove_scheduled_stop_job(observation_id)
                 return {"success": False, "error": error_msg}
 
-            # 3. Check if SDRs are available (not in use by other sessions)
+            # 3. If rotator is required, cancel immediately when it's parked
+            rotator_config = observation.get("rotator", {})
+            if rotator_config.get("tracking_enabled") and rotator_config.get("id"):
+                async with AsyncSessionLocal() as session:
+                    tracking_state_reply = await trackingstate.get_tracking_state(
+                        session, TrackingStateNames.SATELLITE_TRACKING
+                    )
+                if tracking_state_reply.get("success"):
+                    tracking_value = (tracking_state_reply.get("data") or {}).get("value", {})
+                    rotator_state = str(tracking_value.get("rotator_state", "")).lower()
+                    if rotator_state == "parked":
+                        msg = f"Rotator is parked; cancelling observation {observation_id}"
+                        logger.warning(msg)
+                        await log_execution_event(observation_id, msg, "warning")
+                        await update_observation_status(self.sio, observation_id, STATUS_CANCELLED)
+                        await remove_scheduled_stop_job(observation_id)
+                        self._running_observations.discard(observation_id)
+                        return {"success": False, "error": msg}
+                else:
+                    logger.warning(
+                        f"Failed to fetch tracking state; proceeding with observation "
+                        f"{observation_id}: {tracking_state_reply.get('error')}"
+                    )
+
+            # 4. Check if SDRs are available (not in use by other sessions)
             for session_index, session in enumerate(sessions, start=1):
                 sdr_config_dict = session.get("sdr", {}) if isinstance(session, dict) else {}
                 sdr_id = sdr_config_dict.get("id")
@@ -203,7 +229,7 @@ class ObservationExecutor:
                 else:
                     logger.info(f"SDR {sdr_id} is available for observation {observation_id}")
 
-            # 4. Execute observation sessions
+            # 5. Execute observation sessions
             logger.info(f"Executing observation tasks for {observation['name']}")
             await log_execution_event(
                 observation_id, f"Starting tasks for {observation['name']}", "info"
@@ -218,7 +244,7 @@ class ObservationExecutor:
                 if session_index < len(sessions):
                     await asyncio.sleep(0.5)
 
-            # 5. Start tracker once using combined tasks
+            # 6. Start tracker once using combined tasks
             combined_tasks: list[Dict[str, Any]] = []
             for session in sessions:
                 combined_tasks.extend(session.get("tasks", []) if isinstance(session, dict) else [])
@@ -229,7 +255,7 @@ class ObservationExecutor:
                 observation_id, satellite, rotator_config, combined_tasks
             )
 
-            # 6. Update observation status to RUNNING
+            # 7. Update observation status to RUNNING
             await update_observation_status(self.sio, observation_id, STATUS_RUNNING)
             await log_execution_event(observation_id, "All tasks started successfully", "info")
 
@@ -388,6 +414,9 @@ class ObservationExecutor:
 
             # 4. Update status to CANCELLED
             await update_observation_status(self.sio, observation_id, STATUS_CANCELLED)
+
+            # 4b. Persist cancellation in the execution log
+            await log_execution_event(observation_id, "Observation cancelled", "info")
 
             # 5. Remove from running observations tracking
             self._running_observations.discard(observation_id)
