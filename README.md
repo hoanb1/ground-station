@@ -546,6 +546,10 @@ docker run -d \
 
 We welcome contributions! Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to get started.
 
+## Acknowledgments
+
+This project uses the SatNOGS API for transmitter information.
+
 ## License
 
 This project is licensed under the GNU GPL v3. See the [LICENSE](LICENSE) file for details.
