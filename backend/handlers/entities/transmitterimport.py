@@ -25,9 +25,12 @@ from typing import Iterable, Optional, Protocol, TypedDict, cast
 
 import requests
 import yaml
-from sqlalchemy import text
+from sqlalchemy import select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import AsyncSessionLocal
+from db.models import Satellites, Transmitters
 
 DEFAULT_SATDUMP_URL = "https://www.satdump.org/Satellite-List/"
 DEFAULT_SATDUMP_SOURCE = "satdump"
@@ -408,27 +411,25 @@ def load_satyaml() -> Optional[SatYamlProtocol]:
         return None
 
 
-async def upsert_transmitters(rows: list[dict]) -> int:
+async def upsert_transmitters(
+    rows: list[dict],
+    session: Optional[AsyncSession] = None,
+) -> int:
     if not rows:
         return 0
+    table = Transmitters.__table__
+    update_cols = [col for col in rows[0].keys() if col not in {"id", "added"}]
+    stmt = sqlite_insert(table)
+    update_values = {col: getattr(stmt.excluded, col) for col in update_cols}
+    update_values["added"] = table.c.added
+    stmt = stmt.on_conflict_do_update(index_elements=["id"], set_=update_values)
 
-    columns = list(rows[0].keys())
-    placeholders = ", ".join(f":{col}" for col in columns)
-    update_cols = [col for col in columns if col not in {"id", "added"}]
-    update_assignments = ", ".join(f"{col}=excluded.{col}" for col in update_cols)
-    update_assignments = f"{update_assignments}, added=transmitters.added"
-
-    insert_sql = text(
-        "INSERT INTO transmitters ("
-        + ", ".join(columns)
-        + ") VALUES ("
-        + placeholders
-        + ") ON CONFLICT(id) DO UPDATE SET "
-        + update_assignments
-    )
-
-    async with AsyncSessionLocal() as session:
-        await session.execute(insert_sql, rows)
+    if session is None:
+        async with AsyncSessionLocal() as session:
+            await session.execute(stmt, rows)
+            await session.commit()
+    else:
+        await session.execute(stmt, rows)
         await session.commit()
     return len(rows)
 
@@ -437,6 +438,7 @@ async def import_satdump_transmitters(
     url: str = DEFAULT_SATDUMP_URL,
     source: str = DEFAULT_SATDUMP_SOURCE,
     citation: str = DEFAULT_SATDUMP_CITATION,
+    session: Optional[AsyncSession] = None,
 ) -> dict:
     try:
         response = await asyncio.to_thread(requests.get, url, timeout=30)
@@ -448,15 +450,21 @@ async def import_satdump_transmitters(
     if not satellites:
         return {"success": False, "error": "No satellites found on the SatDump page."}
 
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(text("SELECT norad_id FROM satellites"))
-        satellites_in_db = {row[0] for row in result.fetchall()}
-
-    rows, skipped_missing_sat, skipped_no_frequency = build_satdump_rows(
-        satellites, satellites_in_db, source, citation
-    )
-
-    upserted = await upsert_transmitters(rows)
+    if session is None:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(Satellites.norad_id))
+            satellites_in_db = set(result.scalars().all())
+            rows, skipped_missing_sat, skipped_no_frequency = build_satdump_rows(
+                satellites, satellites_in_db, source, citation
+            )
+            upserted = await upsert_transmitters(rows, session=session)
+    else:
+        result = await session.execute(select(Satellites.norad_id))
+        satellites_in_db = set(result.scalars().all())
+        rows, skipped_missing_sat, skipped_no_frequency = build_satdump_rows(
+            satellites, satellites_in_db, source, citation
+        )
+        upserted = await upsert_transmitters(rows, session=session)
 
     return {
         "success": True,
@@ -472,6 +480,7 @@ async def import_gr_satellites_transmitters(
     service: str = DEFAULT_GR_SERVICE,
     source: str = DEFAULT_GR_SOURCE,
     citation: str = DEFAULT_GR_CITATION,
+    session: Optional[AsyncSession] = None,
 ) -> dict:
     resolved_dir = resolve_yaml_dir(yaml_dir)
     satyaml = load_satyaml()
@@ -482,20 +491,35 @@ async def import_gr_satellites_transmitters(
             "error": "YAML directory not found. Install gr-satellites/satyaml or configure it.",
         }
 
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(text("SELECT norad_id FROM satellites"))
-        satellites_in_db = {row[0] for row in result.fetchall()}
-
-    rows, skipped_missing_sat, skipped_no_frequency, skipped_invalid_yaml = await asyncio.to_thread(
-        build_gr_rows,
-        yaml_files,
-        satellites_in_db,
-        service,
-        source,
-        citation,
-    )
-
-    upserted = await upsert_transmitters(rows)
+    if session is None:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(Satellites.norad_id))
+            satellites_in_db = set(result.scalars().all())
+            rows, skipped_missing_sat, skipped_no_frequency, skipped_invalid_yaml = (
+                await asyncio.to_thread(
+                    build_gr_rows,
+                    yaml_files,
+                    satellites_in_db,
+                    service,
+                    source,
+                    citation,
+                )
+            )
+            upserted = await upsert_transmitters(rows, session=session)
+    else:
+        result = await session.execute(select(Satellites.norad_id))
+        satellites_in_db = set(result.scalars().all())
+        rows, skipped_missing_sat, skipped_no_frequency, skipped_invalid_yaml = (
+            await asyncio.to_thread(
+                build_gr_rows,
+                yaml_files,
+                satellites_in_db,
+                service,
+                source,
+                citation,
+            )
+        )
+        upserted = await upsert_transmitters(rows, session=session)
 
     return {
         "success": True,

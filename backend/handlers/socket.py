@@ -227,6 +227,7 @@ def register_socketio_handlers(sio):
     @sio.on("transmitter_import")
     async def handle_transmitter_import(sid, data=None):
         """Handle transmitter imports from external sources."""
+        from db import AsyncSessionLocal
         from handlers.entities.transmitterimport import (
             import_gr_satellites_transmitters,
             import_satdump_transmitters,
@@ -241,12 +242,13 @@ def register_socketio_handlers(sio):
 
         source = data["source"]
         try:
-            if source == "satdump":
-                return await import_satdump_transmitters()
-            if source == "gr-satellites":
-                return await import_gr_satellites_transmitters()
+            async with AsyncSessionLocal() as session:
+                if source == "satdump":
+                    return await import_satdump_transmitters(session=session)
+                if source == "gr-satellites":
+                    return await import_gr_satellites_transmitters(session=session)
 
-            return {"success": False, "error": f"Unknown source: {source}"}
+                return {"success": False, "error": f"Unknown source: {source}"}
         except Exception as e:
             logger.error(f"Error in transmitter import handler: {str(e)}")
             return {"success": False, "error": str(e)}

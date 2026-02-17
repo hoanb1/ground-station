@@ -24,6 +24,10 @@ import requests
 import crud
 from common.common import *  # noqa: F401,F403
 from common.exceptions import SynchronizationErrorMainTLESource
+from handlers.entities.transmitterimport import (
+    import_gr_satellites_transmitters,
+    import_satdump_transmitters,
+)
 from tlesync.state import SatelliteSyncState
 from tlesync.utils import (
     async_fetch,
@@ -563,6 +567,16 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                 f"Items modified: {modified_satellites_count} satellites, {modified_transmitters_count} transmitters"
             )
 
+            # Import gr-satellites and SatDump transmitters using the existing session
+            # to avoid SQLite write-lock contention across multiple sessions.
+            logger.info("Running gr-satellites transmitter import after TLE sync...")
+            gr_result = await import_gr_satellites_transmitters(session=dbsession)
+            logger.info("gr-satellites transmitter import result: %s", gr_result)
+
+            logger.info("Running SatDump transmitter import after TLE sync...")
+            satdump_result = await import_satdump_transmitters(session=dbsession)
+            logger.info("SatDump transmitter import result: %s", satdump_result)
+
             # Update final state - always set to 100% when complete
             sync_state["status"] = "complete"
             sync_state["progress"] = 100
@@ -598,23 +612,10 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
             await _emit(sync_state)
 
         finally:
-            # Always close the session when you're done
-            await dbsession.close()
-            # Skip tracker notifications if the sync did not complete successfully.
+            # Skip post-sync steps if the sync did not complete successfully.
             if not sync_state.get("success"):
+                await dbsession.close()
                 return
-            # Run gr-satellites transmitter import after the DB session is closed
-            # to avoid SQLite write-lock contention.
-            try:
-                from handlers.entities.transmitterimport import import_gr_satellites_transmitters
-
-                logger.info("Running gr-satellites transmitter import after TLE sync...")
-                gr_result = await import_gr_satellites_transmitters()
-                logger.info("gr-satellites transmitter import result: %s", gr_result)
-            except Exception as e:
-                logger.error("Failed to run gr-satellites transmitter import: %s", e)
-                sync_state["errors"].append(str(e))
-
             satellite_norad_ids = {
                 sat.get("norad_id") for sat in sync_state.get("modified", {}).get("satellites", [])
             }
@@ -657,3 +658,5 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                         satellite_norad_ids, transmitter_norad_ids, transmitters_by_norad
                     )
                 )
+            # Always close the session when you're done
+            await dbsession.close()
