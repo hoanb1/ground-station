@@ -22,6 +22,8 @@ import { ToastContainer, Slide } from 'react-toastify';
 import { useTheme } from '@mui/material/styles';
 import { useSelector } from 'react-redux';
 
+const SHOULD_PAUSE_ON_FOCUS_LOSS = false;
+
 export const ToastContainerWithStyles = () => {
     const theme = useTheme();
     const preferences = useSelector((state) => state.preferences.preferences);
@@ -29,6 +31,7 @@ export const ToastContainerWithStyles = () => {
     // Get toast position preference
     const toastPositionPreference = preferences.find(pref => pref.name === 'toast_position');
     const position = toastPositionPreference ? toastPositionPreference.value : 'top-right';
+    const pauseOnFocusLoss = SHOULD_PAUSE_ON_FOCUS_LOSS;
 
     return (
         <>
@@ -183,7 +186,7 @@ export const ToastContainerWithStyles = () => {
                 newestOnTop={false}
                 closeOnClick={false}
                 rtl={false}
-                pauseOnFocusLoss={true}
+                pauseOnFocusLoss={pauseOnFocusLoss}
                 draggable={true}
                 draggablePercent={30}
                 pauseOnHover={true}
