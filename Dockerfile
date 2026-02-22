@@ -138,17 +138,6 @@ RUN git clone --depth=1 https://github.com/pothosware/SoapyAirspy.git && \
     sudo make install -j$(nproc) && \
     sudo ldconfig
 
-# compile SoapySDR-UHD
-WORKDIR /src
-RUN git clone --depth=1 https://github.com/pothosware/SoapyUHD.git && \
-    cd SoapyUHD && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make -j$(nproc) && \
-    sudo make install -j$(nproc) && \
-    sudo ldconfig
-
 # compile SoapySDR-hackrf
 WORKDIR /src
 RUN git clone --depth=1 https://github.com/pothosware/SoapyHackRF.git && \
