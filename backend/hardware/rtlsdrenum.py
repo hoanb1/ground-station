@@ -87,6 +87,10 @@ def probe_available_rtl_sdrs() -> str:
                 "product": product,
                 "serial": serial,
                 "label": label,
+                "antennas": {"tx": [], "rx": ["RX"]},
+                "has_antenna_selection": True,
+                "available_rx_ports": ["RX"],
+                "current_antenna": "RX",
             }
 
             log_messages.append(f"Found RTL-SDR device: {label}")

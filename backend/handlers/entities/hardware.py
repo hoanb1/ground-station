@@ -234,7 +234,7 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 "has_bias_t": True,
                 "has_tuner_agc": True,
                 "has_rtl_agc": True,
-                "antennas": {"tx": [], "rx": []},
+                "antennas": {"tx": [], "rx": ["RX"]},
             }
 
             sdr_parameters_cache[sdr_id] = params
