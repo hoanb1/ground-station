@@ -20,14 +20,22 @@ fi
 echo "Starting Avahi mDNS daemon..."
 mkdir -p /var/run/avahi-daemon
 rm -f /var/run/avahi-daemon/pid
-avahi-daemon --no-chroot -D
+avahi-daemon --no-chroot &
+AVAHI_PID=$!
 sleep 3
 
 # Verify Avahi is running
-if ! pgrep -x avahi-daemon > /dev/null; then
-    echo "ERROR: Avahi daemon failed to start"
-    echo "Attempting to start with debug mode..."
-    avahi-daemon --no-chroot -D --debug
+if ! ps -p $AVAHI_PID > /dev/null; then
+    echo "ERROR: Avahi daemon failed to start (PID $AVAHI_PID not found)"
+    echo "Attempting alternative startup..."
+    avahi-daemon --no-chroot --daemonize=false &
+    AVAHI_PID=$!
+    sleep 2
+    if ! ps -p $AVAHI_PID > /dev/null; then
+        echo "ERROR: Avahi daemon failed to start with alternative method"
+    else
+        echo "Avahi daemon started successfully with alternative method"
+    fi
 else
     echo "Avahi daemon started successfully"
 fi

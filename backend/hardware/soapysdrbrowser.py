@@ -276,56 +276,97 @@ async def refresh_connected_sdrs():
 
 
 async def discover_soapy_servers():
-    """Discover SoapyRemote servers using AsyncZeroconf."""
-    logger.info("Starting mDNS discovery for SoapyRemote servers...")
+    """Discover SoapyRemote servers by scanning known IPs and ports."""
+    logger.info("Starting SoapySDR server discovery via direct IP scanning...")
 
-    # Create AsyncZeroconf instance
-    azc = AsyncZeroconf()
+    # Known IPs to check (host bridge IP and external IP)
+    known_ips = ["172.17.0.1", "192.168.6.15"]
+    known_port = 55132
 
-    # Define service type
-    service_type = "_soapy._tcp.local."  # Fixed the service type here
+    servers_found = 0
 
-    # Create service browser with callback wrapper
-    browser = AsyncServiceBrowser(
-        azc.zeroconf,
-        [service_type],
-        handlers=[service_state_change_handler],  # Use the wrapper instead
-    )
+    for ip in known_ips:
+        logger.info(f"Checking {ip}:{known_port} for SoapySDR server...")
+        server_info = await probe_server(ip, known_port)
+        if server_info:
+            discovered_servers[f"SoapySDR-{ip}"] = server_info
+            servers_found += 1
+            logger.info(f"Found SoapySDR server at {ip}:{known_port}")
 
+    if servers_found > 0:
+        logger.info(f"Discovery completed: Found {servers_found} SoapySDR server(s)")
+    else:
+        logger.info("Discovery completed: No SoapySDR servers found via IP scanning")
+
+    # Log final results
+    active_servers = get_active_servers_with_sdrs()
+    active_count = len(active_servers)
+    total_sdrs = sum(len(server.get('sdrs', [])) for server in active_servers.values())
+
+    logger.info(f"SoapySDR Discovery Complete Found {len(discovered_servers)} server(s), {total_sdrs} SDR(s) active")
+
+
+async def probe_server(ip, port):
+    """Probe a SoapySDR server to get its SDR information."""
     try:
-        search_duration = 15
-        logger.info(f"Searching for {search_duration} seconds...")
-        await asyncio.sleep(search_duration)
+        # Try to connect and get server info
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2.0)
+        result = sock.connect_ex((ip, port))
+        sock.close()
 
-        if discovered_servers:
-            logger.debug("Found the following potential SoapyRemote servers:")
-            for name, server_info in discovered_servers.items():
-                sdrs = server_info.get("sdrs", [])
-                sdr_count = len(sdrs) if isinstance(sdrs, list) else 0
-                logger.debug(
-                    f"  Name: {name}, IP: {server_info['ip']}, Port: {server_info['port']}, "
-                    f"Status: {server_info['status']}, Connected SDRs: {sdr_count}"
-                )
-
-                if server_info["status"] == "active" and isinstance(sdrs, list) and sdrs:
-                    # Format SDR information for nice display
-                    for i, sdr in enumerate(sdrs):
-                        try:
-                            # Pretty format with indentation
-                            sdr_info = json.dumps(sdr, cls=SoapySDREncoder, indent=2)
-                            logger.debug(f"    SDR #{i+1}:\n{sdr_info}")
-                        except Exception as e:
-                            logger.error(f"Error formatting SDR info: {str(e)}")
+        if result == 0:
+            # Server is reachable, try to get SDR info
+            sdr_info = await get_server_sdrs(ip, port)
+            return {
+                'ip': ip,
+                'port': port,
+                'status': 'active' if sdr_info else 'reachable',
+                'sdrs': sdr_info or []
+            }
         else:
-            logger.debug("No SoapyRemote servers advertising via mDNS found.")
+            return {
+                'ip': ip,
+                'port': port,
+                'status': 'unreachable',
+                'sdrs': []
+            }
+    except Exception as e:
+        logger.error(f"Error probing server {ip}:{port}: {str(e)}")
+        return None
 
-    except asyncio.CancelledError:
-        logger.info("Discovery cancelled...")
-    finally:
-        logger.info("Closing Zeroconf browser...")
-        await browser.async_cancel()
-        await azc.async_close()
-        logger.info("Discovery completed.")
+
+async def get_server_sdrs(ip, port):
+    """Get SDR information from a SoapySDR server by probing it."""
+    try:
+        # Use the existing probe function to get SDR info
+        from hardware.soapysdrremoteprobe import probe_remote_soapy_sdr
+
+        sdr_config = {
+            'host': ip,
+            'port': port,
+            'driver': 'rtlsdr'  # Try RTL-SDR first, could be extended to detect other drivers
+        }
+
+        result = probe_remote_soapy_sdr(sdr_config)
+
+        if result.get('success'):
+            # Return the probed SDR info in the expected format
+            return [{
+                'driver': 'rtlsdr',
+                'label': f'RTL-SDR Remote ({ip}:{port})',
+                'device': f'driver=remote,remote=tcp://{ip}:{port},remote:driver=rtlsdr',
+                'serial': '00000001',  # Default serial for remote
+                'available': True
+            }]
+        else:
+            logger.debug(f"Probe failed for {ip}:{port}: {result.get('error')}")
+            return []
+
+    except Exception as e:
+        logger.error(f"Error getting SDRs from {ip}:{port}: {str(e)}")
+        return []
 
 
 # Helper function to get a human-readable representation of discovered servers
@@ -369,6 +410,32 @@ def get_active_servers_with_sdrs():
             active_servers[name] = server_info
 
     return active_servers
+
+
+# Update discovered servers from background task
+def update_discovered_servers(servers_data):
+    """Update the main process's discovered_servers dictionary with data from background task."""
+    global discovered_servers
+
+    logger.info(f"Updating discovered_servers with {len(servers_data)} servers from background task")
+
+    # Clear existing servers and update with new data
+    discovered_servers.clear()
+
+    for name, server_info in servers_data.items():
+        # Convert back to the expected format
+        discovered_servers[name] = {
+            'ip': server_info.get('ip'),
+            'port': server_info.get('port'),
+            'name': server_info.get('name'),
+            'mDNS_name': server_info.get('mDNS_name'),
+            'status': server_info.get('status'),
+            'sdrs': server_info.get('sdrs', []),
+            'addresses': server_info.get('addresses', []),
+            'last_updated': server_info.get('last_updated', 0),
+        }
+
+    logger.info(f"Updated discovered_servers: {len(discovered_servers)} servers")
 
 
 # When you want to run this function:
