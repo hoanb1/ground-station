@@ -98,7 +98,7 @@ def soapysdr_discovery_task(
                 _progress_queue.put(
                     {
                         "type": "output",
-                        "output": "Performing initial mDNS discovery...",
+                        "output": "Performing initial IP/port scanning discovery...",
                         "stream": "stdout",
                         "progress": 10,
                     }
