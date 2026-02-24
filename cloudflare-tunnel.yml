@@ -1,0 +1,42 @@
+tunnel: <YOUR_TUNNEL_ID>
+credentials-file: /home/<USER>/.cloudflared/<YOUR_TUNNEL_ID>.json
+
+ingress:
+  # Ground Station main application with WebSocket support
+  - hostname: station.hoan.uk
+    service: http://192.168.6.15:7000
+    originRequest:
+      noTLSVerify: false
+      connectTimeout: 30s
+      readTimeout: 60s
+  
+  # Health check endpoint (optional)
+  - hostname: station.hoan.uk
+    path: ^/health$
+    service: http://192.168.6.15:7000/health
+    
+  # API endpoints
+  - hostname: station.hoan.uk
+    path: ^/api/.*
+    service: http://192.168.6.15:7000
+    
+  # WebSocket endpoints for Socket.IO
+  - hostname: station.hoan.uk
+    path: ^/socket.io/.*
+    service: http://192.168.6.15:7000
+    originRequest:
+      noTLSVerify: false
+      connectTimeout: 30s
+      readTimeout: 300s  # Longer timeout for WebSocket connections
+      
+  # WebSocket endpoints for Engine.IO (Socket.IO transport)
+  - hostname: station.hoan.uk
+    path: ^/engine.io/.*
+    service: http://192.168.6.15:7000
+    originRequest:
+      noTLSVerify: false
+      connectTimeout: 30s
+      readTimeout: 300s
+  
+  # Default catch-all - return 404 for unmatched paths
+  - service: http_status:404

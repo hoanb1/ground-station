@@ -131,7 +131,7 @@ async def get_local_rtl_sdr_devices():
     return reply
 
 
-async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
+async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=60.0):
     """Retrieve SDR parameters from the SDR process manager with caching"""
 
     reply: Dict[str, Union[bool, None, dict, list, str]] = {
@@ -243,16 +243,23 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
         elif sdr.get("type") in ["soapysdrremote", "soapysdrlocal"]:
             if sdr.get("type") == "soapysdrremote":
                 logger.info("Getting SDR parameters from SoapySDR server for SDR: %s", sdr)
+                import json
+                sdr_json = json.dumps(sdr)
                 probe_process = await asyncio.create_subprocess_exec(
                     "python3",
                     "-c",
+                    "import json, sys; sys.path.insert(0, '/app/backend'); "
                     "from hardware.soapysdrremoteprobe import probe_remote_soapy_sdr; "
-                    f"print(probe_remote_soapy_sdr({sdr}))",
+                    "sdr = json.load(sys.stdin); print(json.dumps(probe_remote_soapy_sdr(sdr)))",
+                    stdin=asyncio.subprocess.PIPE,
                     stdout=asyncio.subprocess.PIPE,
                 )
 
                 try:
-                    stdout, _ = await asyncio.wait_for(probe_process.communicate(), timeout=timeout)
+                    stdout, _ = await asyncio.wait_for(
+                        probe_process.communicate(input=sdr_json.encode()),
+                        timeout=timeout
+                    )
 
                 except asyncio.TimeoutError:
                     probe_process.kill()
@@ -261,21 +268,28 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                     )
             else:
                 logger.info("Getting SDR parameters from local SoapySDR for SDR: %s", sdr)
+                import json
+                sdr_json = json.dumps(sdr)
                 probe_process = await asyncio.create_subprocess_exec(
                     "python3",
                     "-c",
+                    "import json, sys; sys.path.insert(0, '/app/backend'); "
                     "from hardware.soapysdrlocalprobe import probe_local_soapy_sdr; "
-                    f"print(probe_local_soapy_sdr({sdr}))",
+                    "sdr = json.load(sys.stdin); print(json.dumps(probe_local_soapy_sdr(sdr)))",
+                    stdin=asyncio.subprocess.PIPE,
                     stdout=asyncio.subprocess.PIPE,
                 )
 
                 try:
-                    stdout, _ = await asyncio.wait_for(probe_process.communicate(), timeout=timeout)
+                    stdout, _ = await asyncio.wait_for(
+                        probe_process.communicate(input=sdr_json.encode()),
+                        timeout=timeout
+                    )
 
                 except asyncio.TimeoutError:
                     probe_process.kill()
                     raise TimeoutError(
-                        "Timed out while getting SDR parameters from SoapySDR server"
+                        "Timed out while getting SDR parameters from local SoapySDR"
                     )
 
             sdr_params_reply = eval(stdout.decode().strip())
@@ -300,6 +314,9 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 "fft_window_values": window_function_names,
                 "has_soapy_agc": sdr_params["has_soapy_agc"],
                 "antennas": sdr_params["antennas"],
+                "has_antenna_selection": True,
+                "available_rx_ports": sdr_params["antennas"]["rx"],
+                "current_antenna": sdr_params["antennas"]["rx"][0] if sdr_params["antennas"]["rx"] else None,
                 "frequency_ranges": sdr_params.get("frequency_ranges", {}),
                 "clock_info": sdr_params.get("clock_info", {}),
                 "temperature": sdr_params.get("temperature", {}),
@@ -314,7 +331,8 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             probe_process = await asyncio.create_subprocess_exec(
                 "python3",
                 "-c",
-                "from hardware.uhdprobe import probe_uhd_usrp; " f"print(probe_uhd_usrp({sdr}))",
+                "from hardware.uhdprobe import probe_uhd_usrp; import json, sys; "
+                "sys.path.insert(0, '/app/backend'); " f"print(json.dumps(probe_uhd_usrp({sdr})))",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -332,7 +350,7 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 probe_process.kill()
                 raise TimeoutError("Timed out while getting SDR parameters from UHD/USRP")
 
-            sdr_params_reply = eval(stdout.decode().strip())
+            sdr_params_reply = json.loads(stdout.decode().strip())
 
             if sdr_params_reply["success"] is False:
                 logger.error(sdr_params_reply)
@@ -398,8 +416,8 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             probe_process = await asyncio.create_subprocess_exec(
                 "python3",
                 "-c",
-                "from hardware.sigmfprobe import probe_sigmf_recording; "
-                f"print(probe_sigmf_recording({sdr}))",
+                "from hardware.sigmfprobe import probe_sigmf_recording; import json, sys; "
+                "sys.path.insert(0, '/app/backend'); " f"print(json.dumps(probe_sigmf_recording({sdr})))",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -417,7 +435,7 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 probe_process.kill()
                 raise TimeoutError("Timed out while getting parameters from SigMF recording")
 
-            sdr_params_reply = eval(stdout.decode().strip())
+            sdr_params_reply = json.loads(stdout.decode().strip())
 
             if sdr_params_reply["success"] is False:
                 logger.error(sdr_params_reply)
