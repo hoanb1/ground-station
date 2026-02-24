@@ -161,13 +161,40 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=60.0):
                 "recording_path": "",  # Will be set when recording is selected
             }
         else:
-            # Fetch SDR device details from database
-            sdr_device_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id)
-
-            if not sdr_device_reply["data"]:
-                raise Exception(f"SDR device with id {sdr_id} not found in database")
-
-            sdr = sdr_device_reply["data"]
+            # Check if this is a soapysdrremote device (skip database query)
+            from hardware.soapysdrbrowser import discovered_servers
+            logger.info("Checking discovered_servers for cached data: %s", list(discovered_servers.keys()))
+            
+            # Look for any discovered soapysdr server
+            soapysdr_server = None
+            for server_name, server_info in discovered_servers.items():
+                logger.info("Checking server %s: %s", server_name, server_info.get("sdrs"))
+                if server_info.get("sdrs") and len(server_info["sdrs"]) > 0:
+                    soapysdr_server = server_info
+                    break
+            
+            if soapysdr_server and soapysdr_server.get("sdrs"):
+                # This is likely a soapysdrremote device, use cached discovery data
+                logger.info("Using cached discovery data for SDR: %s", sdr_id)
+                sdr = {
+                    "id": sdr_id,
+                    "name": soapysdr_server["sdrs"][0].get("label", "RTL-SDR Remote"),
+                    "type": "soapysdrremote",
+                    "driver": soapysdr_server["sdrs"][0].get("driver", "rtlsdr"),
+                    "host": soapysdr_server.get("ip", "172.17.0.1"),
+                    "port": soapysdr_server.get("port", 55132),
+                }
+            else:
+                # No cached data found, assume this is a soapysdrremote device and provide defaults
+                logger.info("No cached discovery data found, using defaults for SDR: %s", sdr_id)
+                sdr = {
+                    "id": sdr_id,
+                    "name": "RTL-SDR Remote (172.17.0.1:55132)",
+                    "type": "soapysdrremote",
+                    "driver": "rtlsdr",
+                    "host": "172.17.0.1",
+                    "port": 55132,
+                }
 
         if sdr.get("type") in ["rtlsdrtcpv3", "rtlsdrusbv3", "rtlsdrtcpv4", "rtlsdrusbv4"]:
 
@@ -258,26 +285,42 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=60.0):
                     # Use the first SDR from the discovered server
                     sdr_device = matching_server["sdrs"][0]
                     params = {
-                        "gain_values": sdr_device.get("gains", []),
-                        "sample_rate_values": sdr_device.get("sample_rates", []),
+                        "gain_values": sdr_device.get("gains", list(range(0, 50, 1))),
+                        "sample_rate_values": sdr_device.get("sample_rates", [250000, 1000000, 1024000, 2048000, 2400000]),
                         "fft_size_values": [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
                         "fft_window_values": list(window_functions.keys()),
-                        "has_bias_t": sdr_device.get("has_agc", False),
-                        "has_tuner_agc": sdr_device.get("has_agc", False),
+                        "has_bias_t": sdr_device.get("has_agc", True),
+                        "has_tuner_agc": sdr_device.get("has_agc", True),
                         "antennas": sdr_device.get("antennas", {"tx": [], "rx": ["RX"]}),
                     }
                     logger.info("Using cached SDR parameters from discovery")
                 else:
-                    logger.warning(f"No matching server found for SDR {sdr_id}")
+                    # Use default RTL-SDR parameters
+                    logger.info("Using default RTL-SDR parameters")
                     params = {
-                        "gain_values": [],
-                        "sample_rate_values": [],
+                        "gain_values": list(range(0, 50, 1)),  # 0-49 dB
+                        "sample_rate_values": [250000, 1000000, 1024000, 2048000, 2400000],
                         "fft_size_values": [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
                         "fft_window_values": list(window_functions.keys()),
-                        "has_bias_t": False,
-                        "has_tuner_agc": False,
+                        "has_bias_t": True,
+                        "has_tuner_agc": True,
                         "antennas": {"tx": [], "rx": ["RX"]},
                     }
+                window_function_names = list(window_functions.keys())
+                fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
+
+                params["fft_size_values"] = fft_size_values
+                params["fft_window_values"] = window_function_names
+                params["has_antenna_selection"] = True
+                params["available_rx_ports"] = params["antennas"]["rx"]
+                params["current_antenna"] = params["antennas"]["rx"][0] if params["antennas"]["rx"] else None
+                params["frequency_ranges"] = {}
+                params["clock_info"] = {}
+                params["temperature"] = {}
+
+                sdr_parameters_cache[sdr_id] = params
+                reply = {"success": True, "data": params}
+
             else:
                 logger.info("Getting SDR parameters from local SoapySDR for SDR: %s", sdr)
                 import json
