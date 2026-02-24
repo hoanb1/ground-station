@@ -101,9 +101,9 @@ def soapysdr_remote_worker_process(
             device_args += f",serial={serial_number}"
 
         # Add verified SoapyRemote parameters
-        device_args += ",remote:timeout=1000000"  # 1 second timeout (in microseconds)
-        device_args += ",remote:mtu=65536"  # 64KB MTU (larger for high sample rates)
-        device_args += ",remote:window=524288"  # 512KB socket buffer (larger for high throughput)
+        device_args += ",remote:timeout=500000"  # 0.5 second timeout (reduced)
+        device_args += ",remote:mtu=32768"  # 32KB MTU (reduced for compatibility)
+        device_args += ",remote:window=131072"  # 128KB socket buffer (reduced for compatibility)
 
         logger.info(f"Connecting to SoapySDR device with args: {device_args}")
 
