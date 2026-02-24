@@ -881,12 +881,19 @@ async def get_soapy_servers(
 
 
 async def get_sdr_parameters(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
+    sio: Any, data: Optional[Union[Dict, str]], logger: Any, sid: str
 ) -> Dict[str, Union[bool, list, str]]:
     """Get SDR parameters."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug("Getting SDR parameters")
-        sdr_id = data.get("id") if data else None
+        # Handle both dict format {"id": "..."} and direct string format "..."
+        if isinstance(data, dict):
+            sdr_id = data.get("id") if data else None
+        elif isinstance(data, str):
+            sdr_id = data
+        else:
+            sdr_id = None
+        
         parameters = await _fetch_sdr_parameters(dbsession, sdr_id)
         return {
             "success": parameters["success"],
