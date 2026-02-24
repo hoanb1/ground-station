@@ -340,15 +340,23 @@ async def probe_server(ip, port):
 async def get_server_sdrs(ip, port):
     """Get SDR information from a SoapySDR server by probing it."""
     try:
-        # For now, skip the actual probing to avoid SIGILL
-        # Just return a dummy RTL-SDR entry if we think the server is reachable
-        logger.info(f"Assuming RTL-SDR available at {ip}:{port}")
+        # Return basic RTL-SDR capabilities without device creation
+        # This avoids SIGILL issues in container
+        logger.info(f"Assuming RTL-SDR capabilities at {ip}:{port}")
         return [{
             'driver': 'rtlsdr',
             'label': f'RTL-SDR Remote ({ip}:{port})',
             'device': f'driver=remote,remote=tcp://{ip}:{port},remote:driver=rtlsdr',
             'serial': '00000001',  # Default serial for remote
-            'available': True
+            'available': True,
+            # Basic RTL-SDR capabilities
+            'sample_rates': [250000, 1000000, 1024000, 2048000, 2400000],
+            'gains': list(range(0, 50, 1)),  # 0-49 dB in 1 dB steps
+            'antennas': {'rx': ['RX'], 'tx': []},
+            'frequency_ranges': {
+                'rx': {'min': 24.0, 'max': 1800.0}  # 24-1800 MHz typical for RTL-SDR
+            },
+            'has_agc': True  # RTL-SDR typically has AGC
         }]
         
         # Original probing code (commented out due to SIGILL):
@@ -361,13 +369,7 @@ async def get_server_sdrs(ip, port):
         # loop = asyncio.get_event_loop()
         # result = await loop.run_in_executor(None, probe_remote_soapy_sdr, sdr_config)
         # if result.get('success'):
-        #     return [{
-        #         'driver': 'rtlsdr',
-        #         'label': f'RTL-SDR Remote ({ip}:{port})',
-        #         'device': f'driver=remote,remote=tcp://{ip}:{port},remote:driver=rtlsdr',
-        #         'serial': '00000001',
-        #         'available': True
-        #     }]
+        #     return result['data'] if 'data' in result else []
         # else:
         #     logger.debug(f"Probe failed for {ip}:{port}: {result.get('error')}")
         #     return []
