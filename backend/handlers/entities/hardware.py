@@ -243,29 +243,41 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=60.0):
         elif sdr.get("type") in ["soapysdrremote", "soapysdrlocal"]:
             if sdr.get("type") == "soapysdrremote":
                 logger.info("Getting SDR parameters from SoapySDR server for SDR: %s", sdr)
-                import json
-                sdr_json = json.dumps(sdr)
-                probe_process = await asyncio.create_subprocess_exec(
-                    "python3",
-                    "-c",
-                    "import json, sys; sys.path.insert(0, '/app/backend'); "
-                    "from hardware.soapysdrremoteprobe import probe_remote_soapy_sdr; "
-                    "sdr = json.load(sys.stdin); print(json.dumps(probe_remote_soapy_sdr(sdr)))",
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.PIPE,
-                )
-
-                try:
-                    stdout, _ = await asyncio.wait_for(
-                        probe_process.communicate(input=sdr_json.encode()),
-                        timeout=timeout
-                    )
-
-                except asyncio.TimeoutError:
-                    probe_process.kill()
-                    raise TimeoutError(
-                        "Timed out while getting SDR parameters from SoapySDR server"
-                    )
+                # Use cached discovery data instead of probing to avoid SIGILL
+                from hardware.soapysdrbrowser import discovered_servers
+                
+                # Find the server that matches this SDR
+                matching_server = None
+                for server_name, server_info in discovered_servers.items():
+                    if (server_info.get("ip") == sdr.get("host") and 
+                        server_info.get("port") == sdr.get("port")):
+                        matching_server = server_info
+                        break
+                
+                if matching_server and matching_server.get("sdrs"):
+                    # Use the first SDR from the discovered server
+                    sdr_device = matching_server["sdrs"][0]
+                    params = {
+                        "gain_values": sdr_device.get("gains", []),
+                        "sample_rate_values": sdr_device.get("sample_rates", []),
+                        "fft_size_values": [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
+                        "fft_window_values": list(window_functions.keys()),
+                        "has_bias_t": sdr_device.get("has_agc", False),
+                        "has_tuner_agc": sdr_device.get("has_agc", False),
+                        "antennas": sdr_device.get("antennas", {"tx": [], "rx": ["RX"]}),
+                    }
+                    logger.info("Using cached SDR parameters from discovery")
+                else:
+                    logger.warning(f"No matching server found for SDR {sdr_id}")
+                    params = {
+                        "gain_values": [],
+                        "sample_rate_values": [],
+                        "fft_size_values": [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
+                        "fft_window_values": list(window_functions.keys()),
+                        "has_bias_t": False,
+                        "has_tuner_agc": False,
+                        "antennas": {"tx": [], "rx": ["RX"]},
+                    }
             else:
                 logger.info("Getting SDR parameters from local SoapySDR for SDR: %s", sdr)
                 import json
@@ -831,7 +843,8 @@ async def get_sdr_parameters(
     """Get SDR parameters."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug("Getting SDR parameters")
-        parameters = await _fetch_sdr_parameters(dbsession, data)
+        sdr_id = data.get("id") if data else None
+        parameters = await _fetch_sdr_parameters(dbsession, sdr_id)
         return {
             "success": parameters["success"],
             "data": parameters.get("data", []),
