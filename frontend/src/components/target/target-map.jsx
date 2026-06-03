@@ -976,8 +976,8 @@ const TargetMapContainer = ({}) => {
                     crs={mapCrs}
                     zoom={mapZoomLevel}
                     style={{width: '100%', height: '100%'}}
-                    dragging={false}
-                    scrollWheelZoom={false}
+                    dragging={!lockOnTarget}
+                    scrollWheelZoom={true}
                     maxZoom={10}
                     minZoom={0}
                     whenReady={handleWhenReady}

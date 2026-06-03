@@ -23,7 +23,7 @@ import psutil
 import SoapySDR
 from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 
-from common.iqsamples import require_complex64
+from common.iqsamples import require_complex64, DCOffsetRemover
 
 # Configure logging for the worker process
 logger = logging.getLogger("soapysdr-local")
@@ -312,6 +312,12 @@ def soapysdr_local_worker_process(
             }
         )
 
+        # Instantiate stateful DC offset remover
+        dc_remover = DCOffsetRemover()
+
+        # Pre-allocate sample buffer
+        samples_buffer = np.zeros(num_samples, dtype=np.complex64)
+
         # Performance monitoring stats
         stats: Dict[str, Any] = {
             "samples_read": 0,
@@ -523,8 +529,9 @@ def soapysdr_local_worker_process(
                     )
 
             try:
-                # Create a buffer for the samples - read directly the number of samples we need
-                samples_buffer = np.zeros(num_samples, dtype=np.complex64)
+                # Reuse pre-allocated buffer, resizing if necessary
+                if samples_buffer is None or len(samples_buffer) != num_samples:
+                    samples_buffer = np.zeros(num_samples, dtype=np.complex64)
 
                 # Track how many samples we've accumulated so far
                 buffer_position = 0
@@ -609,7 +616,7 @@ def soapysdr_local_worker_process(
                 samples = require_complex64(samples, source="soapysdr-local-worker")
 
                 # Remove DC offset spike
-                samples = remove_dc_offset(samples)
+                samples = dc_remover.remove(samples)
                 chunk_sample_count = len(samples)
                 chunk_id = stream_chunk_id
                 chunk_start_sample = stream_sample_index
@@ -770,18 +777,6 @@ def calculate_samples_per_scan(sample_rate, fft_size):
     return num_samples
 
 
-def remove_dc_offset(samples):
-    """
-    Remove DC offset by subtracting the mean
-    """
-    # Calculate the mean of the complex samples
-    mean_i = np.mean(np.real(samples))
-    mean_q = np.mean(np.imag(samples))
-
-    # Subtract the mean
-    samples_no_dc = samples - (mean_i + 1j * mean_q)
-
-    return samples_no_dc
 
 
 def get_supported_sample_rates(sdr, channel=0):

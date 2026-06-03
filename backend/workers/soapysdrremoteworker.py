@@ -23,7 +23,8 @@ import psutil
 import SoapySDR
 from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 
-from common.iqsamples import require_complex64
+from common.iqsamples import require_complex64, DCOffsetRemover
+from common.utils import is_local_address, get_loopback_optimized_host
 
 # Configure logging for the worker process
 logger = logging.getLogger("soapysdr-remote")
@@ -177,6 +178,18 @@ def soapysdr_remote_worker_process(
         hostname = config.get("host", "127.0.0.1")
         port = config.get("port", 55132)
 
+        # Optimize connection by checking if the host is local
+        hostname = get_loopback_optimized_host(hostname, port)
+
+        # Determine network MTU based on connection destination.
+        # Loopback/local can use a large MTU (65536) safely.
+        # Remote hosts (like 192.168.6.15) must use standard Ethernet MTU (1500)
+        # to avoid IP fragmentation, packet drops, and horizontal scan line corruption.
+        if is_local_address(hostname):
+            network_mtu = 65536
+        else:
+            network_mtu = 1500
+
         # The format should be 'remote:host=HOSTNAME:port=PORT,driver=DRIVER,serial=SERIAL'
         device_args = f"remote=tcp://{hostname}:{port},driver=remote,remote:driver={driver}"
 
@@ -186,7 +199,7 @@ def soapysdr_remote_worker_process(
 
         # Add verified SoapyRemote parameters
         device_args += ",remote:timeout=1000000"  # 1 second timeout (in microseconds)
-        device_args += ",remote:mtu=65536"  # 64KB MTU (larger for high sample rates)
+        device_args += f",remote:mtu={network_mtu}"  # Set MTU dynamically to prevent packet loss
         device_args += ",remote:window=524288"  # 512KB socket buffer (larger for high throughput)
 
         logger.info(f"Connecting to SoapySDR device with args: {device_args}")
@@ -315,8 +328,23 @@ def soapysdr_remote_worker_process(
         except Exception as e:
             logger.debug(f"DC offset correction not available or failed: {e}")
 
+        # Define remote stream arguments to optimize network throughput and prevent packet drops
+        stream_args = {
+            "window": "1048576",  # 1MB socket window size for smoother streaming
+            "buffers": "32",      # More ring buffers to absorb network/GC jitter
+        }
+        # If running locally or on loopback/same machine, optimize MTU.
+        # Remote hosts (like 192.168.6.15) must use standard Ethernet MTU (1500)
+        # to avoid IP fragmentation, packet drops, and horizontal scan line corruption.
+        sdr_host = config.get("host", "127.0.0.1")
+        if is_local_address(sdr_host) or is_local_address(hostname):
+            stream_args["mtu"] = "65536"
+        else:
+            stream_args["mtu"] = "1500"
+
+        logger.info(f"Setting up remote stream with args: {stream_args}")
         # Set up the streaming
-        rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
+        rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32, [channel], stream_args)
 
         # Now check MTU - after setupStream but before activateStream
         try:
@@ -338,6 +366,13 @@ def soapysdr_remote_worker_process(
                 "timestamp": time.time(),
             }
         )
+
+        # Instantiate stateful DC offset remover
+        dc_remover = DCOffsetRemover()
+
+        # Placeholders for pre-allocated buffers
+        buffer = None
+        samples_buffer = None
 
         # Performance monitoring stats
         stats: Dict[str, Any] = {
@@ -565,11 +600,13 @@ def soapysdr_remote_worker_process(
                     read_size = 8192
                 logger.debug(f"Using read_size of {read_size} samples (MTU: {mtu})")
 
-                # Create a buffer for the individual reads
-                buffer = np.zeros(read_size, dtype=np.complex64)
+                # Reuse pre-allocated buffer for individual reads, resizing if necessary
+                if buffer is None or len(buffer) != read_size:
+                    buffer = np.zeros(read_size, dtype=np.complex64)
 
-                # Create an accumulation buffer for collecting enough samples
-                samples_buffer = np.zeros(num_samples, dtype=np.complex64)
+                # Reuse pre-allocated accumulation buffer, resizing if necessary
+                if samples_buffer is None or len(samples_buffer) != num_samples:
+                    samples_buffer = np.zeros(num_samples, dtype=np.complex64)
                 buffer_position = 0
 
                 # Add frame counter for debugging
@@ -577,6 +614,7 @@ def soapysdr_remote_worker_process(
 
                 # Loop until we have enough samples or encounter too many errors
                 read_count = 0
+                consecutive_errors = 0
                 while buffer_position < num_samples and not stop_event.is_set():
                     # Read samples from the device
                     # Use longer timeout (100ms) to accommodate larger buffers and network latency
@@ -587,6 +625,7 @@ def soapysdr_remote_worker_process(
                         # We got samples - measure how many we actually received
                         samples_read = sr.ret
                         logger.debug(f"Read {samples_read}/{read_size} samples")
+                        consecutive_errors = 0
 
                         # Track samples read
                         stats["samples_read"] += samples_read
@@ -612,11 +651,10 @@ def soapysdr_remote_worker_process(
                     elif sr.ret == 0:
                         # No data returned
                         logger.warning(f"Frame {frame_counter}: no data returned (sr.ret=0)")
+                        time.sleep(0.01)
 
                     elif sr.ret < 0:
                         # An error occurred, handle based on the error code.
-                        # On any read error, discard the partial frame to avoid stitching
-                        # non-contiguous IQ into one chunk (critical for GNSS tracking).
                         stats["read_errors"] += 1
 
                         if sr.ret == -1:  # SOAPY_SDR_TIMEOUT
@@ -640,23 +678,19 @@ def soapysdr_remote_worker_process(
                                 f"Frame {frame_counter}: readStream error (sr.ret={sr.ret})"
                             )
 
-                        # Clear partial data and restart frame accumulation.
-                        buffer.fill(0)
-                        samples_buffer.fill(0)
-                        buffer_position = 0
-                        break
+                        consecutive_errors += 1
+                        time.sleep(0.01)
 
-                    else:
-                        # Error occurred
-                        logger.error(f"Frame {frame_counter}: readStream error (sr.ret={sr.ret})")
-
-                        # Clear the buffer to prevent contamination
-                        buffer.fill(0)
-                        samples_buffer.fill(0)
-
-                        # Reset to skip this frame
-                        buffer_position = 0
-                        break
+                        if consecutive_errors > 20:
+                            logger.error(
+                                f"Frame {frame_counter}: Too many consecutive errors ({consecutive_errors}). "
+                                "Discarding frame buffer and breaking loop."
+                            )
+                            # Clear partial data and restart frame accumulation.
+                            buffer.fill(0)
+                            samples_buffer.fill(0)
+                            buffer_position = 0
+                            break
 
                 # Check if we have enough samples for processing
                 if buffer_position < num_samples:
@@ -673,7 +707,7 @@ def soapysdr_remote_worker_process(
                 samples = require_complex64(samples, source="soapysdr-remote-worker")
 
                 # Match local Soapy worker behavior: remove per-chunk DC offset bias.
-                samples = remove_dc_offset(samples)
+                samples = dc_remover.remove(samples)
                 chunk_sample_count = len(samples)
                 chunk_id = stream_chunk_id
                 chunk_start_sample = stream_sample_index
@@ -862,18 +896,6 @@ def calculate_samples_per_scan(sample_rate, fft_size):
     return num_samples
 
 
-def remove_dc_offset(samples):
-    """
-    Remove DC offset by subtracting the mean
-    """
-    # Calculate the mean of the complex samples
-    mean_i = np.mean(np.real(samples))
-    mean_q = np.mean(np.imag(samples))
-
-    # Subtract the mean
-    samples_no_dc = samples - (mean_i + 1j * mean_q)
-
-    return samples_no_dc
 
 
 def get_supported_sample_rates(sdr, channel=0):
@@ -916,6 +938,9 @@ def list_available_devices(hostname, port):
         List of available devices
     """
     try:
+        # Optimize connection by checking if the host is local
+        hostname = get_loopback_optimized_host(hostname, port)
+
         # Connect to the remote server only
         remote_args = f"remote:host={hostname}:port={port}"
 

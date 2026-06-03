@@ -23,7 +23,7 @@ from typing import Any, Dict
 import numpy as np
 import psutil
 
-from common.iqsamples import require_complex64
+from common.iqsamples import require_complex64, DCOffsetRemover
 from common.pathguard import (
     get_sigmf_allowed_roots,
     resolve_sigmf_data_path,
@@ -169,6 +169,9 @@ def sigmf_playback_worker_process(
             }
         )
 
+        # Instantiate stateful DC offset remover
+        dc_remover = DCOffsetRemover()
+
         # Performance monitoring stats
         stats: Dict[str, Any] = {
             "samples_read": 0,
@@ -310,7 +313,7 @@ def sigmf_playback_worker_process(
                         )
 
                 # Remove DC offset
-                samples = remove_dc_offset(samples)
+                samples = dc_remover.remove(samples)
 
                 # Stream IQ data to consumers
                 if has_iq_consumers:
@@ -541,22 +544,3 @@ def parse_iq_samples(data: bytes, datatype: str) -> np.ndarray:
     return np.frombuffer(data, dtype=np.complex64)
 
 
-def remove_dc_offset(samples):
-    """
-    Remove DC offset by subtracting the mean
-    """
-    # Calculate the mean of the complex samples
-    mean_i = np.mean(np.real(samples))
-    mean_q = np.mean(np.imag(samples))
-
-    # Check for invalid values (inf/nan from overflow)
-    if not np.isfinite(mean_i) or not np.isfinite(mean_q):
-        logger.warning(
-            f"Invalid mean values detected (mean_i={mean_i}, mean_q={mean_q}), skipping DC offset removal"
-        )
-        return samples
-
-    # Subtract the mean
-    samples_no_dc = samples - (mean_i + 1j * mean_q)
-
-    return samples_no_dc

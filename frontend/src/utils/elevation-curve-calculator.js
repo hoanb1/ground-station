@@ -99,7 +99,8 @@ export function calculateElevationCurve(
             // Propagate satellite position
             const positionAndVelocity = satellite.propagate(satrec, currentTime);
 
-            if (!positionAndVelocity.position || satrec.error) {
+            // satellite.js v7.0.0 returns null if propagation fails, so check using optional chaining
+            if (!positionAndVelocity || !positionAndVelocity?.position || satrec?.error) {
                 continue;
             }
 

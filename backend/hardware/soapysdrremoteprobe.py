@@ -23,6 +23,7 @@ import yaml
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX
 
 from common.logconfig import resolve_log_config_path
+from common.utils import is_local_address, get_loopback_optimized_host
 
 # Load logger configuration
 with open(resolve_log_config_path(None), "r", encoding="utf-8") as f:
@@ -341,8 +342,16 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
         serial_number = sdr_details.get("serial", "")
         device_name = sdr_details.get("name", "Unknown")
 
+        # Optimize connection by checking if the host is local
+        hostname = get_loopback_optimized_host(hostname, port)
+
+        if is_local_address(hostname):
+            network_mtu = 65536
+        else:
+            network_mtu = 1500
+
         # Format the device args for remote connection
-        device_args = f"remote=tcp://{hostname}:{port},remote:driver={driver}"
+        device_args = f"remote=tcp://{hostname}:{port},remote:driver={driver},remote:mtu={network_mtu}"
 
         # Add the serial number if provided
         if serial_number:

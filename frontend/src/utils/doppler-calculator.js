@@ -66,13 +66,14 @@ export function calculateDopplerShift(
         const positionAndVelocity = satellite.propagate(satrec, time);
 
         // Check for propagation errors
-        if (positionAndVelocity.error) {
-            console.error('Satellite propagation error:', positionAndVelocity.error);
+        // satellite.js v7.0.0 returns null if propagation fails, so check using optional chaining
+        if (!positionAndVelocity || positionAndVelocity?.error) {
+            console.error('Satellite propagation error:', positionAndVelocity ? positionAndVelocity?.error : 'no propagation output');
             return { observedFreqHz: transmittedFreqHz, dopplerShiftHz: 0 };
         }
 
-        const positionEci = positionAndVelocity.position;
-        const velocityEci = positionAndVelocity.velocity;
+        const positionEci = positionAndVelocity?.position;
+        const velocityEci = positionAndVelocity?.velocity;
 
         // Validate ECI position and velocity
         if (!positionEci || !velocityEci) {

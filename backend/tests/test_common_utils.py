@@ -21,7 +21,9 @@ import uuid
 
 import pytest
 
-from common.utils import convert_strings_to_uuids
+from unittest.mock import patch
+
+from common.utils import convert_strings_to_uuids, is_local_address, get_loopback_optimized_host
 
 
 class TestConvertStringsToUuids:
@@ -108,3 +110,85 @@ class TestConvertStringsToUuids:
         result = convert_strings_to_uuids(test_uuids)
 
         assert [str(u) for u in result] == test_uuids
+
+
+class TestLocalAddressOptimization:
+    """Test cases for local address detection and optimization."""
+
+    def test_is_local_address_standards(self):
+        assert is_local_address("127.0.0.1") is True
+        assert is_local_address("localhost") is True
+        assert is_local_address("localhost ") is True
+        assert is_local_address("::1") is True
+        assert is_local_address("") is False
+        assert is_local_address(None) is False
+
+    @patch("psutil.net_if_addrs")
+    @patch("socket.getaddrinfo")
+    def test_is_local_address_with_interfaces(self, mock_getaddrinfo, mock_net_if_addrs):
+        from unittest.mock import MagicMock
+        from common.utils import is_local_address
+
+        # Mock getaddrinfo to return a resolved IP
+        mock_getaddrinfo.return_value = [(None, None, None, None, ("192.168.6.15", 0))]
+
+        # Mock psutil.net_if_addrs to simulate local network interfaces
+        mock_addr = MagicMock()
+        mock_addr.address = "192.168.6.15"
+        mock_net_if_addrs.return_value = {"eth0": [mock_addr]}
+
+        assert is_local_address("192.168.6.15") is True
+        assert is_local_address("my-local-server.lan") is True
+
+    @patch("psutil.net_if_addrs")
+    @patch("socket.getaddrinfo")
+    def test_is_local_address_remote(self, mock_getaddrinfo, mock_net_if_addrs):
+        from unittest.mock import MagicMock
+        from common.utils import is_local_address
+
+        # Mock getaddrinfo to resolve to a remote IP
+        mock_getaddrinfo.return_value = [(None, None, None, None, ("8.8.8.8", 0))]
+
+        # Mock psutil.net_if_addrs
+        mock_addr = MagicMock()
+        mock_addr.address = "192.168.3.63"
+        mock_net_if_addrs.return_value = {"eth0": [mock_addr]}
+
+        assert is_local_address("8.8.8.8") is False
+
+    @patch("socket.create_connection")
+    @patch("common.utils.is_local_address")
+    def test_get_loopback_optimized_host_local_listening(self, mock_is_local, mock_connect):
+        from unittest.mock import MagicMock
+        from common.utils import get_loopback_optimized_host
+
+        mock_is_local.return_value = True
+
+        # Simulate port is open on loopback
+        mock_connect.return_value = MagicMock()
+
+        result = get_loopback_optimized_host("192.168.6.15", 55132)
+        assert result == "127.0.0.1"
+
+    @patch("socket.create_connection")
+    @patch("common.utils.is_local_address")
+    def test_get_loopback_optimized_host_local_not_listening(self, mock_is_local, mock_connect):
+        from common.utils import get_loopback_optimized_host
+
+        mock_is_local.return_value = True
+
+        # Simulate port is closed on loopback
+        mock_connect.side_effect = Exception("Connection refused")
+
+        result = get_loopback_optimized_host("192.168.6.15", 55132)
+        assert result == "192.168.6.15"
+
+    @patch("common.utils.is_local_address")
+    def test_get_loopback_optimized_host_remote(self, mock_is_local):
+        from common.utils import get_loopback_optimized_host
+
+        mock_is_local.return_value = False
+
+        result = get_loopback_optimized_host("8.8.8.8", 55132)
+        assert result == "8.8.8.8"
+

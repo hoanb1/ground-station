@@ -120,8 +120,11 @@ const SatelliteMapContainer = ({ satelliteData }) => {
 
         try {
             const positionAndVelocity = satellite.propagate(satrec, date);
-            const positionEci = positionAndVelocity.position;
-            const velocityEci = positionAndVelocity.velocity;
+            if (!positionAndVelocity) {
+                return null;
+            }
+            const positionEci = positionAndVelocity?.position;
+            const velocityEci = positionAndVelocity?.velocity;
 
             if (!positionEci || typeof positionEci.x !== 'number') {
                 return null;
@@ -366,8 +369,8 @@ const SatelliteMapContainer = ({ satelliteData }) => {
             keyboard={false}
             bounceAtZoomLimits={false}
             closePopupOnClick={false}
-            dragging={false}
-            scrollWheelZoom={false}
+            dragging={true}
+            scrollWheelZoom={true}
             zoomControl={false}
         >
             <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel} />

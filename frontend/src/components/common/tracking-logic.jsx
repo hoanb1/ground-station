@@ -59,8 +59,9 @@ export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
         const pv = satellite.propagate(satrec, date);
 
         // Check if propagation failed OR if propagation detected an error (like orbit decay)
-        if (!pv.position || !pv.velocity || satrec.error) {
-            console.warn(`Failed to propagate satellite ${noradId}: ${!pv.position ? 'no position' : !pv.velocity ? 'no velocity' : `error code ${satrec.error}`}`);
+        // satellite.js v7.0.0 returns null if propagation fails, so we must check with optional chaining (?.)
+        if (!pv || !pv?.position || !pv?.velocity || satrec?.error) {
+            console.warn(`Failed to propagate satellite ${noradId}: ${!pv ? 'no propagation output' : !pv?.position ? 'no position' : !pv?.velocity ? 'no velocity' : `error code ${satrec?.error}`}`);
             return [0, 0, 0, 0];
         }
 
@@ -280,16 +281,16 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1, noradId
         // Compute past points: from (now - durationMinutes) up to now (inclusive)
         for (let t = now.getTime() - durationMinutes * 60 * 1000; t <= now.getTime(); t += stepMs) {
             const time = new Date(t);
-            const { position } = satellite.propagate(satrec, time);
+            const pv = satellite.propagate(satrec, time);
 
             // Check for propagation errors (orbit decay, etc)
-            if (satrec.error) {
-                console.warn(`Satellite path propagation error at time ${time}: error code ${satrec.error}`);
+            if (satrec?.error) {
+                console.warn(`Satellite path propagation error at time ${time}: error code ${satrec?.error}`);
                 break; // Stop calculating path if propagation fails
             }
-            if (position) {
+            if (pv?.position) {
                 const gmst = satellite.gstime(time);
-                const posGd = satellite.eciToGeodetic(position, gmst);
+                const posGd = satellite.eciToGeodetic(pv?.position, gmst);
                 let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
                 const lat = satellite.degreesLat(posGd.latitude);
                 // Validate coordinates before adding
@@ -302,16 +303,16 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1, noradId
         // Compute future points: from now up to (now + durationMinutes) (inclusive)
         for (let t = now.getTime(); t <= now.getTime() + durationMinutes * 60 * 1000; t += stepMs) {
             const time = new Date(t);
-            const { position } = satellite.propagate(satrec, time);
+            const pv = satellite.propagate(satrec, time);
 
             // Check for propagation errors (orbit decay, etc)
-            if (satrec.error) {
-                console.warn(`Satellite path propagation error at time ${time}: error code ${satrec.error}`);
+            if (satrec?.error) {
+                console.warn(`Satellite path propagation error at time ${time}: error code ${satrec?.error}`);
                 break; // Stop calculating path if propagation fails
             }
-            if (position) {
+            if (pv?.position) {
                 const gmst = satellite.gstime(time);
-                const posGd = satellite.eciToGeodetic(position, gmst);
+                const posGd = satellite.eciToGeodetic(pv?.position, gmst);
                 let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
                 const lat = satellite.degreesLat(posGd.latitude);
                 // Validate coordinates before adding
@@ -411,7 +412,8 @@ export function isSatelliteVisible(tleLine1, tleLine2, date, observerCoords, min
 
         // Get satellite position in ECI coordinates
         const positionAndVelocity = satellite.propagate(satrec, date);
-        if (!positionAndVelocity.position) {
+        // satellite.js v7.0.0 returns null if propagation fails, so we check using optional chaining
+        if (!positionAndVelocity || !positionAndVelocity?.position) {
             return false;
         }
 
@@ -531,8 +533,9 @@ export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date =
 
         // Get satellite position and velocity in ECI coordinates
         const positionAndVelocity = satellite.propagate(satrec, date);
-        if (!positionAndVelocity.position || satrec.error) {
-            console.error(`Failed to propagate satellite position: ${!positionAndVelocity.position ? 'no position' : `error code ${satrec.error}`}`);
+        // satellite.js v7.0.0 returns null if propagation fails, so check using optional chaining
+        if (!positionAndVelocity || !positionAndVelocity?.position || satrec?.error) {
+            console.error(`Failed to propagate satellite position: ${!positionAndVelocity ? 'no propagation output' : !positionAndVelocity?.position ? 'no position' : `error code ${satrec?.error}`}`);
             return null;
         }
 

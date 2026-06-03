@@ -303,7 +303,7 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             if sdr.get("type") == "soapysdrremote":
                 logger.info("Getting SDR parameters from SoapySDR server for SDR: %s", sdr)
                 probe_process = await asyncio.create_subprocess_exec(
-                    "python3",
+                    sys.executable,
                     "-c",
                     "from hardware.soapysdrremoteprobe import probe_remote_soapy_sdr; "
                     f"print(probe_remote_soapy_sdr({sdr}))",
@@ -321,7 +321,7 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             else:
                 logger.info("Getting SDR parameters from local SoapySDR for SDR: %s", sdr)
                 probe_process = await asyncio.create_subprocess_exec(
-                    "python3",
+                    sys.executable,
                     "-c",
                     "from hardware.soapysdrlocalprobe import probe_local_soapy_sdr; "
                     f"print(probe_local_soapy_sdr({sdr}))",
@@ -384,7 +384,7 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             logger.info("Getting SDR parameters from UHD/USRP for SDR: %s", sdr)
 
             probe_process = await asyncio.create_subprocess_exec(
-                "python3",
+                sys.executable,
                 "-c",
                 "from hardware.uhdprobe import probe_uhd_usrp; " f"print(probe_uhd_usrp({sdr}))",
                 stdout=asyncio.subprocess.PIPE,
@@ -469,7 +469,7 @@ async def _fetch_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             sdr["recording_path"] = recording_path
 
             probe_process = await asyncio.create_subprocess_exec(
-                "python3",
+                sys.executable,
                 "-c",
                 "from hardware.sigmfprobe import probe_sigmf_recording; "
                 f"print(probe_sigmf_recording({sdr}))",

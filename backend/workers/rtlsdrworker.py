@@ -23,7 +23,7 @@ from typing import Any, Dict
 import numpy as np
 import psutil
 
-from common.iqsamples import require_complex64
+from common.iqsamples import require_complex64, DCOffsetRemover
 
 # Suppress a very specific third-party warning emitted at import-time by pyrtlsdr
 # Context: pyrtlsdr (or its transitive imports) currently uses setuptools.pkg_resources,
@@ -122,6 +122,16 @@ def rtlsdr_worker_process(
             f"rf_center_freq={sdr.center_freq}, gain={sdr.gain}, offset_freq={offset_freq}"
         )
 
+        # Explicitly disable RTL-SDR digital AGC by default at startup (which degrades waterfall and signals)
+        try:
+            sdr.set_agc_mode(False)
+            logger.info("RTL digital AGC explicitly disabled at startup")
+        except Exception as e:
+            logger.debug(f"Could not disable RTL digital AGC at startup: {e}")
+
+        # Instantiate stateful DC offset remover
+        dc_remover = DCOffsetRemover()
+
         # Calculate the number of samples based on sample rate
         num_samples = calculate_samples_per_scan(sdr.sample_rate, fft_size)
 
@@ -134,6 +144,7 @@ def rtlsdr_worker_process(
                 "timestamp": time.time(),
             }
         )
+
 
         # Performance monitoring stats
         stats: Dict[str, Any] = {
@@ -296,7 +307,7 @@ def rtlsdr_worker_process(
                 samples = require_complex64(samples, source="rtlsdr-worker")
 
                 # Remove DC offset
-                samples = remove_dc_offset(samples)
+                samples = dc_remover.remove(samples)
                 chunk_sample_count = len(samples)
                 chunk_id = stream_chunk_id
                 chunk_start_sample = stream_sample_index
@@ -482,15 +493,3 @@ def calculate_samples_per_scan(sample_rate, fft_size):
     return num_samples
 
 
-def remove_dc_offset(samples):
-    """
-    Remove DC offset by subtracting the mean
-    """
-    # Calculate the mean of the complex samples
-    mean_i = np.mean(np.real(samples))
-    mean_q = np.mean(np.imag(samples))
-
-    # Subtract the mean
-    samples_no_dc = samples - (mean_i + 1j * mean_q)
-
-    return samples_no_dc
