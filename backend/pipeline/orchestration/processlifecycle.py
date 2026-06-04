@@ -558,6 +558,21 @@ class ProcessLifecycleManager:
             # If there are still other clients, don't stop the process
             if process_info["clients"]:
                 return
+        else:
+            # Dọn dẹp cho toàn bộ các client đang kết nối để tránh rò rỉ luồng và file descriptor
+            clients_to_cleanup = list(process_info.get("clients", []))
+            self.logger.info(f"Stopping all active consumers for SDR process {sdr_id} for clients: {clients_to_cleanup}")
+            for cid in clients_to_cleanup:
+                self.demodulator_manager.stop_demodulator(sdr_id, cid)
+                self.recorder_manager.stop_recorder(sdr_id, cid)
+                if self.audio_recorder_manager:
+                    audio_recorders = process_info.get("audio_recorders", {}).get(cid, {})
+                    for vfo_number in list(audio_recorders.keys()):
+                        self.audio_recorder_manager.stop_audio_recorder(sdr_id, cid, vfo_number)
+                self.decoder_manager.stop_decoder(sdr_id, cid)
+                if self.transcription_manager:
+                    self.transcription_manager.stop_transcription(sdr_id, cid)
+            process_info["clients"] = []
 
         # Stop the broadcaster first
         if "iq_broadcaster" in process_info:

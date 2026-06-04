@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 - Unit tests in `backend/tests/test_crud_transmitters.py` to verify correctness of the transmitter memory-caching logic.
 
 ### Fixed
+- Fixed a serious file descriptor and disk space leak by wrapping `IQRecorder.run` and `AudioRecorder.run` loops in `try...finally` to guarantee file handles (`.sigmf-data` and `.wav`) are always closed on thread exit.
+- Fixed consumer resource leak when stopping the entire SDR process by updating `stop_sdr_process` in `processlifecycle.py` to clean up all active demodulators, recorders, decoders, and transcription workers for all clients.
 - Fixed N+1 query patterns in `fetch_satellites_for_group_id` and `search_satellites` by implementing bulk-loading of transmitters and groups.
 - Optimized API handlers in `backend/handlers/entities/satellites.py` to leverage bulk loading and remove redundant query loops.
 - Redefined conflict detection query logic in `find_any_time_conflict` (`backend/observations/conflicts.py`) by replacing index-inhibiting `func.coalesce` with standard index-friendly `OR` / `AND` queries.

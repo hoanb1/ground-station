@@ -124,182 +124,189 @@ class IQRecorder(threading.Thread):
 
     def run(self):
         """Main recording loop."""
-        while self.running:
-            try:
-                if self.iq_queue.empty():
-                    time.sleep(0.01)
-                    continue
-
-                iq_message = self.iq_queue.get(timeout=0.1)
-
-                # Update stats
-                with self.stats_lock:
-                    self.stats["iq_chunks_in"] += 1
-                    self.stats["last_activity"] = time.time()
-
-                samples = iq_message.get("samples")
-                center_freq = iq_message.get(
-                    "logical_center_freq_hz", iq_message.get("center_freq")
-                )
-                sample_rate = iq_message.get("sample_rate")
-                timestamp = iq_message.get("timestamp")
-                stream_chunk_id = iq_message.get("stream_chunk_id")
-                stream_start_sample = iq_message.get("stream_start_sample")
-                stream_sample_count = iq_message.get("stream_sample_count")
-
-                if samples is None:
-                    continue
-                samples = require_complex64(samples, source="IQRecorder")
-                if len(samples) == 0:
-                    continue
-
-                # Update sample count
-                with self.stats_lock:
-                    self.stats["iq_samples_in"] += len(samples)
-
-                # Continuity instrumentation: detect dropped/reordered chunks and sample gaps.
-                if stream_chunk_id is None or stream_start_sample is None:
-                    with self.stats_lock:
-                        self.stats["messages_missing_chunk_meta"] += 1
-                else:
-                    try:
-                        chunk_id = int(stream_chunk_id)
-                        start_sample = int(stream_start_sample)
-                        advertised_count = (
-                            int(stream_sample_count) if stream_sample_count is not None else None
-                        )
-                    except (TypeError, ValueError):
-                        with self.stats_lock:
-                            self.stats["invalid_chunk_meta"] += 1
-                    else:
-                        with self.stats_lock:
-                            self.stats["messages_with_chunk_meta"] += 1
-
-                            if self.stats["first_chunk_id"] is None:
-                                self.stats["first_chunk_id"] = chunk_id
-                            self.stats["last_chunk_id"] = chunk_id
-
-                            if self.stats["first_start_sample"] is None:
-                                self.stats["first_start_sample"] = start_sample
-                            self.stats["last_start_sample"] = start_sample
-
-                            if self.last_stream_chunk_id is not None:
-                                if chunk_id == self.last_stream_chunk_id:
-                                    self.stats["duplicate_chunk_ids"] += 1
-                                elif chunk_id > self.last_stream_chunk_id + 1:
-                                    self.stats["chunk_gap_events"] += 1
-                                    self.stats["missing_chunks"] += (
-                                        chunk_id - self.last_stream_chunk_id - 1
-                                    )
-                                elif chunk_id < self.last_stream_chunk_id:
-                                    self.stats["chunk_reorders"] += 1
-
-                            if self.last_stream_end_sample is not None:
-                                if start_sample > self.last_stream_end_sample:
-                                    self.stats["sample_gap_events"] += 1
-                                    self.stats["missing_samples"] += (
-                                        start_sample - self.last_stream_end_sample
-                                    )
-                                elif start_sample < self.last_stream_end_sample:
-                                    self.stats["sample_backtracks"] += 1
-
-                            if advertised_count is not None and advertised_count != len(samples):
-                                self.stats["sample_count_mismatch"] += 1
-
-                        self.last_stream_chunk_id = chunk_id
-                        self.last_stream_end_sample = start_sample + len(samples)
-
-                # Check if parameters changed (new capture segment needed)
-                if (
-                    self.current_center_freq != center_freq
-                    or self.current_input_sample_rate != sample_rate
-                ):
-                    # Calculate frequency shift if needed
-                    if self.enable_frequency_shift and self.target_center_freq is not None:
-                        # Shift from current center_freq to target_center_freq
-                        # Signal at target_center_freq is at (target - center) offset in current recording
-                        # We want to shift it to center (0 Hz offset)
-                        self.shift_hz = center_freq - self.target_center_freq
-                        output_center_freq = self.target_center_freq
-                        logger.info(
-                            f"Frequency shift enabled: {center_freq/1e6:.3f} MHz -> {self.target_center_freq/1e6:.3f} MHz "
-                            f"(shift by {self.shift_hz/1e3:.1f} kHz)"
-                        )
-                    else:
-                        self.shift_hz = 0
-                        output_center_freq = center_freq
-
-                    output_sample_rate = sample_rate / self.decimation_factor
-
-                    # Add new capture segment with output center frequency
-                    self.captures.append(
-                        {
-                            "core:sample_start": self.total_samples,
-                            "core:frequency": int(output_center_freq),
-                            "core:datetime": datetime.fromtimestamp(timestamp, tz=timezone.utc)
-                            .replace(microsecond=0, tzinfo=None)
-                            .isoformat()
-                            + "Z",
-                        }
-                    )
-
-                    self.current_center_freq = center_freq
-                    self.current_input_sample_rate = sample_rate
-                    self.current_sample_rate = output_sample_rate
-
-                    if self.start_datetime is None:
-                        self.start_datetime = timestamp
-
-                    logger.info(
-                        f"New capture segment at sample {self.total_samples}: "
-                        f"freq={output_center_freq/1e6:.3f} MHz, "
-                        f"rate={output_sample_rate/1e6:.2f} MS/s"
-                    )
-
-                # Apply frequency shift if enabled
-                if self.enable_frequency_shift and self.shift_hz != 0:
-                    # Generate time array for this chunk
-                    t = np.arange(len(samples), dtype=np.float64) / sample_rate
-                    # Compute phase incrementally: phase = 2*pi*f*t + phase_offset
-                    # To avoid overflow in the argument to exp, we use cos/sin directly
-                    # since exp(1j*theta) = cos(theta) + 1j*sin(theta)
-                    arg = 2 * np.pi * self.shift_hz * t + self.phase
-                    shift_signal = np.cos(arg) + 1j * np.sin(arg)
-                    # Apply shift (ensure result stays complex64)
-                    samples = (samples * shift_signal).astype(np.complex64)
-                    # Update phase for next chunk (wrap to keep bounded)
-                    self.phase = (
-                        self.phase + 2 * np.pi * self.shift_hz * len(samples) / sample_rate
-                    ) % (2 * np.pi)
-
-                # Apply decimation if requested
-                if self.decimation_factor > 1:
-                    try:
-                        samples = resample_poly(samples, up=1, down=self.decimation_factor).astype(
-                            np.complex64
-                        )
-                    except Exception as e:
-                        logger.error(f"Failed to decimate IQ samples: {e}")
-                        with self.stats_lock:
-                            self.stats["errors"] += 1
+        try:
+            while self.running:
+                try:
+                    if self.iq_queue.empty():
+                        time.sleep(0.01)
                         continue
 
-                # Write samples to file
-                samples.tofile(self.data_file)
-                self.total_samples += len(samples)
+                    iq_message = self.iq_queue.get(timeout=0.1)
 
-                # Update stats (cf32_le = 8 bytes per sample)
-                with self.stats_lock:
-                    self.stats["samples_written"] += len(samples)
-                    self.stats["bytes_written"] += len(samples) * 8
-
-            except Exception as e:
-                if self.running:
-                    logger.error(f"Error in IQ recorder: {str(e)}")
-                    logger.exception(e)
+                    # Update stats
                     with self.stats_lock:
-                        self.stats["errors"] += 1
-                time.sleep(0.1)
+                        self.stats["iq_chunks_in"] += 1
+                        self.stats["last_activity"] = time.time()
+
+                    samples = iq_message.get("samples")
+                    center_freq = iq_message.get(
+                        "logical_center_freq_hz", iq_message.get("center_freq")
+                    )
+                    sample_rate = iq_message.get("sample_rate")
+                    timestamp = iq_message.get("timestamp")
+                    stream_chunk_id = iq_message.get("stream_chunk_id")
+                    stream_start_sample = iq_message.get("stream_start_sample")
+                    stream_sample_count = iq_message.get("stream_sample_count")
+
+                    if samples is None:
+                        continue
+                    samples = require_complex64(samples, source="IQRecorder")
+                    if len(samples) == 0:
+                        continue
+
+                    # Update sample count
+                    with self.stats_lock:
+                        self.stats["iq_samples_in"] += len(samples)
+
+                    # Continuity instrumentation: detect dropped/reordered chunks and sample gaps.
+                    if stream_chunk_id is None or stream_start_sample is None:
+                        with self.stats_lock:
+                            self.stats["messages_missing_chunk_meta"] += 1
+                    else:
+                        try:
+                            chunk_id = int(stream_chunk_id)
+                            start_sample = int(stream_start_sample)
+                            advertised_count = (
+                                int(stream_sample_count) if stream_sample_count is not None else None
+                            )
+                        except (TypeError, ValueError):
+                            with self.stats_lock:
+                                self.stats["invalid_chunk_meta"] += 1
+                        else:
+                            with self.stats_lock:
+                                self.stats["messages_with_chunk_meta"] += 1
+
+                                if self.stats["first_chunk_id"] is None:
+                                    self.stats["first_chunk_id"] = chunk_id
+                                self.stats["last_chunk_id"] = chunk_id
+
+                                if self.stats["first_start_sample"] is None:
+                                    self.stats["first_start_sample"] = start_sample
+                                self.stats["last_start_sample"] = start_sample
+
+                                if self.last_stream_chunk_id is not None:
+                                    if chunk_id == self.last_stream_chunk_id:
+                                        self.stats["duplicate_chunk_ids"] += 1
+                                    elif chunk_id > self.last_stream_chunk_id + 1:
+                                        self.stats["chunk_gap_events"] += 1
+                                        self.stats["missing_chunks"] += (
+                                            chunk_id - self.last_stream_chunk_id - 1
+                                        )
+                                    elif chunk_id < self.last_stream_chunk_id:
+                                        self.stats["chunk_reorders"] += 1
+
+                                if self.last_stream_end_sample is not None:
+                                    if start_sample > self.last_stream_end_sample:
+                                        self.stats["sample_gap_events"] += 1
+                                        self.stats["missing_samples"] += (
+                                            start_sample - self.last_stream_end_sample
+                                        )
+                                    elif start_sample < self.last_stream_end_sample:
+                                        self.stats["sample_backtracks"] += 1
+
+                                if advertised_count is not None and advertised_count != len(samples):
+                                    self.stats["sample_count_mismatch"] += 1
+
+                            self.last_stream_chunk_id = chunk_id
+                            self.last_stream_end_sample = start_sample + len(samples)
+
+                    # Check if parameters changed (new capture segment needed)
+                    if (
+                        self.current_center_freq != center_freq
+                        or self.current_input_sample_rate != sample_rate
+                    ):
+                        # Calculate frequency shift if needed
+                        if self.enable_frequency_shift and self.target_center_freq is not None:
+                            # Shift from current center_freq to target_center_freq
+                            # Signal at target_center_freq is at (target - center) offset in current recording
+                            # We want to shift it to center (0 Hz offset)
+                            self.shift_hz = center_freq - self.target_center_freq
+                            output_center_freq = self.target_center_freq
+                            logger.info(
+                                f"Frequency shift enabled: {center_freq/1e6:.3f} MHz -> {self.target_center_freq/1e6:.3f} MHz "
+                                f"(shift by {self.shift_hz/1e3:.1f} kHz)"
+                            )
+                        else:
+                            self.shift_hz = 0
+                            output_center_freq = center_freq
+
+                        output_sample_rate = sample_rate / self.decimation_factor
+
+                        # Add new capture segment with output center frequency
+                        self.captures.append(
+                            {
+                                "core:sample_start": self.total_samples,
+                                "core:frequency": int(output_center_freq),
+                                "core:datetime": datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                                .replace(microsecond=0, tzinfo=None)
+                                .isoformat()
+                                + "Z",
+                            }
+                        )
+
+                        self.current_center_freq = center_freq
+                        self.current_input_sample_rate = sample_rate
+                        self.current_sample_rate = output_sample_rate
+
+                        if self.start_datetime is None:
+                            self.start_datetime = timestamp
+
+                        logger.info(
+                            f"New capture segment at sample {self.total_samples}: "
+                            f"freq={output_center_freq/1e6:.3f} MHz, "
+                            f"rate={output_sample_rate/1e6:.2f} MS/s"
+                        )
+
+                    # Apply frequency shift if enabled
+                    if self.enable_frequency_shift and self.shift_hz != 0:
+                        # Generate time array for this chunk
+                        t = np.arange(len(samples), dtype=np.float64) / sample_rate
+                        # Compute phase incrementally: phase = 2*pi*f*t + phase_offset
+                        # To avoid overflow in the argument to exp, we use cos/sin directly
+                        # since exp(1j*theta) = cos(theta) + 1j*sin(theta)
+                        arg = 2 * np.pi * self.shift_hz * t + self.phase
+                        shift_signal = np.cos(arg) + 1j * np.sin(arg)
+                        # Apply shift (ensure result stays complex64)
+                        samples = (samples * shift_signal).astype(np.complex64)
+                        # Update phase for next chunk (wrap to keep bounded)
+                        self.phase = (
+                            self.phase + 2 * np.pi * self.shift_hz * len(samples) / sample_rate
+                        ) % (2 * np.pi)
+
+                    # Apply decimation if requested
+                    if self.decimation_factor > 1:
+                        try:
+                            samples = resample_poly(samples, up=1, down=self.decimation_factor).astype(
+                                np.complex64
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to decimate IQ samples: {e}")
+                            with self.stats_lock:
+                                self.stats["errors"] += 1
+                            continue
+
+                    # Write samples to file
+                    samples.tofile(self.data_file)
+                    self.total_samples += len(samples)
+
+                    # Update stats (cf32_le = 8 bytes per sample)
+                    with self.stats_lock:
+                        self.stats["samples_written"] += len(samples)
+                        self.stats["bytes_written"] += len(samples) * 8
+
+                except Exception as e:
+                    if self.running:
+                        logger.error(f"Error in IQ recorder: {str(e)}")
+                        logger.exception(e)
+                        with self.stats_lock:
+                            self.stats["errors"] += 1
+                    time.sleep(0.1)
+        finally:
+            try:
+                self.data_file.close()
+                logger.info("Closed IQ recorder data file in run finally block")
+            except Exception as e:
+                logger.error(f"Error closing IQ data file in finally: {e}")
 
         logger.info(f"IQ recorder stopped: {self.total_samples} samples written")
 

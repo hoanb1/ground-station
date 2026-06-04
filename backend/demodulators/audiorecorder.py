@@ -95,50 +95,57 @@ class AudioRecorder(threading.Thread):
 
     def run(self):
         """Main recording loop."""
-        while self.running:
-            try:
-                if self.audio_queue.empty():
-                    time.sleep(0.01)
-                    continue
+        try:
+            while self.running:
+                try:
+                    if self.audio_queue.empty():
+                        time.sleep(0.01)
+                        continue
 
-                audio_message = self.audio_queue.get(timeout=0.1)
+                    audio_message = self.audio_queue.get(timeout=0.1)
 
-                # Update stats
-                with self.stats_lock:
-                    self.stats["audio_chunks_in"] += 1
-                    self.stats["last_activity"] = time.time()
-
-                audio_data = audio_message.get("audio")
-                timestamp = audio_message.get("timestamp")
-
-                if audio_data is None or len(audio_data) == 0:
-                    continue
-
-                # Update sample count
-                with self.stats_lock:
-                    self.stats["audio_samples_in"] += len(audio_data)
-
-                if self.start_datetime is None:
-                    self.start_datetime = timestamp
-
-                # Write audio samples to WAV file
-                # audio_data is float32 numpy array from demodulator, convert to int16
-                audio_int16 = np.clip(audio_data * 32767, -32768, 32767).astype(np.int16)
-                self.wav_file.writeframes(audio_int16.tobytes())
-                self.total_samples += len(audio_int16)
-
-                # Update stats
-                with self.stats_lock:
-                    self.stats["samples_written"] += len(audio_data)
-                    self.stats["bytes_written"] += len(audio_data) * 2  # 16-bit = 2 bytes
-
-            except Exception as e:
-                if self.running:
-                    logger.error(f"Error in audio recorder: {str(e)}")
-                    logger.exception(e)
+                    # Update stats
                     with self.stats_lock:
-                        self.stats["errors"] += 1
-                time.sleep(0.1)
+                        self.stats["audio_chunks_in"] += 1
+                        self.stats["last_activity"] = time.time()
+
+                    audio_data = audio_message.get("audio")
+                    timestamp = audio_message.get("timestamp")
+
+                    if audio_data is None or len(audio_data) == 0:
+                        continue
+
+                    # Update sample count
+                    with self.stats_lock:
+                        self.stats["audio_samples_in"] += len(audio_data)
+
+                    if self.start_datetime is None:
+                        self.start_datetime = timestamp
+
+                    # Write audio samples to WAV file
+                    # audio_data is float32 numpy array from demodulator, convert to int16
+                    audio_int16 = np.clip(audio_data * 32767, -32768, 32767).astype(np.int16)
+                    self.wav_file.writeframes(audio_int16.tobytes())
+                    self.total_samples += len(audio_int16)
+
+                    # Update stats
+                    with self.stats_lock:
+                        self.stats["samples_written"] += len(audio_data)
+                        self.stats["bytes_written"] += len(audio_data) * 2  # 16-bit = 2 bytes
+
+                except Exception as e:
+                    if self.running:
+                        logger.error(f"Error in audio recorder: {str(e)}")
+                        logger.exception(e)
+                        with self.stats_lock:
+                            self.stats["errors"] += 1
+                    time.sleep(0.1)
+        finally:
+            try:
+                self.wav_file.close()
+                logger.info("Closed WAV recorder file in run finally block")
+            except Exception as e:
+                logger.error(f"Error closing WAV file in finally: {e}")
 
         logger.info(f"Audio recorder stopped: {self.total_samples} samples written")
 
