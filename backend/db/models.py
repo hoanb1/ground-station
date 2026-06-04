@@ -33,8 +33,53 @@ from sqlalchemy import (
     String,
     TypeDecorator,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import CHAR
+from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.ext.declarative import declarative_base
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+
+    Uses PostgreSQL's UUID type, otherwise uses CHAR(36), storing as string with dashes.
+    """
+    impl = CHAR
+    cache_ok = True
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(pgUUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == 'postgresql':
+            return str(value)
+        else:
+            if not isinstance(value, uuid.UUID):
+                try:
+                    return str(uuid.UUID(str(value)))
+                except ValueError:
+                    return str(value)
+            else:
+                return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        if isinstance(value, uuid.UUID):
+            return value
+        try:
+            return uuid.UUID(str(value))
+        except ValueError:
+            return value
+
+UUID = GUID
+
 from sqlalchemy.orm import DeclarativeMeta
 
 # Creates a base class for declarative models using SQLAlchemy.
