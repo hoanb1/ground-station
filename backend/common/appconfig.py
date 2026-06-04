@@ -33,7 +33,7 @@ DEFAULT_APP_CONFIG: Dict[str, Any] = {
     "track_interval_ms": 2000,
     "max_tracker_targets": 10,
     "enable_soapy_discovery": False,
-    "runonce_soapy_discovery": True,
+    "runonce_soapy_discovery": False,
     # Optional override list for satellite metadata API endpoints used during orbital sync.
     # If this list is empty, sync falls back to the original SatNOGS URL.
     "orbital_sync_satellite_metadata_urls": ["http://db.satnogs.org/api/satellites/?format=json"],

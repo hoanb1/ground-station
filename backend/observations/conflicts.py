@@ -18,7 +18,7 @@
 from datetime import datetime, timedelta
 from typing import Optional, Sequence
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import ScheduledObservations
@@ -137,10 +137,18 @@ async def find_any_time_conflict(
         ScheduledObservations.enabled.is_(True),
         ScheduledObservations.status.in_([STATUS_SCHEDULED, STATUS_RUNNING]),
         # Check for time window overlap using task times (with fallback to event times)
-        func.coalesce(ScheduledObservations.task_start, ScheduledObservations.event_start)
-        < search_end,
-        func.coalesce(ScheduledObservations.task_end, ScheduledObservations.event_end)
-        > search_start,
+        or_(
+            and_(
+                ScheduledObservations.task_start.isnot(None),
+                ScheduledObservations.task_start < search_end,
+                ScheduledObservations.task_end > search_start,
+            ),
+            and_(
+                ScheduledObservations.task_start.is_(None),
+                ScheduledObservations.event_start < search_end,
+                ScheduledObservations.event_end > search_start,
+            ),
+        ),
     ]
 
     if exclude_observation_id:

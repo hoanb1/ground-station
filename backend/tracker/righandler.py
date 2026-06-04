@@ -24,7 +24,7 @@ import time
 from common.constants import DictKeys, SocketEvents, TrackingEvents
 from controllers.rig import RigController
 from controllers.sdr import SDRController
-from tracking.doppler import calculate_doppler_shift
+from tracking.doppler import calculate_doppler_shift_from_range_rate, calculate_range_rate
 
 logger = logging.getLogger("tracker-worker")
 
@@ -41,6 +41,25 @@ class RigHandler:
         self.tracker = tracker
         self.last_vfo_update_time = 0.0  # Track when VFO frequencies were last updated
         self.failed_tx_control_modes: set[str] = set()
+        self.current_range_rate = 0.0
+
+    def precompute_range_rate(self, satellite_tles, location):
+        """Precompute range rate for the current satellite and location."""
+        if not satellite_tles or not location:
+            self.current_range_rate = 0.0
+            return
+
+        try:
+            self.current_range_rate = calculate_range_rate(
+                satellite_tles[0],
+                satellite_tles[1],
+                location["lat"],
+                location["lon"],
+                0.0,
+            )
+        except Exception as e:
+            logger.error(f"Error precomputing range rate: {e}")
+            self.current_range_rate = 0.0
 
     @staticmethod
     def _fmt_state_value(value):
@@ -305,31 +324,23 @@ class RigHandler:
                 self.tracker.rig_data["original_freq"] = downlink_freq
                 self.tracker.rig_data["uplink_freq"] = uplink_freq
 
-                # Calculate RX (downlink) doppler shift
+                # Calculate RX (downlink) doppler shift using precomputed range rate
                 if downlink_freq and downlink_freq > 0:
                     (
                         self.tracker.rig_data["downlink_observed_freq"],
                         self.tracker.rig_data["doppler_shift"],
-                    ) = calculate_doppler_shift(
-                        satellite_tles[0],
-                        satellite_tles[1],
-                        location["lat"],
-                        location["lon"],
-                        0,
+                    ) = calculate_doppler_shift_from_range_rate(
+                        self.current_range_rate,
                         downlink_freq,
                     )
                 else:
                     self.tracker.rig_data["downlink_observed_freq"] = 0
                     self.tracker.rig_data["doppler_shift"] = 0
 
-                # Calculate TX (uplink) doppler shift (inverted)
+                # Calculate TX (uplink) doppler shift (inverted) using precomputed range rate
                 if uplink_freq and uplink_freq > 0:
-                    uplink_observed, uplink_doppler = calculate_doppler_shift(
-                        satellite_tles[0],
-                        satellite_tles[1],
-                        location["lat"],
-                        location["lon"],
-                        0,
+                    uplink_observed, uplink_doppler = calculate_doppler_shift_from_range_rate(
+                        self.current_range_rate,
                         uplink_freq,
                     )
                     # For TX, apply opposite correction
@@ -396,14 +407,10 @@ class RigHandler:
                     "uplink_high": transmitter.get("uplink_high"),
                 }
 
-                # Calculate RX (downlink) doppler shift
+                # Calculate RX (downlink) doppler shift using precomputed range rate
                 if downlink_freq and downlink_freq > 0:
-                    downlink_observed_freq, doppler_shift = calculate_doppler_shift(
-                        satellite_tles[0],
-                        satellite_tles[1],
-                        location["lat"],
-                        location["lon"],
-                        0,
+                    downlink_observed_freq, doppler_shift = calculate_doppler_shift_from_range_rate(
+                        self.current_range_rate,
                         downlink_freq,
                     )
                     transmitter_data["downlink_observed_freq"] = downlink_observed_freq
@@ -412,15 +419,11 @@ class RigHandler:
                     transmitter_data["downlink_observed_freq"] = 0
                     transmitter_data["doppler_shift"] = 0
 
-                # Calculate TX (uplink) doppler shift (inverted)
+                # Calculate TX (uplink) doppler shift (inverted) using precomputed range rate
                 if uplink_freq and uplink_freq > 0:
                     # Calculate the doppler shift for uplink
-                    uplink_observed, uplink_doppler = calculate_doppler_shift(
-                        satellite_tles[0],
-                        satellite_tles[1],
-                        location["lat"],
-                        location["lon"],
-                        0,
+                    uplink_observed, uplink_doppler = calculate_doppler_shift_from_range_rate(
+                        self.current_range_rate,
                         uplink_freq,
                     )
                     # For TX, we need to apply the opposite correction:

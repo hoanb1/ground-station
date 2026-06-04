@@ -106,9 +106,18 @@ export async function initializeAppData(socket) {
         store.dispatch(setInitialDataProgress({ completed, total }));
     };
 
+    const withTimeout = (promise, timeoutMs, taskName) => {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(`Task ${taskName} timed out after ${timeoutMs}ms`)), timeoutMs)
+            )
+        ]);
+    };
+
     const runTask = async (task) => {
         try {
-            await task.run();
+            await withTimeout(task.run(), 5000, task.name);
         } catch (error) {
             console.error(`Failed to fetch initial app data: ${task.name}`, error);
         } finally {

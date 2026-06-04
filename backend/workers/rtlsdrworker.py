@@ -23,7 +23,7 @@ from typing import Any, Dict
 import numpy as np
 import psutil
 
-from common.iqsamples import require_complex64, DCOffsetRemover
+from common.iqsamples import DCOffsetRemover, require_complex64
 
 # Suppress a very specific third-party warning emitted at import-time by pyrtlsdr
 # Context: pyrtlsdr (or its transitive imports) currently uses setuptools.pkg_resources,
@@ -35,7 +35,10 @@ warnings.filterwarnings(
     category=UserWarning,
     message=r"pkg_resources is deprecated as an API",
 )
-import rtlsdr  # noqa: E402 - import after warning filter by design
+try:
+    import rtlsdr  # noqa: E402 - import after warning filter by design
+except (ImportError, AttributeError):
+    rtlsdr = None
 
 from workers.rtlsdrtcpclient import RtlSdrTcpClient  # noqa: E402 - follows filtered import
 
@@ -101,6 +104,10 @@ def rtlsdr_worker_process(
             sdr.connect()
 
         else:
+            if rtlsdr is None:
+                raise RuntimeError(
+                    "rtlsdr package is not available or failed to load (check librtlsdr library)"
+                )
             serial_number = config.get("serial_number", 0)
             logger.info(f"Connecting to RTL-SDR with serial number {serial_number} over USB...")
             sdr = rtlsdr.RtlSdr(serial_number=serial_number)
@@ -144,7 +151,6 @@ def rtlsdr_worker_process(
                 "timestamp": time.time(),
             }
         )
-
 
         # Performance monitoring stats
         stats: Dict[str, Any] = {
@@ -491,5 +497,3 @@ def calculate_samples_per_scan(sample_rate, fft_size):
     num_samples = min(num_samples, 1048576)
 
     return num_samples
-
-

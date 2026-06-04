@@ -91,6 +91,9 @@ class StateManager:
 
     async def process_state_changes(self, changes: List[Tuple[str, Any, Any]]):
         """Process all detected state changes."""
+        if changes:
+            self.tracker.last_rotator_query_time = 0.0
+            self.tracker.last_rig_query_time = 0.0
         for change_type, old, new in changes:
             if change_type == "satellite":
                 await self.handle_satellite_change(old, new)

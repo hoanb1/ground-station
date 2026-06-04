@@ -27,6 +27,13 @@ from db.models import Transmitters
 
 NULL_MARKERS = {"", "-", None}
 
+_transmitters_by_sat_cache = None
+
+
+def clear_transmitters_cache():
+    global _transmitters_by_sat_cache
+    _transmitters_by_sat_cache = None
+
 
 def _is_null_marker(value: Any) -> bool:
     return value in NULL_MARKERS or (isinstance(value, str) and value.strip() in NULL_MARKERS)
@@ -143,19 +150,66 @@ def _normalize_transmitter_payload(data: dict, for_edit: bool = False) -> dict:
     return payload
 
 
+async def fetch_transmitters_for_satellites(session: AsyncSession, norad_ids: list[int]) -> dict:
+    """
+    Fetch all transmitters for a list of satellite NORAD IDs in a single query.
+    Returns a dictionary mapping norad_id -> list of serialized transmitters.
+    """
+    try:
+        if not norad_ids:
+            return {"success": True, "data": {}, "error": None}
+
+        global _transmitters_by_sat_cache
+        if _transmitters_by_sat_cache is not None:
+            result_map = {}
+            for nid in norad_ids:
+                result_map[nid] = _transmitters_by_sat_cache.get(nid, [])
+            return {"success": True, "data": result_map, "error": None}
+
+        stmt = select(Transmitters)
+        result = await session.execute(stmt)
+        all_transmitters = result.scalars().all()
+
+        from collections import defaultdict
+
+        cache_map = defaultdict(list)
+        for tx in all_transmitters:
+            serialized_tx = serialize_object(tx)
+            cache_map[tx.norad_cat_id].append(serialized_tx)
+            if tx.norad_follow_id and tx.norad_follow_id != tx.norad_cat_id:
+                cache_map[tx.norad_follow_id].append(serialized_tx)
+
+        _transmitters_by_sat_cache = dict(cache_map)
+
+        result_map = {}
+        for nid in norad_ids:
+            result_map[nid] = _transmitters_by_sat_cache.get(nid, [])
+        return {"success": True, "data": result_map, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching transmitters bulk: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
 async def fetch_transmitters_for_satellite(session: AsyncSession, norad_id: int) -> dict:
     """
     Fetch all transmitter records associated with the given satellite NORAD id.
     Matches by either norad_cat_id or norad_follow_id.
     """
     try:
-        stmt = select(Transmitters).filter(
-            (Transmitters.norad_cat_id == norad_id) | (Transmitters.norad_follow_id == norad_id)
-        )
-        result = await session.execute(stmt)
-        transmitters = result.scalars().all()
-        transmitters = serialize_object(transmitters)
-        return {"success": True, "data": transmitters, "error": None}
+        global _transmitters_by_sat_cache
+        if _transmitters_by_sat_cache is not None:
+            return {
+                "success": True,
+                "data": _transmitters_by_sat_cache.get(norad_id, []),
+                "error": None,
+            }
+
+        reply = await fetch_transmitters_for_satellites(session, [norad_id])
+        if reply.get("success"):
+            return {"success": True, "data": reply["data"].get(norad_id, []), "error": None}
+        return reply
 
     except Exception as e:
         logger.error(f"Error fetching transmitters for satellite {norad_id}: {e}")
@@ -205,6 +259,7 @@ async def add_transmitter(session: AsyncSession, data: dict) -> dict:
         await session.commit()
         new_transmitter = result.scalar_one()
         new_transmitter = serialize_object(new_transmitter)
+        clear_transmitters_cache()
         return {"success": True, "data": new_transmitter, "error": None}
 
     except Exception as e:
@@ -250,6 +305,7 @@ async def edit_transmitter(session: AsyncSession, data: dict) -> dict:
         await session.commit()
         updated_transmitter = upd_result.scalar_one_or_none()
         updated_transmitter = serialize_object(updated_transmitter)
+        clear_transmitters_cache()
         return {"success": True, "data": updated_transmitter, "error": None}
 
     except Exception as e:
@@ -274,6 +330,7 @@ async def delete_transmitter(session: AsyncSession, transmitter_id: Union[uuid.U
         if not deleted:
             return {"success": False, "error": f"Transmitter with id {transmitter_id} not found."}
         await session.commit()
+        clear_transmitters_cache()
         return {"success": True, "data": None, "error": None}
 
     except Exception as e:

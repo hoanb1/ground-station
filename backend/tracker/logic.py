@@ -230,8 +230,11 @@ class SatelliteTracker:
         self.input_transmitters: List[Dict[str, Any]] = []
         self.input_satellite: Optional[Dict[str, Any]] = None
         self.input_target_ephemeris: Optional[Dict[str, Any]] = None
-        self.input_map_settings: Dict[str, Any] = {}
         self.input_hardware: Dict[str, Any] = {}
+        self.last_path_calculation_time = 0.0
+        self.last_norad_id = None
+        self.last_rotator_query_time = 0.0
+        self.last_rig_query_time = 0.0
 
     def in_tracking_state(self) -> bool:
         """Check if rotator is currently in tracking state."""
@@ -381,11 +384,24 @@ class SatelliteTracker:
                 logger.warning("No matching satellite ephemeris provided, skipping iteration")
                 return None
 
+            # Throttle paths emission to reduce CPU spike during tracking loop.
+            current_time = time.time()
+            current_norad_id = input_payload.get("norad_id")
+            include_paths = False
+            if (
+                getattr(self, "last_norad_id", None) != current_norad_id
+                or current_time - getattr(self, "last_path_calculation_time", 0.0) >= 300.0
+            ):
+                include_paths = True
+                self.last_path_calculation_time = current_time
+                self.last_norad_id = current_norad_id
+
             satellite_data = compiled_satellite_data_from_inputs(
                 input_payload,
                 self.input_location,
                 self.input_transmitters,
                 self.input_map_settings,
+                include_paths=include_paths,
             )
             if satellite_data.get("error"):
                 logger.warning(
@@ -540,6 +556,18 @@ class SatelliteTracker:
             interval_seconds,
         )
         while True:
+            # Determine dynamic interval based on hardware connection.
+            # If no rotator and no rig are assigned, slow down tracking to 10s to conserve CPU.
+            has_hardware = False
+            state = self.input_tracking_state
+            if state:
+                rotator_id = state.get("rotator_id", "none")
+                rig_id = state.get("rig_id", "none")
+                has_hardware = (rotator_id and rotator_id not in ("none", "none_selected")) or (
+                    rig_id and rig_id not in ("none", "none_selected")
+                )
+            current_interval = interval_seconds if has_hardware else 10.0
+
             # Update CPU and memory usage periodically
             current_time = time.time()
             if current_time - self.last_cpu_check >= self.cpu_check_interval:
@@ -645,22 +673,34 @@ class SatelliteTracker:
                 # Validate hardware states
                 await self.state_manager.validate_hardware_states()
 
+                # Determine query intervals dynamically based on slewing state
+                current_time = time.time()
+                rotator_interval = 1.0 if self.rotator_data.get("slewing") else 5.0
+                rig_interval = 5.0
+
                 # Update hardware positions (allow tracking to continue if rotator fails)
-                try:
-                    await self.rotator_handler.update_hardware_position()
-                except Exception as e:
-                    logger.warning(f"Rotator communication failed, continuing tracking: {e}")
+                if current_time - self.last_rotator_query_time >= rotator_interval:
+                    try:
+                        await self.rotator_handler.update_hardware_position()
+                        self.last_rotator_query_time = current_time
+                    except Exception as e:
+                        logger.warning(f"Rotator communication failed, continuing tracking: {e}")
 
                 # Update rig frequency (allow tracking to continue if rig fails)
-                try:
-                    await self.rig_handler.update_hardware_frequency()
-                except Exception as e:
-                    logger.warning(f"Rig communication failed, continuing tracking: {e}")
+                if current_time - self.last_rig_query_time >= rig_interval:
+                    try:
+                        await self.rig_handler.update_hardware_frequency()
+                        self.last_rig_query_time = current_time
+                    except Exception as e:
+                        logger.warning(f"Rig communication failed, continuing tracking: {e}")
 
                 # Check position limits
                 self.rotator_handler.check_position_limits(skypoint, satellite_name)
 
                 if target_type == "satellite" and satellite_tles:
+                    # Precompute range rate once for the entire cycle
+                    self.rig_handler.precompute_range_rate(satellite_tles, location)
+
                     # Handle transmitter tracking
                     await self.rig_handler.handle_transmitter_tracking(satellite_tles, location)
 
@@ -743,14 +783,14 @@ class SatelliteTracker:
                 else:
                     loop_duration = 0
 
-                if loop_duration > interval_seconds:
+                if loop_duration > current_interval:
                     logger.warning(
                         f"Single tracking loop iteration took longer "
                         f"({loop_duration}) than the configured "
-                        f"interval ({interval_seconds})"
+                        f"interval ({current_interval})"
                     )
 
-                remaining_time_to_sleep = max((interval_seconds - loop_duration), 0)
+                remaining_time_to_sleep = max((current_interval - loop_duration), 0)
 
                 # Clean up data states
                 self.state_manager.cleanup_data_states()

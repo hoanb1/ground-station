@@ -117,6 +117,17 @@ def _task_wrapper(func: Callable, args: Tuple, kwargs: Dict, queue: mp.Queue):
 
     Catches all output and exceptions, sends them back via queue.
     """
+    # Lower process scheduling priority (niceness) for all background tasks
+    # to prevent CPU starvation of real-time SDR processing and webservers.
+    try:
+        import os
+
+        if hasattr(os, "nice"):
+            os.nice(19)  # Minimum priority (most nice) on Linux/macOS
+    except Exception:
+        # Avoid crash if os.nice is not permitted or fails
+        pass
+
     try:
         # Call the actual task function
         result = func(*args, **kwargs, _progress_queue=queue)

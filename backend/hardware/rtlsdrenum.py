@@ -18,7 +18,10 @@ import logging
 from ctypes import c_ubyte
 from typing import Any, Dict, List, Optional
 
-from rtlsdr import librtlsdr
+try:
+    from rtlsdr import librtlsdr
+except (ImportError, AttributeError):
+    librtlsdr = None
 
 logger = logging.getLogger("rtlsdr-usbenum")
 
@@ -52,6 +55,16 @@ def probe_available_rtl_sdrs() -> str:
     error: Optional[str] = None
 
     log_messages.append("Enumerating available RTL-SDR devices")
+
+    if librtlsdr is None:
+        log_messages.append("Error: librtlsdr is not available (failed to import)")
+        reply: Dict[str, Any] = {
+            "success": False,
+            "data": [],
+            "error": "librtlsdr is not available",
+            "log": log_messages,
+        }
+        return json.dumps(reply)
 
     try:
         count = int(librtlsdr.rtlsdr_get_device_count())
@@ -100,7 +113,7 @@ def probe_available_rtl_sdrs() -> str:
         success = False
         error = str(exc)
 
-    reply: Dict[str, Any] = {
+    reply = {
         "success": success,
         "data": devices,
         "error": error,

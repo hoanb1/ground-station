@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, TypedDict, Union
 
 import crud
-from common.common import is_geostationary, serialize_object
+from common.common import is_geostationary
 from db import AsyncSessionLocal
 from orbits import CentralBody, get_propagation_input
 from tracker.contracts import get_tracking_state_name
@@ -306,23 +306,48 @@ async def compiled_satellite_data(dbsession, norad_id: int) -> Dict[str, Any]:
             cache_satellite_paths(tle1, tle2, duration_minutes, step_minutes, paths, ttl_minutes=30)
             satellite_data["paths"] = paths
 
-        # Add the coverage (footprint)
+        # Add the coverage (footprint) with reduced points (64) for lower CPU utilization
         satellite_data["coverage"] = get_satellite_coverage_circle(
-            position["lat"], position["lon"], position["alt"] / 1000, num_points=300
+            position["lat"], position["lon"], position["alt"] / 1000, num_points=64
         )
 
         position["az"] = sky_point[0]
         position["el"] = sky_point[1]
         satellite_data["position"] = position
 
-        satellite_data = serialize_object(satellite_data)
+        # Fast serialization to avoid slow deepcopy / ModelEncoder loops
+        serialized_data = {
+            "details": {
+                "name": str(satellite_data["details"]["name"]),
+                "tle1": str(satellite_data["details"]["tle1"]),
+                "tle2": str(satellite_data["details"]["tle2"]),
+                "norad_id": (
+                    int(satellite_data["details"]["norad_id"])
+                    if satellite_data["details"]["norad_id"] is not None
+                    else None
+                ),
+                "is_geostationary": bool(satellite_data["details"]["is_geostationary"]),
+            },
+            "position": {
+                "lat": float(satellite_data["position"]["lat"]),
+                "lon": float(satellite_data["position"]["lon"]),
+                "alt": float(satellite_data["position"]["alt"]),
+                "vel": float(satellite_data["position"]["vel"]),
+                "az": float(satellite_data["position"]["az"]),
+                "el": float(satellite_data["position"]["el"]),
+            },
+            "paths": satellite_data["paths"],
+            "coverage": satellite_data["coverage"],
+            "transmitters": satellite_data["transmitters"],
+            "error": bool(satellite_data["error"]),
+        }
+        return serialized_data
 
     except Exception as e:
         logger.error(f"Failed to compile satellite data for norad id: {norad_id}, error: {e}")
         logger.exception(e)
         satellite_data["error"] = True
-
-    return satellite_data
+        return satellite_data
 
 
 def compiled_satellite_data_from_inputs(
@@ -330,6 +355,7 @@ def compiled_satellite_data_from_inputs(
     location: Dict[str, Any],
     transmitters: Optional[List[Any]] = None,
     map_settings: Optional[Dict[str, Any]] = None,
+    include_paths: bool = True,
 ) -> Dict[str, Any]:
     """
     Compile satellite data using in-memory inputs instead of database access.
@@ -378,52 +404,85 @@ def compiled_satellite_data_from_inputs(
             datetime.now(timezone.utc),
         )
 
-        # calculate paths with caching
-        duration_minutes = int((map_settings or {}).get("orbitProjectionDuration", 240))
-        step_minutes = 0.5
+        # calculate paths with caching only if requested
+        if include_paths:
+            duration_minutes = int((map_settings or {}).get("orbitProjectionDuration", 240))
+            step_minutes = 0.5
 
-        tle1 = propagation_input.tle1
-        tle2 = propagation_input.tle2
+            tle1 = propagation_input.tle1
+            tle2 = propagation_input.tle2
 
-        cached_paths = get_cached_satellite_paths(
-            tle1,
-            tle2,
-            duration_minutes,
-            step_minutes,
-        )
-        if cached_paths is not None:
-            satellite_data["paths"] = cached_paths
-        else:
-            paths = get_satellite_path(
-                [tle1, tle2],
-                duration_minutes=duration_minutes,
-                step_minutes=step_minutes,
-            )
-            cache_satellite_paths(
+            cached_paths = get_cached_satellite_paths(
                 tle1,
                 tle2,
                 duration_minutes,
                 step_minutes,
-                paths,
-                ttl_minutes=30,
             )
-            satellite_data["paths"] = paths
+            if cached_paths is not None:
+                satellite_data["paths"] = cached_paths
+            else:
+                paths = get_satellite_path(
+                    [tle1, tle2],
+                    duration_minutes=duration_minutes,
+                    step_minutes=step_minutes,
+                )
+                cache_satellite_paths(
+                    tle1,
+                    tle2,
+                    duration_minutes,
+                    step_minutes,
+                    paths,
+                    ttl_minutes=30,
+                )
+                satellite_data["paths"] = paths
+        else:
+            if "paths" in satellite_data:
+                del satellite_data["paths"]
 
+        # Add the coverage (footprint) with reduced points (64) for lower CPU utilization
         satellite_data["coverage"] = get_satellite_coverage_circle(
-            position["lat"], position["lon"], position["alt"] / 1000, num_points=300
+            position["lat"], position["lon"], position["alt"] / 1000, num_points=64
         )
 
         position["az"] = sky_point[0]
         position["el"] = sky_point[1]
         satellite_data["position"] = position
-        satellite_data = serialize_object(satellite_data)
+
+        # Fast serialization to avoid slow deepcopy / ModelEncoder loops
+        serialized_data = {
+            "details": {
+                "name": str(satellite_details["name"]),
+                "tle1": str(satellite_details["tle1"]),
+                "tle2": str(satellite_details["tle2"]),
+                "norad_id": (
+                    int(satellite_details["norad_id"])
+                    if satellite_details["norad_id"] is not None
+                    else None
+                ),
+                "is_geostationary": bool(satellite_details["is_geostationary"]),
+            },
+            "position": {
+                "lat": float(position["lat"]),
+                "lon": float(position["lon"]),
+                "alt": float(position["alt"]),
+                "vel": float(position["vel"]),
+                "az": float(position["az"]),
+                "el": float(position["el"]),
+            },
+            "coverage": satellite_data["coverage"],
+            "transmitters": satellite_data["transmitters"],
+            "error": bool(satellite_data["error"]),
+        }
+        if include_paths:
+            serialized_data["paths"] = satellite_data["paths"]
+
+        return serialized_data
 
     except Exception as e:
         logger.error(f"Failed to compile satellite data from inputs, error: {e}")
         logger.exception(e)
         satellite_data["error"] = True
-
-    return satellite_data
+        return satellite_data
 
 
 async def get_ui_tracker_state(group_id: str, norad_id: int, tracker_id: str):

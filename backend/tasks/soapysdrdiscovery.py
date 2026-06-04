@@ -19,6 +19,7 @@ try:
 except ImportError:
     HAS_SETPROCTITLE = False
 
+from common.utils import is_local_address
 from hardware.soapysdrbrowser import (
     discover_soapy_servers,
     discovered_servers,
@@ -130,8 +131,11 @@ def soapysdr_discovery_task(
             # Serialize discovered servers for transmission to main process
             serialized_servers = {}
             for name, server_info in discovered_servers.items():
+                server_ip = server_info.get("ip")
+                if server_ip and is_local_address(server_ip):
+                    server_ip = "127.0.0.1"
                 serialized_servers[name] = {
-                    "ip": server_info.get("ip"),
+                    "ip": server_ip,
                     "port": server_info.get("port"),
                     "name": server_info.get("name"),
                     "mDNS_name": server_info.get("mDNS_name"),
@@ -168,6 +172,8 @@ def soapysdr_discovery_task(
                 # Report details for each server
                 for name, server_info in discovered_servers.items():
                     ip = server_info.get("ip")
+                    if ip and is_local_address(ip):
+                        ip = "127.0.0.1"
                     port = server_info.get("port")
                     status = server_info.get("status")
                     sdrs = server_info.get("sdrs", [])
@@ -210,8 +216,11 @@ def soapysdr_discovery_task(
                 # Serialize discovered servers for return
                 serialized_servers = {}
                 for name, server_info in discovered_servers.items():
+                    server_ip = server_info.get("ip")
+                    if server_ip and is_local_address(server_ip):
+                        server_ip = "127.0.0.1"
                     serialized_servers[name] = {
-                        "ip": server_info.get("ip"),
+                        "ip": server_ip,
                         "port": server_info.get("port"),
                         "name": server_info.get("name"),
                         "status": server_info.get("status"),
@@ -273,8 +282,11 @@ def soapysdr_discovery_task(
                 # Serialize discovered servers for transmission to main process
                 serialized_servers = {}
                 for name, server_info in discovered_servers.items():
+                    server_ip = server_info.get("ip")
+                    if server_ip and is_local_address(server_ip):
+                        server_ip = "127.0.0.1"
                     serialized_servers[name] = {
-                        "ip": server_info.get("ip"),
+                        "ip": server_ip,
                         "port": server_info.get("port"),
                         "name": server_info.get("name"),
                         "mDNS_name": server_info.get("mDNS_name"),
@@ -391,8 +403,11 @@ def soapysdr_quick_refresh_task(_progress_queue: Optional[Queue] = None):
             # Serialize discovered servers for transmission to main process
             serialized_servers = {}
             for name, server_info in discovered_servers.items():
+                server_ip = server_info.get("ip")
+                if server_ip and is_local_address(server_ip):
+                    server_ip = "127.0.0.1"
                 serialized_servers[name] = {
-                    "ip": server_info.get("ip"),
+                    "ip": server_ip,
                     "port": server_info.get("port"),
                     "name": server_info.get("name"),
                     "mDNS_name": server_info.get("mDNS_name"),

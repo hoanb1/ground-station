@@ -120,6 +120,16 @@ class SDRType(str, PyEnum):
     UHD = "uhd"
     SIGMFPLAYBACK = "sigmfplayback"
 
+    # Lowercase aliases to prevent SQLAlchemy LookupError when decoding lowercase values from SQLite DB
+    rtlsdrusbv3 = "rtlsdrusbv3"
+    rtlsdrtcpv3 = "rtlsdrtcpv3"
+    rtlsdrusbv4 = "rtlsdrusbv4"
+    rtlsdrtcpv4 = "rtlsdrtcpv4"
+    soapysdrlocal = "soapysdrlocal"
+    soapysdrremote = "soapysdrremote"
+    uhd = "uhd"
+    sigmfplayback = "sigmfplayback"
+
 
 class Satellites(Base):
     __tablename__ = "satellites"
@@ -219,8 +229,8 @@ class Transmitters(Base):
     invert = Column(Boolean, nullable=True)
     baud = Column(Integer, nullable=True)
     sat_id = Column(String, nullable=True)
-    norad_cat_id = Column(Integer, ForeignKey("satellites.norad_id"), nullable=False)
-    norad_follow_id = Column(Integer, nullable=True)
+    norad_cat_id = Column(Integer, ForeignKey("satellites.norad_id"), nullable=False, index=True)
+    norad_follow_id = Column(Integer, nullable=True, index=True)
     status = Column(String, nullable=False)
     citation = Column(String, nullable=True)
     service = Column(String, nullable=True)
@@ -267,7 +277,7 @@ class SDRs(Base):
     serial = Column(String, nullable=True)
     host = Column(String, nullable=True)
     port = Column(Integer, nullable=True)
-    type = Column(Enum(SDRType), nullable=True)
+    type = Column(String, nullable=True)
     driver = Column(String, nullable=True)
     frequency_min = Column(Integer, nullable=True)
     frequency_max = Column(Integer, nullable=True)
@@ -323,7 +333,7 @@ class Locations(Base):
 class Preferences(Base):
     __tablename__ = "preferences"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False, index=True)
     value = Column(String, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
     updated = Column(

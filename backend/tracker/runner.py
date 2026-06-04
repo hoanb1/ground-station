@@ -180,6 +180,15 @@ class TrackerSupervisor:
 
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
+            # Set tracker process niceness to a lower priority (e.g. 15) to prevent
+            # real-time scheduling pressure on SoapySDR-Server / OpenWebRX.
+            try:
+                import os
+
+                if hasattr(os, "nice"):
+                    os.nice(15)
+            except Exception:
+                pass
             try:
                 tracker = SatelliteTracker(
                     queue_out=self.output_queue,

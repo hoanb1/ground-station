@@ -725,3 +725,72 @@ class TestTransmittersCRUD:
 
         assert result["success"] is True
         assert result["data"]["itu_notification"] == {"urls": []}
+
+    async def test_transmitter_caching(self, db_session):
+        """Test transmitter caching behavior and cache invalidation."""
+        from crud.transmitters import clear_transmitters_cache, fetch_transmitters_for_satellites
+
+        clear_transmitters_cache()
+
+        await add_satellite(
+            db_session,
+            {
+                "name": "Cache Test Satellite",
+                "sat_id": "TEST-CACHE",
+                "norad_id": 99912,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=99912),
+                "tle2": TLE2_TEMPLATE.format(norad=99912),
+            },
+        )
+
+        add_reply = await add_transmitter(
+            db_session,
+            {
+                "description": "Cache Test VHF",
+                "satelliteId": 99912,
+                "alive": True,
+                "type": "transmitter",
+                "uplinkLow": "-",
+                "uplinkHigh": "-",
+                "downlinkLow": 145800000,
+                "downlinkHigh": 145900000,
+                "uplinkDrift": "-",
+                "downlinkDrift": "-",
+                "mode": "FM",
+                "uplinkMode": "-",
+                "status": "active",
+            },
+        )
+        assert add_reply["success"] is True
+
+        fetch_reply = await fetch_transmitters_for_satellite(db_session, 99912)
+        assert fetch_reply["success"] is True
+        assert len(fetch_reply["data"]) == 1
+
+        import crud.transmitters
+
+        assert crud.transmitters._transmitters_by_sat_cache is not None
+        assert 99912 in crud.transmitters._transmitters_by_sat_cache
+
+        tx_id = add_reply["data"]["id"]
+        edit_reply = await edit_transmitter(
+            db_session,
+            {
+                "id": tx_id,
+                "description": "Cache Test VHF Updated",
+                "satelliteId": 99912,
+            },
+        )
+        assert edit_reply["success"] is True
+        assert crud.transmitters._transmitters_by_sat_cache is None
+
+        bulk_reply = await fetch_transmitters_for_satellites(db_session, [99912])
+        assert bulk_reply["success"] is True
+        assert 99912 in bulk_reply["data"]
+        assert bulk_reply["data"][99912][0]["description"] == "Cache Test VHF Updated"
+
+        delete_reply = await delete_transmitter(db_session, tx_id)
+        assert delete_reply["success"] is True
+        assert crud.transmitters._transmitters_by_sat_cache is None

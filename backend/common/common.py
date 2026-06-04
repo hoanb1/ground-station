@@ -22,9 +22,10 @@ import uuid
 from datetime import date, datetime, timedelta
 
 import numpy
-from skyfield.api import EarthSatellite, load, wgs84
+from skyfield.api import EarthSatellite, wgs84
 
 from .logger import logger
+from .skyfieldts import ts
 
 
 class ModelEncoder(json.JSONEncoder):
@@ -211,9 +212,7 @@ def is_satellite_over_location(tle, date, target_lat, target_lon, threshold_km=5
 
     line1, line2 = tle
 
-    # create a Skyfield Timescale and convert Python datetime to a Skyfield Time object
-    ts = load.timescale()
-    # If `date` is a naive datetime, treat it as UTC. If it's timezone-aware, .utc_datetime() might be needed.
+    # Use global Skyfield Timescale and convert Python datetime to a Skyfield Time object
     t = ts.from_datetime(date)
 
     # construct the EarthSatellite object from the TLE lines

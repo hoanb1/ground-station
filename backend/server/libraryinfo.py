@@ -22,7 +22,10 @@ import subprocess
 import sys
 from typing import Any, Dict, List, Optional
 
-import gnuradio
+try:
+    import gnuradio
+except ImportError:
+    gnuradio = None
 
 from common.logger import logger
 
@@ -292,12 +295,18 @@ def get_library_versions(use_cache: bool = True) -> Dict[str, Any]:
         }
     else:
         # Fallback to Python import
-        system_libraries["gnuradio"] = {
-            "name": "GNU Radio",
-            "version": gnuradio.__version__ if hasattr(gnuradio, "__version__") else "installed",
-            "category": "sdr",
-            "description": "Software-defined radio framework",
-        }
+        gnuradio_ver = (
+            gnuradio.__version__
+            if gnuradio is not None and hasattr(gnuradio, "__version__")
+            else "installed" if gnuradio is not None else None
+        )
+        if gnuradio_ver is not None:
+            system_libraries["gnuradio"] = {
+                "name": "GNU Radio",
+                "version": gnuradio_ver,
+                "category": "sdr",
+                "description": "Software-defined radio framework",
+            }
 
     # VOLK (Vector-Optimized Library of Kernels)
     volk_version = get_system_library_version(["volk_profile", "--version"])

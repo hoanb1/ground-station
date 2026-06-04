@@ -18,7 +18,9 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Tuple
 
-from skyfield.api import EarthSatellite, load, wgs84
+from sgp4.api import Satrec, jday
+
+from common.skyfieldts import ts
 
 
 def get_satellite_az_el(
@@ -43,23 +45,76 @@ def get_satellite_az_el(
     Returns:
     - (azimuth, elevation): Tuple (in degrees)
     """
-    # Create a timescale and convert the observation time to a Skyfield time object
-    ts = load.timescale()
     t = ts.from_datetime(observation_time)
+    theta = t.gmst * (math.pi / 12.0)
+    jd, fr = jday(
+        int(t.utc.year),
+        int(t.utc.month),
+        int(t.utc.day),
+        int(t.utc.hour),
+        int(t.utc.minute),
+        float(t.utc.second),
+    )
 
-    # Create the EarthSatellite object directly from the TLE strings
-    satellite = EarthSatellite(satellite_tle_line1, satellite_tle_line2)
+    sat = Satrec.twoline2rv(satellite_tle_line1.strip(), satellite_tle_line2.strip())
+    err, pos, vel = sat.sgp4(jd, fr)
+    if err != 0:
+        # Fallback to Skyfield if SGP4 error occurs
+        from skyfield.api import EarthSatellite as E_Sat
+        from skyfield.api import wgs84 as w_84
 
-    # Define the observer's location
-    observer = wgs84.latlon(home_lat, home_lon)
+        satellite = E_Sat(satellite_tle_line1, satellite_tle_line2)
+        observer = w_84.latlon(home_lat, home_lon)
+        difference = satellite - observer
+        alt, az, _ = difference.at(t).altaz()
+        return round(az.degrees, 4), round(alt.degrees, 4)
 
-    # Compute the difference vector between a satellite and an observer
-    difference = satellite - observer
+    # TEME to ECEF rotation
+    cos_theta = math.cos(theta)
+    sin_theta = math.sin(theta)
+    x_ecef = pos[0] * cos_theta + pos[1] * sin_theta
+    y_ecef = -pos[0] * sin_theta + pos[1] * cos_theta
+    z_ecef = pos[2]
 
-    # Get the altitude (elevation) and azimuth in degrees
-    alt, az, _ = difference.at(t).altaz()
+    # Observer ECEF (WGS-84)
+    a = 6378.137  # km
+    b = 6356.7523142  # km
+    esq = 1.0 - (b**2) / (a**2)
+    phi = math.radians(home_lat)
+    lam = math.radians(home_lon)
+    N = a / math.sqrt(1.0 - esq * (math.sin(phi) ** 2))
+    x_obs = N * math.cos(phi) * math.cos(lam)
+    y_obs = N * math.cos(phi) * math.sin(lam)
+    z_obs = N * (1.0 - esq) * math.sin(phi)
 
-    return round(az.degrees, 4), round(alt.degrees, 4)
+    # Relative ECEF vector
+    rx = x_ecef - x_obs
+    ry = y_ecef - y_obs
+    rz = z_ecef - z_obs
+
+    # Local SEZ coordinates
+    sin_phi = math.sin(phi)
+    cos_phi = math.cos(phi)
+    sin_lam = math.sin(lam)
+    cos_lam = math.cos(lam)
+
+    s = sin_phi * cos_lam * rx + sin_phi * sin_lam * ry - cos_phi * rz
+    e = -sin_lam * rx + cos_lam * ry
+    z = cos_phi * cos_lam * rx + cos_phi * sin_lam * ry + sin_phi * rz
+
+    range_val = math.sqrt(s**2 + e**2 + z**2)
+    if range_val < 1e-9:
+        return 0.0, 90.0
+
+    el_rad = math.asin(z / range_val)
+    az_rad = math.atan2(e, -s)
+
+    az_deg = math.degrees(az_rad)
+    if az_deg < 0:
+        az_deg += 360.0
+    el_deg = math.degrees(el_rad)
+
+    return round(az_deg, 4), round(el_deg, 4)
 
 
 def get_satellite_position_from_tle(tle_lines):
@@ -82,31 +137,74 @@ def get_satellite_position_from_tle(tle_lines):
     line1 = tle_lines[1].strip()
     line2 = tle_lines[2].strip()
 
-    # Load a timescale and get the current time.
-    ts = load.timescale()
     t = ts.now()
+    theta = t.gmst * (math.pi / 12.0)
+    jd, fr = jday(
+        int(t.utc.year),
+        int(t.utc.month),
+        int(t.utc.day),
+        int(t.utc.hour),
+        int(t.utc.minute),
+        float(t.utc.second),
+    )
 
-    # Create an EarthSatellite object from the TLE.
-    satellite = EarthSatellite(line1, line2, name, ts)
+    sat = Satrec.twoline2rv(line1, line2)
+    err, pos, vel = sat.sgp4(jd, fr)
+    if err != 0:
+        # Fallback to Skyfield if SGP4 error occurs
+        from skyfield.api import EarthSatellite as E_Sat
 
-    # Compute the geocentric position for the current time.
-    geocentric = satellite.at(t)
+        satellite = E_Sat(line1, line2, name, ts)
+        geocentric = satellite.at(t)
+        subpoint = geocentric.subpoint()
+        vx, vy, vz = geocentric.velocity.km_per_s
+        return {
+            "lat": float(subpoint.latitude.degrees),
+            "lon": float(subpoint.longitude.degrees),
+            "alt": float(subpoint.elevation.m),
+            "vel": float(math.sqrt(vx * vx + vy * vy + vz * vz)),
+        }
 
-    # Obtain subpoint (latitude, longitude, and elevation above Earth).
-    subpoint = geocentric.subpoint()
+    # TEME to ECEF rotation
+    cos_theta = math.cos(theta)
+    sin_theta = math.sin(theta)
+    x_ecef = pos[0] * cos_theta + pos[1] * sin_theta
+    y_ecef = -pos[0] * sin_theta + pos[1] * cos_theta
+    z_ecef = pos[2]
 
-    lat_degrees = subpoint.latitude.degrees
-    lon_degrees = subpoint.longitude.degrees
-    altitude_m = subpoint.elevation.m  # altitude above Earth's surface in meters
+    # Geodetic coordinates (WGS-84) using Bowring's method
+    a = 6378.137  # km
+    b = 6356.7523142  # km
+    esq = 1.0 - (b**2) / (a**2)
+    epsq = (a**2) / (b**2) - 1.0
+    p = math.sqrt(x_ecef**2 + y_ecef**2)
+    if p < 1e-9:
+        lat_deg = 90.0 if z_ecef > 0 else -90.0
+        lon_deg = 0.0
+        alt_m = abs(z_ecef) - b
+    else:
+        u = math.atan2(z_ecef * a, p * b)
+        lat = math.atan2(z_ecef + epsq * b * (math.sin(u) ** 3), p - esq * a * (math.cos(u) ** 3))
+        lon = math.atan2(y_ecef, x_ecef)
+        N = a / math.sqrt(1.0 - esq * (math.sin(lat) ** 2))
+        alt = p / math.cos(lat) - N
+        lat_deg = math.degrees(lat)
+        lon_deg = math.degrees(lon)
+        alt_m = alt * 1000.0
 
-    # Get velocity vector in km/s
-    vx, vy, vz = geocentric.velocity.km_per_s
-    velocity_km_s = math.sqrt(vx * vx + vy * vy + vz * vz)
+        # Normalize longitude to [-180, 180]
+        if lon_deg > 180:
+            lon_deg -= 360
+        elif lon_deg < -180:
+            lon_deg += 360
+
+    # Velocity in km/s (magnitude of TEME velocity is invariant under rotation)
+    velocity_km_s = math.sqrt(vel[0] ** 2 + vel[1] ** 2 + vel[2] ** 2)
 
     return {
-        "lat": float(lat_degrees),
-        "lon": float(lon_degrees),
-        "alt": float(altitude_m),
+        "lat": float(lat_deg),
+        "lon": float(lon_deg),
+        "alt": float(alt_m),
         "vel": float(velocity_km_s),
     }
 
@@ -132,71 +230,111 @@ def get_satellite_path(
         }
         Each segment is a list of coordinate points that don't cross the dateline
     """
-
     try:
-        # Load time scale
-        ts = load.timescale()
-
-        # Create satellite object from TLE
         if len(tle) != 2:
             raise ValueError("TLE must contain exactly two lines")
 
-        satellite = EarthSatellite(tle[0], tle[1], "Satellite", ts)
+        line1 = tle[0].strip()
+        line2 = tle[1].strip()
+        sat = Satrec.twoline2rv(line1, line2)
 
-        # Get current time
         now = datetime.now(timezone.utc)
 
-        past_points = []
-        future_points = []
-        step_td = timedelta(minutes=step_minutes)
+        # Earth constants for Bowring's method (WGS-84)
+        a = 6378.137  # km
+        b = 6356.7523142  # km
+        esq = 1.0 - (b**2) / (a**2)
+        epsq = (a**2) / (b**2) - 1.0
 
-        # Compute past points: from (now - durationMinutes) up to now (inclusive)
+        # Earth rotation rate in radians per second (GMST rate of change)
+        omega_e = 7.2921158579e-5
+
+        total_steps = int(duration_minutes / step_minutes)
+        step_sec = step_minutes * 60.0
+        jd_step = step_minutes / 1440.0
+
+        # 1. Past path calculation
         past_start = now - timedelta(minutes=duration_minutes)
-        current = past_start
+        t0_p = ts.from_datetime(past_start)
+        theta_0_p = t0_p.gmst * (math.pi / 12.0)
 
-        while current <= now:
-            time = ts.utc(
-                current.year,
-                current.month,
-                current.day,
-                current.hour,
-                current.minute,
-                current.second + current.microsecond / 1e6,
-            )
+        past_points = []
+        jd0_p, fr0_p = jday(
+            past_start.year,
+            past_start.month,
+            past_start.day,
+            past_start.hour,
+            past_start.minute,
+            past_start.second + past_start.microsecond / 1e6,
+        )
 
-            geocentric = satellite.at(time)
-            subpoint = wgs84.subpoint(geocentric)
+        for step in range(total_steps + 1):
+            jd = jd0_p
+            fr = fr0_p + step * jd_step
 
-            lat = float(subpoint.latitude.degrees)
-            lon = normalize_longitude(float(subpoint.longitude.degrees))
+            err, pos, vel = sat.sgp4(jd, fr)
+            if err == 0:
+                dt_seconds = step * step_sec
+                theta = (theta_0_p + omega_e * dt_seconds) % (2.0 * math.pi)
 
-            past_points.append({"lat": lat, "lon": lon})
-            current += step_td
+                cos_theta = math.cos(theta)
+                sin_theta = math.sin(theta)
+                x_ecef = pos[0] * cos_theta + pos[1] * sin_theta
+                y_ecef = -pos[0] * sin_theta + pos[1] * cos_theta
+                z_ecef = pos[2]
 
-        # Compute future points: from now up to (now + durationMinutes) (inclusive)
-        future_end = now + timedelta(minutes=duration_minutes)
-        current = now
+                p = math.sqrt(x_ecef**2 + y_ecef**2)
+                if p < 1e-9:
+                    lat_deg = 90.0 if z_ecef > 0 else -90.0
+                    lon_deg = 0.0
+                else:
+                    u = math.atan2(z_ecef * a, p * b)
+                    lat = math.atan2(
+                        z_ecef + epsq * b * (math.sin(u) ** 3), p - esq * a * (math.cos(u) ** 3)
+                    )
+                    lon = math.atan2(y_ecef, x_ecef)
+                    lat_deg = math.degrees(lat)
+                    lon_deg = math.degrees(lon)
+                past_points.append({"lat": lat_deg, "lon": normalize_longitude(lon_deg)})
 
-        while current <= future_end:
-            time = ts.utc(
-                current.year,
-                current.month,
-                current.day,
-                current.hour,
-                current.minute,
-                current.second + current.microsecond / 1e6,
-            )
+        # 2. Future path calculation
+        t0_f = ts.from_datetime(now)
+        theta_0_f = t0_f.gmst * (math.pi / 12.0)
 
-            geocentric = satellite.at(time)
-            subpoint = wgs84.subpoint(geocentric)
+        future_points = []
+        jd0_f, fr0_f = jday(
+            now.year, now.month, now.day, now.hour, now.minute, now.second + now.microsecond / 1e6
+        )
 
-            lat = float(subpoint.latitude.degrees)
-            lon = normalize_longitude(float(subpoint.longitude.degrees))
+        for step in range(total_steps + 1):
+            jd = jd0_f
+            fr = fr0_f + step * jd_step
 
-            future_points.append({"lat": lat, "lon": lon})
-            current += step_td
+            err, pos, vel = sat.sgp4(jd, fr)
+            if err == 0:
+                dt_seconds = step * step_sec
+                theta = (theta_0_f + omega_e * dt_seconds) % (2.0 * math.pi)
 
-        # Split the past and future arrays into segments to avoid drawing lines across the dateline
+                cos_theta = math.cos(theta)
+                sin_theta = math.sin(theta)
+                x_ecef = pos[0] * cos_theta + pos[1] * sin_theta
+                y_ecef = -pos[0] * sin_theta + pos[1] * cos_theta
+                z_ecef = pos[2]
+
+                p = math.sqrt(x_ecef**2 + y_ecef**2)
+                if p < 1e-9:
+                    lat_deg = 90.0 if z_ecef > 0 else -90.0
+                    lon_deg = 0.0
+                else:
+                    u = math.atan2(z_ecef * a, p * b)
+                    lat = math.atan2(
+                        z_ecef + epsq * b * (math.sin(u) ** 3), p - esq * a * (math.cos(u) ** 3)
+                    )
+                    lon = math.atan2(y_ecef, x_ecef)
+                    lat_deg = math.degrees(lat)
+                    lon_deg = math.degrees(lon)
+                future_points.append({"lat": lat_deg, "lon": normalize_longitude(lon_deg)})
+
         past_segments = split_at_dateline(past_points)
         future_segments = split_at_dateline(future_points)
 

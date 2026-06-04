@@ -299,13 +299,25 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: Union[s
                 group_row.satellite_ids = cleaned_satellite_ids
                 await session.commit()
 
-        # Fetch transmitters for each satellite and add group_id
-        for satellite in satellites:
-            stmt = select(Transmitters).filter(Transmitters.norad_cat_id == satellite["norad_id"])
+        # Fetch transmitters for all satellites in the group in one query
+        from collections import defaultdict
+
+        transmitters_by_norad = defaultdict(list)
+        if satellite_ids:
+            stmt = select(Transmitters).filter(
+                (Transmitters.norad_cat_id.in_(satellite_ids))
+                | (Transmitters.norad_follow_id.in_(satellite_ids))
+            )
             result = await session.execute(stmt)
-            transmitters = result.scalars().all()
-            satellite["transmitters"] = serialize_object(transmitters)
-            # Add the group_id to each satellite object
+            all_transmitters = result.scalars().all()
+            for tx in all_transmitters:
+                transmitters_by_norad[tx.norad_cat_id].append(tx)
+                if tx.norad_follow_id and tx.norad_follow_id != tx.norad_cat_id:
+                    transmitters_by_norad[tx.norad_follow_id].append(tx)
+
+        for satellite in satellites:
+            norad_id = satellite["norad_id"]
+            satellite["transmitters"] = serialize_object(transmitters_by_norad[norad_id])
             satellite["group_id"] = str(group_id)
 
         return {"success": True, "data": satellites, "error": None}
@@ -391,26 +403,27 @@ async def search_satellites(session: AsyncSession, keyword: Union[str, int, None
         satellites = serialize_object(satellites)
         await _attach_primary_earth_orbits(session, satellites)
 
+        # Fetch all groups once to avoid N+1 query problem
+        all_groups_stmt = select(Groups)
+        all_groups_result = await session.execute(all_groups_stmt)
+        all_groups = all_groups_result.scalars().all()
+        all_groups_serialized = serialize_object(all_groups)
+
         # For each satellite, find which groups it belongs to
         for satellite in satellites:
             norad_id = satellite["norad_id"]
 
-            # Get all groups and filter them in Python since JSON querying can be database-specific
-            all_groups_stmt = select(Groups)
-            all_groups_result = await session.execute(all_groups_stmt)
-            all_groups = all_groups_result.scalars().all()
-
             # Filter groups that contain this satellite's NORAD ID
             matching_groups = []
-            for group in all_groups:
-                if group.satellite_ids and norad_id in group.satellite_ids:
+            for group in all_groups_serialized:
+                if group.get("satellite_ids") and norad_id in group["satellite_ids"]:
                     matching_groups.append(group)
 
             # Sort groups by number of member satellites (fewer first)
-            matching_groups.sort(key=lambda g: len(g.satellite_ids) if g.satellite_ids else 0)
+            matching_groups.sort(key=lambda g: len(g.get("satellite_ids") or []))
 
             # Add group information to the satellite
-            satellite["groups"] = serialize_object(matching_groups) if matching_groups else []
+            satellite["groups"] = matching_groups
 
         return {"success": True, "data": satellites, "error": None}
 

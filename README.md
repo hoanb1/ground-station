@@ -98,6 +98,7 @@ This project was built with the help of Claude Code and Codex.
 *   **Scheduled Observations:** Define detailed observation tasks that automatically listen, decode, transcribe, and record audio and IQ during satellite passes without manual intervention.
 *   **SatDump Integration:** Decode weather satellite images from METEOR-M2 (LRPT and HRPT) via SatDump, coupled with automated observations.
 *   **Performance Monitoring:** Real-time visualization of the signal processing pipeline showing data flow between components (SDR → FFT → Demodulator → Decoder → Browser), queue health monitoring, throughput rates, and component statistics to diagnose bottlenecks and optimize performance.
+*   **Database Query Optimization & Caching:** SQLite IO overhead is bypassed using index-friendly query paths, bulk-loading to eliminate N+1 loop queries, and an active in-memory cache for satellite transmitters. This prevents CPU/IO spikes and package drops during active satellite tracking.
 *   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network. Works great on a tablet and cell.
 
 ## Scheduled Observations & Automated Pass Recording
