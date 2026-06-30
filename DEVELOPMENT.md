@@ -201,3 +201,7 @@ You can install the package and use it as a command-line tool:
 pip install -e .
 ground-station  # Starts the application
 ```
+
+## Strict Development Rules: No Mock/Fake Data
+
+All telemetry, signal representations, audio recordings, decoders, and waterfall spectrograms must strictly represent real SDR hardware readings (e.g. from RTL-SDR / gr-satnogs). Implementing mock, fake, placeholder, or generated dummy data is strictly prohibited and violates coding standards for this system. All features must pull actual data from SDR receivers.
