@@ -254,8 +254,13 @@ const ObservationFormDialog = () => {
     });
 
     // Get transmitters from selected satellite
-    const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
-    const availableTransmitters = selectedSatellite?.transmitters || [];
+    const currentNoradId = selectedSatelliteId || formData.satellite?.norad_id;
+    const selectedSatellite = groupOfSats.find(sat => String(sat.norad_id) === String(currentNoradId))
+        || (formData.satellite?.transmitters ? formData.satellite : null);
+    const availableTransmitters = 
+        (selectedSatellite?.transmitters?.length > 0 ? selectedSatellite.transmitters : null) ||
+        (formData.satellite?.transmitters?.length > 0 ? formData.satellite.transmitters : null) ||
+        [];
 
     // Helper to get safe transmitter value (returns empty string if transmitter not in available list)
     const getSafeTransmitterValue = (transmitterId) => {
@@ -278,6 +283,34 @@ const ObservationFormDialog = () => {
     // Determine if form should be disabled based on observation status
     const isFormDisabled = selectedObservation && 
         ['running', 'completed', 'failed', 'cancelled'].includes(selectedObservation.status?.toLowerCase());
+
+    // Fetch satellite with transmitters whenever formData.satellite.norad_id changes
+    useEffect(() => {
+        if (socket && formData.satellite?.norad_id) {
+            dispatch(fetchSatelliteWithTransmitters({
+                socket,
+                satelliteName: formData.satellite.name,
+                noradId: formData.satellite.norad_id
+            }))
+                .unwrap()
+                .then((fullSat) => {
+                    if (fullSat && fullSat.transmitters && fullSat.transmitters.length > 0) {
+                        dispatch(setGroupOfSats([fullSat]));
+                        dispatch(setSatelliteId(fullSat.norad_id));
+                        setFormData((prev) => ({
+                            ...prev,
+                            satellite: {
+                                ...prev.satellite,
+                                transmitters: fullSat.transmitters
+                            }
+                        }));
+                    }
+                })
+                .catch((err) => {
+                    console.error("Failed to fetch satellite transmitters in observation dialog:", err);
+                });
+        }
+    }, [socket, formData.satellite?.norad_id, dispatch]);
 
     useEffect(() => {
         setFormData((prev) => {

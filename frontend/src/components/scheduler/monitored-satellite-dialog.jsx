@@ -243,8 +243,18 @@ export default function MonitoredSatelliteDialog() {
     const sdrParamsForSelected = formData.sdr.id ? sdrParameters?.[formData.sdr.id] : null;
     const biasTSupported = Boolean(sdrParamsForSelected?.has_bias_t || sdrParamsForSelected?.capabilities?.bias_t?.supported);
 
-    const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
-    const availableTransmitters = selectedSatellite?.transmitters || [];
+    const [fetchedTransmitters, setFetchedTransmitters] = useState([]);
+
+    const currentNoradId = selectedSatelliteId || formData.satellite?.norad_id || selectedMonitoredSatellite?.satellite?.norad_id;
+    const selectedSatellite = groupOfSats.find(sat => String(sat.norad_id) === String(currentNoradId))
+        || (formData.satellite?.transmitters ? formData.satellite : null)
+        || (selectedMonitoredSatellite?.satellite?.transmitters ? selectedMonitoredSatellite.satellite : null);
+    const availableTransmitters = 
+        (selectedSatellite?.transmitters?.length > 0 ? selectedSatellite.transmitters : null) ||
+        (formData.satellite?.transmitters?.length > 0 ? formData.satellite.transmitters : null) ||
+        (selectedMonitoredSatellite?.satellite?.transmitters?.length > 0 ? selectedMonitoredSatellite.satellite.transmitters : null) ||
+        fetchedTransmitters ||
+        [];
 
     // Helper to get safe transmitter value (returns empty string if transmitter not in available list)
     const getSafeTransmitterValue = (transmitterId) => {
@@ -271,6 +281,37 @@ export default function MonitoredSatelliteDialog() {
             dispatch(fetchSDRParameters({ socket, sdrId: formData.sdr.id }));
         }
     }, [socket, formData.sdr.id, dispatch]);
+
+    // Fetch satellite with transmitters whenever NORAD ID or dialog open changes
+    useEffect(() => {
+        const targetNoradId = formData.satellite?.norad_id || selectedMonitoredSatellite?.satellite?.norad_id;
+        const targetName = formData.satellite?.name || selectedMonitoredSatellite?.satellite?.name;
+        if (open && socket && targetNoradId) {
+            dispatch(fetchSatelliteWithTransmitters({
+                socket,
+                satelliteName: targetName,
+                noradId: targetNoradId
+            }))
+                .unwrap()
+                .then((fullSat) => {
+                    if (fullSat && fullSat.transmitters && fullSat.transmitters.length > 0) {
+                        setFetchedTransmitters(fullSat.transmitters);
+                        dispatch(setGroupOfSats([fullSat]));
+                        dispatch(setSatelliteId(fullSat.norad_id));
+                        setFormData((prev) => ({
+                            ...prev,
+                            satellite: {
+                                ...prev.satellite,
+                                transmitters: fullSat.transmitters
+                            }
+                        }));
+                    }
+                })
+                .catch((err) => {
+                    console.error("Failed to fetch satellite transmitters in dialog:", err);
+                });
+        }
+    }, [socket, open, formData.satellite?.norad_id, selectedMonitoredSatellite?.satellite?.norad_id, dispatch]);
 
     useEffect(() => {
         setFormData((prev) => {
@@ -455,6 +496,7 @@ export default function MonitoredSatelliteDialog() {
                 norad_id: satellite.norad_id,
                 name: satellite.name,
                 group_id: satellite.group_id || selectedGroupId || '',
+                transmitters: satellite.transmitters || [],
             },
         }));
     };
@@ -570,23 +612,42 @@ export default function MonitoredSatelliteDialog() {
         }
         setFormData((prev) => {
             const newTasks = [...prev.tasks, newTask];
+            const updatedSessions = [...(prev.sessions || [])];
+            if (updatedSessions[activeSessionIndex]) {
+                updatedSessions[activeSessionIndex] = {
+                    ...updatedSessions[activeSessionIndex],
+                    tasks: newTasks,
+                };
+            }
             const taskKey = `${activeSessionIndex}-${newTasks.length - 1}`;
             setExpandedTasks((prevExpanded) => ({
                 ...prevExpanded,
-                [taskKey]: false
+                [taskKey]: true
             }));
             return {
                 ...prev,
                 tasks: newTasks,
+                sessions: updatedSessions,
             };
         });
     };
 
     const handleRemoveTask = (index) => {
-        setFormData((prev) => ({
-            ...prev,
-            tasks: prev.tasks.filter((_, i) => i !== index),
-        }));
+        setFormData((prev) => {
+            const newTasks = prev.tasks.filter((_, i) => i !== index);
+            const updatedSessions = [...(prev.sessions || [])];
+            if (updatedSessions[activeSessionIndex]) {
+                updatedSessions[activeSessionIndex] = {
+                    ...updatedSessions[activeSessionIndex],
+                    tasks: newTasks,
+                };
+            }
+            return {
+                ...prev,
+                tasks: newTasks,
+                sessions: updatedSessions,
+            };
+        });
     };
 
     const handleTaskConfigChange = (index, field, value) => {
@@ -616,7 +677,14 @@ export default function MonitoredSatelliteDialog() {
                     },
                 };
             }
-            return { ...prev, tasks: newTasks };
+            const updatedSessions = [...(prev.sessions || [])];
+            if (updatedSessions[activeSessionIndex]) {
+                updatedSessions[activeSessionIndex] = {
+                    ...updatedSessions[activeSessionIndex],
+                    tasks: newTasks,
+                };
+            }
+            return { ...prev, tasks: newTasks, sessions: updatedSessions };
         });
     };
 
@@ -633,7 +701,14 @@ export default function MonitoredSatelliteDialog() {
                     },
                 },
             };
-            return { ...prev, tasks: newTasks };
+            const updatedSessions = [...(prev.sessions || [])];
+            if (updatedSessions[activeSessionIndex]) {
+                updatedSessions[activeSessionIndex] = {
+                    ...updatedSessions[activeSessionIndex],
+                    tasks: newTasks,
+                };
+            }
+            return { ...prev, tasks: newTasks, sessions: updatedSessions };
         });
     };
 

@@ -139,8 +139,11 @@ async def fetch_monitored_satellites(
 ) -> dict:
     """
     Fetch a single monitored satellite by ID or all if ID is not provided.
+    Includes satellite transmitters.
     """
     try:
+        from crud.transmitters import fetch_transmitters_for_satellites
+
         if satellite_id is not None:
             stmt = select(MonitoredSatellites).filter(MonitoredSatellites.id == satellite_id)
             result = await session.execute(stmt)
@@ -148,11 +151,26 @@ async def fetch_monitored_satellites(
             if satellite:
                 satellite = serialize_object(satellite)
                 satellite = _transform_from_db_format(satellite)
+                nid = satellite.get("satellite", {}).get("norad_id")
+                if nid:
+                    tx_res = await fetch_transmitters_for_satellites(session, [nid])
+                    if tx_res.get("success"):
+                        satellite["satellite"]["transmitters"] = tx_res.get("data", {}).get(nid, [])
         else:
             stmt = select(MonitoredSatellites).order_by(MonitoredSatellites.created_at)
             result = await session.execute(stmt)
-            satellites = result.scalars().all()
-            satellite = [_transform_from_db_format(serialize_object(sat)) for sat in satellites]
+            satellites_raw = result.scalars().all()
+            satellite = [_transform_from_db_format(serialize_object(sat)) for sat in satellites_raw]
+            
+            norad_ids = [s.get("satellite", {}).get("norad_id") for s in satellite if s.get("satellite", {}).get("norad_id")]
+            if norad_ids:
+                tx_res = await fetch_transmitters_for_satellites(session, norad_ids)
+                if tx_res.get("success"):
+                    tx_map = tx_res.get("data", {})
+                    for item in satellite:
+                        nid = item.get("satellite", {}).get("norad_id")
+                        if nid and nid in tx_map:
+                            item["satellite"]["transmitters"] = tx_map[nid]
 
         return {"success": True, "data": satellite, "error": None}
 

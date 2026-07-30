@@ -161,6 +161,11 @@ async def fetch_transmitters_for_satellites(session: AsyncSession, norad_ids: li
 
         global _transmitters_by_sat_cache
         if _transmitters_by_sat_cache is not None:
+            # Auto-invalidate in-memory cache if any requested norad_id is not in cache keys
+            if any(nid not in _transmitters_by_sat_cache for nid in norad_ids):
+                _transmitters_by_sat_cache = None
+
+        if _transmitters_by_sat_cache is not None:
             result_map = {}
             for nid in norad_ids:
                 result_map[nid] = _transmitters_by_sat_cache.get(nid, [])

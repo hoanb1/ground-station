@@ -184,6 +184,8 @@ const router = createBrowserRouter([
     },
 ]);
 
+window.store = store;
+
 const app = (
     <ReduxProvider store={store}>
         <PersistGate loading={null} persistor={persistor}>

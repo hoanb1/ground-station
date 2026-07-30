@@ -26,6 +26,7 @@ from common.arguments import arguments
 from common.common import *  # noqa: F401,F403
 from common.exceptions import SynchronizationErrorMainTLESource
 from crud.orbitalsources import fetch_orbital_source
+from crud.transmitters import clear_transmitters_cache
 from db.models import Satellites
 from handlers.entities.transmitterimport import (
     import_gr_satellites_transmitters,
@@ -770,6 +771,9 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
             logger.info("Running SatDump transmitter import after orbital sync...")
             satdump_result = await import_satdump_transmitters(session=dbsession)
             logger.info("SatDump transmitter import result: %s", satdump_result)
+
+            logger.info("Clearing transmitters cache after successful synchronization...")
+            clear_transmitters_cache()
 
             # Update final state - always set to 100% when complete
             sync_state["status"] = "complete"

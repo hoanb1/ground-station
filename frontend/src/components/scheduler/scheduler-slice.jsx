@@ -450,22 +450,36 @@ export const fetchSatelliteWithTransmitters = createAsyncThunk(
     async ({ socket, satelliteName, noradId }, { rejectWithValue }) => {
         try {
             return await new Promise((resolve, reject) => {
+                const searchData = noradId ? String(noradId) : satelliteName;
                 socket.emit("api.call", {
-  cmd: 'get-satellite-search',
-  data: satelliteName
-}, response => {
-  if (response.success && response.data.length > 0) {
-    // Find the exact satellite by norad_id
-    const satellite = response.data.find(sat => sat.norad_id === noradId);
-    if (satellite) {
-      resolve(satellite);
-    } else {
-      reject(new Error('Satellite not found in search results'));
-    }
-  } else {
-    reject(new Error('Failed to fetch satellite'));
-  }
-});
+                    cmd: 'get-satellite-search',
+                    data: searchData
+                }, response => {
+                    if (response.success && response.data && response.data.length > 0) {
+                        // Find exact satellite by norad_id (using string coercion)
+                        const satellite = response.data.find(sat => String(sat.norad_id) === String(noradId));
+                        if (satellite) {
+                            resolve(satellite);
+                        } else if (satelliteName && searchData !== satelliteName) {
+                            // Fallback: try searching by satellite name
+                            socket.emit("api.call", {
+                                cmd: 'get-satellite-search',
+                                data: satelliteName
+                            }, nameResp => {
+                                if (nameResp.success && nameResp.data && nameResp.data.length > 0) {
+                                    const satByName = nameResp.data.find(s => String(s.norad_id) === String(noradId));
+                                    resolve(satByName || nameResp.data[0]);
+                                } else {
+                                    resolve(response.data[0]);
+                                }
+                            });
+                        } else {
+                            resolve(response.data[0]);
+                        }
+                    } else {
+                        reject(new Error('Failed to fetch satellite'));
+                    }
+                });
             });
         } catch (error) {
             return rejectWithValue(error.message);

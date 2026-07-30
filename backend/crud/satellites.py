@@ -409,9 +409,25 @@ async def search_satellites(session: AsyncSession, keyword: Union[str, int, None
         all_groups = all_groups_result.scalars().all()
         all_groups_serialized = serialize_object(all_groups)
 
-        # For each satellite, find which groups it belongs to
+        # Fetch transmitters for all matching search satellites in one query
+        from collections import defaultdict
+        satellite_norad_ids = [s["norad_id"] for s in satellites]
+        transmitters_by_norad = defaultdict(list)
+        if satellite_norad_ids:
+            tx_stmt = select(Transmitters).filter(
+                (Transmitters.norad_cat_id.in_(satellite_norad_ids))
+                | (Transmitters.norad_follow_id.in_(satellite_norad_ids))
+            )
+            tx_result = await session.execute(tx_stmt)
+            for tx in tx_result.scalars().all():
+                transmitters_by_norad[tx.norad_cat_id].append(tx)
+                if tx.norad_follow_id and tx.norad_follow_id != tx.norad_cat_id:
+                    transmitters_by_norad[tx.norad_follow_id].append(tx)
+
+        # For each satellite, find which groups it belongs to and attach transmitters
         for satellite in satellites:
             norad_id = satellite["norad_id"]
+            satellite["transmitters"] = serialize_object(transmitters_by_norad[norad_id])
 
             # Filter groups that contain this satellite's NORAD ID
             matching_groups = []

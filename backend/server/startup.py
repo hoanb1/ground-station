@@ -321,7 +321,8 @@ async def download_decoded_folder(foldername: str, background_tasks: BackgroundT
 # This catch-all route comes AFTER specific API routes
 @app.get("/{full_path:path}")
 async def serve_spa(request: Request, full_path: str):
-    static_files_dir = os.environ.get("STATIC_FILES_DIR", "../../frontend/dist")
+    default_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+    static_files_dir = os.environ.get("STATIC_FILES_DIR", default_dist)
     base_dir = Path(static_files_dir).resolve()
 
     if is_static_asset_request(full_path):
