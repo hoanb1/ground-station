@@ -707,7 +707,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     dispatch(setSatelliteId(targetType === TARGET_TYPES.SATELLITE ? target?.noradId : ''));
                     dispatch(setRotator({ value: nextRotatorId, trackerId: selectedTrackerId }));
                     dispatch(setRadioRig({ value: nextRigId, trackerId: selectedTrackerId }));
-                    dispatch(setAvailableTransmitters(nextTransmitters));
+                    dispatch(setAvailableTransmitters({ value: nextTransmitters, trackerId: selectedTrackerId }));
                     return { success: true };
                 } catch (error) {
                     const errorCode = String(error?.error || error?.code || '').trim();
@@ -817,7 +817,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
             dispatch(setSatelliteId(nextSatelliteId));
             dispatch(setRotator({ value: normalizedRotatorId, trackerId: trackerSlotId }));
             dispatch(setRadioRig({ value: normalizedRigId, trackerId: trackerSlotId }));
-            dispatch(setAvailableTransmitters(nextTransmitters));
+            dispatch(setAvailableTransmitters({ value: nextTransmitters, trackerId: trackerSlotId }));
             await dispatch(setTrackingStateInBackend({ socket, data: payload })).unwrap();
             setCreateDialogOpen(false);
             resetCreateDialogState();

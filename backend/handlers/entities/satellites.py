@@ -162,18 +162,9 @@ async def search_satellites(
             keyword = data
         satellites = await crud.satellites.search_satellites(dbsession, keyword=keyword)
 
-        # Get transmitters for each satellite in bulk
-        if satellites and satellites.get("data"):
-            sat_list = satellites["data"]
-            norad_ids = [sat["norad_id"] for sat in sat_list]
-            tx_reply = await crud.transmitters.fetch_transmitters_for_satellites(
-                dbsession, norad_ids
-            )
-            tx_data = tx_reply.get("data", {}) if tx_reply.get("success") else {}
-            for satellite in sat_list:
-                satellite["transmitters"] = tx_data.get(satellite["norad_id"], [])
-        else:
+        if not (satellites and satellites.get("data")):
             logger.debug(f"No satellites found for search keyword: {data}")
+
 
         return {"success": satellites["success"], "data": satellites.get("data", [])}
 

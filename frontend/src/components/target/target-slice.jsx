@@ -1231,7 +1231,14 @@ const targetSatTrackSlice = createSlice({
             state.trackerViews[parsed.trackerId] = trackerView;
         },
         setAvailableTransmitters(state, action) {
-            state.availableTransmitters = normalizeTransmitters(action.payload);
+            const parsed = parseScopedSelectionPayload(action.payload, state.trackerId);
+            state.availableTransmitters = normalizeTransmitters(parsed.value);
+            if (!parsed.trackerId) {
+                return;
+            }
+            const trackerView = state.trackerViews[parsed.trackerId] || createDefaultTrackerView();
+            trackerView.availableTransmitters = normalizeTransmitters(parsed.value);
+            state.trackerViews[parsed.trackerId] = trackerView;
         },
         setTargetTransmitters(state, action) {
             const noradId = action.payload?.noradId;

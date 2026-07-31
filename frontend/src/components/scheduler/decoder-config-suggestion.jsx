@@ -47,8 +47,9 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
     const transmitterId = transmitter?.id;
 
     useEffect(() => {
-        // Only fetch if we should show and have required data
-        if (!show || !decoderType || !transmitter || decoderType === 'none') {
+        const supportedDecoders = ['gmsk', 'bpsk', 'afsk', 'gfsk', 'fsk', 'gnss'];
+        // Only fetch if we should show and have required data for supported decoders
+        if (!show || !decoderType || !transmitter || !supportedDecoders.includes(decoderType)) {
             setConfig(null);
             setError(null);
             return;
@@ -72,7 +73,7 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
     console.log('[DecoderConfigSuggestion] Config data:', response.data);
     setConfig(response.data);
   } else {
-    console.error('[DecoderConfigSuggestion] Error:', response.error);
+    console.warn('[DecoderConfigSuggestion] Config fetch info:', response.error);
     setError(response.error || 'Failed to fetch decoder configuration');
   }
 });
@@ -87,8 +88,9 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
         }
     };
 
-    // Don't render if we shouldn't show or decoder type is 'none'
-    if (!show || decoderType === 'none') {
+    const supportedDecoders = ['gmsk', 'bpsk', 'afsk', 'gfsk', 'fsk', 'gnss'];
+    // Don't render if we shouldn't show or decoder type is not supported
+    if (!show || !supportedDecoders.includes(decoderType)) {
         return null;
     }
 

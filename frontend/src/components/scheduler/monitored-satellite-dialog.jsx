@@ -59,6 +59,7 @@ import {
     setGroupOfSats,
     setSelectedFromSearch,
     fetchSDRParameters,
+    fetchSatelliteWithTransmitters,
 } from './scheduler-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { SatelliteSelector } from './satellite-selector.jsx';
@@ -245,16 +246,27 @@ export default function MonitoredSatelliteDialog() {
 
     const [fetchedTransmitters, setFetchedTransmitters] = useState([]);
 
-    const currentNoradId = selectedSatelliteId || formData.satellite?.norad_id || selectedMonitoredSatellite?.satellite?.norad_id;
-    const selectedSatellite = groupOfSats.find(sat => String(sat.norad_id) === String(currentNoradId))
+    const currentNoradId = selectedMonitoredSatellite?.satellite?.norad_id || formData.satellite?.norad_id || selectedSatelliteId;
+    const selectedSatellite = (Array.isArray(groupOfSats) ? groupOfSats : []).find(sat => sat && String(sat.norad_id) === String(currentNoradId))
         || (formData.satellite?.transmitters ? formData.satellite : null)
         || (selectedMonitoredSatellite?.satellite?.transmitters ? selectedMonitoredSatellite.satellite : null);
     const availableTransmitters = 
         (selectedSatellite?.transmitters?.length > 0 ? selectedSatellite.transmitters : null) ||
         (formData.satellite?.transmitters?.length > 0 ? formData.satellite.transmitters : null) ||
         (selectedMonitoredSatellite?.satellite?.transmitters?.length > 0 ? selectedMonitoredSatellite.satellite.transmitters : null) ||
-        fetchedTransmitters ||
+        (fetchedTransmitters?.length > 0 ? fetchedTransmitters : null) ||
         [];
+
+    useEffect(() => {
+        console.log("=== TRANSMITTERS DEBUG ===");
+        console.log("currentNoradId:", currentNoradId);
+        console.log("selectedSatellite.transmitters:", selectedSatellite?.transmitters);
+        console.log("formData.satellite.transmitters:", formData.satellite?.transmitters);
+        console.log("selectedMonitoredSatellite.satellite.transmitters:", selectedMonitoredSatellite?.satellite?.transmitters);
+        console.log("fetchedTransmitters:", fetchedTransmitters);
+        console.log("availableTransmitters:", availableTransmitters);
+        console.log("==========================");
+    }, [currentNoradId, selectedSatellite, formData.satellite, selectedMonitoredSatellite, fetchedTransmitters, availableTransmitters]);
 
     // Helper to get safe transmitter value (returns empty string if transmitter not in available list)
     const getSafeTransmitterValue = (transmitterId) => {
@@ -284,8 +296,8 @@ export default function MonitoredSatelliteDialog() {
 
     // Fetch satellite with transmitters whenever NORAD ID or dialog open changes
     useEffect(() => {
-        const targetNoradId = formData.satellite?.norad_id || selectedMonitoredSatellite?.satellite?.norad_id;
-        const targetName = formData.satellite?.name || selectedMonitoredSatellite?.satellite?.name;
+        const targetNoradId = currentNoradId;
+        const targetName = selectedMonitoredSatellite?.satellite?.name || formData.satellite?.name || selectedSatellite?.name;
         if (open && socket && targetNoradId) {
             dispatch(fetchSatelliteWithTransmitters({
                 socket,
@@ -1679,6 +1691,7 @@ export default function MonitoredSatelliteDialog() {
                             <Stack spacing={2}>
                                 {formData.tasks.map((task, index) => {
                                     const taskKey = `${activeSessionIndex}-${index}`;
+                                    const isTaskExpanded = expandedTasks[taskKey] !== false;
                                     return (
                                         <Box
                                             key={index}
@@ -1689,15 +1702,15 @@ export default function MonitoredSatelliteDialog() {
                                                 borderRadius: 1,
                                                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
                                                 transition: 'background-color 0.2s',
-                                                cursor: !expandedTasks[taskKey] ? 'pointer' : 'default',
-                                                ...(!expandedTasks[taskKey] && {
+                                                cursor: !isTaskExpanded ? 'pointer' : 'default',
+                                                ...(!isTaskExpanded && {
                                                     '&:hover': {
                                                         bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
                                                     },
                                                 }),
                                             }}
                                             onClick={(e) => {
-                                                if (!expandedTasks[taskKey] && !e.target.closest('button')) {
+                                                if (!isTaskExpanded && !e.target.closest('button')) {
                                                     toggleTaskExpanded(index);
                                                 }
                                             }}
@@ -1707,19 +1720,19 @@ export default function MonitoredSatelliteDialog() {
                                                     display="flex"
                                                     justifyContent="space-between"
                                                     alignItems="center"
-                                                    mb={expandedTasks[taskKey] ? 2 : 0}
+                                                    mb={isTaskExpanded ? 2 : 0}
                                                 >
                                                     <Box
                                                         display="flex"
                                                         alignItems="center"
                                                         gap={1}
                                                         sx={{ flex: 1 }}
-                                                        onClick={() => expandedTasks[taskKey] && toggleTaskExpanded(index)}
+                                                        onClick={() => isTaskExpanded && toggleTaskExpanded(index)}
                                                     >
                                                         <IconButton
                                                             size="small"
                                                             sx={{
-                                                                transform: expandedTasks[taskKey] ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                                transform: isTaskExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                                                                 transition: 'transform 0.2s'
                                                             }}
                                                         >
@@ -1742,7 +1755,7 @@ export default function MonitoredSatelliteDialog() {
                                                         variant="filled"
                                                         sx={{ minWidth: 130 }}
                                                     />
-                                                    {!expandedTasks[taskKey] && (
+                                                    {!isTaskExpanded && (
                                                         <Typography
                                                             variant="body2"
                                                             color="text.secondary"
@@ -1759,7 +1772,7 @@ export default function MonitoredSatelliteDialog() {
                                                     <DeleteIcon fontSize="small" />
                                                 </IconButton>
                                             </Box>
-                                            {expandedTasks[taskKey] && (
+                                            {isTaskExpanded && (
                                                 <Stack spacing={2}>
                                                     {task.type === 'decoder' && (() => {
                                                         const decoderType = task.config.decoder_type;

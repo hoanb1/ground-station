@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2026-06-04
+## [Unreleased] - 2026-07-31
+
+### Fixed
+- Fixed missing `fetchSatelliteWithTransmitters` import in `MonitoredSatelliteDialog` component (`monitored-satellite-dialog.jsx`) which triggered runtime `ReferenceError` when opening satellite scheduler dialog.
+- Expanded task accordions by default in `MonitoredSatelliteDialog` so task configuration fields and transmitter selection dropdowns are immediately visible and interactive.
+- Added decoder type validation check in `DecoderConfigSuggestion` (`decoder-config-suggestion.jsx`) to avoid unsupported backend query requests for decoders such as SSTV.
+- Scoped `setAvailableTransmitters` action payload in Redux (`target-slice.jsx` & `target-selector-bar.jsx`) with `trackerId` to ensure multi-tracker state synchronization.
+- Streamlined `search_satellites` response formatting in backend satellite entity handler (`backend/handlers/entities/satellites.py`).
 
 ### Added
 - Database indexes for frequently queried foreign keys and parameters to eliminate full table scans in SQLite:
